@@ -13,49 +13,74 @@ class kNdtool():
         self.p=np.shape(xdata)[1]
     '''
 
-    def optimize_hyper_params(self,main_function,ydata,xdata,optimize_dict):
-        #hyper_param_array=pull from hyper_paramdict
-        self.xgrid,self.diff=MY_KDE_dataprep_smalln(xin,modeldict['kern_grid'])
+    def optimize_hyper_params(self,main_function,ydata,xdata,optimizedict):
+
+        #First extract optimization information, including modeling information in model dict,
+        #param structure in model dict, and param values in paramdict
+        modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in keys of parent dicts
+        model_param_formdict=modeldict['hyper_param_form_dict']
+        kerngrid=modeldict['kern_grid']
+        
+        param_valdict=optimizedict['hyper_param_dict']
         method=optimize_dict['method']
+        free_paramlist=param_valdict['p_bandwidth']
+        
+        #generate rhs of difference and
+        #the N*N matrix of first differences that will be used so often
+        self.xgrid,self.onediffs=MY_KDE_dataprep_smalln(xin,kerngrid)
+
+        self.n,self.p=xdata.shape
 
         #parse args to pass to the main optimization function
-        #need to make this more flexible based on modeldict:hper_param_form_dict, replace with ordered dict?
-        hpdict=optimize_dict['hyper_paramdict'] 
-        hyper_paramlist=np.concatenate(hpdict['ddiff_exp_params'],hpdict['x_bandwidth_params'],axis=0)
-        args_tuple=(ydata,xdata,modeldict)
+  
+        #build pos_hyper_param and fixed hyper_param, add more later
+        #Below code commented out b/c too complicated to make it so flexible.
+        #can build in flexibility later
+        '''fixedparams=[]
+        non_neg_params=[]
+        for key,val in param_valdict:
+            if model_param_formdict[key]='fixed':
+                fixedparams.append(val)
+            if model_param_formdict[key]='fixed':
+                non_negparams.append(val)'''
+           
+        args_tuple=(ydata,xdata,self.xgrid,self.onediffs,modeldict)#include N*N array, theonediffs since it will be used so many times.
                 
-        return minimize(MY_KDEregMSE,hyper_paramlist,args=args_tuple,method=method) 
+        return minimize(MY_KDEregMSE,free_paramlist,args=args_tuple,method=method) 
 
-    def doKDEsmalln(self,xin,w,xgrid=None):
-        """estimate the density of xgrid using data xin.
+    def doX_KDEsmalln(self,xin,xout,xbw,modeldict):
+        """estimate the density of xout using data xin and weights, xbw
         if no data are provided for xgrid, xgrid is set as xin
         return xgrid x 2 array of values and marginal densities.
         doKDE first constructs 
         """
-        grid='yes';if xgrid==None: grid='no'; xgrid=xin;
-        ngrid,pgrid=xgrid.shape;nin,pin=xin.shape
-        assert pgrid==pin,'xout and xin have different numbers of parameters'
+        nout,pout=xout.shape;nin,pin=xin.shape
+        assert pout==pin,'xout and xin have different numbers of parameters'
         assert np.shape(xin)[-1]==len(w),'len(w) does not match length of last dimension of xin'
 
         if grid=='no': xmask=np.eye(nin, dtype=int)
     
+    #def doYX_KDEsmalln(self,yin,xin,xout,ybw,xbw,modeldict):
 
-    def MY_KDEregMSE(self,hyper_params,yin,xin,modeldict)
-    """moves hyper_params to first position and then runs MY_KDEreg to fit the model
+    
+    def MY_KDEregMSE(self,hyper_params,yin,xin,xgrid,onediffs,modeldict)
+    """moves hyper_params to first position of the obj function and then runs MY_KDEreg to fit the model
     then returns MSE of the fit"""
         print('starting optimization of hyperparameters')
-        print('kern grid=',modeldict['kern_grid'])
         #is the masking approach sufficient for leave one out cross validation?
         #kern_grid='no' forces masking of self for predicting self
-        return np.sum((yin-MY_KDEreg(yin,xin,xin,hyper_params,modeldict))**2)
+        if modeldict['Kh_form']=='exp_l2'
+            xin=np.product(xin,hyper_params[:-p]**-1)
+            onediffs=np.product(onediffs,hyper_params[:-p])
+        return np.sum((yin-MY_KDEreg(yin,xin,xin,hyper_params,onediffs,modeldict))**2)
         
     
     def MY_KDEreg(self,yin,xin,xpredict,hyper_params,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        yx=np.concatenate(yin,xin,axis=1)
-        prob_yx=doKDEsmalln(yx,w)
-        prox_x=doKDEsmalln(
+        X_bw=        
+        prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
+        prox_x=doX_KDEsmalln(xin,xin,xbw,,modeldict)
         
     def MY_KDE_dataprep_smalln(self,xin,kern_grid):
         """takes in data and makes differences between observed data and potentially a grid
