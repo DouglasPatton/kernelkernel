@@ -42,14 +42,22 @@ class kNdtool():
 
             xyout=MY_KDE_gridprep_smalln(kerngrid,self.p+1)
             assert xyout.shape[1]==self.p+1,'xyout has wrong number of columns'
-            assert xyout.shape[0]==kerngrid**(self.p+1)
+            assert xyout.shape[0]==kerngrid**(self.p+1),'xyout has wrong number of rows'
             self.outgrid='yes'
         if kerngrid=='no'
-            xout=xdata_std;xyout=np.concatenate(xdata_std,ydata_std,axis=1)
+            xout=xdata_std;
+            xyout=np.concatenate(xdata_std,ydata_std,axis=1)
             self.outgrid='no'
 
         #for small data pre-build multi dimensional differences and masks and apply them.
-        Ndiff_ndarray=
+        
+        xstack=xdata_std
+        xoutstack=xout
+        Ndifflist=[]
+        for ii in range(max_Ndiff):
+            Ndifflist.append(makediffmat_itoj(xstack,xoutstack))
+            xstack=np.repeat(xstack,[:,None]
+                                             
                                            
                                         
         #parse args to pass to the main optimization function
@@ -72,8 +80,9 @@ class kNdtool():
 
     def makediffmat_itoj(self,xi,xj):
         #return xi[:,None,:]-xj[None,:,:] #replaced with more flexible version
-        #below code needs to keep i at dimension second from rhs
-        return np.expand_dims(xi,0)-np.expand_dims(xj,1) #check this xj-xi where j varies for each i
+        #below code needs to keep i at first dimension, j,k,.... at nearly last dimension, p at last
+        r=xi.ndim
+        return np.expand_dims(xi,r)-np.expand_dims(xj,r-1) #check this xj-xi where j varies for each i
             
     def make_masks_smalln(self,max_Ndiff):
 
