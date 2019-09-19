@@ -4,17 +4,17 @@ data1=generate 1+ 3dimensional joint random distributions //
 so we can smooth it and compare to real dist or use 2 dimensions to predict the 3rd.
 
 
-#create modeldict for 1 layer of ddiffs,
+#create modeldict for 1 layer of Ndiffs,
 #product of kernels of each parameter (as in liu and yang eq1.)
 n,p=data1.shape
-modeldict1={'max_ddiff':2, 'kern_grid':'no', 'ddiff_kern':gaussian,//
+modeldict1={'max_Ndiff':2, 'kern_grid':'no', 'Ndiff_kern':gaussian,//
             'Kh_form':'exp_l2'  'hyper_param_form_dict'://
             {'Ndiff_exp':'fixed','p_bandwidth':'non-neg']}
             }
 #exp_l2 means take the l2 ("el two") norm across all parameters and then plug into the kernel (diff from liu and yang)
 #x_params:full means each plus constant;
     #each means 1 hyper parameter per column of data
-#kern_grid:'n' makes n evenly spaced values across every parameter for density estimation.
+#kern_grid if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
     #'no' means use original data, which is useful for calibrating hyper parameters
 hyper_paramdict1={'Ndiff_exp':np.array([-1,1]),'p_bandwidth':np.ones([p,]),//
                   }

@@ -14,23 +14,44 @@ class kNdtool():
     '''
 
     def optimize_hyper_params(self,main_function,ydata,xdata,optimizedict):
+        self.xmean=np.mean(xdata,axis=0)
+        self.ymean=np.mean(ydata,axis=0)
+        self.xstd=np.std(xdata,axis=0)
+        self.ystd=np.std(ydata,axis=0)
+        xdata_std=(xdata-self.xmean)/self.xstd
+        ydata_std=(ydata-self.ymean)/self.ystd
 
         #First extract optimization information, including modeling information in model dict,
         #param structure in model dict, and param values in paramdict
-        modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in keys of parent dicts
+        modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
         model_param_formdict=modeldict['hyper_param_form_dict']
         kerngrid=modeldict['kern_grid']
+        max_Ndiff=modeldict['max_Ndiff']
         
         param_valdict=optimizedict['hyper_param_dict']
         method=optimize_dict['method']
         free_paramlist=param_valdict['p_bandwidth']
-        
-        #generate rhs of difference and
-        #the N*N matrix of first differences that will be used so often
-        self.xgrid,self.onediffs=MY_KDE_dataprep_smalln(xin,kerngrid)
 
         self.n,self.p=xdata.shape
 
+        #for small data, pre-create the 'grid'/out data  and Ndiffs
+        if type(kerngrid) is int:
+            xout=MY_KDE_gridprep_smalln(kerngrid,self.p)
+            assert xout.shape[1]==self.p,'xout has wrong number of columns'
+            assert xout.shape[0]==kerngrid**self.p,'xout has wrong number of rows'
+
+            xyout=MY_KDE_gridprep_smalln(kerngrid,self.p+1)
+            assert xyout.shape[1]==self.p+1,'xyout has wrong number of columns'
+            assert xyout.shape[0]==kerngrid**(self.p+1)
+            self.outgrid='yes'
+        if kerngrid=='no'
+            xout=xdata_std;xyout=np.concatenate(xdata_std,ydata_std,axis=1)
+            self.outgrid='no'
+
+        #for small data pre-build multi dimensional differences and masks and apply them.
+        Ndiff_ndarray=
+                                           
+                                        
         #parse args to pass to the main optimization function
   
         #build pos_hyper_param and fixed hyper_param, add more later
@@ -44,9 +65,18 @@ class kNdtool():
             if model_param_formdict[key]='fixed':
                 non_negparams.append(val)'''
            
-        args_tuple=(ydata,xdata,self.xgrid,self.onediffs,modeldict)#include N*N array, theonediffs since it will be used so many times.
+        args_tuple=(ydata_std,xdata_std,xgrid,ygrid,,self.onediffs,modeldict)#include N*N array, theonediffs since it will be used so many times.
                 
         return minimize(MY_KDEregMSE,free_paramlist,args=args_tuple,method=method) 
+
+
+    def makediffmat_itoj(self,xi,xj):
+        #return xi[:,None,:]-xj[None,:,:] #replaced with more flexible version
+        #below code needs to keep i at dimension second from rhs
+        return np.expand_dims(xi,0)-np.expand_dims(xj,1) #check this xj-xi where j varies for each i
+            
+    def make_masks_smalln(self,max_Ndiff):
+
 
     def doX_KDEsmalln(self,xin,xout,xbw,modeldict):
         """estimate the density of xout using data xin and weights, xbw
@@ -61,6 +91,7 @@ class kNdtool():
         if grid=='no': xmask=np.eye(nin, dtype=int)
     
     #def doYX_KDEsmalln(self,yin,xin,xout,ybw,xbw,modeldict):
+        
 
     
     def MY_KDEregMSE(self,hyper_params,yin,xin,xgrid,onediffs,modeldict)
@@ -78,38 +109,18 @@ class kNdtool():
     def MY_KDEreg(self,yin,xin,xpredict,hyper_params,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        X_bw=        
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
         prox_x=doX_KDEsmalln(xin,xin,xbw,,modeldict)
         
-    def MY_KDE_dataprep_smalln(self,xin,kern_grid):
-        """takes in data and makes differences between observed data and potentially a grid
-        returns: xgrid, and a matrix of arrays where the i,j element is xin(i)-xgrid(j) 
-
-        """
-        #make xgrid based on modeldict:kern_grid or not
-        n=xin.shape[0]
-        makegrid=1
-        
-        if kern_grid=='no':
-            makegrid=0;xgrid=xin, 
-        #if kern_grid=='n': # not needed b/c default
-        if type(kern_grid) is int:
-            n=kern_grid
-        if makegrid==1:
-            xgrid=np.linspace(-3,3,n)
-            for idx in range(self.p-1)#-1 b/c xgrid already created; need to figure out how to better vectorize this loop
-                xgrid=np.concatenate(np.repeat(xgrid,n,axis=0),np.repeat(np.linspace(-3,3,n)[:,None],n**(idx+1),axis=0),axis=1)#need to check this!
-        self.makegrid=makegrid #save to help with masking
-        return makediffmat_itoj(xin,xgrid)
+    def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
+        agrid=np.linspace(-3,3,n) #assuming variables have been standardized
+            for idx in range(-1)#-1 b/c agrid already created; need to figure out how to better vectorize this loop
+                agrid=np.concatenate(np.repeat(agrid,n,axis=0),np.repeat(np.linspace(-3,3,n)[:,None],n**(idx+1),axis=0),axis=1)
+                #assertions added to check shape of output
+        return agrid
         
             
 
-    def makediffmat_itoj(self,xi,xj):
-        #return xi[:,None,:]-xj[None,:,:] #replaced with more flexible version
-        return np.expand_dims(xi,1)-np.expand_dims(xj,0) #check this
-            
-    def make_masks_smalln(self,max_ddiff):
             
                           
 
@@ -117,9 +128,9 @@ class kNdtool():
 
     
 
-    def make_ddiff_bign(self,x,ddiff_list,ddiff_exp,ddiff_kern,simple_h)
+    def make_Ndiff_bign(self,x,Ndiff_list,Ndiff_exp,Ndiff_kern,simple_h)
         """takes data and returns multidimensional differenced bandwidths
-        ddiff_list is a list of differences to include in bandwidths"""
+        Ndiff_list is a list of differences to include in bandwidths"""
         return
         
 
