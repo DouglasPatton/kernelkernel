@@ -29,3 +29,7 @@ hyper_params_out=mk.kNdtool.optimize_hyper_params(mk.MY_KDEreg,data,optimizedict
 
 
 
+#find values for hyperparameters
+kNdtool.optimize_hyper_params(ydata,xdata,optimizedict1)
+
+#plot 

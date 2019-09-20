@@ -3,61 +3,48 @@ from scipy.optimize import minimize
 
 class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
-    self.doKDE() returns a joint density estimate for the grid or points entered based on user specified model features
 
     """
-    '''#delete this init section?
-    def __init__(self,data,grid=None,optimize_dict=None):
-        self.x=xdata
-        self.n=np.shape(xdata)[0]
-        self.p=np.shape(xdata)[1]
-    '''
 
-    def optimize_hyper_params(self,main_function,ydata,xdata,optimizedict):
-        self.xmean=np.mean(xdata,axis=0)
-        self.ymean=np.mean(ydata,axis=0)
-        self.xstd=np.std(xdata,axis=0)
-        self.ystd=np.std(ydata,axis=0)
-        xdata_std=(xdata-self.xmean)/self.xstd
-        ydata_std=(ydata-self.ymean)/self.ystd
+    def max_Ndiff_datastacker(self,xdata_std,xout,max_Ndiff):
+        """take 2 arrays expands their last and second to last dimensions,
+        respectively, then repeats into that dimension, then takes differences
+        between the two and saves those differences to a list.
+        """
+        xstack=xdata_std
+        xoutstack=xout
+        nout=xout.shape[0]
+        Ndifflist=[]
+        for ii in range(max_Ndiff):
+            xstack=np.repeat(np.expand_dims(xstack,ii+1),self.nout,axis=ii+1)
+            xoutstack=np.repeat(np.expand_dims(xoutstack,ii),self.n,axis=ii)
+            Ndifflist.append(xstack-xoutstack)
+        return Ndifflist
+        
+    def optimize_hyper_params(self,ydata,xdata,optimizedict):
+        self.n,self.p=xdata.shape
+        assert ydata.shape[0]==xdata.shape[0],'x and y do not match in dimension 0'
 
-        #First extract optimization information, including modeling information in model dict,
+        #standardize x and y
+        xdata_std,ydata_std=standardize_xy(xdata,ydata)
+        
+        #extract optimization information, including modeling information in model dict,
         #param structure in model dict, and param values in paramdict
         modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
         model_param_formdict=modeldict['hyper_param_form_dict']
         kerngrid=modeldict['kern_grid']
         max_Ndiff=modeldict['max_Ndiff']
-        
-        param_valdict=optimizedict['hyper_param_dict']
         method=optimize_dict['method']
-        free_paramlist=param_valdict['p_bandwidth']
+        param_valdict=optimizedict['hyper_param_dict']
+        free_paramlist=param_valdict['p_bandwidth']#not flexible yet
 
-        self.n,self.p=xdata.shape
+        #prep out data as grid or original dataset
+        xout,xyout=prep_out_grid(kerngrid,xdata_std,ydata_std)
+    
+        #for small data pre-build multi dimensional differences and masks and masks to differences.
+        Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff)
 
-        #for small data, pre-create the 'grid'/out data  and Ndiffs
-        if type(kerngrid) is int:
-            xout=MY_KDE_gridprep_smalln(kerngrid,self.p)
-            assert xout.shape[1]==self.p,'xout has wrong number of columns'
-            assert xout.shape[0]==kerngrid**self.p,'xout has wrong number of rows'
-
-            xyout=MY_KDE_gridprep_smalln(kerngrid,self.p+1)
-            assert xyout.shape[1]==self.p+1,'xyout has wrong number of columns'
-            assert xyout.shape[0]==kerngrid**(self.p+1),'xyout has wrong number of rows'
-            self.outgrid='yes'
-        if kerngrid=='no'
-            xout=xdata_std;
-            xyout=np.concatenate(xdata_std,ydata_std,axis=1)
-            self.outgrid='no'
-
-        #for small data pre-build multi dimensional differences and masks and apply them.
         
-        xstack=xdata_std
-        xoutstack=xout
-        Ndifflist=[]
-        for ii in range(max_Ndiff):
-            Ndifflist.append(makediffmat_itoj(xstack,xoutstack))
-            xstack=np.repeat(xstack,[:,None]
-                                             
                                            
                                         
         #parse args to pass to the main optimization function
@@ -104,8 +91,8 @@ class kNdtool():
 
     
     def MY_KDEregMSE(self,hyper_params,yin,xin,xgrid,onediffs,modeldict)
-    """moves hyper_params to first position of the obj function and then runs MY_KDEreg to fit the model
-    then returns MSE of the fit"""
+        """moves hyper_params to first position of the obj function and then runs MY_KDEreg to fit the model
+        then returns MSE of the fit"""
         print('starting optimization of hyperparameters')
         #is the masking approach sufficient for leave one out cross validation?
         #kern_grid='no' forces masking of self for predicting self
@@ -127,20 +114,34 @@ class kNdtool():
                 agrid=np.concatenate(np.repeat(agrid,n,axis=0),np.repeat(np.linspace(-3,3,n)[:,None],n**(idx+1),axis=0),axis=1)
                 #assertions added to check shape of output
         return agrid
+           
+
+    def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
+        #for small data, pre-create the 'grid'/out data  and Ndiffs
+        if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
+            if type(kerngrid) is int:
+                self.nout=kerngrid**self.p             
+                xout=MY_KDE_gridprep_smalln(kerngrid,self.p)
+                assert xout.shape[1]==self.p,'xout has wrong number of columns'
+                assert xout.shape[0]==kerngrid**self.p,'xout has wrong number of rows'
+
+                xyout=MY_KDE_gridprep_smalln(kerngrid,self.p+1)
+                assert xyout.shape[1]==self.p+1,'xyout has wrong number of columns'
+                assert xyout.shape[0]==kerngrid**(self.p+1),'xyout has wrong number of rows'
+                self.outgrid='yes'
+            if kerngrid=='no'
+                self.nout=self.n
+                xout=xdata_std;
+                xyout=np.concatenate(xdata_std,ydata_std,axis=1)
+                self.outgrid='no'
+        return xout,xyout              
         
-            
-
-            
-                          
-
-        
-
-    
-
-    def make_Ndiff_bign(self,x,Ndiff_list,Ndiff_exp,Ndiff_kern,simple_h)
-        """takes data and returns multidimensional differenced bandwidths
-        Ndiff_list is a list of differences to include in bandwidths"""
-        return
-        
+    def standardize_xy(self,xdata,ydata):
+        self.xmean=np.mean(xdata,axis=0)
+        self.ymean=np.mean(ydata,axis=0)
+        self.xstd=np.std(xdata,axis=0)
+        self.ystd=np.std(ydata,axis=0)
+        return (xdata-self.xmean)/self.xstd,(ydata-self.ymean)/self.ystd
 
 
+                             
