@@ -6,44 +6,79 @@ class kNdtool():
 
     """
 
+    def max_Ndiff_maskstacker(self,nout,nin,p,max_Ndiff):
+        "match the parameter structure of Ndifflist produced by max_Ndiff_datastacker
+        ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)
+        if self.outgrid=='no':
+            masklist=[nXnmask]
+        if self.outgrid=='yes':
+            masklist=[np.zero([nout,nin,p])]
+        
+        for ii in range(max_Ndiff-1)+1:#since the first mask has already been computed
+            maskpartlist=[]
+            for iii in range(ii+2):
+                maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))
+            masklist.append[np.ma.mask_or(maskpartlist)#syntax to merge masks
+                            
+        
+
     def max_Ndiff_datastacker(self,xdata_std,xout,max_Ndiff):
         """take 2 arrays expands their last and second to last dimensions,
         respectively, then repeats into that dimension, then takes differences
         between the two and saves those differences to a list.
+        xout_i-xin_j is the top level difference (N times) and from their it's always xin_j-xin_k, xin_k-xin_l.
+        Generally xin_j-xin_k have even probabilities, based on the sample, but
+        xgridi-xgridj or xgrid_j-xgrid_k have probabilities that must be calculated
+        later go back and make this more flexible and weight xgrids by probabilities and provide an option
         """
-        xstack=xdata_std
-        xoutstack=xout
+        
+        '''below, dim1 is like a child of dim0. for each item in dim0,we need to subtract
+        each item which vary along dim1 xout is copied over the new dimension for
+        the many times we will subtract xin from each one. later we will sum(or multiply
+        for produt kernels) over the rhs dimension (p), then multiply kernels/functions
+        of the remaining rhs dimensions until we have an nx1 (i.e., [n,]) array that is our
+        kernel for that obervation
+        '''
+        xoutstack=xout[:,None,:]
+        #the None layer of xinstack *should* (I think) be broadcast a
+        #different number of times at different uses below
+        xinstack=xdata_std[None,:,:]
+        xinstackT=xdata_std[:,None,:]
         nout=xout.shape[0]
-        Ndifflist=[]
-        for ii in range(max_Ndiff):
-            xstack=np.repeat(np.expand_dims(xstack,ii+1),self.nout,axis=ii+1)
-            xoutstack=np.repeat(np.expand_dims(xoutstack,ii),self.n,axis=ii)
-            Ndifflist.append(xstack-xoutstack)
+        Ndifflist=[xoutstack-xinstack]
+        for ii in range(max_Ndiff-1)+1:#since the first diff has already been computed
+            xinstack=np.repeat(np.expand_dims(xinstack,ii+1),self.n,axis=ii+1)
+            xinstackT=np.repeat(np.expand_dims(xinstackT,ii),self.n,axis=ii)
+            Ndifflist.append(xinstack-xinstackT)
         return Ndifflist
         
     def optimize_hyper_params(self,ydata,xdata,optimizedict):
         self.n,self.p=xdata.shape
+        self.optdict=optimizedict
+        
         assert ydata.shape[0]==xdata.shape[0],'x and y do not match in dimension 0'
 
-        #standardize x and y
+        #standardize x and y and save their means and std to self
         xdata_std,ydata_std=standardize_xy(xdata,ydata)
-        
+        #store the standardized (by column or parameter,p) versions of x and y
+        self.xdata_std=xdata_std;self.ydata_std=ydata_std
         #extract optimization information, including modeling information in model dict,
-        #param structure in model dict, and param values in paramdict
+        #parametr structure in model dict, and starting free parameter values from paramdict
+        #these options are still not mature
         modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
         model_param_formdict=modeldict['hyper_param_form_dict']
         kerngrid=modeldict['kern_grid']
         max_Ndiff=modeldict['max_Ndiff']
         method=optimize_dict['method']
         param_valdict=optimizedict['hyper_param_dict']
-        free_paramlist=param_valdict['p_bandwidth']#not flexible yet
-
-        #prep out data as grid or original dataset
+        free_paramlist=param_valdict['p_bandwidth']#not flexible yet, add exponents later
+        
+        #prep out data as grid (over -3,3) or the original dataset
         xout,xyout=prep_out_grid(kerngrid,xdata_std,ydata_std)
     
-        #for small data pre-build multi dimensional differences and masks and masks to differences.
-        Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff)
-
+        #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
+        self.Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff)
+        self.Ndiff_masklist=max_Ndiff_maskstacker(self,nout,nin,max_Ndiff)
         
                                            
                                         
@@ -59,8 +94,9 @@ class kNdtool():
                 fixedparams.append(val)
             if model_param_formdict[key]='fixed':
                 non_negparams.append(val)'''
-           
-        args_tuple=(ydata_std,xdata_std,xgrid,ygrid,,self.onediffs,modeldict)#include N*N array, theonediffs since it will be used so many times.
+        
+        
+        args_tuple=(modeldict)
                 
         return minimize(MY_KDEregMSE,free_paramlist,args=args_tuple,method=method) 
 
@@ -99,6 +135,8 @@ class kNdtool():
         if modeldict['Kh_form']=='exp_l2'
             xin=np.product(xin,hyper_params[:-p]**-1)
             onediffs=np.product(onediffs,hyper_params[:-p])
+        #here is the simple MSE objective function. however, I think I need to use
+        #the more sophisticated MISE or mean integrated squared error
         return np.sum((yin-MY_KDEreg(yin,xin,xin,hyper_params,onediffs,modeldict))**2)
         
     
@@ -119,6 +157,7 @@ class kNdtool():
     def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
         #for small data, pre-create the 'grid'/out data  and Ndiffs
         if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
+            self.data_is_small='yes'
             if type(kerngrid) is int:
                 self.nout=kerngrid**self.p             
                 xout=MY_KDE_gridprep_smalln(kerngrid,self.p)

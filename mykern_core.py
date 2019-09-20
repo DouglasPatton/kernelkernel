@@ -7,10 +7,17 @@ so we can smooth it and compare to real dist or use 2 dimensions to predict the 
 #create modeldict for 1 layer of Ndiffs,
 #product of kernels of each parameter (as in liu and yang eq1.)
 n,p=data1.shape
-modeldict1={'max_Ndiff':2, 'kern_grid':'no', 'Ndiff_kern':gaussian,//
-            'Kh_form':'exp_l2'  'hyper_param_form_dict'://
-            {'Ndiff_exp':'fixed','p_bandwidth':'non-neg']}
-            }
+modeldict1={
+    'max_Ndiff':2,
+    'kern_grid':'no',
+    'Ndiff_kern':gaussian,
+    'Kh_form':'exp_l2'
+    'hyper_param_form_dict':{
+        'Ndiff_exp':'fixed',
+        'p_bandwidth':'non-neg'
+        }
+    }
+    
 #exp_l2 means take the l2 ("el two") norm across all parameters and then plug into the kernel (diff from liu and yang)
 #x_params:full means each plus constant;
     #each means 1 hyper parameter per column of data
@@ -24,12 +31,18 @@ hyper_paramdict1={'Ndiff_exp':np.array([-1,1]),'p_bandwidth':np.ones([p,]),//
 #regression parameter as in liu and yang eq1
 optimizedict1={'method':'Nelder-Mead','hyper_param_dict':hyper_paramdict1,'model_dict':modeldict1}
 
-
-hyper_params_out=mk.kNdtool.optimize_hyper_params(mk.MY_KDEreg,data,optimizedict1)#this needs to store hyperparameters 
-
-
-
+#------Calibrate/Optimize--------
 #find values for hyperparameters
-kNdtool.optimize_hyper_params(ydata,xdata,optimizedict1)
+optimized_Ndiff_kernel=kNdtool.optimize_hyper_params(ydata,xdata,optimizedict1)
 
-#plot 
+'''
+#plot and compare
+on synthetic data, 1, 2, 3+ mixed distributions
+1d - Ndiff vs gaussian kernel vs kernel_tunneling
+2d -  
+
+
+multidimensional x problem
+e.g., parameter treatment
+"product kernel approach" vs l2 "el two" distance 
+'''
