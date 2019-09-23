@@ -19,11 +19,12 @@ class kNdtool():
             for iii in range(ii+2):
                 maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))
             masklist.append[np.ma.mask_or(maskpartlist)#syntax to merge masks
-                            
+        return masklist                    
         
 
     def max_Ndiff_datastacker(self,xdata_std,xout,max_Ndiff):
-        """take 2 arrays expands their last and second to last dimensions,
+        """Broadcasting makes this code unnecessary. pre-Masking is sufficient.
+        take 2 arrays expands their last and second to last dimensions,
         respectively, then repeats into that dimension, then takes differences
         between the two and saves those differences to a list.
         xout_i-xin_j is the top level difference (N times) and from their it's always xin_j-xin_k, xin_k-xin_l.
@@ -75,11 +76,12 @@ class kNdtool():
         
         #prep out data as grid (over -3,3) or the original dataset
         xout,xyout=prep_out_grid(kerngrid,xdata_std,ydata_std)
-    
+        self.xout=xout;self.xyout=xyout
+                    
         #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
-        self.Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff)
+        #self.Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff) 
         self.Ndiff_masklist=max_Ndiff_maskstacker(self,nout,nin,max_Ndiff)
-        
+        self.Ndiff=makediffmat_itoj(xout,xdata_std)
                                            
                                         
         #parse args to pass to the main optimization function
@@ -98,7 +100,7 @@ class kNdtool():
         
         args_tuple=(modeldict)
                 
-        return minimize(MY_KDEregMSE,free_paramlist,args=args_tuple,method=method) 
+        return minimize(MY_KDEregMISE,free_paramlist,args=args_tuple,method=method) 
 
 
     def makediffmat_itoj(self,xi,xj):
@@ -155,7 +157,7 @@ class kNdtool():
            
 
     def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
-        #for small data, pre-create the 'grid'/out data  and Ndiffs
+        #for small data, pre-create the 'grid'/out data 
         if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
             self.data_is_small='yes'
             if type(kerngrid) is int:
