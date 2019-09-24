@@ -21,21 +21,27 @@ modeldict1={
         }
     }
     
-#exp_l2 means take the l2 ("el two") norm across all parameters and then plug into the kernel (diff from liu and yang)
-#x_params:full means each plus constant;
-    #each means 1 hyper parameter per column of data
+#Kh_form: exp_l2 means take the l2 ("el two") norm across all parameters and then plug into the kernel (diff from liu and yang)
+    #'product' means use product kernel like as in liu and yang eq1. and 1
+
 #kern_grid if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
     #'no' means use original data, which is useful for calibrating hyper parameters
+#hyper_param_form_dict is a nested dictionary
+
+
+
+#------------------------------------------
+#-----starting hyper parameter values------
 hyper_paramdict1={
     'Ndiff_exp':np.array([-1,1]),
     'p_bandwidth':np.ones([p,]),
     'all_x_bandwidth':0.3,
-    'y_bandwidth'=0.3)
+    'all_y_bandwidth'=0.3)
                   }
 
 #create hyper parameter optimization
 #with 1 bandwidth-hyperparameter per
-#regression parameter as in liu and yang eq1
+#regression parameter 
 optimizedict1={'method':'Nelder-Mead','hyper_param_dict':hyper_paramdict1,'model_dict':modeldict1}
 
 #------Calibrate/Optimize--------

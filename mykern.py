@@ -5,17 +5,39 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
+    def xNdiff_BWmaker(self
+
     def xBWmaker(self,max_Ndiff,masklist,Ndiffs,Ndiff_exp_params,free_paramlist,Kh_form):
-        if Kh_form=='exp_l2'
-        for ii in self.Ndiff_masklist:
-            np.broadcast_to(self.Ndiff
+        """using short version of calculating sums of squares with increasing left out observations
+        """
+        if Kh_form=='exp_l2':
+            #Ndiffwt_list=[]
             
+            if self.outgrid=='yes':
+                Ndiffsumsq=np.sum(np.ma.array(np.square(Ndiffs),mask=np.eye(Ndiff.shape[0])),axis=1)
+            if self.outgrid=='no':
+                Ndiffsumsq=np.sum(np.square(Ndiffs),axis=1))
+                                   
+            Ndiffwt_list=[Ndiffsum]    
+            for ii in range(max_Ndiff):
+                Ndiffwt_list.append(Ndiffsum.broadcast_to)
+            
+            
+                       
+        
+
+
+
+        #for ii in masklist:
+         #   np.ma.array(np.broadcast_to(self.Ndiff,self.Ndiff_masklist[ii]),mask=masklist
+            #switching to subtraction version of coming up with sums of differences with progressive exclusions
         
         
-    def max_Ndiff_maskstacker(self,nout,nin,p,max_Ndiff):
+    def max_Ndiff_maskstacker(self,nout,nin,p,max_Ndiff,modeldict_):
         "match the parameter structure of Ndifflist produced by max_Ndiff_datastacker
         ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)
-        #change p to 1 if using Kh_form==exp_l2
+        #change p to 1 if using Kh_form==exp_l2 because parameters will be collapsed before mask is applied
+        if Kh_form==exp_l2:p=1;
         if self.outgrid=='no':
             masklist=[ninmask]
         if self.outgrid=='yes':
@@ -33,10 +55,10 @@ class kNdtool():
         
     def optimize_hyper_params(self,ydata,xdata,optimizedict):
         """This is the method for iteratively running kernelkernel to optimize hyper parameters
-        optimize dict contains starting values for free parameters, hyper-parameter structure(not working),
-        and a model dict that describes which model to run including how hyper-parameters enter (not working)
+        optimize dict contains starting values for free parameters, hyper-parameter structure(not flexible),
+        and a model dict that describes which model to run including how hyper-parameters enter (partiall flexible)
         speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
-        list of centered data points.
+        list of centered data points. see mykern_core for an example and explanation of dictionaries.
         Flexibility is also a goal. max_Ndiff is the deepest the model goes.
         ------------------
         attributes created
