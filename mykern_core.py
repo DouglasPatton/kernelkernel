@@ -9,6 +9,7 @@ so we can smooth it and compare to real dist or use 2 dimensions to predict the 
 n,p=data1.shape
 modeldict1={
     'max_Ndiff':2,
+    'normalize_ndiffwtsum:'all',
     'kern_grid':'no',
     'Ndiff_kern':gaussian,
     'Kh_form':'exp_l2'
@@ -23,7 +24,7 @@ modeldict1={
     #each means 1 hyper parameter per column of data
 #kern_grid if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
     #'no' means use original data, which is useful for calibrating hyper parameters
-hyper_paramdict1={'Ndiff_exp':np.array([-1,1]),'p_bandwidth':np.ones([p,]),//
+hyper_paramdict1={'Ndiff_exp':np.array([-1,1]),'p_bandwidth':np.ones([p,])//
                   }
 
 #create hyper parameter optimization

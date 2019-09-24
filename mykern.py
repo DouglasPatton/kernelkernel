@@ -5,7 +5,10 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
-
+    def xBWmaker(self,free_paramlist,):
+        for ii in self.Ndiff_masklist
+        
+        
     def max_Ndiff_maskstacker(self,nout,nin,p,max_Ndiff):
         "match the parameter structure of Ndifflist produced by max_Ndiff_datastacker
         ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)
@@ -17,43 +20,30 @@ class kNdtool():
         for ii in range(max_Ndiff-1)+1:#since the first mask has already been computed
             maskpartlist=[]
             for iii in range(ii+2):
-                maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))
+                maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))#use broacast_to instead of repeat?
             masklist.append[np.ma.mask_or(maskpartlist)#syntax to merge masks
         return masklist                    
         
 
-    def max_Ndiff_datastacker(self,xdata_std,xout,max_Ndiff):
-        """Broadcasting makes this code unnecessary. pre-Masking is sufficient.
-        take 2 arrays expands their last and second to last dimensions,
-        respectively, then repeats into that dimension, then takes differences
-        between the two and saves those differences to a list.
-        xout_i-xin_j is the top level difference (N times) and from their it's always xin_j-xin_k, xin_k-xin_l.
-        Generally xin_j-xin_k have even probabilities, based on the sample, but
-        xgridi-xgridj or xgrid_j-xgrid_k have probabilities that must be calculated
-        later go back and make this more flexible and weight xgrids by probabilities and provide an option
-        """
-        
-        '''below, dim1 is like a child of dim0. for each item in dim0,we need to subtract
-        each item which vary along dim1 xout is copied over the new dimension for
-        the many times we will subtract xin from each one. later we will sum(or multiply
-        for produt kernels) over the rhs dimension (p), then multiply kernels/functions
-        of the remaining rhs dimensions until we have an nx1 (i.e., [n,]) array that is our
-        kernel for that obervation
-        '''
-        xoutstack=xout[:,None,:]
-        #the None layer of xinstack *should* (I think) be broadcast a
-        #different number of times at different uses below
-        xinstack=xdata_std[None,:,:]
-        xinstackT=xdata_std[:,None,:]
-        nout=xout.shape[0]
-        Ndifflist=[xoutstack-xinstack]
-        for ii in range(max_Ndiff-1)+1:#since the first diff has already been computed
-            xinstack=np.repeat(np.expand_dims(xinstack,ii+1),self.n,axis=ii+1)
-            xinstackT=np.repeat(np.expand_dims(xinstackT,ii),self.n,axis=ii)
-            Ndifflist.append(xinstack-xinstackT)
-        return Ndifflist
+    
         
     def optimize_hyper_params(self,ydata,xdata,optimizedict):
+        """This is the method for iteratively running kernelkernel to optimize hyper parameters
+        optimize dict contains starting values for free parameters, hyper-parameter structure(not working),
+        and a model dict that describes which model to run including how hyper-parameters enter (not working)
+        speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
+        list of centered data points.
+        Flexibility is also a goal. max_Ndiff is the deepest the model goes.
+        ------------------
+        attributes created
+        self.n,self.p,self.optdict 
+        self.xdata_std, self.xmean,self.xstd
+        self.ydata_std,self.ymean,self.ystd
+        self.Ndiff - the nout X nin X p matrix of first differences of xdata_std
+        self.Ndiff_masklist - a list of progressively higher dimension (len=nin) 
+            masks to broadcast(views) Ndiff to.
+        
+        """
         self.n,self.p=xdata.shape
         self.optdict=optimizedict
         
@@ -72,15 +62,18 @@ class kNdtool():
         max_Ndiff=modeldict['max_Ndiff']
         method=optimize_dict['method']
         param_valdict=optimizedict['hyper_param_dict']
-        free_paramlist=param_valdict['p_bandwidth']#not flexible yet, add exponents later
+        free_params=param_valdict['p_bandwidth']#not flexible yet, add exponents later
+        Ndiff_exp_params=param_valdict['Ndiff_exp']#fixed right now
+        fixed_paramdict={'Ndiff_exp_params':Ndiff_exp_params}#not flexible yet                   
         
         #prep out data as grid (over -3,3) or the original dataset
         xout,xyout=prep_out_grid(kerngrid,xdata_std,ydata_std)
-        self.xout=xout;self.xyout=xyout
+        self.xin=xdata_std,self.yin=ydata_std
+        self.xout=xout;self.yxout=yxout
                     
         #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
         #self.Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff) 
-        self.Ndiff_masklist=max_Ndiff_maskstacker(self,nout,nin,max_Ndiff)
+        self.Ndiff_masklist=max_Ndiff_maskstacker(self,nout,nin,max_Ndiff)#do I need to save yxin?
         self.Ndiff=makediffmat_itoj(xout,xdata_std)
                                            
                                         
@@ -98,9 +91,9 @@ class kNdtool():
                 non_negparams.append(val)'''
         
         
-        args_tuple=(modeldict)
+        args_tuple=(yxin,yxout,xin,xout,modeldict,fixed_paramdict)
                 
-        return minimize(MY_KDEregMISE,free_paramlist,args=args_tuple,method=method) 
+        return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method) 
 
 
     def makediffmat_itoj(self,xi,xj):
@@ -109,8 +102,7 @@ class kNdtool():
         r=xi.ndim
         return np.expand_dims(xi,r)-np.expand_dims(xj,r-1) #check this xj-xi where j varies for each i
             
-    def make_masks_smalln(self,max_Ndiff):
-
+    
 
     def doX_KDEsmalln(self,xin,xout,xbw,modeldict):
         """estimate the density of xout using data xin and weights, xbw
@@ -121,14 +113,14 @@ class kNdtool():
         nout,pout=xout.shape;nin,pin=xin.shape
         assert pout==pin,'xout and xin have different numbers of parameters'
         assert np.shape(xin)[-1]==len(w),'len(w) does not match length of last dimension of xin'
-
-        if grid=='no': xmask=np.eye(nin, dtype=int)
+        BW=
+        
     
     #def doYX_KDEsmalln(self,yin,xin,xout,ybw,xbw,modeldict):
         
 
     
-    def MY_KDEregMSE(self,hyper_params,yin,xin,xgrid,onediffs,modeldict)
+    def MY_KDEregMSE(self,hyper_params,yxin,yxout,xin,xout,modeldict,fixed_paramdict)
         """moves hyper_params to first position of the obj function and then runs MY_KDEreg to fit the model
         then returns MSE of the fit"""
         print('starting optimization of hyperparameters')
@@ -136,10 +128,14 @@ class kNdtool():
         #kern_grid='no' forces masking of self for predicting self
         if modeldict['Kh_form']=='exp_l2'
             xin=np.product(xin,hyper_params[:-p]**-1)
+            xout=np.product(xout,hyper_params[:-p]**-1)
+            yxin[]=np.product(xin,hyper_params[:-p]**-1)
+            yxout=np.product(xout,hyper_params[:-p]**-1)
+                            
             onediffs=np.product(onediffs,hyper_params[:-p])
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error
-        return np.sum((yin-MY_KDEreg(yin,xin,xin,hyper_params,onediffs,modeldict))**2)
+        return np.sum((yin-MY_KDEreg(yxin,yxout,xin,xout,hyper_params,onediffs,modeldict))**2)
         
     
     def MY_KDEreg(self,yin,xin,xpredict,hyper_params,modeldict):
