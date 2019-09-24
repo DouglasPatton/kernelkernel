@@ -5,22 +5,27 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
-    def xNdiff_BWmaker(self
+    
 
     def xBWmaker(self,max_Ndiff,masklist,Ndiffs,Ndiff_exp_params,free_paramlist,Kh_form):
         """using short version of calculating sums of squares with increasing left out observations
         """
         if Kh_form=='exp_l2':
             #Ndiffwt_list=[]
-            
-            if self.outgrid=='yes':
-                Ndiffsumsq=np.sum(np.ma.array(np.square(Ndiffs),mask=np.eye(Ndiff.shape[0])),axis=1)
+            n=Ndiffs.shape[0]
             if self.outgrid=='no':
+                diffsumsq=np.sum(np.square(Ndiffs),axis=1))#don't need to subtract i=j from sum b/c 0 always
+                n=n-1
+                #Ndiffsumsq=np.sum(np.ma.array(np.square(Ndiffs),mask=np.eye(n),axis=1)
+            if self.outgrid=='yes':#smoothing to a grid, so no points dropped
                 Ndiffsumsq=np.sum(np.square(Ndiffs),axis=1))
-                                   
-            Ndiffwt_list=[Ndiffsum]    
+                n_ijk=n
+            Ndiffwt_list=[Ndiffsumsq]
+            Ndiffwt_subtract=[Ndiffsumsq]
             for ii in range(max_Ndiff):
-                Ndiffwt_list.append(Ndiffsum.broadcast_to)
+                
+                Ndiffwt_list.append((Ndiffwt_list[ii]*(n-1))- Ndiffwt_subtract#check syntax on this
+                n_ijk-=1
             
             
                        
@@ -105,7 +110,7 @@ class kNdtool():
         #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
         #self.Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff) 
         self.Ndiff_masklist=max_Ndiff_maskstacker(self,nout,nin,max_Ndiff)#do I need to save yxin?
-        self.Ndiff=makediffmat_itoj(xout,xdata_std)
+        self.Ndiff=makediffmat_itoj(xout,xdata_std)#xout is already standardized
                                            
                                         
         #parse args to pass to the main optimization function
