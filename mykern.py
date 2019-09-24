@@ -23,7 +23,7 @@ class kNdtool():
             Ndiffwt_list=[Ndiffsumsq]
             Ndiffwt_subtract=[Ndiffsumsq]
             for ii in range(max_Ndiff):
-                
+                Ndiffwt_subtract.append(Ndiffwt_subtract[ii]*n
                 Ndiffwt_list.append((Ndiffwt_list[ii]*(n-1))- Ndiffwt_subtract#check syntax on this
                 n_ijk-=1
             
