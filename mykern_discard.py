@@ -33,3 +33,26 @@ def max_Ndiff_datastacker(self,xdata_std,xout,max_Ndiff):
             xinstackT=np.repeat(np.expand_dims(xinstackT,ii),self.n,axis=ii)
             Ndifflist.append(xinstack-xinstackT)
         return Ndifflist
+
+'''after writing it out, it seems that I do need the vectorized Ndiffstacker and its mask counterpart afterall.
+'''
+def xBWmaker(self,max_Ndiff,masklist,Ndiffs,Ndiff_exp_params,free_paramlist,Kh_form):
+        """using short version of calculating sums of squares with increasing left out observations
+        """
+        if Kh_form=='exp_l2':
+            #Ndiffwt_list=[]
+            n=Ndiffs.shape[0]
+            if self.outgrid=='no':
+                diffsumsq=np.sum(np.square(Ndiffs),axis=1))#don't need to subtract i=j from sum b/c 0 always
+                n=n-1
+                #Ndiffsumsq=np.sum(np.ma.array(np.square(Ndiffs),mask=np.eye(n),axis=1)
+            if self.outgrid=='yes':#smoothing to a grid, so no points dropped
+                Ndiffsumsq=np.sum(np.square(Ndiffs),axis=1))
+                n_ijk=n
+            Ndiffwt_list=[Ndiffsumsq]
+            Ndiffwt_subtract=[Ndiffsumsq]
+            for ii in range(max_Ndiff):
+                Ndiffwt_subtract.append(Ndiffwt_subtract[ii]*n
+                Ndiffwt_list.append((Ndiffwt_list[ii]*(n-1))- Ndiffwt_subtract#check syntax on this
+                n_ijk-=1
+            

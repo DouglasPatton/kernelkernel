@@ -1,6 +1,6 @@
 import mykern as mk
 
-data1=generate 1+ 3dimensional joint random distributions //
+data1=generate mixed 3dimensional joint random distributions //
 so we can smooth it and compare to real dist or use 2 dimensions to predict the 3rd.
 
 
@@ -12,7 +12,8 @@ modeldict1={
     'normalize_ndiffwtsum':'all',
     'kern_grid':'no',
     'Ndiff_kern':'gaussian',
-    'Kh_form':'exp_l2'
+    'Kh_form':'exp_l2',
+    'regression_model':'NW'
     'hyper_param_form_dict':{
         'Ndiff_exp':'fixed',
         'p_bandwidth':'non-neg',
@@ -23,7 +24,8 @@ modeldict1={
     
 #Kh_form: exp_l2 means take the l2 ("el two") norm across all parameters and then plug into the kernel (diff from liu and yang)
     #'product' means use product kernel like as in liu and yang eq1. and 1
-
+#'regression_model':'NW' means use nadaraya-watson kernel regression
+    #'full_logit'
 #kern_grid if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
     #'no' means use original data, which is useful for calibrating hyper parameters
 #hyper_param_form_dict is a nested dictionary
@@ -44,8 +46,8 @@ hyper_paramdict1={
 #regression parameter 
 optimizedict1={'method':'Nelder-Mead','hyper_param_dict':hyper_paramdict1,'model_dict':modeldict1}
 
-#------Calibrate/Optimize--------
-#find values for hyperparameters
+#-----------------Calibrate/Optimize--------
+#-------find values for hyperparameters-----
 optimized_Ndiff_kernel=kNdtool.optimize_hyper_params(ydata,xdata,optimizedict1)
 
 '''
