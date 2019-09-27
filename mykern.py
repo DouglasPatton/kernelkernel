@@ -6,7 +6,7 @@ class kNdtool():
 
     """
 
-    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern,normalization):
+    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern,normalization=None,bw_prod_kern_hyper_params=None):
         """returns an nout X nin np.array of bandwidths
         """
         for depth in range(max_bw_Ndiff,0,-1)#start at deepest Ndiff and work to front
@@ -14,18 +14,23 @@ class kNdtool():
             #tupe construction algorithm in max_Ndiff_datastacker(), there are the first two dimensions that are from the
             #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
             #collapsing with np.ma.sum. 
-            n_depth_mean=np.ma.sum(np.ma.array(max_Ndiff_datastacker(Ndiffs,depth),mask=self.Ndiff_masklist[depth]),axis=depth+1)
+            n_depth_masked_sum=np.ma.sum(np.ma.array(max_Ndiff_datastacker(Ndiffs,depth),mask=self.Ndiff_masklist[depth]),axis=depth+1)
+            n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum)
+    
                 if normalization=='own_n':
 
                 if normalization=='across':
                     np.ma.sum(
-            
+        if Ndiff_bw_kern=='product':
+            n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,bw_prod_kern_hyper_params)
         
         #normalization options can be implemented after each sum. two obvious options
         #are to divide by the sum across the same level or divide by the number of observations at the same level.
         #perhaps an extension could be to normalize by sums at other levels.
 
-
+    def do_bw_kern(self,kern_choice,maskeddata,bw_prod_kern_hyper_params=None):
+            if kern_choice=="product":
+                return np.ma.product(bw_prod_kern_hyper_params*snp.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.dim)
         
     def max_Ndiff_datastacker(self,Ndiffs,depth):
         """After working on two other approaches, I think this approach to replicating the differences with views via
@@ -186,10 +191,11 @@ class kNdtool():
             Ndiff_exponent=fixed_paramdict['Ndiff_exponent']
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
-        normalization=modeldict['normalize_Ndiffwtsum']                                                   
+        normalization=modeldict['normalize_Ndiffwtsum']
+        bw_prod_kern_hyper_params=hyper_params[:-self.p]
         xBWmaker(
             max_bw_Ndiff,self.Ndiff_masklist,onediffs,
-            Ndiff_exponent,Ndiff_bw_kern,normalization
+            Ndiff_exponent,Ndiff_bw_kern,normalization,bw_prod_kern_hyper_params
             )
                             
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
