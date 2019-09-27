@@ -7,53 +7,24 @@ class kNdtool():
     """
 
     def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern):
-        
+        """returns an nout X nin np.array of bandwidths
+        """
+        for depth in range(max_bw_Ndiff,0,-1)
+        np.ma.array(max_Ndiff_datastacker(Ndiffs,depth),mask-self.Ndiff_masklist[depth]
 
 
 
         
-    def max_Ndiff_datastacker_new(self,Ndiffs,max_bw_Ndiff):
-        Ndiff_shape=Ndiffs.shape[]
-        np.brodcast_to(Ndiffs, 
+    def max_Ndiff_datastacker_new(self,Ndiffs,depth):
+        #prepare tuple indicating shape to broadcast to
+        Ndiff_shape=Ndiffs.shape()
+        Ndiff_shape_out=Ndiff_shape[0:1]+(Ndiff_shape[1],)*depth
+        if len(Ndiff_shape==3):#if parameter dimension hasn't been collapsed yet, keep it at end
+        Ndiff_shape_out=Ndiff_shape_out+Ndiff_shape[3]
+        return np.brodcast_to(Ndiffs,Ndiff_shape_out)
          
     
-    def max_bw_Ndiff_datastacker_old(self,xdata_std,xout,max_bw_Ndiff):
-        """
-        take 2 arrays expands their last and second to last dimensions,
-        respectively, then repeats into that dimension, then takes differences
-        between the two and saves those differences to a list.
-        xout_i-xin_j is the top level difference (N times) and from their it's always xin_j-xin_k, xin_k-xin_l.
-        Generally xin_j-xin_k have even probabilities, based on the sample, but
-        xgridi-xgridj or xgrid_j-xgrid_k have probabilities that must be calculated
-        later go back and make this more flexible and weight xgrids by probabilities and provide an option
-        """
-        
-        '''below, dim1 is like a child of dim0. for each item in dim0,we need to subtract
-        each item which vary along dim1 xout is copied over the new dimension for
-        the many times we will subtract xin from each one. later we will sum(or multiply
-        for produt kernels) over the rhs dimension (p), then multiply kernels/functions
-        of the remaining rhs dimensions until we have an nx1 (i.e., [n,]) array that is our
-        kernel for that obervation
-        '''
-        xoutstack=xout[:,None,:]
-        xinstack=xdata_std[None,:,:]
-        xinstackT=xdata_std[:,None,:]
-        nout=xout.shape[0]
-        Ndifflist=[xoutstack-xinstack]
-        for ii in range(max_bw_Ndiff-1)+1:#since the first diff has already been computed
-            #xinstack=np.repeat(np.expand_dims(xinstack,ii+1),self.n,axis=ii+1)
-            xinstack=np.broadcast_to(xinstack,xinstack.shape())
-            xinstackT=np.repeat(np.expand_dims(xinstackT,ii),self.n,axis=ii)
-            Ndifflist.append(xinstack-xinstackT)
-        return Ndifflist
-    
-"""         
-        #for ii in masklist:
-         #   np.ma.array(np.broadcast_to(self.Ndiff,self.Ndiff_masklist[ii]),mask=masklist
-            #switching to subtraction version of coming up with sums of differences with progressive exclusions
-"""        
-        
-    def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict_):
+        def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict_):
         "match the parameter structure of Ndifflist produced by max_bw_Ndiff_datastacker
         ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)
         #change p to 1 if using Ndiff_bw_kern==rbfkern because parameters will be collapsed before mask is applied

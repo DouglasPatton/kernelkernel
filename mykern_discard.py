@@ -55,4 +55,4 @@ def xBWmaker(self,max_Ndiff,masklist,Ndiffs,Ndiff_exp_params,free_paramlist,Kh_f
                 Ndiffwt_subtract.append(Ndiffwt_subtract[ii]*n
                 Ndiffwt_list.append((Ndiffwt_list[ii]*(n-1))- Ndiffwt_subtract#check syntax on this
                 n_ijk-=1
-            
+d
