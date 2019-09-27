@@ -51,8 +51,12 @@ class kNdtool():
         
         for ii in range(max_bw_Ndiff-1)+1:#since the first mask has already been computed
             maskpartlist=[]
-            for iii in range(ii+2):
-                maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))#use broacast_to instead of repeat?
+            for iii in range(2,ii+2,1):#does this need to start at 2?
+                #use broacast_to instead of repeat?
+                #when i insert a new dimension, I'm effectively transposing
+                #but not sure if this is quite right. Do I need to broadcast to
+                maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))
+                ninmask=np.repeat(np.expand_dim(ninmask,ninmask.dim),nin,axis=ninmask.dim)#need to think about this carefully
             masklist.append[np.ma.mask_or(maskpartlist)#syntax to merge masks
         return masklist                    
         
