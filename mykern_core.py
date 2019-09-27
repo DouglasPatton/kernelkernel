@@ -15,7 +15,7 @@ modeldict1={
     'Ndiff_bw_kern':'rbfkern',
     'regression_model':'NW'
     'hyper_param_form_dict':{
-        'Ndiff_exp':'fixed',
+        'Ndiff_exponent':'fixed',
         'p_bandwidth':'non-neg',
         'all_x_bandwidth':'non-neg'
         'all_y_bandwidth':'non-neg'
@@ -44,7 +44,7 @@ modeldict1={
 #------------------------------------------
 #-----starting hyper parameter values------
 hyper_paramdict1={
-    'Ndiff_exp':np.array([-1,1]),
+    'Ndiff_exponent':np.array([-1,1]),
     'p_bandwidth':np.ones([p,]),
     'all_x_bandwidth':0.3,
     'all_y_bandwidth'=0.3)

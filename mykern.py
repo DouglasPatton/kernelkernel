@@ -6,9 +6,15 @@ class kNdtool():
 
     """
 
+    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern):
+        
 
-    def mas_Ndiff_datastacker_new(self,Ndiffs,max_bw_Ndiff):
-         
+
+
+        
+    def max_Ndiff_datastacker_new(self,Ndiffs,max_bw_Ndiff):
+        Ndiff_shape=Ndiffs.shape[]
+        np.brodcast_to(Ndiffs, 
          
     
     def max_bw_Ndiff_datastacker_old(self,xdata_std,xout,max_bw_Ndiff):
@@ -35,7 +41,7 @@ class kNdtool():
         nout=xout.shape[0]
         Ndifflist=[xoutstack-xinstack]
         for ii in range(max_bw_Ndiff-1)+1:#since the first diff has already been computed
-            xinstack=np.repeat(np.expand_dims(xinstack,ii+1),self.n,axis=ii+1)
+            #xinstack=np.repeat(np.expand_dims(xinstack,ii+1),self.n,axis=ii+1)
             xinstack=np.broadcast_to(xinstack,xinstack.shape())
             xinstackT=np.repeat(np.expand_dims(xinstackT,ii),self.n,axis=ii)
             Ndifflist.append(xinstack-xinstackT)
@@ -108,8 +114,9 @@ class kNdtool():
         free_params=np.concatenate(param_valdict['all_x_bandwidth'],free_params,axis=0)#two more parameters for x and y
         free_params=np.concatenate(param_valdict['all_y_bandwidth'],free_params,axis=0)                            
 
-        Ndiff_exp_params=param_valdict['Ndiff_exp']#fixed right now
-        fixed_paramdict={'Ndiff_exp_params':Ndiff_exp_params}#not flexible yet                   
+        Ndiff_exponent=param_valdict['Ndiff_exponent']#fixed right now
+        if model_param_formdict['Ndiff_exponent']=='fixed':                 
+            fixed_paramdict={'Ndiff_exponent':Ndiff_exponent}#not flexible yet                   
         
         #prep out data as grid (over -3,3) or the original dataset
         xout,yxout=prep_out_grid(kerngrid,xdata_std,ydata_std)
@@ -119,7 +126,7 @@ class kNdtool():
         #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
         #self.Ndifflist=max_bw_Ndiff_datastacker(xdata_std,xout,max_bw_Ndiff) 
         self.Ndiff_masklist=max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)#do I need to save yxin?
-        self.Ndiff=makediffmat_itoj(xout,xdata_std)#xout is already standardized
+        #self.Ndiff=makediffmat_itoj(xout,xdata_std)#xout is already standardized; doing this inside optimization now
                                            
                                         
         #parse args to pass to the main optimization function
@@ -140,6 +147,62 @@ class kNdtool():
                 
         return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method) 
 
+
+            
+
+    
+    def MY_KDEregMSE(self,hyper_params,yxin,yxout,xin,xout,modeldict,fixed_paramdict):
+        """moves hyper_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
+            then returns MSE of the fit 
+        Assumes last p elements of hyper_params are the scale parameters for 'el two' approach to
+        columns of x.
+        """
+        print('starting optimization of hyperparameters')
+        #is the masking approach sufficient for leave one out cross validation?
+        #kern_grid='no' forces masking of self for predicting self
+        p=xin.shape[1]
+        if modeldict['Ndiff_bw_kern']=='rbfkern':
+            xin_scaled=np.product(xin,hyper_params[:-p])#assuming the last p items of the hyper_params array are the scale parameters
+            xout_scaled=np.product(xout,hyper_params[:-p])
+            yxin_scaled=np.product(yxin,np.concatenate((np.array([1]),hyper_params[:-p]),axis=0))#insert array of 1's to avoid scaling y
+            yxout_scaled=np.product(yxout,np.concatenate((np.array([1]),hyper_params[:-p]),axis=0))
+            onediffs_scaled_l2norm=np.sum(np.power(np.product(makediffmat_itoj(xout_scaled,xin_scaled),hyper_params[:-p]),2,axis=p
+            assert onediffs_scaled_l2norm.shape==(xout.shape[0],xin.shape[0]),'onediffs_scaled_l2norm does not have shape=(nout,nin)'
+            #predict
+            yhat=MY_KDEreg(yxin_scaled,yxout_scaled,xin_scaled,xout_scaled,hyper_params,onediffs_scaled_l2norm,modeldict,fixed_paramdict)
+            
+        
+                            
+        if modeldict['Ndiff_bw_kern']=='product':
+            onediffs=makediffmat_itoj(xout,xin)#scale now?
+            #predict
+            yhat=MY_KDEreg(yxin,yxout,xin,xout,hyper_params,onediffs,modeldict)
+        
+                            
+
+        #here is the simple MSE objective function. however, I think I need to use
+        #the more sophisticated MISE or mean integrated squared error,
+        #either way need to replace with cost function function
+        y_err=yin-yhat
+        return np.sum(y_err*y_err)
+        
+    
+    def MY_KDEreg(self,yxin,yxout,xin,xout,hyper_params,onediffs,modeldict,fixed_paramdict):
+        """returns predited values of y for xpredict based on yin, xin, and modeldict
+        """
+                                                   
+        #prepare the Ndiff bandwidth weights
+        if modeldict['hyper_param_form_dict']['Ndiff_exponent']=='fixed':
+            Ndiff_exponent=fixed_paramdict['Ndiff_exponent']
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
+        xBWmaker(
+            max_bw_Ndiff,self.Ndiff_masklist,onediffs,
+            Ndiff_exponent,Ndiff_bw_kern
+            )
+                            
+        prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
+        prox_x=doX_KDEsmalln(xin,xin,xbw,,modeldict)
 
     def makediffmat_itoj(self,xi,xj):
         #return xi[:,None,:]-xj[None,:,:] #replaced with more flexible version
@@ -163,54 +226,7 @@ class kNdtool():
         
     
     #def doYX_KDEsmalln(self,yin,xin,xout,ybw,xbw,modeldict):
-        
 
-    
-    def MY_KDEregMSE(self,hyper_params,yxin,yxout,xin,xout,modeldict,fixed_paramdict):
-        """moves hyper_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
-            then returns MSE of the fit 
-        Assumes last p elements of hyper_params are the scale parameters for 'el two' approach to
-        columns of x.
-        """
-        print('starting optimization of hyperparameters')
-        #is the masking approach sufficient for leave one out cross validation?
-        #kern_grid='no' forces masking of self for predicting self
-        if modeldict['Ndiff_bw_kern']=='rbfkern':
-            xin_scaled=np.product(xin,hyper_params[:-p]**-1)
-            xout_scaled=np.product(xout,hyper_params[:-p]**-1)
-            yxin_scaled=np.product(yxin,np.concatenate((np.array([1]),hyper_params[:-p]**-1),axis=0))
-            yxout_scaled=np.product(yxout,np.concatenate((np.array([1]),hyper_params[:-p]**-1),axis=0))
-            onediffs_scaled=np.product(onediffs,hyper_params[:-p])
-            yhat=MY_KDEreg(yxin_scaled,yxout_scaled,xin_scaled,xout_scaled,hyper_params,onediffs_scaled,modeldict,fixed_paramdict)
-            
-        
-                            
-        if modeldict['Ndiff_bw_kern']=='product':
-            yhat=MY_KDEreg(yxin,yxout,xin,xout,hyper_params,onediffs,modeldict)
-        
-                            
-
-        #here is the simple MSE objective function. however, I think I need to use
-        #the more sophisticated MISE or mean integrated squared error
-        y_err=yin-yhat
-        return np.sum(y_err*y_err)
-        
-    
-    def MY_KDEreg(self,yxin,yxout,xin,xout,hyper_params,onediffs_scaled,modeldict,fixed_paramdict):
-        """returns predited values of y for xpredict based on yin, xin, and modeldict
-        """
-        #prepare the Ndiff bandwidth weights
-        Ndiff_exp_params=
-        if modeldict['Ndiff_bw_kern']=='rbfkern':
-            onediffs_scaled_l2norm=np.sum(np.power(onediffs_scaled,2),axis=self.p)
-            assert onediffs_scaled_l2norm.shape==[nout,nin],'onediffs_scaled_l2norm has the wrong shape'
-            xBWmaker(
-                modeldict['max_bw_Ndiff'],self.Ndiff_masklist,onediffs_scaled_l2norm,
-                fixed_paramdict['Ndiff_exp_params'],free_paramlist,Ndiff_bw_kern
-                )
-                            
-        prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
-        prox_x=doX_KDEsmalln(xin,xin,xbw,,modeldict)
         
     def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
         """creates a grid with all possible combinations of n evenly spaced values from -3 to 3.
