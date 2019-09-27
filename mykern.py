@@ -7,11 +7,11 @@ class kNdtool():
     """
 
 
-    def mas_Ndiff_datastacker_new(self,Ndiffs,max_Ndiff):
+    def mas_Ndiff_datastacker_new(self,Ndiffs,max_bw_Ndiff):
          
          
     
-    def max_Ndiff_datastacker_old(self,xdata_std,xout,max_Ndiff):
+    def max_bw_Ndiff_datastacker_old(self,xdata_std,xout,max_bw_Ndiff):
         """
         take 2 arrays expands their last and second to last dimensions,
         respectively, then repeats into that dimension, then takes differences
@@ -34,34 +34,30 @@ class kNdtool():
         xinstackT=xdata_std[:,None,:]
         nout=xout.shape[0]
         Ndifflist=[xoutstack-xinstack]
-        for ii in range(max_Ndiff-1)+1:#since the first diff has already been computed
+        for ii in range(max_bw_Ndiff-1)+1:#since the first diff has already been computed
             xinstack=np.repeat(np.expand_dims(xinstack,ii+1),self.n,axis=ii+1)
             xinstack=np.broadcast_to(xinstack,xinstack.shape())
             xinstackT=np.repeat(np.expand_dims(xinstackT,ii),self.n,axis=ii)
             Ndifflist.append(xinstack-xinstackT)
-        return Ndifflist    
-   """         
-                       
-        
-
-
-
+        return Ndifflist
+    
+"""         
         #for ii in masklist:
          #   np.ma.array(np.broadcast_to(self.Ndiff,self.Ndiff_masklist[ii]),mask=masklist
             #switching to subtraction version of coming up with sums of differences with progressive exclusions
+"""        
         
-        
-    def max_Ndiff_maskstacker(self,nout,nin,p,max_Ndiff,modeldict_):
-        "match the parameter structure of Ndifflist produced by max_Ndiff_datastacker
+    def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict_):
+        "match the parameter structure of Ndifflist produced by max_bw_Ndiff_datastacker
         ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)
-        #change p to 1 if using Kh_form==exp_l2 because parameters will be collapsed before mask is applied
-        if Kh_form==exp_l2:p=1;
+        #change p to 1 if using Ndiff_bw_kern==rbfkern because parameters will be collapsed before mask is applied
+        if Ndiff_bw_kern==rbfkern:p=1;
         if self.outgrid=='no':
             masklist=[ninmask]
         if self.outgrid=='yes':
             masklist=[np.zero([nout,nin,p])]
         
-        for ii in range(max_Ndiff-1)+1:#since the first mask has already been computed
+        for ii in range(max_bw_Ndiff-1)+1:#since the first mask has already been computed
             maskpartlist=[]
             for iii in range(ii+2):
                 maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))#use broacast_to instead of repeat?
@@ -77,7 +73,7 @@ class kNdtool():
         and a model dict that describes which model to run including how hyper-parameters enter (partiall flexible)
         speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
         list of centered data points. see mykern_core for an example and explanation of dictionaries.
-        Flexibility is also a goal. max_Ndiff is the deepest the model goes.
+        Flexibility is also a goal. max_bw_Ndiff is the deepest the model goes.
         ------------------
         attributes created
         self.n,self.p,self.optdict 
@@ -103,7 +99,7 @@ class kNdtool():
         modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
         model_param_formdict=modeldict['hyper_param_form_dict']
         kerngrid=modeldict['kern_grid']
-        max_Ndiff=modeldict['max_Ndiff']
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
         method=optimize_dict['method']
         param_valdict=optimizedict['hyper_param_dict']
         
@@ -121,8 +117,8 @@ class kNdtool():
         self.xout=xout;self.yxout=yxout
                     
         #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
-        #self.Ndifflist=max_Ndiff_datastacker(xdata_std,xout,max_Ndiff) 
-        self.Ndiff_masklist=max_Ndiff_maskstacker(self,nout,nin,max_Ndiff)#do I need to save yxin?
+        #self.Ndifflist=max_bw_Ndiff_datastacker(xdata_std,xout,max_bw_Ndiff) 
+        self.Ndiff_masklist=max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)#do I need to save yxin?
         self.Ndiff=makediffmat_itoj(xout,xdata_std)#xout is already standardized
                                            
                                         
@@ -179,7 +175,7 @@ class kNdtool():
         print('starting optimization of hyperparameters')
         #is the masking approach sufficient for leave one out cross validation?
         #kern_grid='no' forces masking of self for predicting self
-        if modeldict['Kh_form']=='exp_l2':
+        if modeldict['Ndiff_bw_kern']=='rbfkern':
             xin_scaled=np.product(xin,hyper_params[:-p]**-1)
             xout_scaled=np.product(xout,hyper_params[:-p]**-1)
             yxin_scaled=np.product(yxin,np.concatenate((np.array([1]),hyper_params[:-p]**-1),axis=0))
@@ -189,7 +185,7 @@ class kNdtool():
             
         
                             
-        if modeldict['Kh_form']=='product':
+        if modeldict['Ndiff_bw_kern']=='product':
             yhat=MY_KDEreg(yxin,yxout,xin,xout,hyper_params,onediffs,modeldict)
         
                             
@@ -205,17 +201,20 @@ class kNdtool():
         """
         #prepare the Ndiff bandwidth weights
         Ndiff_exp_params=
-        if modeldict['Kh_form']=='exp_l2':
-            onediffs_scaled_l2norm=np.sum(onediffs_scaled*onediffs_scaled,axis=p)
+        if modeldict['Ndiff_bw_kern']=='rbfkern':
+            onediffs_scaled_l2norm=np.sum(np.power(onediffs_scaled,2),axis=self.p)
             assert onediffs_scaled_l2norm.shape==[nout,nin],'onediffs_scaled_l2norm has the wrong shape'
-            xBWmaker(modeldict['max_Ndiff'],self.Ndiff_masklist,onediffs_scaled_l2norm,fixed_paramdict['Ndiff_exp_params'],free_paramlist,Kh_form)
+            xBWmaker(
+                modeldict['max_bw_Ndiff'],self.Ndiff_masklist,onediffs_scaled_l2norm,
+                fixed_paramdict['Ndiff_exp_params'],free_paramlist,Ndiff_bw_kern
+                )
                             
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
         prox_x=doX_KDEsmalln(xin,xin,xbw,,modeldict)
         
     def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
         """creates a grid with all possible combinations of n evenly spaced values from -3 to 3.
-        if I am using the "el two" approach, it seems like the grid is just two items wide, y and ||x||
+        
         """
         agrid=np.linspace(-3,3,n) #assuming variables have been standardized
             for idx in range(-1)#-1 b/c agrid already created; need to figure out how to better vectorize this loop

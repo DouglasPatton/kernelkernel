@@ -8,11 +8,11 @@ so we can smooth it and compare to real dist or use 2 dimensions to predict the 
 #product of kernels of each parameter (as in liu and yang eq1.)
 n,p=data1.shape
 modeldict1={
-    'max_Ndiff':2,
+    'max_bw_Ndiff':2,
     'normalize_ndiffwtsum':'all',
     'kern_grid':'no',
-    'Ndiff_kern':'gaussian',
-    'Kh_form':'exp_l2',
+    'outer_kern':'gaussian',
+    'Ndiff_bw_kern':'rbfkern',
     'regression_model':'NW'
     'hyper_param_form_dict':{
         'Ndiff_exp':'fixed',
@@ -22,11 +22,20 @@ modeldict1={
         }
     }
     
-#Kh_form: exp_l2 means take the l2 ("el two") norm across all parameters and then plug into the kernel (diff from liu and yang)
-    #'product' means use product kernel like as in liu and yang eq1. and 1
-#'regression_model':'NW' means use nadaraya-watson kernel regression
-    #'full_logit'
-#kern_grid if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
+#max_bw_Ndiff: is the depth of Ndiffs applied in estimating the bandwidth.
+#kern_grid:
+    #no means smooth the original data
+    #
+#Ndiff_bw_kern:
+    #rbfkern means use the radial basis function kernel
+    #'product' means use product kernel like as in liu and yang eq1. 
+#'regression_model':
+    #'NW' means use nadaraya-watson kernel regression
+    #'full_logit' means local logit with all variables entering linearly
+    #'rbf_logit' means local logit with 1 parameters: scaled l2 norm centered on zero (globally or by i?). Is this a new idea?
+    
+#kern_grid
+    #if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
     #'no' means use original data, which is useful for calibrating hyper parameters
 #hyper_param_form_dict is a nested dictionary
 
