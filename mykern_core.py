@@ -1,3 +1,5 @@
+#this document is really structured more as a jupyter notebook, but there is no markdown yet.
+
 import mykern as mk
 
 data1=generate mixed 3dimensional joint random distributions //
@@ -9,7 +11,7 @@ so we can smooth it and compare to real dist or use 2 dimensions to predict the 
 n,p=data1.shape
 modeldict1={
     'max_bw_Ndiff':2,
-    'normalize_ndiffwtsum':'all',
+    'normalize_Ndiffwtsum':'across',
     'kern_grid':'no',
     'outer_kern':'gaussian',
     'Ndiff_bw_kern':'rbfkern',
@@ -23,17 +25,20 @@ modeldict1={
     }
     
 #max_bw_Ndiff: is the depth of Ndiffs applied in estimating the bandwidth.
+#'normalize_Ndiffwtsum':
+    #'across' means sum across own level of kernelized-Ndiffs and divide by that sum (CDF approach)
+    #'own_n' means for (n+k)diff where n+K=max_bw_Ndiff
 #kern_grid:
     #no means smooth the original data
     #
 #Ndiff_bw_kern:
     #rbfkern means use the radial basis function kernel
     #'product' means use product kernel like as in liu and yang eq1. 
+#
 #'regression_model':
     #'NW' means use nadaraya-watson kernel regression
     #'full_logit' means local logit with all variables entering linearly
     #'rbf_logit' means local logit with 1 parameters: scaled l2 norm centered on zero (globally or by i?). Is this a new idea?
-    
 #kern_grid
     #if int, then create int evnely spaced values from -3 to 3 (standard normal middle ~99%)
     #'no' means use original data, which is useful for calibrating hyper parameters

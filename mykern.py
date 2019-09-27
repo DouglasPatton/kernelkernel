@@ -6,23 +6,38 @@ class kNdtool():
 
     """
 
-    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern):
+    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern,normalization):
         """returns an nout X nin np.array of bandwidths
         """
-        for depth in range(max_bw_Ndiff,0,-1)
-        np.ma.array(max_Ndiff_datastacker(Ndiffs,depth),mask-self.Ndiff_masklist[depth]
+        for depth in range(max_bw_Ndiff,0,-1)#start at deepest Ndiff and work to front
+            #axis=depth+1 b/c we want to sum over the last (rbf kern) or 2nd to last (product kern). As can be seen from the
+            #tupe construction algorithm in max_Ndiff_datastacker(), there are the first two dimensions that are from the
+            #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
+            #collapsing with np.ma.sum. 
+            n_depth_mean=np.ma.sum(np.ma.array(max_Ndiff_datastacker(Ndiffs,depth),mask=self.Ndiff_masklist[depth]),axis=depth+1)
+                if normalization=='own_n':
 
+                if normalization=='across':
+                    np.ma.sum(
+            
+        
+        #normalization options can be implemented after each sum. two obvious options
+        #are to divide by the sum across the same level or divide by the number of observations at the same level.
+        #perhaps an extension could be to normalize by sums at other levels.
 
 
         
-    def max_Ndiff_datastacker_new(self,Ndiffs,depth):
+    def max_Ndiff_datastacker(self,Ndiffs,depth):
+        """After working on two other approaches, I think this approach to replicating the differences with views via
+        np.broadcast_to and then masking them using the pre-optimization-start-built lists of progressively deeper masks
+        (though it may prove more effective not do have masks of each depth pre-built),
+        """
         #prepare tuple indicating shape to broadcast to
         Ndiff_shape=Ndiffs.shape()
-        Ndiff_shape_out=Ndiff_shape[0:1]+(Ndiff_shape[1],)*depth
+        Ndiff_shape_out_tup=Ndiff_shape[0:1]+(Ndiff_shape[1],)*depth#these are tupples, so read as python not numpy
         if len(Ndiff_shape==3):#if parameter dimension hasn't been collapsed yet, keep it at end
-        Ndiff_shape_out=Ndiff_shape_out+Ndiff_shape[3]
-        return np.brodcast_to(Ndiffs,Ndiff_shape_out)
-         
+            Ndiff_shape_out_tup=Ndiff_shape_out_tup+Ndiff_shape[3]
+        return np.brodcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to broadcast nin times over <depth> dimensions          
     
         def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict_):
         "match the parameter structure of Ndifflist produced by max_bw_Ndiff_datastacker
@@ -155,7 +170,7 @@ class kNdtool():
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
         y_err=yin-yhat
-        return np.sum(y_err*y_err)
+        return np.sum(np.power(y_err,2)
         
     
     def MY_KDEreg(self,yxin,yxout,xin,xout,hyper_params,onediffs,modeldict,fixed_paramdict):
@@ -167,9 +182,10 @@ class kNdtool():
             Ndiff_exponent=fixed_paramdict['Ndiff_exponent']
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
+        normalization=modeldict['normalize_Ndiffwtsum']                                                   
         xBWmaker(
             max_bw_Ndiff,self.Ndiff_masklist,onediffs,
-            Ndiff_exponent,Ndiff_bw_kern
+            Ndiff_exponent,Ndiff_bw_kern,normalization
             )
                             
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
