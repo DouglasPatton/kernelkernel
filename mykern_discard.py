@@ -1,3 +1,18 @@
+old and new mask stacker code before cleanup
+for ii in range(max_bw_Ndiff-1):#-1since the first mask has already been computed
+            basemask=masklist[-1]#copy the last item to basemask
+            masklist.append[np.repeat(np.expand_dim(basemask,0),nin,axis=0)]#then use basemask to
+                #start the next item in the masklist with 1 more dimension on the left
+            #reindex:for iii in range(2,ii+2,1):
+            for iii in range(1,ii+2):#if Ndiff is 2, above for loop maxes out at 1,
+                #then this loop maxes at 0,1,2from range(1+2)
+                #when i insert a new dimension between two dimensions, I'm effectively transposing
+                #take the last item we're constructing and merge it with another mask
+                masklist[-1]=np.ma.mask_or(masklist[-1],np.repeat(np.expand_dim(basemask,iii),nin,axis=iii))
+                #reindex:ninmask=np.repeat(np.expand_dim(ninmask,ninmask.dim),nin,axis=ninmask.dim)
+            #masklist.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
+
+
 '''old way to assign fixed vs. free, etc.
 #if model_param_formdict['p_bandwidth']
 free_params=param_valdict['p_bandwidth']#not flexible yet, add exponents later

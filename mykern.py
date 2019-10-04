@@ -5,30 +5,42 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
-
-    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,diffdict,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization=None):
+    def normalize_and_sum_bw(self,kernstack,normalization):
+        if normalization=='none':
+            return np.ma.sum(kernstack,axis=0)
+        
+        if normalization=='own_n':
+            return np.ma.mean(kernstack,axis=0)
+        
+        # if normalization=='across': #does this make sense? not working now.
+        #    this_depth_not_summed=kernstack
+        #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth+1])),axis=0)
+        #  n_depth_total=np.ma.sum(np.ma.divide(this_depth_not_summed,one_deeper_summed),axis=0)
+    def xBWmaker(self,max_bw_Ndiff,self.Ndiff_masklist,diffdict,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization=None):
         """returns an nout X nin np.array of bandwidths
         """
 
         #for loop starts at deepest Ndiff and works to front
+    #
         #axis=depth+1 b/c we want to sum over the last (rbf kern) or 2nd to last (product kern). As can be seen from the
         #tup construction algorithm in Ndiff_datastacker(), there are the first two dimensions that are from the
         #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
         #collapsing with np.ma.sum.
         Ndiffs=diffdict['Ndiffs']
-        if Ndiff_bw_kern=='rbfkern': #onediffs parameter column already collapsed
+        if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             
-            for depth in range(max_bw_Ndiff,0,-1)#dpeth starts wtih the last mask first
-            
-                n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth]),axis=0)
-                #reindex:n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth]),axis=depth+1)
-                #depth+1 b/c ?
-                n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum)
-        
-                    if normalization=='own_n':
-                        
-                    if normalization=='across':
-                        np.ma.sum(
+            for depth in range(max_bw_Ndiff,0,-1):#dpeth starts wtih the last mask first
+                this_depth_ma_Ndiffstack=np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth])
+                if depth==max_bw_Ndiff:
+                    the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
+                else:
+                    the_bw=np.ma.multiply(the_bw,np.ma.power(this_depth_ma_Ndiffstack,Ndiff_exponent_params[depth]))
+                
+                n_depth_total=np.ma.power(n_depth_total,Ndiff_exponent_params[depth])
+                
+                
+                else:
+                    the_bw=np.ma.multiply(n_depth_total,the_bw)
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,p_bandwidth_params)
         
@@ -41,6 +53,7 @@ class kNdtool():
             return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
+            return np.ma.exp(-np.ma.power(maskeddata,2))
             
         
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
@@ -62,7 +75,7 @@ class kNdtool():
         return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
             #broadcast nin times over <depth> dimensions added to the left side of np.shape()        
     
-        def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict_):
+    def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict):
         '''match the parameter structure of Ndifflist produced by Ndiff_datastacker
         notably, mostly differences (and thus masks) will be between the nin (n in the original dataset) obeservations.
         though would be interesting to make this more flexible in the future.
@@ -70,7 +83,7 @@ class kNdtool():
         '''
         ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)#this one will be used extensively to construct masks
         #change p to 1 if using Ndiff_bw_kern==rbfkern because parameters will be collapsed before mask is applied
-        if Ndiff_bw_kern==rbfkern:p=1
+        if Ndiff_bw_kern=='rbfkern':p=1
         if self.outgrid=='no':
             masklist=[ninmask]
         if self.outgrid=='yes':
@@ -80,12 +93,12 @@ class kNdtool():
             masklist.append[np.repeat(np.expand_dim(basemask,0),nin,axis=0)]#then use basemask to
             for iii in range(1,ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                 #then this loop maxes at 0,1,2from range(1+2)
-                
+
                 #take the last item we're constructing and merge it with another mask
                 masklist[-1]=np.ma.mask_or(masklist[-1],np.repeat(np.expand_dim(basemask,iii),nin,axis=iii))
                 #reindex:ninmask=np.repeat(np.expand_dim(ninmask,ninmask.dim),nin,axis=ninmask.dim)
             #masklist.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
-            
+
         return masklist
                             
     def pull_value_from_fixed_or_free(self,free_params,fixed_params,param_name,fixed_or_free_paramdict):
@@ -97,7 +110,8 @@ class kNdtool():
         return the_param_values
 
     def sort_fixed_or_free(self,model_param_formdict,param_valdict):
-        '''takes a dictionary specifying fixed or free and a dictionary specifying starting (if free) or fixed (if fixed) values
+        '''takes a dictionary specifying fixed or free and a dictionary specifying starting (if free) or
+        fixed (if fixed) values
         returns 2 lists and a dict
             free_params 1 dim np array of the starting parameter values in order
             fixed_params 1 dim nop array of the fixed parameter values in order
