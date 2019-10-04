@@ -5,8 +5,18 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
-
-    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,diffdict,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization=None):
+    def normalize_and_sum_bw(self,kernstack,normalization):
+        if normalization=='none':
+            return np.ma.sum(kernstack,axis=0)
+        
+        if normalization=='own_n':
+            return np.ma.mean(kernstack,axis=0)
+        
+        # if normalization=='across': #does this make sense? not working now.
+        #    this_depth_not_summed=kernstack
+        #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth+1])),axis=0)
+        #  n_depth_total=np.ma.sum(np.ma.divide(this_depth_not_summed,one_deeper_summed),axis=0)
+    def xBWmaker(self,max_bw_Ndiff,self.Ndiff_masklist,diffdict,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization=None):
         """returns an nout X nin np.array of bandwidths
         """
 
@@ -16,19 +26,20 @@ class kNdtool():
         #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
         #collapsing with np.ma.sum.
         Ndiffs=diffdict['Ndiffs']
-        if Ndiff_bw_kern=='rbfkern': #onediffs parameter column already collapsed
+        if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             
-            for depth in range(max_bw_Ndiff,0,-1)#dpeth starts wtih the last mask first
-            
-                n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth]),axis=0)
-                #reindex:n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth]),axis=depth+1)
-                #depth+1 b/c ?
-                n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum)
-        
-                    if normalization=='own_n':
-                        
-                    if normalization=='across':
-                        np.ma.sum(
+            for depth in range(max_bw_Ndiff,0,-1):#dpeth starts wtih the last mask first
+                this_depth_ma_Ndiffstack=np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth])
+                if depth==max_bw_Ndiff:
+                    the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
+                else:
+                    the_bw=np.ma.multiply(the_bw,np.ma.power(this_depth_ma_Ndiffstack,Ndiff_exponent_params[depth]))
+                
+                n_depth_total=np.ma.power(n_depth_total,Ndiff_exponent_params[depth])
+                
+                
+                else:
+                    the_bw=np.ma.multiply(n_depth_total,the_bw)
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,p_bandwidth_params)
         
@@ -41,6 +52,7 @@ class kNdtool():
             return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
+            return np.ma.exp(-np.ma.power(maskeddata,2))
             
         
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):

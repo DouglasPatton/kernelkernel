@@ -11,7 +11,7 @@ so we can smooth it and compare to real dist or use 2 dimensions to predict the 
 n,p=data1.shape
 modeldict1={
     'max_bw_Ndiff':2,
-    'normalize_Ndiffwtsum':'across',
+    'normalize_Ndiffwtsum':'own_n',
     'kern_grid':'no',
     'outer_kern':'gaussian',
     'Ndiff_bw_kern':'rbfkern',
