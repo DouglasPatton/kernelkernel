@@ -18,7 +18,7 @@ class kNdtool():
         if Ndiff_bw_kern=='rbfkern': #onediffs parameter column already collapsed
             for depth in range(max_bw_Ndiff,0,-1)
             
-                n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth),mask=self.Ndiff_masklist[depth]),axis=depth+1)
+                n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth]),axis=depth+1)
                 #depth+1 b/c ?
                 n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum)
         
@@ -40,28 +40,37 @@ class kNdtool():
         if kern_choice=='rbfkern':
             
         
-    def Ndiff_datastacker(self,Ndiffs,depth):
+    def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
         """After working on two other approaches, I think this approach to replicating the differences with views via
         np.broadcast_to and then masking them using the pre-optimization-start-built lists of progressively deeper masks
         (though it may prove more effective not do have masks of each depth pre-built)
         """
         #prepare tuple indicating shape to broadcast to
         Ndiff_shape=Ndiffs.shape()
-        assert Ndiff_shape==(self.nout,self.nin),"Ndiff shape not nout X nin"
-        Ndiff_shape_out_tup=Ndiff_shape[0]+(Ndiff_shape[1],)*depth#these are tupples, so read as python not numpy
-        if len(Ndiff_shape==3):#if parameter dimension hasn't been collapsed yet, keep it at end
-            Ndiff_shape_out_tup=Ndiff_shape_out_tup+Ndiff_shape[3]
-        return np.brodcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to broadcast nin times over <depth> dimensions          
+        if Ndiff_bw_kern=='rbfkern':
+            assert Ndiff_shape==(self.nout,self.nin),"Ndiff shape not nout X nin but bwkern is rbfkern"
+        if Ndiff_bw_kern=='product':
+            assert Ndiff_shape==(self.nout,self.nin,self.p),"Ndiff shape not nout X nin X p but bwkern is product"
+        
+        Ndiff_shape_out_tup=(Ndiff_shape[1])*depth+(Ndiff_shape[0])#these are tupples, so read as python not numpy
+       if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet, 
+            Ndiff_shape_out_tup=Ndiff_shape_out_tup+Ndiff_shape[2]#then add it at the end
+        return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
+            #broadcast nin times over <depth> dimensions added to the left side of np.shape()        
     
         def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict_):
-        "match the parameter structure of Ndifflist produced by max_bw_Ndiff_datastacker
-        ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)
+        '''match the parameter structure of Ndifflist produced by Ndiff_datastacker
+        notably, mostly differences (and thus masks) will be between the nin (n in the original dataset) obeservations.
+        though would be interesting to make this more flexible in the future.
+        '''
+        ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)#
         #change p to 1 if using Ndiff_bw_kern==rbfkern because parameters will be collapsed before mask is applied
-        if Ndiff_bw_kern==rbfkern:p=1;
+        if Ndiff_bw_kern==rbfkern:p=1
         if self.outgrid=='no':
             masklist=[ninmask]
         if self.outgrid=='yes':
-            masklist=[np.zero([nout,nin,p])]
+            #reindex:masklist=[np.zero([nout,nin,p])]
+            #masklist=[np.zero([nout,nin,p])]
         
         for ii in range(max_bw_Ndiff-1)+1:#since the first mask has already been computed
             maskpartlist=[]
