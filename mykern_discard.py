@@ -1,3 +1,29 @@
+'''old way to assign fixed vs. free, etc.
+#if model_param_formdict['p_bandwidth']
+free_params=param_valdict['p_bandwidth']#not flexible yet, add exponents later
+free_params=np.concatenate(param_valdict['all_x_bandwidth'],free_params,axis=0)#two more parameters for x and y
+free_params=np.concatenate(param_valdict['all_y_bandwidth'],free_params,axis=0)                            
+
+Ndiff_exponent=param_valdict['Ndiff_exponent']#fixed right now
+if model_param_formdict['Ndiff_exponent']=='fixed':                 
+    fixed_or_free_paramdict={'Ndiff_exponent':Ndiff_exponent}#not flexible yet                   
+'''
+#---------------------------------------------
+#parse args to pass to the main optimization function
+
+#build pos_hyper_param and fixed hyper_param, add more later
+#Below code commented out b/c too complicated to make it so flexible.
+#can build in flexibility later
+'''fixedparams=[]
+non_neg_params=[]
+for key,val in param_valdict:
+    if model_param_formdict[key]='fixed':
+        fixedparams.append(val)
+    if model_param_formdict[key]='fixed':
+        non_negparams.append(val)'''
+
+
+
 """max_Ndiff_datastaker is irrelevant. It is built inefficiently and it would be easier
 to do the differencing before making the numerous multidimensional copies. 
 Also, I would like to run some memory tests on it 

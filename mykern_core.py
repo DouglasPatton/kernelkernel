@@ -18,9 +18,9 @@ modeldict1={
     'regression_model':'NW'
     'hyper_param_form_dict':{
         'Ndiff_exponent':'fixed',
-        'p_bandwidth':'non-neg',
-        'all_x_bandwidth':'non-neg'
-        'all_y_bandwidth':'non-neg'
+        'p_bandwidth':'free',
+        'all_x_bandwidth':'free'
+        'all_y_bandwidth':'free'
         }
     }
     

@@ -6,19 +6,19 @@ class kNdtool():
 
     """
 
-    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent,Ndiff_bw_kern,normalization=None,bw_prod_kern_free_params=None):
+    def xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization=None):
         """returns an nout X nin np.array of bandwidths
         """
 
         #for loop starts at deepest Ndiff and works to front
         #axis=depth+1 b/c we want to sum over the last (rbf kern) or 2nd to last (product kern). As can be seen from the
-        #tup construction algorithm in max_Ndiff_datastacker(), there are the first two dimensions that are from the
+        #tup construction algorithm in Ndiff_datastacker(), there are the first two dimensions that are from the
         #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
         #collapsing with np.ma.sum.
-        if Ndiff_bw_kern=='rbfkern':
+        if Ndiff_bw_kern=='rbfkern': #onediffs parameter column already collapsed
             for depth in range(max_bw_Ndiff,0,-1)
             
-                n_depth_masked_sum=np.ma.sum(np.ma.array(max_Ndiff_datastacker(Ndiffs,depth),mask=self.Ndiff_masklist[depth]),axis=depth+1)
+                n_depth_masked_sum=np.ma.sum(np.ma.array(Ndiff_datastacker(Ndiffs,depth),mask=self.Ndiff_masklist[depth]),axis=depth+1)
                 #depth+1 b/c ?
                 n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum)
         
@@ -26,24 +26,24 @@ class kNdtool():
                         
                     if normalization=='across':
                         np.ma.sum(
-        if Ndiff_bw_kern=='product':
-            n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,bw_prod_kern_free_params)
+        if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
+            n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,p_bandwidth_params)
         
         #normalization options can be implemented after each sum. two obvious options
         #are to divide by the sum across the same level or divide by the number of observations at the same level.
         #perhaps an extension could be to normalize by sums at other levels.
 
-    def do_bw_kern(self,kern_choice,maskeddata,bw_prod_kern_free_params=None):
+    def do_bw_kern(self,kern_choice,maskeddata,p_bandwidth_params=None):
         if kern_choice=="product":
-            return np.ma.product(bw_prod_kern_free_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)
+            return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
             
         
-    def max_Ndiff_datastacker(self,Ndiffs,depth):
+    def Ndiff_datastacker(self,Ndiffs,depth):
         """After working on two other approaches, I think this approach to replicating the differences with views via
         np.broadcast_to and then masking them using the pre-optimization-start-built lists of progressively deeper masks
-        (though it may prove more effective not do have masks of each depth pre-built),
+        (though it may prove more effective not do have masks of each depth pre-built)
         """
         #prepare tuple indicating shape to broadcast to
         Ndiff_shape=Ndiffs.shape()
@@ -68,14 +68,48 @@ class kNdtool():
             for iii in range(2,ii+2,1):#does this need to start at 2?
                 #use broacast_to instead of repeat?
                 #when i insert a new dimension, I'm effectively transposing
-                #but not sure if this is quite right. Do I need to broadcast to
+                #but need to verify
                 maskpartlist.append(np.repeat(np.expand_dim(ninmask,iii),nin,axis=iii))
                 ninmask=np.repeat(np.expand_dim(ninmask,ninmask.dim),nin,axis=ninmask.dim)#need to think about this carefully
             masklist.append[np.ma.mask_or(maskpartlist)#syntax to merge masks
-        return masklist                    
-        
+        return masklist
+                            
+    def pull_value_from_fixed_or_free(self,free_params,fixed_params,param_name,fixed_or_free_paramdict):
+        start,end=fixed_or_free_paramdict[param_name]['location_idx']
+        if fixed_or_free_paramdict[param_name]['fixed_or_free']=='fixed':
+            the_param_values=fixed_params[start:end]#end already includes +1 to make range inclusive of the end value
+        if fixed_or_free_paramdict[param_name]['fixed_or_free']=='free':
+            the_param_values=free_params[start:end]#end already includes +1 to make range inclusive of the end value 
+        return the_param_values
 
-    
+    def sort_fixed_or_free(self,model_param_formdict,param_valdict):
+        '''takes a dictionary specifying fixed or free and a dictionary specifying starting (if free) or fixed (if fixed) values
+        returns 2 lists and a dict
+            free_params 1 dim np array of the starting parameter values in order
+            fixed_params 1 dim nop array of the fixed parameter values in order
+            ffixed_or_free_paramdict a dictionary for each parameter (param_name) with the following key:val
+                fixed_or_free:'fixed' or 'free'
+                location_idx: the start and end location for parameters of param_name in the appropriate array
+        '''
+        fixed_params=[];free_params=[];fixed_or_free_paramdict={}
+        #build fixed and free vectors of hyper-parameters based on hyper_param_formdict
+        for param_name,param_form in model_param_formdict.items():
+            param_feature_dict={}
+            param_val=param_val_dict[param_name]
+            assert param_val.ndim==1,"values for {} have not ndim==1".format(param_name)
+            if param_form=='fixed':
+                param_feature_dict['fixed_or_free']=='fixed'
+                param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))
+                    #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
+                np.concatenate([fixed_params,param_val],axis=0)
+                fixed_or_free_paramdict[param_name]=param_feature_dict
+            if param_form=='free':
+                param_feature_dict['fixed_or_free']=='free'
+                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
+                    #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
+                np.concatenate([free_params,param_val],axis=0)
+                fixed_or_free_paramdict[param_name]=param_feature_dict
+        return free_params,fixed_params,fixed_or_free_paramdict
         
     def optimize_free_params(self,ydata,xdata,optimizedict):
         """This is the method for iteratively running kernelkernel to optimize hyper parameters
@@ -92,11 +126,9 @@ class kNdtool():
         self.Ndiff - the nout X nin X p matrix of first differences of xdata_std
         self.Ndiff_masklist - a list of progressively higher dimension (len=nin) 
             masks to broadcast(views) Ndiff to.
-        
         """
         self.n,self.p=xdata.shape
         self.optdict=optimizedict
-        
         assert ydata.shape[0]==xdata.shape[0],'x and y do not match in dimension 0'
 
         #standardize x and y and save their means and std to self
@@ -113,41 +145,9 @@ class kNdtool():
         method=optimize_dict['method']
         param_valdict=optimizedict['hyper_param_dict']
 
-
-        #-------------------------------
-        fixed_params=[]
-        free_params=[]
-        fixed_or_free_paramdict={}
-        
-        #build fixed and free vectors of hyper-parameters based on hyper_param_formdict
-        for param_name,param_form in model_param_formdict.items():
-            param_feature_dict={}
-            param_val=param_val_dict[param_name]
-            assert param_val.ndim==1,"values for {} have not ndim==1".format(param_name)
-            if param_form=='fixed':
-                param_feature_dict['fixed_or_free']=='fixed'
-                param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))#start and end indices
-                np.concatenate([fixed_params,param_val],axis=0)
-                fixed_or_free_paramdict[param_name]=param_feature_dict
-            if param_form=='free':
-                param_feature_dict['fixed_or_free']=='free'
-                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))#start and end indices
-                np.concatenate([free_params,param_val],axis=0)
-                fixed_or_free_paramdict[param_name]=param_feature_dict
-                
-                    
-        
-        
-        #if model_param_formdict['p_bandwidth']
-        free_params=param_valdict['p_bandwidth']#not flexible yet, add exponents later
-        free_params=np.concatenate(param_valdict['all_x_bandwidth'],free_params,axis=0)#two more parameters for x and y
-        free_params=np.concatenate(param_valdict['all_y_bandwidth'],free_params,axis=0)                            
-
-        Ndiff_exponent=param_valdict['Ndiff_exponent']#fixed right now
-        if model_param_formdict['Ndiff_exponent']=='fixed':                 
-            fixed_or_free_paramdict={'Ndiff_exponent':Ndiff_exponent}#not flexible yet                   
-
-
+        #create lists of variables and dictionary for keeping track of them
+        free_params,fixed_params,fixed_or_free_paramdict=sort_fixed_or_free(model_param_formdict,param_valdict)
+             
         #--------------------------------
         #prep out data as grid (over -3,3) or the original dataset
         xout,yxout=prep_out_grid(kerngrid,xdata_std,ydata_std)
@@ -159,27 +159,8 @@ class kNdtool():
         self.Ndiff_masklist=max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)#do I need to save yxin?
         #self.Ndiff=makediffmat_itoj(xout,xdata_std)#xout is already standardized; doing this inside optimization now
                                            
-                                        
-        #parse args to pass to the main optimization function
-  
-        #build pos_hyper_param and fixed hyper_param, add more later
-        #Below code commented out b/c too complicated to make it so flexible.
-        #can build in flexibility later
-        '''fixedparams=[]
-        non_neg_params=[]
-        for key,val in param_valdict:
-            if model_param_formdict[key]='fixed':
-                fixedparams.append(val)
-            if model_param_formdict[key]='fixed':
-                non_negparams.append(val)'''
-        
-        
         args_tuple=(fixed_params,yxin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
-                
-        return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method) 
-
-
-            
+        return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method)
 
     
     def MY_KDEregMSE(self,free_params,fixed_params,yxin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
@@ -191,21 +172,28 @@ class kNdtool():
         print('starting optimization of hyperparameters')
         #is the masking approach sufficient for leave one out cross validation?
         #kern_grid='no' forces masking of self for predicting self
+
+        #pull p_bandwidth parameters from the appropriate location and appropriate vector
+        p_bandwidth_params=self.pull_value_from_fixed_or_free(free_params,fixed_params,'p_bandwidth',fixed_or_free_paramdict)
         p=xin.shape[1]
+        assert p==len(p_bandwidth_params),"the wrong number of p_bandwidth_params exist"
+
+
         if modeldict['Ndiff_bw_kern']=='rbfkern':
-            xin_scaled=np.product(xin,free_params[:-p])#assuming the last p items of the free_params array are the scale parameters
-            xout_scaled=np.product(xout,free_params[:-p])
-            yxin_scaled=np.product(yxin,np.concatenate((np.array([1]),free_params[:-p]),axis=0))#insert array of 1's to avoid scaling y
-            yxout_scaled=np.product(yxout,np.concatenate((np.array([1]),free_params[:-p]),axis=0))
-            onediffs_scaled_l2norm=np.power(np.sum(np.power((makediffmat_itoj(xout_scaled,xin_scaled)*free_params[:-p]),2),axis=p),.5)
+            
+            xin_scaled=xin*p_bandwidth_params#assuming the last p items of the free_params array are the scale parameters
+            xout_scaled=xout*p_bandwidth_params
+            yxin_scaled=yxin*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#insert array of 1's to avoid scaling y. need to think about whether this is correc
+            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#or should I scale y?
+            onediffs_scaled_l2norm=np.power(np.sum(np.power(makediffmat_itoj(xout_scaled,xin_scaled),2),axis=p),.5)
             assert onediffs_scaled_l2norm.shape==(xout.shape[0],xin.shape[0]),'onediffs_scaled_l2norm does not have shape=(nout,nin)'
-            #predict using the 
+            #predict
             yhat=MY_KDEreg(yxin_scaled,yxout_scaled,xin_scaled,xout_scaled,free_params,fixed_params,onediffs_scaled_l2norm,modeldict,fixed_or_free_paramdict)
             
         
                             
         if modeldict['Ndiff_bw_kern']=='product':
-            onediffs=makediffmat_itoj(xout,xin)#scale now?
+            onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
             #predict
             yhat=MY_KDEreg(yxin,yxout,xin,xout,free_params,fixed_params,onediffs,modeldict)
         
@@ -223,16 +211,13 @@ class kNdtool():
         """
                                                    
         #prepare the Ndiff bandwidth weights
-        if modeldict['hyper_param_form_dict']['Ndiff_exponent']=='fixed':
-            Ndiff_exponent=fixed_or_free_paramdict['Ndiff_exponent']
+        Ndiff_exponent_params=pull_value_from_fixed_or_free(free_params,fixed_params,'Ndiff_exponent',fixed_or_free_paramdict)
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
         normalization=modeldict['normalize_Ndiffwtsum']
-        bw_prod_kern_free_params=free_params[:-self.p]
-        xBWmaker(
-            max_bw_Ndiff,self.Ndiff_masklist,onediffs,
-            Ndiff_exponent,Ndiff_bw_kern,normalization,bw_prod_kern_free_params
-            )
+        p_bandwidth_params=pull_value_from_fixed_or_free(self,free_params,fixed_params,'p_bandwidth',fixed_or_free_paramdict)
+        
+        xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,onediffs,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization)
                             
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
         prox_x=doX_KDEsmalln(xin,xin,xbw,,modeldict)
