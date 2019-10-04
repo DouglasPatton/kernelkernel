@@ -30,7 +30,7 @@ modeldict1={
     #'own_n' means for (n+k)diff where n+K=max_bw_Ndiff
 #kern_grid:
     #no means smooth the original data
-    #
+    #yes means form a grid across all the variables for xin, yxin
 #Ndiff_bw_kern:
     #rbfkern means use the radial basis function kernel
     #'product' means use product kernel like as in liu and yang eq1. 
