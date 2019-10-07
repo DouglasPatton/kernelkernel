@@ -29,7 +29,7 @@ class kNdtool():
         Ndiffs=diffdict['Ndiffs']
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             
-            for depth in range(max_bw_Ndiff,0,-1):#dpeth starts wtih the last mask first
+            for depth in range(max_bw_Ndiff,0,-1):#depth starts with the last mask first
                 this_depth_ma_Ndiffstack=np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth])
                 if depth==max_bw_Ndiff:
                     the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
@@ -248,6 +248,7 @@ class kNdtool():
                                                    
         #prepare the Ndiff bandwidth weights
         Ndiff_exponent_params=pull_value_from_fixed_or_free(free_params,fixed_params,'Ndiff_exponent',fixed_or_free_paramdict)
+        all_x_bw=pull_value_from_fixed_or_free(free_params,fixed_params,'all_x_bw',fixed_or_free_paramdict)
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
         normalization=modeldict['normalize_Ndiffwtsum']
