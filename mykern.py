@@ -8,10 +8,10 @@ class kNdtool():
     def normalize_and_sum_bw(self,kernstack,normalization):
         if normalization=='none':
             return np.ma.sum(kernstack,axis=0)
-        
+
         if normalization=='own_n':
             return np.ma.mean(kernstack,axis=0)
-        
+
         # if normalization=='across': #does this make sense? not working now.
         #    this_depth_not_summed=kernstack
         #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth+1])),axis=0)
@@ -21,7 +21,6 @@ class kNdtool():
         """
 
         #for loop starts at deepest Ndiff and works to front
-    #
         #axis=depth+1 b/c we want to sum over the last (rbf kern) or 2nd to last (product kern). As can be seen from the
         #tup construction algorithm in Ndiff_datastacker(), there are the first two dimensions that are from the
         #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
@@ -35,10 +34,22 @@ class kNdtool():
                     the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
                 else:
                     the_bw=np.ma.multiply(the_bw,np.ma.power(this_depth_ma_Ndiffstack,Ndiff_exponent_params[depth]))
-                
+
                 n_depth_total=np.ma.power(n_depth_total,Ndiff_exponent_params[depth])
-                
-                
+
+
+                else:
+                    the_bw=np.ma.multiply(n_depth_total,the_bw)
+            for depth in range(max_bw_Ndiff,0,-1):#dpeth starts wtih the last mask first
+                this_depth_ma_Ndiffstack=np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth])
+                if depth==max_bw_Ndiff:
+                    the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
+                else:
+                    the_bw=np.ma.multiply(the_bw,np.ma.power(this_depth_ma_Ndiffstack,Ndiff_exponent_params[depth]))
+
+                n_depth_total=np.ma.power(n_depth_total,Ndiff_exponent_params[depth])
+
+
                 else:
                     the_bw=np.ma.multiply(n_depth_total,the_bw)
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
@@ -54,7 +65,7 @@ class kNdtool():
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
             return np.ma.exp(-np.ma.power(maskeddata,2))
-            
+
         
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
         """After working on two other approaches, I think this approach to replicating the differences with views via
@@ -98,7 +109,7 @@ class kNdtool():
                 masklist[-1]=np.ma.mask_or(masklist[-1],np.repeat(np.expand_dim(basemask,iii),nin,axis=iii))
                 #reindex:ninmask=np.repeat(np.expand_dim(ninmask,ninmask.dim),nin,axis=ninmask.dim)
             #masklist.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
-
+            
         return masklist
                             
     def pull_value_from_fixed_or_free(self,free_params,fixed_params,param_name,fixed_or_free_paramdict):
