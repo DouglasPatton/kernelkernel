@@ -36,13 +36,15 @@ class kNdtool():
         max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
+        kern_grid=model_dict['kern_grid']
 
         p_bandwidth_params = self.pull_value_from_fixed_or_free('p_bandwidth', fixed_or_free_paramdict)
         Ndiffs=diffdict['Ndiffs']
+        onediffs=diffdict['onediffs']
 
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             
-            for depth in range(max_bw_Ndiff,0,-1):#depth starts with the last mask first #this loop will be memory
+            for depth in range(max_bw_Ndiff,1,-1):#depth starts with the last mask first #this loop will be memory
                 # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
                 # nested summation with broadcasting tools in numpy
                 if normalization == 'own_n':normalization=self.nin-depth
@@ -58,11 +60,13 @@ class kNdtool():
                 )
 
                 if depth<max_bw_Ndiff:#at max depth, no lower depth exists, so leave it alone
-                    this_depth_bw=this_depth_bw*np.ma.power(lower_depth_bw,Ndiff_exponent_params[depth])
+                    this_depth_bw=this_depth_bw*np.ma.power(lower_depth_bw,Ndiff_exponent_params[depth+1])
                 lower_depth_bw=this_depth_bw#setup for next iteration
-
-
-
+            if kern_grid=='no':normalization=self.nin-1#first item in stack of masks should match these
+            if kern_grid=='yes':normalization=self.nout
+            last_depth_bw=np.ma.power(self.normalize_and_sum_bw(self.do_bw_kern(Ndiff_bw_kern,onediffs,Ndiff_depth_bw_params[0]),normalization),Ndiff_exponent_params[0])*np.ma.power(this_depth_bw,Ndiff_exponent_params[1])
+            assert last_depth_bw.shape()=(self.nin,self.nout),'final bw is not ninXnout with rbfkernel'
+            return last_depth_bw
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
         
@@ -215,10 +219,10 @@ class kNdtool():
         self.xin=xdata_std,self.yin=ydata_std
         self.xout=xout;self.yxout=yxout
                     
-        #for small data pre-build lists of multi dimensional differences and masks and masks to differences.
-        #self.Ndifflist=max_bw_Ndiff_datastacker(xdata_std,xout,max_bw_Ndiff) 
+
+        #pre-build list of masks
         self.Ndiff_masklist=max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)#do I need to save yxin?
-        #self.Ndiff=makediffmat_itoj(xout,xdata_std)#xout is already standardized; doing this inside optimization now
+
                                            
         args_tuple=(fixed_params,yxin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
         return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method)
@@ -249,13 +253,12 @@ class kNdtool():
             xout_scaled=xout*p_bandwidth_params
             yxin_scaled=yxin*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#insert array of 1's to avoid scaling y. need to think about whether this is correc
             yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#or should I scale y?
-            onediffs_scaled_l2norm=np.power(np.sum(np.power(makediffmat_itoj(xout_scaled,xin_scaled),2),axis=p),.5)
-            if modeldict['kerngrid']=='no:
-                'Ndiffs_scaled_l2norm=onediffs_scaled_l2norm
+            onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=p),.5)
+            if modeldict['kerngrid']=='no':
+                Ndiffs_scaled_l2norm=onediffs_scaled_l2norm
             else:
-                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(makediffmat_itoj(xin_scaled,xin_scaled),2),axis=p),.5)
-                    #used for higher differences when kerngrid=yes
-            assert onediffs_scaled_l2norm.shape==(xout.shape[0],xin.shape[0]),'onediffs_scaled_l2norm does not have shape=(nout,nin)'
+                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=p),.5)
+            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xout.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
             #predict
             diffdict={}
             diffdict['onediffs']=onediffs_scaled_l2norm
@@ -288,11 +291,12 @@ class kNdtool():
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
         prox_x=doX_KDEsmalln(xin,xin,xbw,modeldict)
 
-    def makediffmat_itoj(self,xi,xj):
+    def makediffmat_itoj(self,xin,xout):
         #return xi[:,None,:]-xj[None,:,:] #replaced with more flexible version
         #below code needs to keep i at first dimension, j,k,.... at nearly last dimension, p at last
-        r=xi.ndim
-        return np.expand_dims(xi,r)-np.expand_dims(xj,r-1) #check this xj-xi where j varies for each i
+        #reindex:r=xi.ndim
+        #reindex:return np.expand_dims(xi,r)-np.expand_dims(xj,r-1)
+        return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return noutXninXstarting_dims
             
     
 
