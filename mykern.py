@@ -6,17 +6,22 @@ class kNdtool():
 
     """
     def normalize_and_sum_bw(self,kernstack,normalization):
+        """"""
+        '''3 types of Ndiff normalization so far. could extend to normalize by other levels. 
+        '''
         if normalization=='none':
             return np.ma.sum(kernstack,axis=0)
 
-        if normalization=='own_n':
-            return np.ma.mean(kernstack,axis=0)
+        if type(normalization) is int:
+            return np.ma.sum(kernstack/int)
+        if normalization=='across'
+            return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
 
         # if normalization=='across': #does this make sense? not working now.
         #    this_depth_not_summed=kernstack
         #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth+1])),axis=0)
         #  n_depth_total=np.ma.sum(np.ma.divide(this_depth_not_summed,one_deeper_summed),axis=0)
-    def xBWmaker(self,max_bw_Ndiff,self.Ndiff_masklist,diffdict,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization=None):
+    def xBWmaker(self,max_bw_Ndiff,Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict):
         """returns an nout X nin np.array of bandwidths
         """
         #for loop starts at deepest Ndiff and works to front
@@ -24,49 +29,60 @@ class kNdtool():
         #tup construction algorithm in Ndiff_datastacker(), there are the first two dimensions that are from the
         #original Ndiff, which is NoutXNin. Then there is a dimension added *depth* times and the last one is what we are
         #collapsing with np.ma.sum.
+
+
+        Ndiff_exponent_params = self.pull_value_from_fixed_or_free('Ndiff_exponent', fixed_or_free_paramdict)
+        Ndiff_depth_bw_params = self.pull_value_from_fixed_or_free('Ndiff_depth_bw', fixed_or_free_paramdict)
+        max_bw_Ndiff = modeldict['max_bw_Ndiff']
+        Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
+        normalization = modeldict['normalize_Ndiffwtsum']
+
+        p_bandwidth_params = self.pull_value_from_fixed_or_free('p_bandwidth', fixed_or_free_paramdict)
         Ndiffs=diffdict['Ndiffs']
+
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             
-            for depth in range(max_bw_Ndiff,0,-1):#depth starts with the last mask first
-                this_depth_ma_Ndiffstack=np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth])
-                if depth==max_bw_Ndiff:
-                    the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
-                else:
-                    the_bw=np.ma.multiply(the_bw,np.ma.power(this_depth_ma_Ndiffstack,Ndiff_exponent_params[depth]))
-                n_depth_total=np.ma.power(n_depth_total,Ndiff_exponent_params[depth])
-                else:
-                    the_bw=np.ma.multiply(n_depth_total,the_bw)
-            for depth in range(max_bw_Ndiff,0,-1):#dpeth starts wtih the last mask first
-                this_depth_ma_Ndiffstack=np.ma.array(Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth])
-                if depth==max_bw_Ndiff:
-                    the_bw=normalize_and_sum_bw(do_bw_kern(Ndiff_bw_kern,this_depth_ma_Ndiffstack)),normalization)
-                else:
-                    the_bw=np.ma.multiply(the_bw,np.ma.power(this_depth_ma_Ndiffstack,Ndiff_exponent_params[depth]))
+            for depth in range(max_bw_Ndiff,0,-1):#depth starts with the last mask first #this loop will be memory
+                # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
+                # nested summation with broadcasting tools in numpy
+                if normalization == 'own_n':normalization=self.nin-depth
+                this_depth_bw=self.normalize_and_sum_bw(
+                    self.do_bw_kern(
+                        Ndiff_bw_kern,np.ma.array(
+                            self.Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),
+                            mask=self.Ndiff_masklist[depth]
+                        ),
+                        Ndiff_depth_bw_params[depth]
+                    ),
+                    normalization
+                )
 
-                n_depth_total=np.ma.power(n_depth_total,Ndiff_exponent_params[depth])
+                if depth<max_bw_Ndiff:#at max depth, no lower depth exists, so leave it alone
+                    this_depth_bw=this_depth_bw*np.ma.power(lower_depth_bw,Ndiff_exponent_params[depth])
+                lower_depth_bw=this_depth_bw#setup for next iteration
 
 
-                else:
-                    the_bw=np.ma.multiply(n_depth_total,the_bw)
+
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
-            n_depth_masked_sum_kern=do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,p_bandwidth_params)
+            n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
         
-        #normalization options can be implemented after each sum. two obvious options
-        #are to divide by the sum across the same level or divide by the number of observations at the same level.
-        #perhaps an extension could be to normalize by sums at other levels.
 
-    def do_bw_kern(self,kern_choice,maskeddata,p_bandwidth_params=None):
+
+    def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,p_bandwidth_params=None):
         if kern_choice=="product":
-            return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)
+            return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
-            return np.ma.exp(-np.ma.power(maskeddata,2))
+            return self.gkern(maskeddata,Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
 
-        
+    def gkern(self,x,h):
+        "returns the gaussian kernel at x with bandwidth h"
+        1/(2^.5*np.pi*h)*np.ma.exp(-np.ma.power(x/h), 2)/2)
+
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
         """After working on two other approaches, I think this approach to replicating the differences with views via
         np.broadcast_to and then masking them using the pre-optimization-start-built lists of progressively deeper masks
-        (though it may prove more effective not do have masks of each depth pre-built)
+        (though it may prove more effective not to have masks of each depth pre-built)
         """
         #prepare tuple indicating shape to broadcast to
         
@@ -76,9 +92,10 @@ class kNdtool():
         if Ndiff_bw_kern=='product':
             assert Ndiff_shape==(self.nin,self.nin,self.p),"Ndiff shape not nin X nin X p but bwkern is product"
         
-        Ndiff_shape_out_tup=(Ndiff_shape[1])*depth+(Ndiff_shape[0])#these are tupples, so read as python not numpy
+        Ndiff_shape_out_tup=(Ndiff_shape[1],)*depth+(Ndiff_shape[0],)#these are tupples, so read as python not numpy
        if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet, 
-            Ndiff_shape_out_tup=Ndiff_shape_out_tup+Ndiff_shape[2]#then add it at the end
+            Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
+            # at the end of the tupple
         return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
             #broadcast nin times over <depth> dimensions added to the left side of np.shape()        
     
@@ -116,7 +133,7 @@ class kNdtool():
             the_param_values=fixed_or_free_paramdict['free_params'][start:end]#end already includes +1 to make range inclusive of the end value 
         return the_param_values
 
-    def sort_fixed_or_free(self,model_param_formdict,param_valdict):
+    def setup_fixed_or_free(self,model_param_formdict,param_valdict):
         '''takes a dictionary specifying fixed or free and a dictionary specifying starting (if free) or
         fixed (if fixed) values
         returns 1 array and a dict
@@ -125,7 +142,8 @@ class kNdtool():
             fixed_params 1 dim np array of the fixed parameter values in order in side the dictionary
             fixed_or_free_paramdict a dictionary for each parameter (param_name) with the following key:val
                 fixed_or_free:'fixed' or 'free'
-                location_idx: the start and end location for parameters of param_name in the appropriate array
+                location_idx: the start and end location for parameters of param_name in the appropriate array,
+                    notably end location has 1 added to it, so python indexing will correctly include the last value.
                 fixed_params:array of fixed params
                 Once inside optimization, the following will be added
                 free_params:array of free params or string:'outside' if the array has been removed to pass to the optimizer
@@ -189,7 +207,7 @@ class kNdtool():
 
         #create a list of free paramters for optimization  and
         # dictionary for keeping track of them and the list of fixed parameters too
-        free_params,fixed_or_free_paramdict=sort_fixed_or_free(model_param_formdict,param_valdict)
+        free_params,fixed_or_free_paramdict=setup_fixed_or_free(model_param_formdict,param_valdict)
              
         #--------------------------------
         #prep out data as grid (over -3,3) or the original dataset
@@ -249,7 +267,7 @@ class kNdtool():
         if modeldict['Ndiff_bw_kern']=='product':
             onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
             #predict
-            yhat=MY_KDEreg(yxin,yxout,xin,xout,free_params,fixed_params,onediffs,modeldict)
+            yhat=MY_KDEreg(yxin,yxout,xin,xout,fixed_or_free_paramdict,diffdict,modeldict)
         
                             
 
@@ -260,19 +278,12 @@ class kNdtool():
         return np.sum(np.power(y_err,2)
         
     
-    def MY_KDEreg(self,yxin,yxout,xin,xout,free_params,fixed_params,diffdict,modeldict,fixed_or_free_paramdict):
+    def MY_KDEreg(self,yxin,yxout,xin,xout,fixed_or_free_paramdict,diffdict,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
                                                    
         #prepare the Ndiff bandwidth weights
-        Ndiff_exponent_params=self.pull_value_from_fixed_or_free('Ndiff_exponent',fixed_or_free_paramdict)
-        Ndiff_depth_bw=self.pull_value_from_fixed_or_free('Ndiff_depth_bw',fixed_or_free_paramdict)
-        max_bw_Ndiff=modeldict['max_bw_Ndiff']
-        Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
-        normalization=modeldict['normalize_Ndiffwtsum']
-        p_bandwidth_params=self.pull_value_from_fixed_or_free('p_bandwidth',fixed_or_free_paramdict)
-        
-        xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,diffdict,Ndiff_exponent_params,p_bandwidth_params,Ndiff_bw_kern,normalization)
+        xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict)
                             
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
         prox_x=doX_KDEsmalln(xin,xin,xbw,modeldict)
