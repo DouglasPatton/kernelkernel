@@ -61,10 +61,17 @@ class kNdtool():
 
                 if depth<max_bw_Ndiff:#at max depth, no lower depth exists, so leave it alone
                     this_depth_bw=this_depth_bw*np.ma.power(lower_depth_bw,Ndiff_exponent_params[depth+1])
-                lower_depth_bw=this_depth_bw#setup for next iteration
+                if depth>2:lower_depth_bw=this_depth_bw#setup for next iteration
+            #now the for loop is over and this_depth_bw
             if kern_grid=='no':normalization=self.nin-1#first item in stack of masks should match these
             if kern_grid=='yes':normalization=self.nout
-            last_depth_bw=np.ma.power(self.normalize_and_sum_bw(self.do_bw_kern(Ndiff_bw_kern,onediffs,Ndiff_depth_bw_params[0]),normalization),Ndiff_exponent_params[0])*np.ma.power(this_depth_bw,Ndiff_exponent_params[1])
+            last_depth_bw=np.ma.power(
+                self.normalize_and_sum_bw(
+                    self.do_bw_kern(Ndiff_bw_kern,onediffs,Ndiff_depth_bw_params[0]),
+                    normalization
+                ),
+                Ndiff_exponent_params[0]
+            )*np.ma.power(this_depth_bw,Ndiff_exponent_params[1])
             assert last_depth_bw.shape()=(self.nin,self.nout),'final bw is not ninXnout with rbfkernel'
             return last_depth_bw
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
@@ -176,9 +183,9 @@ class kNdtool():
         return free_params,fixed_or_free_paramdict
         
     def optimize_free_params(self,ydata,xdata,optimizedict):
-        """This is the method for iteratively running kernelkernel to optimize hyper parameters
-        optimize dict contains starting values for free parameters, hyper-parameter structure(not flexible),
-        and a model dict that describes which model to run including how hyper-parameters enter (partiall flexible)
+        """"This is the method for iteratively running kernelkernel to optimize hyper parameters
+        optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
+        and a model dict that describes which model to run including how hyper-parameters enter (quite flexible)
         speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
         list of centered data points. see mykern_core for an example and explanation of dictionaries.
         Flexibility is also a goal. max_bw_Ndiff is the deepest the model goes.
@@ -211,17 +218,17 @@ class kNdtool():
 
         #create a list of free paramters for optimization  and
         # dictionary for keeping track of them and the list of fixed parameters too
-        free_params,fixed_or_free_paramdict=setup_fixed_or_free(model_param_formdict,param_valdict)
+        free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
              
         #--------------------------------
         #prep out data as grid (over -3,3) or the original dataset
-        xout,yxout=prep_out_grid(kerngrid,xdata_std,ydata_std)
+        xout,yxout=self.prep_out_grid(kerngrid,xdata_std,ydata_std)
         self.xin=xdata_std,self.yin=ydata_std
         self.xout=xout;self.yxout=yxout
                     
 
         #pre-build list of masks
-        self.Ndiff_masklist=max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)#do I need to save yxin?
+        self.Ndiff_masklist=self.max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)#do I need to save yxin?
 
                                            
         args_tuple=(fixed_params,yxin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
@@ -328,25 +335,28 @@ class kNdtool():
            
 
     def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
-        #for small data, pre-create the 'grid'/out data 
-        if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
-            self.data_is_small='yes'
-            if type(kerngrid) is int:
-                self.nout=kerngrid**self.p             
-                xout=MY_KDE_gridprep_smalln(kerngrid,self.p)
-                assert xout.shape[1]==self.p,'xout has wrong number of columns'
-                assert xout.shape[0]==kerngrid**self.p,'xout has wrong number of rows'
+        '''#for small data, pre-create the 'grid'/out data
+        no big data version for now
+        '''
+        # if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
+        #    self.data_is_small='yes'
+        if type(kerngrid) is int:
+            self.nout=kerngrid**self.p
+            xout=MY_KDE_gridprep_smalln(kerngrid,self.p)
+            assert xout.shape[1]==self.p,'xout has wrong number of columns'
+            assert xout.shape[0]==kerngrid**self.p,'xout has wrong number of rows'
 
-                yxout=MY_KDE_gridprep_smalln(kerngrid,self.p+1)
-                assert yxout.shape[1]==self.p+1,'yxout has wrong number of columns'
-                assert yxout.shape[0]==kerngrid**(self.p+1),'yxout has wrong number of rows'
-                self.outgrid='yes'
-            if kerngrid=='no'
-                self.nout=self.n
-                xout=xdata_std;
-                yxout=np.concatenate(ydata_std,xdata_std,axis=1)
-                self.outgrid='no'
-        return xout,yxout              
+            yxout=MY_KDE_gridprep_smalln(kerngrid,self.p+1)
+            assert yxout.shape[1]==self.p+1,'yxout has wrong number of columns'
+            assert yxout.shape[0]==kerngrid**(self.p+1),'yxout has wrong number of rows'
+            self.outgrid='yes'
+        if kerngrid=='no'
+            self.nout=self.n
+            xout=xdata_std;
+            yxout=np.concatenate(ydata_std,xdata_std,axis=1)
+            self.outgrid='no'
+        return xout,yxout
+
         
     def standardize_xy(self,xdata,ydata):
         self.xmean=np.mean(xdata,axis=0)
