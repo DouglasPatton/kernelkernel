@@ -5,7 +5,7 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
-    def normalize_and_sum_bw(self,kernstack,normalization):
+    def sum_then_normalize_bw(self,kernstack,normalization):
         """"""
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels. 
         '''
@@ -17,14 +17,62 @@ class kNdtool():
         if normalization=='across'
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
-            return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)
+            return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)#dividing by sum across the sums at "this_depth"
 
         # if normalization=='across': #does this make sense? not working now.
         #    this_depth_not_summed=kernstack
         #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth+1])),axis=0)
         #  n_depth_total=np.ma.sum(np.ma.divide(this_depth_not_summed,one_deeper_summed),axis=0)
-    def xBWmaker(self,max_bw_Ndiff,Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict):
-        """returns an nout X nin np.array of bandwidths
+
+    def recursive_BWmaker(self, max_bw_Ndiff, Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict):
+        """returns an nin X nout np.array of bandwidths
+        """
+        Ndiff_exponent_params = self.pull_value_from_fixed_or_free('Ndiff_exponent', fixed_or_free_paramdict)
+        Ndiff_depth_bw_params = self.pull_value_from_fixed_or_free('Ndiff_depth_bw', fixed_or_free_paramdict)
+        max_bw_Ndiff = modeldict['max_bw_Ndiff']
+        Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
+        normalization = modeldict['normalize_Ndiffwtsum']
+        kern_grid = model_dict['kern_grid']
+
+        p_bandwidth_params = self.pull_value_from_fixed_or_free('p_bandwidth', fixed_or_free_paramdict)
+        Ndiffs = diffdict['Ndiffs']
+        onediffs = diffdict['onediffs']
+
+        if Ndiff_bw_kern == 'rbfkern':  # parameter column already collapsed
+            lower_depth_bw=Ndiff_depth_bw_params[1]#there should only be two for recursive Ndiff
+
+            for depth in range(max_bw_Ndiff, 0, -1):  # depth starts with the last mask first #this loop will be memory
+                # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
+                # nested summation with broadcasting tools in numpy
+                if normalization == 'own_n':
+                    normalize = self.nin - depth
+                else:
+                    normalize = normalization
+                this_depth_bw = np.ma.power(
+                    self.sum_then_normalize_bw(
+                        self.do_bw_kern(
+                            Ndiff_bw_kern, np.ma.array(
+                                self.Ndiff_datastacker(Ndiffs, depth, Ndiff_bw_kern),
+                                mask=self.Ndiff_masklist[depth]
+                                ),
+                            lower_depth_bw
+                            ),
+                        normalize
+                        )
+                    ,Ndiff_exponent_params[depth]
+                    )
+
+                if depth > 1:
+                    lower_depth_bw=this_depth_bw
+            last_depth_bw=Ndiff_depth_bw_params[0]*np.ma.power(this_depth_bw,,Ndiff_exponent_params[0])
+            assert last_depth_bw.shape()=(self.nin, self.nout), 'final bw is not ninXnout with rbfkernel'
+            return last_depth_bw
+        if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
+            n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
+                                                      p_bandwidth_params)
+
+    def product_BWmaker(self,max_bw_Ndiff,Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict):
+        """returns an nin X nout np.array of bandwidths
         """
         #for loop starts at deepest Ndiff and works to front
         #axis=depth+1 b/c we want to sum over the last (rbf kern) or 2nd to last (product kern). As can be seen from the
@@ -45,12 +93,12 @@ class kNdtool():
         onediffs=diffdict['onediffs']
 
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
-            
             for depth in range(max_bw_Ndiff,1,-1):#depth starts with the last mask first #this loop will be memory
                 # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
                 # nested summation with broadcasting tools in numpy
-                if normalization == 'own_n':normalization=self.nin-depth
-                this_depth_bw=self.normalize_and_sum_bw(
+                if normalization == 'own_n':normalize=self.nin-depth
+                else:normalize=normalization
+                this_depth_bw=self.sum_then_normalize_bw(
                     self.do_bw_kern(
                         Ndiff_bw_kern,np.ma.array(
                             self.Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),
@@ -58,19 +106,22 @@ class kNdtool():
                         ),
                         Ndiff_depth_bw_params[depth]
                     ),
-                    normalization
+                    normalize
                 )
 
                 if depth<max_bw_Ndiff:#at max depth, no lower depth exists, so leave it alone
                     this_depth_bw=this_depth_bw*np.ma.power(lower_depth_bw,Ndiff_exponent_params[depth+1])
                 if depth>2:lower_depth_bw=this_depth_bw#setup for next iteration
             #now the for loop is over and this_depth_bw
-            if kern_grid=='no':normalization=self.nin-1#first item in stack of masks should match these
-            if kern_grid=='yes':normalization=self.nout
+            if normalization == 'own_n':
+                if kern_grid == 'no': normalize = self.nin - 1  # first item in stack of masks should match these
+                if kern_grid == 'yes': normalize = self.nout
+            else:
+                normalize = normalization
             last_depth_bw=np.ma.power(
-                self.normalize_and_sum_bw(
+                self.sum_then_normalize_bw(
                     self.do_bw_kern(Ndiff_bw_kern,onediffs,Ndiff_depth_bw_params[0]),
-                    normalization
+                    normalize
                 ),
                 Ndiff_exponent_params[0]
             )*np.ma.power(this_depth_bw,Ndiff_exponent_params[1])
@@ -295,8 +346,11 @@ class kNdtool():
         """
                                                    
         #prepare the Ndiff bandwidth weights
-        xBWmaker(max_bw_Ndiff,self.Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict)
-                            
+        if modeldict['Ndiff_type']=='product':
+            product_BWmaker(max_bw_Ndiff,self.Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict)
+        if modeldict['Ndiff_type'] == 'recursive':
+            recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
+
         prob_yx=doYX_KDEsmalln(yin,xin,xin,ybw,xbw,modeldict)#joint density of y and all of x's
         prox_x=doX_KDEsmalln(xin,xin,xbw,modeldict)
 
