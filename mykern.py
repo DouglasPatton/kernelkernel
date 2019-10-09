@@ -15,7 +15,9 @@ class kNdtool():
         if type(normalization) is int:
             return np.ma.sum(kernstack/int)
         if normalization=='across'
-            return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
+            #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
+            this_depth_sum=np.ma.sum(kernstack,axis=0)
+            return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)
 
         # if normalization=='across': #does this make sense? not working now.
         #    this_depth_not_summed=kernstack
