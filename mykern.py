@@ -311,9 +311,9 @@ class kNdtool():
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             
-            xin_scaled=xin*p_bandwidth_params#assuming the last p items of the free_params array are the scale parameters
+            xin_scaled=xin*p_bandwidth_params
             xout_scaled=xout*p_bandwidth_params
-            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#or should I scale y?
+            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))
             y_yxout=yxout_scaled[:,0]
             x_yxout=yxout_scaled[:,1:]
             y_onediffs=self.makediffmat_itoj(yin,y_yxout)
@@ -360,8 +360,9 @@ class kNdtool():
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
         yx_onediffs_endstack=np.concatenate((yonediffs[:,:,None],xonedifs[:,:,None]),axis=2)
+        yx_bw_endstack=np.concatenate((ybw[:,:,None],xbw[:,:,None]),axis=2)
         prob_x = do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
-        prob_yx = do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
+        prob_yx = do_KDEsmalln(yx_one_diffs_endstack, yx_bw_endstack, fixed_or_free_paramdict, modeldict)
 
 
         yhat = MY_KDEreg(yin, xin_scaled, xout_scaled, y_yxout, x_yxout, fixed_or_free_paramdict, diffdict, modeldict)
@@ -376,35 +377,31 @@ class kNdtool():
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
 
-
-
-
-        prob_yx = doYX_KDEsmalln(yin, xin, y_yxout, x_yxout, ybw, xbw, fixed_or_free_paramdict, modeldict)
-        # joint density of y and all of x's
-
-
     def makediffmat_itoj(self,xin,xout):
         return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
             
     
 
     def do_KDEsmalln(self,onediffs,xbw,modeldict):
-        """estimate the density items in onediffs using xbw. they must have same shape
+        """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
+        first 2 dimensions of onediffs must be ninXnout
         """
         assert onediffs.shape()==xbw.shape(), "onediffs is shape:{} while xbw is shape:{}".format(onediffs.shape(),xbw.shape())
         allkerns=self.gkern(onediffs,xbw)
         #collapse by random variables indexed in last axis until allkerns.ndim=2
+        normalization=modeldict['product_kern_norm']
+        if normalization =='self':
+            allkerns=allkerns/np.sum(allkerns,axis=0)    #need to check this logic. should I
+            # collapse just nin dim or both lhs dims?
+
         for i in range((allkerns.ndim-2):0:-1)
-            assert allkerns.ndim>2, "all kerns is being collapsed via product on rhs but has 2 or less dimensions"
+            assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
+                                    "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
             allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
         assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}"
-        return sumkerns=np.ma.sum(allkerns,axis=0)#collapsing the nin dimension for each obs of nout
-
-        
-    
+        return np.ma.sum(allkerns,axis=0)#collapsing across the nin kernels for each of nout
 
 
-        
     def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
         """creates a grid with all possible combinations of n evenly spaced values from -3 to 3.
         
@@ -414,7 +411,6 @@ class kNdtool():
                 agrid=np.concatenate(np.repeat(agrid,n,axis=0),np.repeat(np.linspace(-3,3,n)[:,None],n**(idx+1),axis=0),axis=1)
                 #assertions added to check shape of output
         return agrid
-           
 
     def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
         '''#for small data, pre-create the 'grid'/out data
@@ -439,7 +435,6 @@ class kNdtool():
             self.outgrid='no'
         return xout,yxout
 
-        
     def standardize_xy(self,xdata,ydata):
         self.xmean=np.mean(xdata,axis=0)
         self.ymean=np.mean(ydata,axis=0)
