@@ -289,7 +289,7 @@ class kNdtool():
         return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method)
 
     
-    def MY_KDEregMSE(self,free_params,fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
+    def MY_KDEregMSE (self,free_params,fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
@@ -304,6 +304,7 @@ class kNdtool():
         
         #pull p_bandwidth parameters from the appropriate location and appropriate vector
         p_bandwidth_params=self.pull_value_from_fixed_or_free('p_bandwidth',fixed_or_free_paramdict)
+
         p=xin.shape[1]
         assert p==len(p_bandwidth_params),"the wrong number of p_bandwidth_params exist"
 
@@ -312,21 +313,19 @@ class kNdtool():
             
             xin_scaled=xin*p_bandwidth_params#assuming the last p items of the free_params array are the scale parameters
             xout_scaled=xout*p_bandwidth_params
-            #yxin_scaled=yxin*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#insert array of 1's to avoid scaling y. need to think about whether this is correc
             yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))#or should I scale y?
             y_yxout=yxout_scaled[:,0]
             x_yxout=yxout_scaled[:,1:]
-            #yin=yxin_scaled[:,0]
-            y_onediffs=self.makediffmat_itoj(yin,yout)
+            y_onediffs=self.makediffmat_itoj(yin,y_yxout)
             y_Ndiffs=self.makediffmat_itoj(yin,yin)
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=p),.5)
 
             if modeldict['kerngrid']=='no':
                 Ndiffs_scaled_l2norm=onediffs_scaled_l2norm
             else:
-                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=p),.5)
+                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,x_yxout),2),axis=p),.5)
             assert onediffs_scaled_l2norm.shape==(xin.shape[0],xout.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
-            #predict
+
             diffdict={}
             diffdict['onediffs']=onediffs_scaled_l2norm
             diffdict['Ndiffs']=Ndiffs_scaled_l2norm
@@ -335,17 +334,37 @@ class kNdtool():
             ydiffdict['Ndiffs']=y_Ndiffs
             diffdict['ydiffdict']=ydiffdict
 
-            yhat=MY_KDEreg(yin,xin_scaled,xout_scaled,y_yxout,x_yxout,fixed_or_free_paramdict,diffdict,modeldict)
-            
-        
-                            
+
         if modeldict['Ndiff_bw_kern']=='product':
             onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
             #predict
             yhat=MY_KDEreg(yin,xin_scaled,xout_scaled,y_yxout,x_yxout,fixed_or_free_paramdict,diffdict,modeldict)
-        
-                            
+            #not developed yet
 
+        # prepare the Ndiff bandwidth weights
+        if modeldict['Ndiff_type'] == 'product':
+            xbw = product_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = product_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict['ydiffdict'],
+                              modeldict)
+        if modeldict['Ndiff_type'] == 'recursive':
+            xbw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict['ydiffdict'],
+                                modeldict)
+        #extract and multiply ij varying part of bw times non varying part
+        hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
+        hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
+
+        xbw=xbw*hx
+        ybw=ybw*hy
+
+        xonediffs=diffdict['onediffs']
+        yonediffs=diffdict['ydiffdict']['onediffs']
+        yx_onediffs_endstack=np.concatenate((yonediffs[:,:,None],xonedifs[:,:,None]),axis=2)
+        prob_x = do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
+        prob_yx = do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
+
+
+        yhat = MY_KDEreg(yin, xin_scaled, xout_scaled, y_yxout, x_yxout, fixed_or_free_paramdict, diffdict, modeldict)
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
@@ -356,37 +375,34 @@ class kNdtool():
     def MY_KDEreg(yin,xin_scaled,xout_scaled,y_yxout,x_yxoutd,fixed_or_free_paramdict,diffdict,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-                                                   
-        #prepare the Ndiff bandwidth weights
-        if modeldict['Ndiff_type']=='product':
-            xbw=product_BWmaker(max_bw_Ndiff,self.Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict)
-            ybw=product_BWmaker(max_bw_Ndiff,self.Ndiff_masklist,fixed_or_free_paramdict,diffdict['ydiffdict'],modeldict)
-        if modeldict['Ndiff_type'] == 'recursive':
-            xbw=recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict,diffdict['ydiffdict'], modeldict)
-        prob_yx=doYX_KDEsmalln(yin,xin,y_yxout,x_yxout,ybw,xbw,fixed_or_free_paramdict,modeldict)#joint density of y and all of x's
-        prox_x=doX_KDEsmalln(xin,xout,xbw,fixed_or_free_paramdict,modeldict)
+
+
+
+
+        prob_yx = doYX_KDEsmalln(yin, xin, y_yxout, x_yxout, ybw, xbw, fixed_or_free_paramdict, modeldict)
+        # joint density of y and all of x's
+
 
     def makediffmat_itoj(self,xin,xout):
         return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
             
     
 
-    def doX_KDEsmalln(self,xin,xout,xbw,modeldict):
-        """estimate the density of xout using data xin and weights, xbw
-        if no data are provided for xgrid, xgrid is set as xin
-        return xgrid x 2 array of values and marginal densities.
-        doKDE first constructs
-        Should I replace dictionaries with actual values? 
+    def do_KDEsmalln(self,onediffs,xbw,modeldict):
+        """estimate the density items in onediffs using xbw. they must have same shape
         """
-        nout,pout=xout.shape;nin,pin=xin.shape
-        assert pout==pin,'xout and xin have different numbers of parameters'
-        assert np.shape(xin)[-1]==len(w),'len(w) does not match length of last dimension of xin'
-        if modeldict['outer_kern']='gaussian'
-        return self.gkern((xout-xin)/xbw,xbw)
+        assert onediffs.shape()==xbw.shape(), "onediffs is shape:{} while xbw is shape:{}".format(onediffs.shape(),xbw.shape())
+        allkerns=self.gkern(onediffs,xbw)
+        #collapse by random variables indexed in last axis until allkerns.ndim=2
+        for i in range((allkerns.ndim-2):0:-1)
+            assert allkerns.ndim>2, "all kerns is being collapsed via product on rhs but has 2 or less dimensions"
+            allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
+        assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}"
+        return sumkerns=np.ma.sum(allkerns,axis=0)#collapsing the nin dimension for each obs of nout
+
         
     
-    #def doYX_KDEsmalln(self,yin,xin,xout,ybw,xbw,modeldict):
+
 
         
     def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
