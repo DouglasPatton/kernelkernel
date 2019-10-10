@@ -18,7 +18,7 @@ class data_gen():
         spreadx=np.random.randint(xwide, size=(1,p))+1#random row vector to multiply by each random column of x to allow s.d. upto 5
         shiftx=np.random.randint(0,xtall, size=(1,p))-xtall/2#random row vector to add to each column of x
         randx=np.random.randn(n,p)
-        self.x = np.concatenate((np.ones((n,1)),shiftx+spreadx*randx),axis=1)
+        self.x = np.concatenate((np.ones([n,1]),shiftx+spreadx*randx),axis=1)
         #generate error~N(0,1)
         self.e=np.random.randn(n)*evar**.5
         

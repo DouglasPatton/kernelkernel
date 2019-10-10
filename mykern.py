@@ -5,6 +5,9 @@ class kNdtool():
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
+
+    def __init__(self):
+        pass
     def sum_then_normalize_bw(self,kernstack,normalization):
         """"""
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels. 
@@ -14,7 +17,7 @@ class kNdtool():
 
         if type(normalization) is int:
             return np.ma.sum(kernstack/int)
-        if normalization=='across'
+        if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
             return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)#dividing by sum across the sums at "this_depth"
@@ -64,8 +67,8 @@ class kNdtool():
 
                 if depth > 1:
                     lower_depth_bw=this_depth_bw
-            last_depth_bw=Ndiff_depth_bw_params[0]*np.ma.power(this_depth_bw,,Ndiff_exponent_params[0])
-            assert last_depth_bw.shape()=(self.nin, self.nout), 'final bw is not ninXnout with rbfkernel'
+            last_depth_bw=Ndiff_depth_bw_params[0]*np.ma.power(this_depth_bw,Ndiff_exponent_params[0])
+            assert last_depth_bw.shape()==(self.nin, self.nout), 'final bw is not ninXnout with rbfkernel'
             return last_depth_bw
         if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
@@ -126,7 +129,7 @@ class kNdtool():
                 ),
                 Ndiff_exponent_params[0]
             )*np.ma.power(this_depth_bw,Ndiff_exponent_params[1])
-            assert last_depth_bw.shape()=(self.nin,self.nout),'final bw is not ninXnout with rbfkernel'
+            assert last_depth_bw.shape()==(self.nin,self.nout),'final bw is not ninXnout with rbfkernel'
             return last_depth_bw
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
@@ -142,7 +145,7 @@ class kNdtool():
 
     def gkernh(self, x, h):
         "returns the gaussian kernel at x with bandwidth h"
-        1/((2*np.pi)^.5*h)*np.ma.exp(-np.ma.power(x/h), 2)/2)
+        return 1/((2*np.pi)^.5*h)*np.ma.exp(-np.ma.power(x/h)/2, 2)
 
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
         """After working on two other approaches, I think this approach to replicating the differences with views via
@@ -158,7 +161,7 @@ class kNdtool():
             assert Ndiff_shape==(self.nin,self.nin,self.p),"Ndiff shape not nin X nin X p but bwkern is product"
         
         Ndiff_shape_out_tup=(Ndiff_shape[1],)*depth+(Ndiff_shape[0],)#these are tupples, so read as python not numpy
-       if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet, 
+        if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
             Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
             # at the end of the tupple
         return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
@@ -233,7 +236,7 @@ class kNdtool():
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
-        ]
+
         return free_params,fixed_or_free_paramdict
         
     def optimize_free_params(self,ydata,xdata,optimizedict):
@@ -252,12 +255,14 @@ class kNdtool():
         self.Ndiff_masklist - a list of progressively higher dimension (len=nin) 
             masks to broadcast(views) Ndiff to.
         """
+        print(ydata.shape)
+        print(xdata.shape)
         self.n,self.p=xdata.shape
         self.optdict=optimizedict
-        assert ydata.shape[0]==xdata.shape[0],'x and y do not match in dimension 0'
+        assert ydata.shape[0]==xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
-        xdata_std,ydata_std=standardize_xy(xdata,ydata)
+        xdata_std,ydata_std=self.standardize_xy(xdata,ydata)
         #store the standardized (by column or parameter,p) versions of x and y
         self.xdata_std=xdata_std;self.ydata_std=ydata_std
         #extract optimization information, including modeling information in model dict,
@@ -313,7 +318,7 @@ class kNdtool():
             
             xin_scaled=xin*p_bandwidth_params
             xout_scaled=xout*p_bandwidth_params
-            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0))
+            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0)
             y_yxout=yxout_scaled[:,0]
             x_yxout=yxout_scaled[:,1:]
             y_onediffs=self.makediffmat_itoj(yin,y_yxout)
@@ -365,22 +370,22 @@ class kNdtool():
         prob_yx = do_KDEsmalln(yx_one_diffs_endstack, yx_bw_endstack, fixed_or_free_paramdict, modeldict)
 
         if modeldict['regression_model']=='NW':
-            yhat = MY_NW_KDEreg(prob_yx,prob_x,y_yxout)
+            yhat = my_NW_KDEreg(prob_yx,prob_x,y_yxout)
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
         yin_un_std=yin*self.ystd+self.ymean
         yhat_un_std=yin*self.ystd+self.ymean
         y_err=yin_un_std=yhat_un_std
-        return np.sum(np.power(y_err,2)
+        return np.sum(np.power(y_err,2))
 
 
-    def MY_NW_KDEreg(prob_yx,prob_x,y_yxout):
+    def my_NW_KDEreg(self,prob_yx,prob_x,y_yxout):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
         cdfnorm_prob_yx=prob_yx/np.sum(prob_yx,axis=0)
         cdfnorm_prob_x = prob_x / np.sum(prob_x, axis=0)
-        return np.sum(yin*cdfnorm_prob_yx/cdfnorm_prob_x
+        return np.sum(y_yxout*cdfnorm_prob_yx/cdfnorm_prob_x)
 
     def makediffmat_itoj(self,xin,xout):
         return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
@@ -397,11 +402,11 @@ class kNdtool():
         if normalization =='self':
             allkerns=allkerns/np.sum(allkerns,axis=0)    #need to check this logic. should I
             # collapse just nin dim or both lhs dims?
-
-        for i in range((allkerns.ndim-2):0:-1)
-            assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
-                                    "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
-            allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
+        if allkerns.ndim>2:
+            for i in range((allkerns.ndim()-2),0,-1):
+                assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
+                                        "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
+                allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
         assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape(),self.nin,self.nout)
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
@@ -410,9 +415,9 @@ class kNdtool():
         """creates a grid with all possible combinations of n evenly spaced values from -3 to 3.
         """
         agrid=np.linspace(-3,3,n) #assuming variables have been standardized
-            for idx in range(-1)#-1 b/c agrid already created; need to figure out how to better vectorize this loop
-                agrid=np.concatenate(np.repeat(agrid,n,axis=0),np.repeat(np.linspace(-3,3,n)[:,None],n**(idx+1),axis=0),axis=1)
-                #assertions added to check shape of output
+        for idx in range(n-1):#-1 b/c agrid already created; need to figure out how to better vectorize this loop
+            agrid=np.concatenate(np.repeat(agrid,n,axis=0),np.repeat(np.linspace(-3,3,n)[:,None],n**(idx+1),axis=0),axis=1)
+            #assertions added to check shape of output
         return agrid
 
     def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
@@ -431,7 +436,7 @@ class kNdtool():
             assert yxout.shape[1]==self.p+1,'yxout has wrong number of columns'
             assert yxout.shape[0]==kerngrid**(self.p+1),'yxout has wrong number of rows'
             self.outgrid='yes'
-        if kerngrid=='no'
+        if kerngrid=='no':
             self.nout=self.n
             xout=xdata_std;
             yxout=np.concatenate(ydata_std,xdata_std,axis=1)
@@ -445,5 +450,5 @@ class kNdtool():
         self.ystd=np.std(ydata,axis=0)
         return (xdata-self.xmean)/self.xstd,(ydata-self.ymean)/self.ystd
 
-
-                             
+if __name__=="_main__":
+    pass
