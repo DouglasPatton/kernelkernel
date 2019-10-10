@@ -220,13 +220,13 @@ class kNdtool():
             param_val=param_val_dict[param_name]
             assert param_val.ndim==1,"values for {} have not ndim==1".format(param_name)
             if param_form=='fixed':
-                param_feature_dict['fixed_or_free']=='fixed'
+                param_feature_dict['fixed_or_free']='fixed'
                 param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 np.concatenate([fixed_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
             if param_form=='free':
-                param_feature_dict['fixed_or_free']=='free'
+                param_feature_dict['fixed_or_free']='free'
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 np.concatenate([free_params,param_val],axis=0)
@@ -286,7 +286,7 @@ class kNdtool():
 
                                            
         args_tuple=(fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
-        return minimize(MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
+        self.mse=minimize(MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
 
     
     def MY_KDEpredictMSE (self,free_params,fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
@@ -345,7 +345,7 @@ class kNdtool():
         if modeldict['Ndiff_type'] == 'product':
             xbw = product_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
             ybw = product_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict['ydiffdict'],
-                              modeldict)
+                modeldict)
         if modeldict['Ndiff_type'] == 'recursive':
             xbw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
             ybw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict['ydiffdict'],
