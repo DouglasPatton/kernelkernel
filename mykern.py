@@ -138,11 +138,11 @@ class kNdtool():
             return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
-            return self.gkern(maskeddata,Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
+            return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
 
-    def gkern(self,x,h):
+    def gkernh(self, x, h):
         "returns the gaussian kernel at x with bandwidth h"
-        1/(2^.5*np.pi*h)*np.ma.exp(-np.ma.power(x/h), 2)/2)
+        1/((2*np.pi)^.5*h)*np.ma.exp(-np.ma.power(x/h), 2)/2)
 
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
         """After working on two other approaches, I think this approach to replicating the differences with views via
@@ -286,10 +286,10 @@ class kNdtool():
 
                                            
         args_tuple=(fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
-        return minimize(MY_KDEregMSE,free_params,args=args_tuple,method=method)
+        return minimize(MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
 
     
-    def MY_KDEregMSE (self,free_params,fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
+    def MY_KDEpredictMSE (self,free_params,fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
@@ -354,7 +354,7 @@ class kNdtool():
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
 
-        xbw=xbw*hx
+        xbw=xbw*hx#need to make this flexible to blocks of x
         ybw=ybw*hy
 
         xonediffs=diffdict['onediffs']
@@ -364,8 +364,8 @@ class kNdtool():
         prob_x = do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
         prob_yx = do_KDEsmalln(yx_one_diffs_endstack, yx_bw_endstack, fixed_or_free_paramdict, modeldict)
 
-
-        yhat = MY_KDEreg(yin, xin_scaled, xout_scaled, y_yxout, x_yxout, fixed_or_free_paramdict, diffdict, modeldict)
+        if modeldict['regression_model']=='NW':
+            yhat = MY_NW_KDEreg(prob_yx,prob_x,y_yxout)
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
@@ -373,10 +373,12 @@ class kNdtool():
         return np.sum(np.power(y_err,2)
         
     
-    def MY_KDEreg(yin,xin_scaled,xout_scaled,y_yxout,x_yxoutd,fixed_or_free_paramdict,diffdict,modeldict):
+    def MY_NW_KDEreg(prob_yx,prob_x,y_yxout):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-
+        cdfnorm_prob_yx=prob_yx/np.sum(prob_yx,axis=0)
+        cdfnorm_prob_x = prob_x / np.sum(prob_x, axis=0)
+        return np.sum(yin*cdfnorm_prob_yx/cdfnorm_prob_x
     def makediffmat_itoj(self,xin,xout):
         return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
             
@@ -387,7 +389,7 @@ class kNdtool():
         first 2 dimensions of onediffs must be ninXnout
         """
         assert onediffs.shape()==xbw.shape(), "onediffs is shape:{} while xbw is shape:{}".format(onediffs.shape(),xbw.shape())
-        allkerns=self.gkern(onediffs,xbw)
+        allkerns=self.gkernh(onediffs, xbw)
         #collapse by random variables indexed in last axis until allkerns.ndim=2
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
@@ -398,13 +400,12 @@ class kNdtool():
             assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
                                     "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
             allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
-        assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}"
-        return np.ma.sum(allkerns,axis=0)#collapsing across the nin kernels for each of nout
+        assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape(),self.nin,self.nout))
+        return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
 
     def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
         """creates a grid with all possible combinations of n evenly spaced values from -3 to 3.
-        
         """
         agrid=np.linspace(-3,3,n) #assuming variables have been standardized
             for idx in range(-1)#-1 b/c agrid already created; need to figure out how to better vectorize this loop
