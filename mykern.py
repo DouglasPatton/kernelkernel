@@ -285,11 +285,11 @@ class kNdtool():
         self.Ndiff_masklist=self.max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)
 
                                            
-        args_tuple=(fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
+        args_tuple=(yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
         self.mse=minimize(MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
 
     
-    def MY_KDEpredictMSE (self,free_params,fixed_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
+    def MY_KDEpredictMSE (self,free_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
@@ -369,20 +369,22 @@ class kNdtool():
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
-        y_err=yin-yhat
+        yin_un_std=yin*self.ystd+self.ymean
+        yhat_un_std=yin*self.ystd+self.ymean
+        y_err=yin_un_std=yhat_un_std
         return np.sum(np.power(y_err,2)
-        
-    
+
+
     def MY_NW_KDEreg(prob_yx,prob_x,y_yxout):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
         cdfnorm_prob_yx=prob_yx/np.sum(prob_yx,axis=0)
         cdfnorm_prob_x = prob_x / np.sum(prob_x, axis=0)
         return np.sum(yin*cdfnorm_prob_yx/cdfnorm_prob_x
+
     def makediffmat_itoj(self,xin,xout):
         return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
             
-    
 
     def do_KDEsmalln(self,onediffs,xbw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
@@ -400,7 +402,7 @@ class kNdtool():
             assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
                                     "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
             allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
-        assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape(),self.nin,self.nout))
+        assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape(),self.nin,self.nout)
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
 
