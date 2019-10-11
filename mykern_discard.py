@@ -1,3 +1,64 @@
+"""optimize_free_params( should be totally duplicated now that inheritance is setup, but juts in case, I'm saving it here too
+"""
+'''   
+    def optimize_free_params(self,ydata,xdata,optimizedict):
+        """"This is the method for iteratively running kernelkernel to optimize hyper parameters
+        optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
+        and a model dict that describes which model to run including how hyper-parameters enter (quite flexible)
+        speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
+        list of centered data points. see mykern_core for an example and explanation of dictionaries.
+        Flexibility is also a goal. max_bw_Ndiff is the deepest the model goes.
+        ------------------
+        attributes created
+        self.n,self.p,self.optdict 
+        self.xdata_std, self.xmean,self.xstd
+        self.ydata_std,self.ymean,self.ystd
+        self.Ndiff - the nout X nin X p matrix of first differences of xdata_std
+        self.Ndiff_masklist - a list of progressively higher dimension (len=nin) 
+            masks to broadcast(views) Ndiff to.
+        """
+        print(ydata.shape)
+        print(xdata.shape)
+        self.n,self.p=xdata.shape
+        self.optdict=optimizedict
+        assert ydata.shape[0]==xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
+
+        #standardize x and y and save their means and std to self
+        xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
+        #store the standardized (by column or parameter,p) versions of x and y
+        self.xdata_std=xdata_std;self.ydata_std=ydata_std
+        #extract optimization information, including modeling information in model dict,
+        #parameter structure in model dict, and starting free parameter values from paramdict
+        #these options are still not fully mature and actually flexible
+        modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
+        model_param_formdict=modeldict['hyper_param_form_dict']
+        kerngrid=modeldict['kern_grid']
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        method=optimize_dict['method']
+        param_valdict=optimizedict['hyper_param_dict']
+
+        #create a list of free paramters for optimization  and
+        # dictionary for keeping track of them and the list of fixed parameters too
+        free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
+
+        #--------------------------------
+        #prep out data as grid (over -3,3) or the original dataset
+        xout,yxout=self.prep_out_grid(kerngrid,xdata_std,ydata_std)
+        self.xin=xdata_std,self.yin=ydata_std
+        self.xout=xout;self.yxout=yxout
+
+
+        #pre-build list of masks
+        self.Ndiff_masklist=self.max_bw_Ndiff_maskstacker(self,nout,nin,max_bw_Ndiff)
+
+
+        args_tuple=(yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
+        self.mse=minimize(MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
+    '''
+
+
+
+
 old and new mask stacker code before cleanup
 for ii in range(max_bw_Ndiff-1):#-1since the first mask has already been computed
             basemask=masklist[-1]#copy the last item to basemask
