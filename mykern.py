@@ -23,10 +23,10 @@ class kNdtool( object ):
 
         # if normalization=='across': #does this make sense? not working now.
         #    this_depth_not_summed=kernstack
-        #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_masklist[depth+1])),axis=0)
+        #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_list_of_masks[depth+1])),axis=0)
         #  n_depth_total=np.ma.sum(np.ma.divide(this_depth_not_summed,one_deeper_summed),axis=0)
 
-    def recursive_BWmaker(self, max_bw_Ndiff, Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict):
+    def recursive_BWmaker(self, max_bw_Ndiff, Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict):
         """returns an nin X nout np.array of bandwidths
         """
         Ndiff_exponent_params = self.pull_value_from_fixed_or_free('Ndiff_exponent', fixed_or_free_paramdict)
@@ -55,7 +55,7 @@ class kNdtool( object ):
                         self.do_bw_kern(
                             Ndiff_bw_kern, np.ma.array(
                                 self.Ndiff_datastacker(Ndiffs, depth, Ndiff_bw_kern),
-                                mask=self.Ndiff_masklist[depth]
+                                mask=self.Ndiff_list_of_masks[depth]
                                 ),
                             lower_depth_bw #this is the recursive part
                             ),
@@ -74,7 +74,7 @@ class kNdtool( object ):
                                                       p_bandwidth_params)
             #not developed yet
 
-    def product_BWmaker(self,max_bw_Ndiff,Ndiff_masklist,fixed_or_free_paramdict,diffdict,modeldict):
+    def product_BWmaker(self,max_bw_Ndiff,Ndiff_list_of_masks,fixed_or_free_paramdict,diffdict,modeldict):
         """returns an nin X nout np.array of bandwidths
         """
         #for loop starts at deepest Ndiff and works to front
@@ -105,7 +105,7 @@ class kNdtool( object ):
                     self.do_bw_kern(
                         Ndiff_bw_kern,np.ma.array(
                             self.Ndiff_datastacker(Ndiffs,depth,Ndiff_bw_kern),
-                            mask=self.Ndiff_masklist[depth]
+                            mask=self.Ndiff_list_of_masks[depth]
                         ),
                         Ndiff_depth_bw_params[depth]
                     ),
@@ -174,23 +174,24 @@ class kNdtool( object ):
         '''
         ninmask=np.repeat(np.eye(nin)[:,:,None],p,axis=2)#this one will be used extensively to construct masks
         #change p to 1 if using Ndiff_bw_kern==rbfkern because parameters will be collapsed before mask is applied
+        Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
         if Ndiff_bw_kern=='rbfkern':p=1
         if self.outgrid=='no':
-            masklist=[ninmask]
+            list_of_masks=[ninmask]
         if self.outgrid=='yes':
-            masklist=[np.zero([nin,nout,p])]#reindexed to lkjip
-        for ii in range(max_bw_Ndiff-1):#-1since the first mask is in masklist
-            basemask=masklist[-1]#copy the last item to basemask
-            masklist.append[np.repeat(np.expand_dim(basemask,0),nin,axis=0)]#then use basemask to
+            list_of_masks=[np.zero([nin,nout,p])]#reindexed to lkjip
+        for ii in range(max_bw_Ndiff-1):#-1since the first mask is in list_of_masks
+            lastmask=list_of_masks[-1]#copy the last item to lastmask
+            list_of_masks.append(np.repeat(np.expand_dims(lastmask,axis=0),nin,axis=0))#then use lastmask to
             for iii in range(1,ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                 #then this loop maxes at 0,1,2from range(1+2)
 
                 #take the last item we're constructing and merge it with another mask
-                masklist[-1]=np.ma.mask_or(masklist[-1],np.repeat(np.expand_dim(basemask,iii),nin,axis=iii))
-                #reindex:ninmask=np.repeat(np.expand_dim(ninmask,ninmask.dim),nin,axis=ninmask.dim)
-            #masklist.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
+                list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.repeat(np.expand_dims(lastmask,axis=iii),nin,axis=iii))
+                #reindex:ninmask=np.repeat(np.expand_dims(ninmask,ninmask.dim),nin,axis=ninmask.dim)
+            #list_of_masks.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
             
-        return masklist
+        return list_of_masks
                             
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict):
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
@@ -215,7 +216,7 @@ class kNdtool( object ):
                 Once inside optimization, the following will be added
                 free_params:array of free params or string:'outside' if the array has been removed to pass to the optimizer
         '''
-        fixed_params=[];free_params=[];fixed_or_free_paramdict={}
+        fixed_params=np.array([]);free_params=np.array([]);fixed_or_free_paramdict={}
         #build fixed and free vectors of hyper-parameters based on hyper_param_formdict
         for param_name,param_form in model_param_formdict.items():
             param_feature_dict={}
@@ -255,8 +256,10 @@ class kNdtool( object ):
         #pull p_bandwidth parameters from the appropriate location and appropriate vector
         p_bandwidth_params=self.pull_value_from_fixed_or_free('p_bandwidth',fixed_or_free_paramdict)
 
-        p=xin.shape[1]
-        assert p==len(p_bandwidth_params),"the wrong number of p_bandwidth_params exist"
+        #p=xin.shape[1]
+        print(p_bandwidth_params)
+        assert self.p==p_bandwidth_params.shape[0],\
+            "p={} but p_bandwidth_params.shape={}".format(self.p,p_bandwidth_params.shape)
 
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
@@ -293,12 +296,12 @@ class kNdtool( object ):
 
         # prepare the Ndiff bandwidth weights
         if modeldict['Ndiff_type'] == 'product':
-            xbw = product_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = product_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict['ydiffdict'],
+            xbw = product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
                 modeldict)
         if modeldict['Ndiff_type'] == 'recursive':
-            xbw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_masklist, fixed_or_free_paramdict, diffdict['ydiffdict'],
+            xbw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
                                 modeldict)
         #extract and multiply ij varying part of bw times non varying part
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
@@ -333,7 +336,7 @@ class kNdtool( object ):
         return np.sum(y_yxout*cdfnorm_prob_yx/cdfnorm_prob_x)
 
     def makediffmat_itoj(self,xin,xout):
-        return np.expand_dims(xin, 1) - np.expand_dims(xout, 0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
+        return np.expand_dims(xin, axis=1) - np.expand_dims(xout, axis=0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
             
 
     def do_KDEsmalln(self,onediffs,xbw,modeldict):
@@ -410,7 +413,7 @@ class optimize_free_params(kNdtool):
     self.xdata_std, self.xmean,self.xstd
     self.ydata_std,self.ymean,self.ystd
     self.Ndiff - the nout X nin X p matrix of first differences of xdata_std
-    self.Ndiff_masklist - a list of progressively higher dimension (len=nin)
+    self.Ndiff_list_of_masks - a list of progressively higher dimension (len=nin)
         masks to broadcast(views) Ndiff to.
     """
 
@@ -419,7 +422,8 @@ class optimize_free_params(kNdtool):
 
         print(ydata.shape)
         print(xdata.shape)
-        self.n,self.p=xdata.shape
+        self.nin,self.p=xdata.shape
+        self.n=self.nin
         self.optdict=optimizedict
         assert ydata.shape[0]==xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
@@ -440,7 +444,8 @@ class optimize_free_params(kNdtool):
         #create a list of free paramters for optimization  and
         # dictionary for keeping track of them and the list of fixed parameters too
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
-
+        print('free_params',free_params)
+        print('fixed_params',fixed_or_free_paramdict['fixed_params'])
         #--------------------------------
         #prep out data as grid (over -3,3) or the original dataset
         xout,yxout=self.prep_out_grid(kerngrid,xdata_std,ydata_std)
@@ -450,10 +455,11 @@ class optimize_free_params(kNdtool):
 
 
         #pre-build list of masks
-        self.Ndiff_masklist=self.max_bw_Ndiff_maskstacker(self,self.nout,self.nin,max_bw_Ndiff)
+        self.Ndiff_list_of_masks=self.max_bw_Ndiff_maskstacker(self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
 
 
-        args_tuple=(yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict)
-        self.mse=minimize(MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
+        args_tuple=(self.yin,self.yxout,self.xin,self.xout,modeldict,fixed_or_free_paramdict)
+        self.mse=minimize(self.MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
+
 if __name__=="_main__":
     pass
