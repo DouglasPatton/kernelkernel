@@ -1,12 +1,3 @@
-                test=self.do_bw_kern(
-                    Ndiff_bw_kern,np.ma.array(
-                        self.Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),#depth+1 b/c depth is in index form
-                        mask=self.Ndiff_list_of_masks[depth]
-                        ),
-                    this_depth_bw_param
-                    )
-                print('test.shape is {}'.format(test.shape))
-
 """optimize_free_params( should be totally duplicated now that inheritance is setup, but juts in case, I'm saving it here too
 """
 '''   

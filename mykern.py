@@ -15,7 +15,7 @@ class kNdtool( object ):
             return np.ma.sum(kernstack,axis=0)
 
         if type(normalization) is int:
-            return np.ma.sum(kernstack/normalization)
+            return np.ma.sum(kernstack,axis=0)/normalization
         if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
@@ -105,14 +105,7 @@ class kNdtool( object ):
                 else:normalize=normalization
                 this_depth_bw_param=Ndiff_depth_bw_params[depth]
                 print('this_depth_bw_param',this_depth_bw_param)
-                test=self.do_bw_kern(
-                    Ndiff_bw_kern,np.ma.array(
-                        self.Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),#depth+1 b/c depth is in index form
-                        mask=self.Ndiff_list_of_masks[depth]
-                        ),
-                    this_depth_bw_param
-                    )
-                print('test.shape is {}'.format(test.shape))
+
                 this_depth_bw=np.ma.power(
                     self.sum_then_normalize_bw(
                         self.do_bw_kern(
@@ -124,28 +117,16 @@ class kNdtool( object ):
                             ),
                         normalize
                         ),
-                    Ndiff_exponent_params[depth]
+                    Ndiff_exponent_params[depth-1]#depth-1 b/c product Ndiff has N-1 exponent params.
                     )
                 print('this_depth_bw.shape=',this_depth_bw.shape)
                 if depth<max_bw_Ndiff-1:#at max depth, the starting point, there are no deeper depths, so leave it alone, otherwise multiply each depth by the deeper depth.
                     this_depth_bw=this_depth_bw*deeper_depth
-                deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration
-            #now the for loop is over and this_depth_bw
-            if normalization == 'own_n':
-                if kern_grid == 'no': normalize = self.nin - 1  # first item in stack of masks should match these
-                if kern_grid == 'yes': normalize = self.nout
-            else:
-                normalize = normalization
-            last_depth_bw=np.ma.power(
-                self.sum_then_normalize_bw(
-                    self.do_bw_kern(Ndiff_bw_kern,np.ma.array(onediffs,mask=self.Ndiff_list_of_masks[0]),Ndiff_depth_bw_params[0]),
-                    normalize
-                    )
-                *this_depth_bw,
-                Ndiff_exponent_params[0]
-                )
-            assert last_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(last_depth_bw.shape,self.nin,self.nout)
-            return last_depth_bw
+                if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
+            this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]
+            assert this_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(this_depth_bw.shape,self.nin,self.nout)
+            return this_depth_bw
+                
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
 
@@ -338,10 +319,10 @@ class kNdtool( object ):
 
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
-        yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonedifs[:,:,None]],axis=2)
+        yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
         yx_bw_endstack=np.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
-        prob_x = do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
-        prob_yx = do_KDEsmalln(yx_one_diffs_endstack, yx_bw_endstack, fixed_or_free_paramdict, modeldict)
+        prob_x = self.do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
+        prob_yx = self.do_KDEsmalln(yx_one_diffs_endstack, yx_bw_endstack, fixed_or_free_paramdict, modeldict)
 
         if modeldict['regression_model']=='NW':
             yhat = my_NW_KDEreg(prob_yx,prob_x,y_yxout)
