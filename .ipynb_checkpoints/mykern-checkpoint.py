@@ -15,7 +15,7 @@ class kNdtool( object ):
             return np.ma.sum(kernstack,axis=0)
 
         if type(normalization) is int:
-            return np.ma.sum(kernstack/int)
+            return np.ma.sum(kernstack/normalization)
         if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
@@ -98,26 +98,38 @@ class kNdtool( object ):
 
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             for depth in range(max_bw_Ndiff-1,0,-1):#depth starts with the last mask first #this loop will be memory
+                print('depth={}'.format(depth))
                 # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
                 # nested summation with broadcasting tools in numpy
-                if normalization == 'own_n':normalize=self.nin-depth-1#-1 b/c depth is in index form (0 to depth-1)
+                if normalization == 'own_n':normalize=self.nin-(depth+1)#+1 b/c depth is in index form (0 to depth-1)
                 else:normalize=normalization
                 this_depth_bw_param=Ndiff_depth_bw_params[depth]
                 print('this_depth_bw_param',this_depth_bw_param)
-                this_depth_bw=self.sum_then_normalize_bw(
-                    self.do_bw_kern(
-                        Ndiff_bw_kern,np.ma.array(
-                            self.Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),#depth+1 b/c depth is in index form
-                            mask=self.Ndiff_list_of_masks[depth]
+                test=self.do_bw_kern(
+                    Ndiff_bw_kern,np.ma.array(
+                        self.Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),#depth+1 b/c depth is in index form
+                        mask=self.Ndiff_list_of_masks[depth]
                         ),
-                        this_depth_bw_param
-                    ),
-                    normalize
-                )
-
-                if depth<max_bw_Ndiff-1:#at max depth, no lower depth exists, so leave it alone
-                    this_depth_bw=this_depth_bw*np.ma.power(lower_depth_bw,Ndiff_exponent_params[depth+1])
-                if depth>2:lower_depth_bw=this_depth_bw#setup for next iteration
+                    this_depth_bw_param
+                    )
+                print('test.shape is {}'.format(test.shape))
+                this_depth_bw=np.ma.power(
+                    self.sum_then_normalize_bw(
+                        self.do_bw_kern(
+                            Ndiff_bw_kern,np.ma.array(
+                                self.Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),#depth+1 b/c depth is in index form
+                                mask=self.Ndiff_list_of_masks[depth]
+                                ),
+                            this_depth_bw_param
+                            ),
+                        normalize
+                        ),
+                    Ndiff_exponent_params[depth]
+                    )
+                print('this_depth_bw.shape=',this_depth_bw.shape)
+                if depth<max_bw_Ndiff-1:#at max depth, the starting point, there are no deeper depths, so leave it alone, otherwise multiply each depth by the deeper depth.
+                    this_depth_bw=this_depth_bw*deeper_depth
+                deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration
             #now the for loop is over and this_depth_bw
             if normalization == 'own_n':
                 if kern_grid == 'no': normalize = self.nin - 1  # first item in stack of masks should match these
@@ -126,12 +138,13 @@ class kNdtool( object ):
                 normalize = normalization
             last_depth_bw=np.ma.power(
                 self.sum_then_normalize_bw(
-                    self.do_bw_kern(Ndiff_bw_kern,onediffs,Ndiff_depth_bw_params[0]),
+                    self.do_bw_kern(Ndiff_bw_kern,np.ma.array(onediffs,mask=self.Ndiff_list_of_masks[0]),Ndiff_depth_bw_params[0]),
                     normalize
-                ),
+                    )
+                *this_depth_bw,
                 Ndiff_exponent_params[0]
-            )*np.ma.power(this_depth_bw,Ndiff_exponent_params[1])
-            assert last_depth_bw.shape()==(self.nin,self.nout),'final bw is not ninXnout with rbfkernel'
+                )
+            assert last_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(last_depth_bw.shape,self.nin,self.nout)
             return last_depth_bw
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
@@ -434,8 +447,8 @@ class optimize_free_params(kNdtool):
     def __init__(self,ydata,xdata,optimizedict):
         kNdtool.__init__(self)
 
-        print(ydata.shape)
-        print(xdata.shape)
+        #print(ydata.shape)
+        #print(xdata.shape)
         self.nin,self.p=xdata.shape
         self.n=self.nin
         self.optdict=optimizedict
@@ -458,8 +471,8 @@ class optimize_free_params(kNdtool):
         #create a list of free paramters for optimization  and
         # dictionary for keeping track of them and the list of fixed parameters too
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
-        print('free_params',free_params)
-        print('fixed_params',fixed_or_free_paramdict['fixed_params'])
+        #print('free_params',free_params)
+        #print('fixed_params',fixed_or_free_paramdict['fixed_params'])
         #--------------------------------
         #prep out data as grid (over -3,3) or the original dataset
         xout,yxout=self.prep_out_grid(kerngrid,xdata_std,ydata_std)
