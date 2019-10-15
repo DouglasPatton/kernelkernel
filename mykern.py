@@ -152,7 +152,7 @@ class kNdtool( object ):
         (though it may prove more effective not to have masks of each depth pre-built)
         """
         #prepare tuple indicating shape to broadcast to
-        
+        print(type(Ndiffs))
         Ndiff_shape=Ndiffs.shape
         if Ndiff_bw_kern=='rbfkern':
             assert Ndiff_shape==(self.nin,self.nin),"Ndiff shape not nin X nin but bwkern is rbfkern"
@@ -221,8 +221,8 @@ class kNdtool( object ):
         for param_name,param_form in model_param_formdict.items():
             param_feature_dict={}
             param_val=param_valdict[param_name]
-            print('param_val',param_val)
-            print('param_form',param_form)
+            #print('param_val',param_val)
+            #print('param_form',param_form)
             assert param_val.ndim==1,"values for {} have not ndim==1".format(param_name)
             if param_form=='fixed':
                 param_feature_dict['fixed_or_free']='fixed'
@@ -251,13 +251,14 @@ class kNdtool( object ):
         print('starting optimization of hyperparameters')
 
         #add free_params back into fixed_or_free_paramdict now that inside optimizer
+        assert fixed_or_free_paramdict['free_params']=="outside",'free_params are expected to be outside but are:{} instead.'.format(fixed_or_free_paramdict['free_params'])
         fixed_or_free_paramdict['free_params']=free_params
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         #pull p_bandwidth parameters from the appropriate location and appropriate vector
         p_bandwidth_params=self.pull_value_from_fixed_or_free('p_bandwidth',fixed_or_free_paramdict)
 
         #p=xin.shape[1]
-        print(p_bandwidth_params)
+        #print(p_bandwidth_params)
         p=p_bandwidth_params.shape[0]
         assert self.p==p,\
             "p={} but p_bandwidth_params.shape={}".format(self.p,p_bandwidth_params.shape)
@@ -337,8 +338,9 @@ class kNdtool( object ):
         return np.sum(y_yxout*cdfnorm_prob_yx/cdfnorm_prob_x)
 
     def makediffmat_itoj(self,xin,xout):
-        return np.expand_dims(xin, axis=1) - np.expand_dims(xout, axis=0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
-            
+        diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xout, axis=0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
+        print('type(diffs)=',type(diffs))
+        return diffs
 
     def do_KDEsmalln(self,onediffs,xbw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
