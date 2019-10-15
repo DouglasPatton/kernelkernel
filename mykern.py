@@ -132,7 +132,7 @@ class kNdtool( object ):
             return last_depth_bw
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
-        
+
 
 
     def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,p_bandwidth_params=None):
@@ -254,7 +254,7 @@ class kNdtool( object ):
         
         #add free_params back into fixed_or_free_paramdict now that inside optimizer
         fixed_or_free_paramdict['free_params']=free_params
-        
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
         #pull p_bandwidth parameters from the appropriate location and appropriate vector
         p_bandwidth_params=self.pull_value_from_fixed_or_free('p_bandwidth',fixed_or_free_paramdict)
 
