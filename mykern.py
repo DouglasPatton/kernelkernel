@@ -67,7 +67,7 @@ class kNdtool( object ):
                 if depth > 1:
                     lower_depth_bw=this_depth_bw
             last_depth_bw=Ndiff_depth_bw_params[0]*np.ma.power(this_depth_bw,Ndiff_exponent_params[0])
-            assert last_depth_bw.shape()==(self.nin, self.nout), 'final bw is not ninXnout with rbfkernel'
+            assert last_depth_bw.shape==(self.nin, self.nout), 'final bw is not ninXnout with rbfkernel'
             return last_depth_bw
         if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
@@ -141,9 +141,9 @@ class kNdtool( object ):
 
     def gkernh(self, x, h):
         "returns the gaussian kernel at x with bandwidth h"
-        print("x.shape",x.shape)
-        print('h.shape',h.shape)
-        print('h',h)
+        #print("x.shape",x.shape)
+        #print('h.shape',h.shape)
+        #print('h',h)
         denom=1/((2*np.pi)**.5*h)
         return denom*np.ma.exp(-np.ma.power(x/h/2, 2))
         #return np.ma.exp(-np.ma.power(x/h/2, 2))
@@ -167,7 +167,7 @@ class kNdtool( object ):
             Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
             # at the end of the tupple
         return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
-            #broadcast nin times over <depth> dimensions added to the left side of np.shape()        
+            #broadcast nin times over <depth> dimensions added to the left side of np.shape       
     
     def max_bw_Ndiff_maskstacker(self,nout,nin,p,max_bw_Ndiff,modeldict):
         '''match the parameter structure of Ndifflist produced by Ndiff_datastacker
@@ -256,7 +256,6 @@ class kNdtool( object ):
         print('starting optimization of hyperparameters')
 
         #add free_params back into fixed_or_free_paramdict now that inside optimizer
-        assert fixed_or_free_paramdict['free_params']=="outside",'free_params are expected to be outside but are:{} instead.'.format(fixed_or_free_paramdict['free_params'])
         fixed_or_free_paramdict['free_params']=free_params
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         #pull p_bandwidth parameters from the appropriate location and appropriate vector
@@ -316,16 +315,18 @@ class kNdtool( object ):
 
         xbw=xbw*hx#need to make this flexible to blocks of x
         ybw=ybw*hy
-
+        
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
+        assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
         yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
         yx_bw_endstack=np.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
-        prob_x = self.do_KDEsmalln(one_diffs, xbw, fixed_or_free_paramdict, modeldict)
-        prob_yx = self.do_KDEsmalln(yx_one_diffs_endstack, yx_bw_endstack, fixed_or_free_paramdict, modeldict)
+        prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
+        prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
+            #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs
 
         if modeldict['regression_model']=='NW':
-            yhat = my_NW_KDEreg(prob_yx,prob_x,y_yxout)
+            yhat = self.my_NW_KDEreg(prob_yx,prob_x,y_yxout)
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
@@ -347,23 +348,23 @@ class kNdtool( object ):
         print('type(diffs)=',type(diffs))
         return diffs
 
-    def do_KDEsmalln(self,onediffs,xbw,modeldict):
+    def do_KDEsmalln(self,diffs,xbw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
         first 2 dimensions of onediffs must be ninXnout
         """
-        assert onediffs.shape()==xbw.shape(), "onediffs is shape:{} while xbw is shape:{}".format(onediffs.shape(),xbw.shape())
-        allkerns=self.gkernh(onediffs, xbw)
+        assert diffs.shape==xbw.shape, "diffs is shape:{} while xbw is shape:{}".format(diffs.shape,xbw.shape)
+        allkerns=self.gkernh(diffs, xbw)
         #collapse by random variables indexed in last axis until allkerns.ndim=2
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
             allkerns=allkerns/np.sum(allkerns,axis=0)    #need to check this logic. should I
             # collapse just nin dim or both lhs dims?
         if allkerns.ndim>2:
-            for i in range((allkerns.ndim()-2),0,-1):
+            for i in range((allkerns.ndim-2),0,-1):
                 assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
                                         "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
-                allkerns=np.product(allkerns,axis=i+2)#collapse right most dimension
-        assert allkerns.shape()==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape(),self.nin,self.nout)
+                allkerns=np.product(allkerns,axis=i+1)#collapse right most dimension
+        assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
 
