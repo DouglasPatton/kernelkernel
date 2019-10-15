@@ -221,18 +221,20 @@ class kNdtool( object ):
         for param_name,param_form in model_param_formdict.items():
             param_feature_dict={}
             param_val=param_valdict[param_name]
+            print('param_val',param_val)
+            print('param_form',param_form)
             assert param_val.ndim==1,"values for {} have not ndim==1".format(param_name)
             if param_form=='fixed':
                 param_feature_dict['fixed_or_free']='fixed'
                 param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
-                np.concatenate([fixed_params,param_val],axis=0)
+                fixed_params=np.concatenate([fixed_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
             if param_form=='free':
                 param_feature_dict['fixed_or_free']='free'
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
-                np.concatenate([free_params,param_val],axis=0)
+                free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
@@ -258,7 +260,8 @@ class kNdtool( object ):
 
         #p=xin.shape[1]
         print(p_bandwidth_params)
-        assert self.p==p_bandwidth_params.shape[0],\
+        p=p_bandwidth_params.shape[0]
+        assert self.p==p,\
             "p={} but p_bandwidth_params.shape={}".format(self.p,p_bandwidth_params.shape)
 
 
@@ -273,7 +276,7 @@ class kNdtool( object ):
             y_Ndiffs=self.makediffmat_itoj(yin,yin)
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=p),.5)
 
-            if modeldict['kerngrid']=='no':
+            if modeldict['kern_grid']=='no':
                 Ndiffs_scaled_l2norm=onediffs_scaled_l2norm
             else:
                 Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,x_yxout),2),axis=p),.5)
@@ -296,12 +299,12 @@ class kNdtool( object ):
 
         # prepare the Ndiff bandwidth weights
         if modeldict['Ndiff_type'] == 'product':
-            xbw = product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
+            xbw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
                 modeldict)
         if modeldict['Ndiff_type'] == 'recursive':
-            xbw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
+            xbw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
                                 modeldict)
         #extract and multiply ij varying part of bw times non varying part
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
