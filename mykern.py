@@ -89,7 +89,7 @@ class kNdtool( object ):
         max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
-        kern_grid=model_dict['kern_grid']
+        kern_grid=modeldict['kern_grid']
 
         p_bandwidth_params = self.pull_value_from_fixed_or_free('p_bandwidth', fixed_or_free_paramdict)
         Ndiffs=diffdict['Ndiffs']
@@ -153,7 +153,7 @@ class kNdtool( object ):
         """
         #prepare tuple indicating shape to broadcast to
         
-        Ndiff_shape=Ndiffs.shape()
+        Ndiff_shape=Ndiffs.shape
         if Ndiff_bw_kern=='rbfkern':
             assert Ndiff_shape==(self.nin,self.nin),"Ndiff shape not nin X nin but bwkern is rbfkern"
         if Ndiff_bw_kern=='product':
@@ -249,9 +249,7 @@ class kNdtool( object ):
         columns of x.
         """
         print('starting optimization of hyperparameters')
-        #is the masking approach sufficient for leave one out cross validation?
-        #kern_grid='no' forces masking of self for predicting self
-        
+
         #add free_params back into fixed_or_free_paramdict now that inside optimizer
         fixed_or_free_paramdict['free_params']=free_params
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
