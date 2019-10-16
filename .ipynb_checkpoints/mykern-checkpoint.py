@@ -36,7 +36,7 @@ class kNdtool( object ):
         normalization = modeldict['normalize_Ndiffwtsum']
         kern_grid = model_dict['kern_grid']
 
-        p_bandwidth_params = self.pull_value_from_fixed_or_free('p_bandwidth', fixed_or_free_paramdict)
+        p_bandscale_params = self.pull_value_from_fixed_or_free('p_bandscale', fixed_or_free_paramdict)
         Ndiffs = diffdict['Ndiffs']
         onediffs = diffdict['onediffs']
 
@@ -71,7 +71,7 @@ class kNdtool( object ):
             return last_depth_bw
         if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
-                                                      p_bandwidth_params)
+                                                      p_bandscale_params)
             #not developed yet
 
     def product_BWmaker(self,max_bw_Ndiff,Ndiff_list_of_masks,fixed_or_free_paramdict,diffdict,modeldict):
@@ -92,7 +92,7 @@ class kNdtool( object ):
         normalization = modeldict['normalize_Ndiffwtsum']
         kern_grid=modeldict['kern_grid']
 
-        p_bandwidth_params = self.pull_value_from_fixed_or_free('p_bandwidth', fixed_or_free_paramdict)
+        p_bandscale_params = self.pull_value_from_fixed_or_free('p_bandscale', fixed_or_free_paramdict)
         Ndiffs=diffdict['Ndiffs']
         onediffs=diffdict['onediffs']
 
@@ -130,13 +130,13 @@ class kNdtool( object ):
             return this_depth_bw
                 
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
-            n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandwidth_params)
+            n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandscale_params)
 
 
 
-    def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,p_bandwidth_params=None):
+    def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,p_bandscale_params=None):
         if kern_choice=="product":
-            return np.ma.product(p_bandwidth_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
+            return np.ma.product(p_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
             return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
@@ -224,6 +224,8 @@ class kNdtool( object ):
             the_param_values=fixed_or_free_paramdict['fixed_params'][start:end]#end already includes +1 to make range inclusive of the end value
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='free':
             the_param_values=fixed_or_free_paramdict['free_params'][start:end]#end already includes +1 to make range inclusive of the end value 
+        if fixed_or_free_paramdict[param_name]['const']=='non-neg':#transform variable with e^(.) if there is a non-negative constraint
+            the_param_values=np.exp(the_param_values)
         return the_param_values
 
     def setup_fixed_or_free(self,model_param_formdict,param_valdict):
@@ -251,12 +253,21 @@ class kNdtool( object ):
             assert param_val.ndim==1,"values for {} have not ndim==1".format(param_name)
             if param_form=='fixed':
                 param_feature_dict['fixed_or_free']='fixed'
+                param_feature_dict['const']='fixed'
                 param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 fixed_params=np.concatenate([fixed_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
-            if param_form=='free':
+            elif param_form=='free':
                 param_feature_dict['fixed_or_free']='free'
+                param_feature_dict['const']='free'
+                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
+                    #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
+                free_params=np.concatenate([free_params,param_val],axis=0)
+                fixed_or_free_paramdict[param_name]=param_feature_dict
+            else:
+                param_feature_dict['fixed_or_free']='free'
+                param_feature_dict['const']=param_form
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 free_params=np.concatenate([free_params,param_val],axis=0)
@@ -275,24 +286,23 @@ class kNdtool( object ):
         """
         #print('starting optimization of hyperparameters')
 
-        #add free_params back into fixed_or_free_paramdict now that inside optimizer
+        #add/or_refresh free_params back into fixed_or_free_paramdict now that inside optimizer
+        if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
+            print('opitmization starting')
         fixed_or_free_paramdict['free_params']=free_params
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
-        #pull p_bandwidth parameters from the appropriate location and appropriate vector
-        p_bandwidth_params=self.pull_value_from_fixed_or_free('p_bandwidth',fixed_or_free_paramdict)
-
-        #p=xin.shape[1]
-        #print(p_bandwidth_params)
-        p=p_bandwidth_params.shape[0]
+        #pull p_bandscale parameters from the appropriate location and appropriate vector
+        p_bandscale_params=self.pull_value_from_fixed_or_free('p_bandscale',fixed_or_free_paramdict)
+        p=p_bandscale_params.shape[0]
         assert self.p==p,\
-            "p={} but p_bandwidth_params.shape={}".format(self.p,p_bandwidth_params.shape)
+            "p={} but p_bandscale_params.shape={}".format(self.p,p_bandscale_params.shape)
 
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             
-            xin_scaled=xin*p_bandwidth_params
-            xout_scaled=xout*p_bandwidth_params
-            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandwidth_params],axis=0)
+            xin_scaled=xin*p_bandscale_params
+            xout_scaled=xout*p_bandscale_params
+            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandscale_params],axis=0)
             y_yxout=yxout_scaled[:,0]
             x_yxout=yxout_scaled[:,1:]
             y_onediffs=self.makediffmat_itoj(yin,y_yxout)
@@ -333,9 +343,7 @@ class kNdtool( object ):
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
 
-        hx=np.exp(hx) #forcing these paramters to be positive
-        hy=np.exp(hy)
-        
+                
         xbw=xbw*hx#need to make this flexible to blocks of x
         ybw=ybw*hy
         #print('xbw masked count:',np.ma.count_masked(xbw),'with shape:',xbw.shape)
