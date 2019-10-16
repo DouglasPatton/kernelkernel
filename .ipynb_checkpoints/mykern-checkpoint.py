@@ -307,12 +307,12 @@ class kNdtool( object ):
             x_yxout=yxout_scaled[:,1:]
             y_onediffs=self.makediffmat_itoj(yin,y_yxout)
             y_Ndiffs=self.makediffmat_itoj(yin,yin)
-            onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=p),.5)
+            onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=2),.5)
 
             if modeldict['kern_grid']=='no':
                 Ndiffs_scaled_l2norm=onediffs_scaled_l2norm
             else:
-                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,x_yxout),2),axis=p),.5)
+                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,x_yxout),2),axis=2),.5)
             assert onediffs_scaled_l2norm.shape==(xin.shape[0],xout.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
 
             diffdict={}
