@@ -1,7 +1,9 @@
 import numpy as np
 
 class reg(object):
-    def __init__(self,y,x):
+    def __init__(self,y,x,seed=None):
+        if not seed==None:
+            np.random.seed(seed)
         self.y=y
         self.x=x
     

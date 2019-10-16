@@ -5,13 +5,16 @@ class data_gen():
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self, data_shape=None, ftype='linear'):
+    def __init__(self,seed=None,data_shape=None, ftype='linear'):
         if data_shape==None:
             self.n=200;self.p=2
         else:self.n=data_shape[0];self.p=data_shape[1]
+        if not seed==None:
+            np.random.seed(seed)
+        
         p=self.p
         n=self.n
-        betamax=100
+        betamax=10
         evar=1.5
         xtall=3
         xwide=2

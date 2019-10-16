@@ -86,7 +86,7 @@ class kNdtool( object ):
 
         Ndiff_exponent_params = self.pull_value_from_fixed_or_free('Ndiff_exponent', fixed_or_free_paramdict)
         Ndiff_depth_bw_params = self.pull_value_from_fixed_or_free('Ndiff_depth_bw', fixed_or_free_paramdict)
-        print('Ndiff_depth_bw_params',Ndiff_depth_bw_params)
+        #print('Ndiff_depth_bw_params',Ndiff_depth_bw_params)
         max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
@@ -98,13 +98,13 @@ class kNdtool( object ):
 
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             for depth in range(max_bw_Ndiff-1,0,-1):#depth starts with the last mask first #this loop will be memory
-                print('depth={}'.format(depth))
+                #print('depth={}'.format(depth))
                 # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
                 # nested summation with broadcasting tools in numpy
                 if normalization == 'own_n':normalize=self.nin-(depth+1)#+1 b/c depth is in index form (0 to depth-1)
                 else:normalize=normalization
                 this_depth_bw_param=Ndiff_depth_bw_params[depth]
-                print('this_depth_bw_param',this_depth_bw_param)
+                #print('this_depth_bw_param',this_depth_bw_param)
 
                 this_depth_bw=np.ma.power(
                     self.sum_then_normalize_bw(
@@ -119,12 +119,14 @@ class kNdtool( object ):
                         ),
                     Ndiff_exponent_params[depth-1]#depth-1 b/c product Ndiff has N-1 exponent params.
                     )
-                print('this_depth_bw.shape=',this_depth_bw.shape)
+                #print('depth:',depth+1,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
+                #print('this_depth_bw.shape=',this_depth_bw.shape)
                 if depth<max_bw_Ndiff-1:#at max depth, the starting point, there are no deeper depths, so leave it alone, otherwise multiply each depth by the deeper depth.
                     this_depth_bw=this_depth_bw*deeper_depth
                 if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]
             assert this_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(this_depth_bw.shape,self.nin,self.nout)
+            
             return this_depth_bw
                 
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
@@ -144,8 +146,26 @@ class kNdtool( object ):
         #print("x.shape",x.shape)
         #print('h.shape',h.shape)
         #print('h',h)
+        
         denom=1/((2*np.pi)**.5*h)
-        return denom*np.ma.exp(-np.ma.power(x/h/2, 2))
+        numerator=np.ma.exp(-np.ma.power(x/(h*2), 2))
+        print('excess numerator mask count',np.ma.count_masked(numerator)-np.ma.count_masked(h))    
+        print('excess denom mask count',np.ma.count_masked(denom)-np.ma.count_masked(h))    
+        excess_denom_mask=np.ma.count_masked(denom)-np.ma.count_masked(h)
+        if excess_denom_mask>0:
+            print('h',h)
+            print('denom',denom)
+        
+        kern=denom*numerator
+        
+        hmaskcount=np.ma.count_masked(h)
+        kernmaskedcount=np.ma.count_masked(kern)
+        xmaskedcount=np.ma.count_masked(x)
+        print('gkernh maskcount',kernmaskedcount,'kernshape',kern.shape,'maskeddata_maskcount',xmaskedcount,'maskeddata_shape',x.shape,'hmaskcount',hmaskcount)
+        if kernmaskedcount==22:
+            print('denom,numerator',[(i,k) for i,k in zip(denom,numerator)])
+            print(self.fixed_or_free_paramdict)
+        return kern
         #return np.ma.exp(-np.ma.power(x/h/2, 2))
 
     def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
@@ -154,7 +174,7 @@ class kNdtool( object ):
         (though it may prove more effective not to have masks of each depth pre-built)
         """
         #prepare tuple indicating shape to broadcast to
-        print(type(Ndiffs))
+        #print(type(Ndiffs))
         Ndiff_shape=Ndiffs.shape
         if Ndiff_bw_kern=='rbfkern':
             assert Ndiff_shape==(self.nin,self.nin),"Ndiff shape not nin X nin but bwkern is rbfkern"
@@ -253,7 +273,7 @@ class kNdtool( object ):
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
         columns of x.
         """
-        print('starting optimization of hyperparameters')
+        #print('starting optimization of hyperparameters')
 
         #add free_params back into fixed_or_free_paramdict now that inside optimizer
         fixed_or_free_paramdict['free_params']=free_params
@@ -313,14 +333,23 @@ class kNdtool( object ):
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
 
+        hx=np.exp(hx) #forcing these paramters to be positive
+        hy=np.exp(hy)
+        
         xbw=xbw*hx#need to make this flexible to blocks of x
         ybw=ybw*hy
+        #print('xbw masked count:',np.ma.count_masked(xbw),'with shape:',xbw.shape)
+        #print('ybw masked count:',np.ma.count_masked(ybw),'with shape:',ybw.shape)
+        
         
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
         assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
         yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
-        yx_bw_endstack=np.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
+        yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
+        print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
+        print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
+        
         prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
         prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs
@@ -331,41 +360,60 @@ class kNdtool( object ):
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
         yin_un_std=yin*self.ystd+self.ymean
-        yhat_un_std=yin*self.ystd+self.ymean
-        y_err=yin_un_std=yhat_un_std
-        return np.sum(np.power(y_err,2))
+        yhat_un_std=yhat*self.ystd+self.ymean
+        y_err=yin_un_std-yhat_un_std
+        mse= np.mean(np.power(y_err,2))
+        print('mse:',mse)
+        self.yhat=yhat_un_std
+        print(np.ma.count_masked(yhat),'are masked in yhat of yhatshape:',yhat.shape)
+        return mse
 
 
     def my_NW_KDEreg(self,prob_yx,prob_x,y_yxout):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        cdfnorm_prob_yx=prob_yx/np.sum(prob_yx,axis=0)
-        cdfnorm_prob_x = prob_x / np.sum(prob_x, axis=0)
-        return np.sum(y_yxout*cdfnorm_prob_yx/cdfnorm_prob_x)
-
+        
+        #cdfnorm_prob_yx=prob_yx/np.ma.sum(prob_yx,axis=0)
+        cdfnorm_prob_yx=prob_yx#dropped normalization
+        #cdfnorm_prob_x = prob_x / np.ma.sum(prob_x, axis=0)
+        cdfnorm_prob_x = prob_x#dropped normalization
+        print(np.ma.count_masked(cdfnorm_prob_yx),'are masked in cdfnorm_prob_yx of shape:',cdfnorm_prob_yx.shape)
+        print(np.ma.count_masked(cdfnorm_prob_x),'are masked in cdfnorm_prob_x of shape:',cdfnorm_prob_x.shape)
+        yhat= np.ma.sum(y_yxout*cdfnorm_prob_yx/cdfnorm_prob_x,axis=0)#sum over axis=0 collapses across nin for each nout
+        return yhat
+    
     def makediffmat_itoj(self,xin,xout):
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xout, axis=0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
-        print('type(diffs)=',type(diffs))
+        #print('type(diffs)=',type(diffs))
         return diffs
 
-    def do_KDEsmalln(self,diffs,xbw,modeldict):
+    def do_KDEsmalln(self,diffs,bw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
         first 2 dimensions of onediffs must be ninXnout
         """
-        assert diffs.shape==xbw.shape, "diffs is shape:{} while xbw is shape:{}".format(diffs.shape,xbw.shape)
-        allkerns=self.gkernh(diffs, xbw)
+        assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
+        #print('diffs',diffs)
+        #print('bw',bw)
+        allkerns=self.gkernh(diffs, bw)
+        print(np.ma.count_masked(allkerns),'alkerns masked count with shape',allkerns.shape)
+        #print('allkerns:',allkerns)
         #collapse by random variables indexed in last axis until allkerns.ndim=2
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
-            allkerns=allkerns/np.sum(allkerns,axis=0)    #need to check this logic. should I
+            allkerns_sum=np.ma.sum(allkerns,axis=0)
+            #print('allkerns_sum.shape:',allkerns_sum.shape,allkerns_sum.max())               
+            allkerns=allkerns/allkerns_sum    #need to check this logic. should I
             # collapse just nin dim or both lhs dims?
         if allkerns.ndim>2:
+            #print('diffs',diffs)
+            #print('bw',bw) 
             for i in range((allkerns.ndim-2),0,-1):
                 assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
                                         "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
-                allkerns=np.product(allkerns,axis=i+1)#collapse right most dimension
+                allkerns=np.ma.product(allkerns,axis=i+1)#collapse right most dimension
         assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
-        return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
+        return allkerns
+        #return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
 
     def MY_KDE_gridprep_smalln(self,n,p,kern_grid):
@@ -397,6 +445,8 @@ class kNdtool( object ):
             self.nout=self.n
             xout=xdata_std;
             yxout=np.concatenate([ydata_std[:,None],xdata_std],axis=1)
+            #print('xoutshape and yxouts.shape',xout.shape,yxout.shape)
+            #yxout=np.concatenate([ydata_std[None,:],xdata_std],axis=1)
             self.outgrid='no'
         return xout,yxout
 
@@ -453,6 +503,7 @@ class optimize_free_params(kNdtool):
         #create a list of free paramters for optimization  and
         # dictionary for keeping track of them and the list of fixed parameters too
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
+        self.fixed_or_free_paramdict=fixed_or_free_paramdict
         #print('free_params',free_params)
         #print('fixed_params',fixed_or_free_paramdict['fixed_params'])
         #--------------------------------
