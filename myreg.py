@@ -12,7 +12,8 @@ class reg(object):
         # a simple regression that prints its own mse and returns estimated parameters
         q=np.linalg.inv(np.matmul(x.T,x))
         self.b=np.matmul(np.matmul(q,x.T),y)
-        self.mse=np.sum((y-x@self.b)**2)/y.shape[0]
+        self.yhat=x@self.b
+        self.mse=np.sum((y-self.yhat)**2)/y.shape[0]
 
     def myregstdz(self,y,x): 
         [n,k]=np.shape(x)
