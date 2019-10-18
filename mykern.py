@@ -98,6 +98,7 @@ class kNdtool( object ):
 
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             this_depth_bw=np.ones([self.nin,self.nout])
+            print('self.nout',self.nout)
             for depth in range(max_bw_Ndiff-1,0,-1):#depth starts with the last mask first #this loop will be memory
                 #print('depth={}'.format(depth))
                 # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
@@ -475,9 +476,45 @@ class kNdtool( object ):
         yonediffs=diffdict['ydiffdict']['onediffs']
         assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
         print(yonediffs.shape,xonediffs.shape)
-        yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
+        ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
+        if ykern_grid=='no' and xkern_grid=='no':
+            yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
+            yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
+        if type(ykern_grid) is int and xkern_grid=='no':
+            
+            y_tup=yonediffs.shape+(self.nout,)
+            x_tup=xonediffs.shape[:-1]+(ykern_grid,)+(xonediffs.shape[-1],)
+            yx_onediffs_end=np.ma.concatenate(
+                [
+                    np.expand_dims(np.broadcast_to(np.expand_dims(yonediffs,axis=yonediffs.ndim),y_tup),axis=len(y_tup)),
+                    np.expand_dims(np.broadcast_to(np.expand_dims(xonediffs,axis=xonediffs.ndim-1),x_tup),axis=len(y_tup))
+                    ]
+                ,axis=len(y_tup))
+            print('before reshape',yx_onediffs_end.shape)
+            newshape_tupple=yx_onediffs_end.shape[:-2]+(yx_onediffs_end.shape[-1]*yx_onediffs_end.shape[-2],)
+            yx_onediffs_endstack=yx_onediffs_end.reshape(newshape_tupple)
+            print('after reshape',yx_onediffs_endstack.shape)
+        
+        
+            newshape_tupple=y_bw.shape+(yx_bw_end.shape[-2]*yx_bw_end.shape[-1],)
+            yx_bw_end=np.ma.concatenate(
+                [
+                    np.expand_dims(np.broadcast_to(np.expand_dims(ybw,axis=ybw.ndim),y_tup),axis=len(y_tup)).reshape(),
+                    np.expand_dims(np.broadcast_to(np.expand_dims(xbw,axis=xbw.ndim-1),x_tup),axis=len(y_tup)).reshape()
+                    ]
+                ,axis=len(y_tup))
+            print('before reshape',yx_bw_end.shape)
+            
+            yx_bw_endstack=yx_bw_end.reshape(newshape_tupple)
+            print('after reshape',yx_bw_endstack.shape)
+                
+        
+        
+            yx_bw_endstack
+        
         #yx_onediffs_endstack=np.concatenate([np.tile(yonediffs,[self.nin,self.nout*xonediffs.shape[1]])[:,:,None],np.repeat(xonediffs,yonediffs.shape[1],axis=1)[:,:,None]],axis=2)
-        yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
+        
+
         #print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
         #print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
         
