@@ -370,7 +370,8 @@ class kNdtool( object ):
         
         prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
         prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
-            #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs
+            #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
+            #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
 
         if modeldict['regression_model']=='NW':
             yhat = self.my_NW_KDEreg(prob_yx,prob_x,y_yxout)
@@ -430,20 +431,21 @@ class kNdtool( object ):
             for i in range((allkerns.ndim-2),0,-1):
                 assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
                                         "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
-                allkerns=np.ma.product(allkerns,axis=i+1)#collapse right most dimension
+                allkerns=np.ma.product(allkerns,axis=i+1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+                #are kernels of x and y, we are creating the product kernel of x and y
         assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
         return allkerns
         #return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
 
-    def MY_KDE_gridprep_smalln(self,n,p):
-        """creates a grid with all possible combinations of n (kerngrid not nin or nout) evenly spaced values from -3 to 3.
+    def MY_KDE_gridprep_smalln(self,m,p):
+        """creates a grid with all possible combinations of m=n^p (kerngrid not nin or nout) evenly spaced values from -3 to 3.
         """
-        agrid=np.linspace(-3,3,n)[:,None] #assuming variables have been standardized
+        agrid=np.linspace(-3,3,m)[:,None] #assuming variables have been standardized
         pgrid=agrid.copy()
         for idx in range(p-1):
         #for idx in range(n-1):#-1 b/c agrid already created; need to figure out how to better vectorize this loop
-            pgrid=np.concatenate([np.repeat(pgrid,n,axis=0),np.repeat(agrid,n**(idx+1),axis=0)],axis=1)
+            pgrid=np.concatenate([np.repeat(pgrid,m,axis=0),np.repeat(agrid,m**(idx+1),axis=0)],axis=1)
             #agrid=np.concatenate([np.repeat(agrid,n,axis=0),np.repeat(pgrid,n**(idx+1),axis=0)],axis=1)
             #agridtupple=(n**(var+1),n)#starting with var=0, agrid tupple will be shape(2,n) which has 
             #pgridtupple=(n*n**(var+1),pgrid.shape[1])
