@@ -205,18 +205,27 @@ class kNdtool( object ):
         when i insert a new dimension between two dimensions, I'm effectively transposing
         '''
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
-        if Ndiff_bw_kern=='rbfkern':p=1
+        ykerngrid=modeldict['ykern_grid']
+        if Ndiff_bw_kern=='rbfkern':
+            p=1
         ninmask=np.ma.make_mask(np.repeat(np.eye(nin)[:,:,None],p,axis=2))#this one will be used extensively to construct masks
         #change p to 1 if using Ndiff_bw_kern==rbfkern because parameters will be collapsed before mask is applied
         
-        if self.outgrid=='no':
+        if ykerngrid=="no":
             list_of_masks=[ninmask]
-        if self.outgrid=='yes':
+            if max_bw_Ndiff>1:
+                list_of_masks.append(np.broadcast_to(ninmask,(nin,nin,nin,p)))
+        if type(ykerngrid) is int:
             list_of_masks=[np.zeros([nin,nout,p])]#reindexed to lkjip
-        lastmask=ninmask #second masks always based on self.nin
-        for ii in range(max_bw_Ndiff-1):#-1since the first mask is in list_of_masks
-            list_of_masks.append(np.repeat(np.expand_dims(lastmask,axis=0),nin,axis=0))
-            #list_of_masks.append(lastmask)
+            if max_bw_Ndiff>1:
+                list_of_masks.append(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,p)))
+                
+        lastmask=list_of_masks[-1] #second masks always based on self.nin
+        for ii in range(max_bw_Ndiff-2):#-2 since the first 2 masks in list_of_masks already
+            ii+=1#b/c 2nd mask already completed.
+            #list_of_masks.append(np.repeat(np.expand_dims(lastmask,axis=0),nin,axis=0))
+            masktup=nin+lastmask.shape#add another dimension of lenght nin to left side of masktup
+            list_of_masks.append(np.broadcast_to(lastmask,masktup))
             for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                 #then this loop maxes at 0,1,2from range(1+2)
 
@@ -445,24 +454,34 @@ class kNdtool( object ):
         pgrid=agrid.copy()
         for idx in range(p-1):
         #for idx in range(n-1):#-1 b/c agrid already created; need to figure out how to better vectorize this loop
-            pgrid=np.concatenate([np.repeat(pgrid,m,axis=0),np.repeat(agrid,m**(idx+1),axis=0)],axis=1)
-            #agrid=np.concatenate([np.repeat(agrid,n,axis=0),np.repeat(pgrid,n**(idx+1),axis=0)],axis=1)
-            #agridtupple=(n**(var+1),n)#starting with var=0, agrid tupple will be shape(2,n) which has 
-            #pgridtupple=(n*n**(var+1),pgrid.shape[1])
-            #pgrid=np.concatenate(np.broadcast_to(agrid[None,:],agridtupple).ravel()[:,None],np.broadcast_to(pgrid[:,:,None],pgridtupple),axis=1)
-            #np.meshgrid(agrid,pgrid)
+            #pgrid=np.concatenate([np.repeat(pgrid,m,axis=0),np.repeat(agrid,m**(idx+1),axis=0)],axis=1)
             
             
-            #assertions added to check shape of output
+            #agridtupple=(m**(idx+1),m)#starting with var=0, agrid tupple will be shape(2,n) which has 
+            #pgridtupple=(m*m**(idx+1),pgrid.shape[1])
+            #pgrid=np.concatenate(np.broadcast_to(agrid,agridtupple).ravel()[:,None],np.broadcast_to(pgrid,pgridtupple),axis=1)
+            
+            pgrid=np.concatenate(np.repeat(agrid,m,axis=0),np.tile(pgrid,m,axis=0)
+            
+
         return pgrid
 
-    def prep_out_grid(self,kerngrid,xdata_std,ydata_std):
+    def prep_out_grid(self,xkerngrid,ykerngrid,xdata_std,ydata_std,xout=None):
         '''#for small data, pre-create the 'grid'/out data
         no big data version for now
         '''
         # if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
         #    self.data_is_small='yes'
-        if type(kerngrid) is int:
+        if xout==None:
+            xout=xdata_std
+        if type(ykerngrid) is int and xkerngrid=="no":
+            #yout=np.broadcast_to(np.linspace(-3,3,ykerngrid),(xdata_std.shape[0],ykerngrid))
+            yout=np.linspace(-3,3,ykerngrid)#will broadcast later
+            self.nout=xout.shape[0]
+            #xout=np.(np.tile(y_out,xdata_std.shape[0],axis=0))
+            xout=self.xout
+            
+        if type(xkerngrid) is int:#this doesn't work yet
             self.nout=kerngrid**self.p
             xout=self.MY_KDE_gridprep_smalln(kerngrid,self.p)
             assert xout.shape[1]==self.p,'xout has wrong number of columns'
@@ -471,15 +490,15 @@ class kNdtool( object ):
             yxout=self.MY_KDE_gridprep_smalln(kerngrid,self.p+1)
             assert yxout.shape[1]==self.p+1,'yxout has wrong number of columns'
             assert yxout.shape[0]==kerngrid**(self.p+1),'yxout has {} rows not {}'.format(yxout.shape[0],kerngrid**(self.p+1))
-            self.outgrid='yes'
-        if kerngrid=='no':
-            self.nout=self.n
-            xout=xdata_std;
-            yxout=np.concatenate([ydata_std[:,None],xdata_std],axis=1)
+            
+        if xkerngrid=='no'qnd ykerngrid=='no':
+            self.nout=self.nin
+            xout=xdata_std
+            yout=ydata_std
             #print('xoutshape and yxouts.shape',xout.shape,yxout.shape)
             #yxout=np.concatenate([ydata_std[None,:],xdata_std],axis=1)
-            self.outgrid='no'
-        return xout,yxout
+            
+        return xout,yout
 
     def standardize_yx(self,xdata,ydata):
         self.xmean=np.mean(xdata,axis=0)
@@ -527,7 +546,8 @@ class optimize_free_params(kNdtool):
         #these options are still not fully mature and actually flexible
         modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
         model_param_formdict=modeldict['hyper_param_form_dict']
-        kerngrid=modeldict['kern_grid']
+        xkerngrid=modeldict['xkern_grid']
+        ykerngrid=modeldict['ykern_grid']
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         method=optimizedict['method']
         param_valdict=optimizedict['hyper_param_dict']
@@ -536,11 +556,9 @@ class optimize_free_params(kNdtool):
         # dictionary for keeping track of them and the list of fixed parameters too
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
-        #print('free_params',free_params)
-        #print('fixed_params',fixed_or_free_paramdict['fixed_params'])
-        #--------------------------------
-        #prep out data as grid (over -3,3) or the original dataset
-        xout,yxout=self.prep_out_grid(kerngrid,xdata_std,ydata_std)
+       
+                                 
+        xout,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,xout)
         self.xin=xdata_std;self.yin=ydata_std
         self.xout=xout;self.yxout=yxout
         self.nout=xout.shape[0]
