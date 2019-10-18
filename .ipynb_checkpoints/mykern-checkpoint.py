@@ -185,7 +185,7 @@ class kNdtool( object ):
         
         #reindex:Ndiff_shape_out_tup=(Ndiff_shape[1],)*depth+(Ndiff_shape[0],)#these are tupples, so read as python not numpy
         if depth>2:
-            Ndiff_shape_out_tup=(self.nin,)*depth+(self.nin,)#these are tupples, so read as python not numpy
+            Ndiff_shape_out_tup=(self.nin,)*depth+(self.nout,)#these are tupples, so read as python not numpy
             if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
                 Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
             # at the end of the tupple
@@ -224,17 +224,22 @@ class kNdtool( object ):
         for ii in range(max_bw_Ndiff-2):#-2 since the first 2 masks in list_of_masks already
             ii+=1#b/c 2nd mask already completed.
             #list_of_masks.append(np.repeat(np.expand_dims(lastmask,axis=0),nin,axis=0))
-            masktup=nin+lastmask.shape#add another dimension of lenght nin to left side of masktup
-            list_of_masks.append(np.broadcast_to(lastmask,masktup))
+            #masktup=(nin,)+lastmask.shape#add another dimension of lenght nin to left side of masktup
+            #print('masktup at ii={}:'.format(ii),masktup)
+            #list_of_masks.append(np.broadcast_to(lastmask,masktup))
+            
+            masktup=lastmask.shape
+            list_of_masks.append(lastmask)
             for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                 #then this loop maxes at 0,1,2from range(1+2)
 
                 #take the last item we're constructing and merge it with another mask
                 #list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.repeat(np.expand_dims(lastmask,axis=iii),nin,axis=iii))
-                list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),nin+masktup))#nout should stay at 2nd to last position
+                list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),(nin,)+masktup))#nout should stay at 2nd to last position
                 #reindex:ninmask=np.repeat(np.expand_dims(ninmask,ninmask.dim),nin,axis=ninmask.dim)
             #list_of_masks.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
             lastmask=list_of_masks[-1]#copy the last item to lastmask
+        [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff)]
         return list_of_masks
                             
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict):
@@ -349,7 +354,6 @@ class kNdtool( object ):
             
         if xkerngrid=='no'and ykerngrid=='no':
             self.nout=self.nin
-            xout=xdata_std
             yout=ydata_std
             #print('xoutshape and yxouts.shape',xout.shape,yxout.shape)
             #yxout=np.concatenate([ydata_std[None,:],xdata_std],axis=1)
@@ -395,6 +399,8 @@ class kNdtool( object ):
         return allkerns
         #return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
+
+    
     def MY_KDEpredictMSE (self,free_params,yin,yout,xin,xout,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
@@ -468,7 +474,9 @@ class kNdtool( object ):
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
         assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
+        print(yonediffs.shape,xonediffs.shape)
         yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
+        #yx_onediffs_endstack=np.concatenate([np.tile(yonediffs,[self.nin,self.nout*xonediffs.shape[1]])[:,:,None],np.repeat(xonediffs,yonediffs.shape[1],axis=1)[:,:,None]],axis=2)
         yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
         #print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
         #print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
@@ -509,7 +517,12 @@ class kNdtool( object ):
         #print(y_yxout,cdfnorm_prob_yx/cdfnorm_prob_x)
         return yhat
     
-    
+    def predict_tool(self,xout,fixed_or_free_paramdict,modeldict):
+        """
+        """
+        xout=(xout-self.xmean)/self.xstd
+        self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xout,modeldict,fixed_or_free_paramdict)
+        return self.prediciton.yhat  
     
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
@@ -573,7 +586,14 @@ class optimize_free_params(kNdtool):
 
 
         args_tuple=(self.yin,self.yout,self.xin,self.xout,modeldict,fixed_or_free_paramdict)
-        self.mse=minimize(self.MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
+        optiondict={
+            'xatol':0.1,
+            'fatol':0.1,
+            'adaptive':True
+        }
+        self.mse=minimize(self.MY_KDEpredictMSE,free_params,args=args_tuple,method=method, options=optiondict)
+        
+        
 
 if __name__=="_main__":
     pass
