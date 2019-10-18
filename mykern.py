@@ -36,7 +36,7 @@ class kNdtool( object ):
         normalization = modeldict['normalize_Ndiffwtsum']
         kern_grid = model_dict['kern_grid']
 
-        p_bandscale_params = self.pull_value_from_fixed_or_free('p_bandscale', fixed_or_free_paramdict)
+        x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
         Ndiffs = diffdict['Ndiffs']
         onediffs = diffdict['onediffs']
 
@@ -71,7 +71,7 @@ class kNdtool( object ):
             return last_depth_bw
         if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
-                                                      p_bandscale_params)
+                                                      x_bandscale_params)
             #not developed yet
 
     def product_BWmaker(self,max_bw_Ndiff,Ndiff_list_of_masks,fixed_or_free_paramdict,diffdict,modeldict):
@@ -92,7 +92,7 @@ class kNdtool( object ):
         normalization = modeldict['normalize_Ndiffwtsum']
         kern_grid=modeldict['kern_grid']
 
-        p_bandscale_params = self.pull_value_from_fixed_or_free('p_bandscale', fixed_or_free_paramdict)
+        x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
         Ndiffs=diffdict['Ndiffs']
         onediffs=diffdict['onediffs']
 
@@ -132,13 +132,13 @@ class kNdtool( object ):
             return this_depth_bw
                 
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
-            n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],p_bandscale_params)
+            n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
 
 
 
-    def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,p_bandscale_params=None):
+    def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,x_bandscale_params=None):
         if kern_choice=="product":
-            return np.ma.product(p_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
+            return np.ma.product(x_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
             return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
@@ -230,7 +230,8 @@ class kNdtool( object ):
                 #then this loop maxes at 0,1,2from range(1+2)
 
                 #take the last item we're constructing and merge it with another mask
-                list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.repeat(np.expand_dims(lastmask,axis=iii),nin,axis=iii))
+                #list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.repeat(np.expand_dims(lastmask,axis=iii),nin,axis=iii))
+                list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),nin+masktup))#nout should stay at 2nd to last position
                 #reindex:ninmask=np.repeat(np.expand_dims(ninmask,ninmask.dim),nin,axis=ninmask.dim)
             #list_of_masks.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
             lastmask=list_of_masks[-1]#copy the last item to lastmask
@@ -296,7 +297,7 @@ class kNdtool( object ):
         return free_params,fixed_or_free_paramdict
 
     
-    def MY_KDEpredictMSE (self,free_params,yin,yxout,xin,xout,modeldict,fixed_or_free_paramdict):
+    def MY_KDEpredictMSE (self,free_params,yin,yout,xin,xout,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
@@ -310,28 +311,25 @@ class kNdtool( object ):
             print('{}'.format(self.opt_iter),end=',')
         fixed_or_free_paramdict['free_params']=free_params
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
-        #pull p_bandscale parameters from the appropriate location and appropriate vector
-        p_bandscale_params=self.pull_value_from_fixed_or_free('p_bandscale',fixed_or_free_paramdict)
-        p=p_bandscale_params.shape[0]
+        #pull x_bandscale parameters from the appropriate location and appropriate vector
+        x_bandscale_params=self.pull_value_from_fixed_or_free('x_bandscale',fixed_or_free_paramdict)
+        y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
+        p=x_bandscale_params.shape[0]
         assert self.p==p,\
-            "p={} but p_bandscale_params.shape={}".format(self.p,p_bandscale_params.shape)
+            "p={} but x_bandscale_params.shape={}".format(self.p,x_bandscale_params.shape)
 
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             
-            xin_scaled=xin*p_bandscale_params
-            xout_scaled=xout*p_bandscale_params
-            yxout_scaled=yxout*np.concatenate([np.array([1]),p_bandscale_params],axis=0)
-            y_yxout=yxout_scaled[:,0]
-            x_yxout=yxout_scaled[:,1:]
-            y_onediffs=self.makediffmat_itoj(yin,y_yxout)
-            y_Ndiffs=self.makediffmat_itoj(yin,yin)
+            xin_scaled=xin*x_bandscale_params
+            xout_scaled=xout*x_bandscale_params
+            #yxout_scaled=yxout*np.concatenate([np.array([1]),x_bandscale_params],axis=0)
+            yin_scaled=yin*y_bandscale_params
+            yout_scaled=yout*y_bandscale_params
+            y_onediffs=self.makediffmat_itoj(yin_scaled,y_out_scaled)
+            y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=2),.5)
-
-            if modeldict['kern_grid']=='no':
-                Ndiffs_scaled_l2norm=onediffs_scaled_l2norm
-            else:
-                Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
+            Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
             assert onediffs_scaled_l2norm.shape==(xin.shape[0],xout.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
 
             diffdict={}
@@ -346,7 +344,7 @@ class kNdtool( object ):
         if modeldict['Ndiff_bw_kern']=='product':
             onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
             #predict
-            yhat=MY_KDEreg(yin,xin_scaled,xout_scaled,y_yxout,x_yxout,fixed_or_free_paramdict,diffdict,modeldict)
+            yhat=MY_NW_KDEreg(yin_scaled,xin_scaled,xout_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)
             #not developed yet
 
         # prepare the Ndiff bandwidth weights
@@ -383,12 +381,13 @@ class kNdtool( object ):
             #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
 
         if modeldict['regression_model']=='NW':
-            yhat = self.my_NW_KDEreg(prob_yx,prob_x,y_yxout)
+            yhat = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
-        yin_un_std=yin*self.ystd+self.ymean
-        yhat_un_std=yhat*self.ystd+self.ymean
+        yin_un_std=yin_scaled*y_bandscale_params**-1*self.ystd+self.ymean
+        assert np.arrayequal(yin_un_std,self.ydata),"yin_un_std does not mach self.ydata"
+        yhat_un_std=yhat*y_bandscale_params**-1*self.ystd+self.ymean
         y_err=yin_un_std-yhat_un_std
         mse= np.mean(np.power(y_err,2))
         self.mselist.append((mse,fixed_or_free_paramdict))
@@ -397,7 +396,7 @@ class kNdtool( object ):
         return mse
 
 
-    def my_NW_KDEreg(self,prob_yx,prob_x,y_yxout):
+    def my_NW_KDEreg(self,prob_yx,prob_x,yout):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
         
@@ -461,7 +460,7 @@ class kNdtool( object ):
             #pgridtupple=(m*m**(idx+1),pgrid.shape[1])
             #pgrid=np.concatenate(np.broadcast_to(agrid,agridtupple).ravel()[:,None],np.broadcast_to(pgrid,pgridtupple),axis=1)
             
-            pgrid=np.concatenate(np.repeat(agrid,m,axis=0),np.tile(pgrid,m,axis=0)
+            pgrid=np.concatenate([np.repeat(agrid,m**(idx+1),axis=0),np.tile(pgrid,[m,1])],axis=1)
             
 
         return pgrid
@@ -479,9 +478,8 @@ class kNdtool( object ):
             yout=np.linspace(-3,3,ykerngrid)#will broadcast later
             self.nout=xout.shape[0]
             #xout=np.(np.tile(y_out,xdata_std.shape[0],axis=0))
-            xout=self.xout
             
-        if type(xkerngrid) is int:#this doesn't work yet
+        if type(xkerngrid) is int:#this maybe doesn't work yet
             self.nout=kerngrid**self.p
             xout=self.MY_KDE_gridprep_smalln(kerngrid,self.p)
             assert xout.shape[1]==self.p,'xout has wrong number of columns'
@@ -491,7 +489,7 @@ class kNdtool( object ):
             assert yxout.shape[1]==self.p+1,'yxout has wrong number of columns'
             assert yxout.shape[0]==kerngrid**(self.p+1),'yxout has {} rows not {}'.format(yxout.shape[0],kerngrid**(self.p+1))
             
-        if xkerngrid=='no'qnd ykerngrid=='no':
+        if xkerngrid=='no'and ykerngrid=='no':
             self.nout=self.nin
             xout=xdata_std
             yout=ydata_std
@@ -531,6 +529,7 @@ class optimize_free_params(kNdtool):
         self.opt_iter=0#one will be added to this at the start of each round of optimization
         #print(ydata.shape)
         #print(xdata.shape)
+        self.xdata=xdata;self.ydata=ydata
         self.nin,self.p=xdata.shape
         self.n=self.nin
         self.optdict=optimizedict
@@ -558,17 +557,18 @@ class optimize_free_params(kNdtool):
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
        
                                  
-        xout,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,xout)
+        xout,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std)
         self.xin=xdata_std;self.yin=ydata_std
-        self.xout=xout;self.yxout=yxout
-        self.nout=xout.shape[0]
+        self.xout=xout;
+        self.nout=xout.shape[0]#probalby redundant
+        self.yout=yout
 
 
         #pre-build list of masks
         self.Ndiff_list_of_masks=self.max_bw_Ndiff_maskstacker(self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
 
 
-        args_tuple=(self.yin,self.yxout,self.xin,self.xout,modeldict,fixed_or_free_paramdict)
+        args_tuple=(self.yin,self.yout,self.xin,self.xout,modeldict,fixed_or_free_paramdict)
         self.mse=minimize(self.MY_KDEpredictMSE,free_params,args=args_tuple,method=method)
 
 if __name__=="_main__":
