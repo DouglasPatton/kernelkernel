@@ -34,7 +34,7 @@ class kNdtool( object ):
         max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
-        kern_grid = model_dict['kern_grid']
+        #kern_grid = model_dict['kern_grid']
 
         x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
         Ndiffs = diffdict['Ndiffs']
@@ -90,7 +90,7 @@ class kNdtool( object ):
         max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
-        kern_grid=modeldict['kern_grid']
+        #kern_grid=modeldict['kern_grid']
 
         x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
         Ndiffs=diffdict['Ndiffs']
@@ -297,153 +297,11 @@ class kNdtool( object ):
         return free_params,fixed_or_free_paramdict
 
     
-    def MY_KDEpredictMSE (self,free_params,yin,yout,xin,xout,modeldict,fixed_or_free_paramdict):
-        """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
-            then returns MSE of the fit 
-        Assumes last p elements of free_params are the scale parameters for 'el two' approach to
-        columns of x.
-        """
-        #print('starting optimization of hyperparameters')
-
-        #add/or_refresh free_params back into fixed_or_free_paramdict now that inside optimizer
-        if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
-            self.opt_iter+=1#then it must be a new iteration of optimization
-            print('{}'.format(self.opt_iter),end=',')
-        fixed_or_free_paramdict['free_params']=free_params
-        max_bw_Ndiff=modeldict['max_bw_Ndiff']
-        #pull x_bandscale parameters from the appropriate location and appropriate vector
-        x_bandscale_params=self.pull_value_from_fixed_or_free('x_bandscale',fixed_or_free_paramdict)
-        y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
-        p=x_bandscale_params.shape[0]
-        assert self.p==p,\
-            "p={} but x_bandscale_params.shape={}".format(self.p,x_bandscale_params.shape)
-
-
-        if modeldict['Ndiff_bw_kern']=='rbfkern':
-            
-            xin_scaled=xin*x_bandscale_params
-            xout_scaled=xout*x_bandscale_params
-            #yxout_scaled=yxout*np.concatenate([np.array([1]),x_bandscale_params],axis=0)
-            yin_scaled=yin*y_bandscale_params
-            yout_scaled=yout*y_bandscale_params
-            y_onediffs=self.makediffmat_itoj(yin_scaled,y_out_scaled)
-            y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
-            onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=2),.5)
-            Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
-            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xout.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
-
-            diffdict={}
-            diffdict['onediffs']=onediffs_scaled_l2norm
-            diffdict['Ndiffs']=Ndiffs_scaled_l2norm
-            ydiffdict={}
-            ydiffdict['onediffs']=y_onediffs
-            ydiffdict['Ndiffs']=y_Ndiffs
-            diffdict['ydiffdict']=ydiffdict
-
-
-        if modeldict['Ndiff_bw_kern']=='product':
-            onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
-            #predict
-            yhat=MY_NW_KDEreg(yin_scaled,xin_scaled,xout_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)
-            #not developed yet
-
-        # prepare the Ndiff bandwidth weights
-        if modeldict['Ndiff_type'] == 'product':
-            xbw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
-                modeldict)
-        if modeldict['Ndiff_type'] == 'recursive':
-            xbw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
-            ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
-                                modeldict)
-        #extract and multiply ij varying part of bw times non varying part
-        hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
-        hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
-
-                
-        xbw=xbw*hx#need to make this flexible to blocks of x
-        ybw=ybw*hy
-        #print('xbw masked count:',np.ma.count_masked(xbw),'with shape:',xbw.shape)
-        #print('ybw masked count:',np.ma.count_masked(ybw),'with shape:',ybw.shape)
-        
-        
-        xonediffs=diffdict['onediffs']
-        yonediffs=diffdict['ydiffdict']['onediffs']
-        assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
-        yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
-        yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
-        #print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
-        #print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
-        
-        prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
-        prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
-            #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
-            #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
-
-        if modeldict['regression_model']=='NW':
-            yhat = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
-        #here is the simple MSE objective function. however, I think I need to use
-        #the more sophisticated MISE or mean integrated squared error,
-        #either way need to replace with cost function function
-        yin_un_std=yin_scaled*y_bandscale_params**-1*self.ystd+self.ymean
-        assert np.arrayequal(yin_un_std,self.ydata),"yin_un_std does not mach self.ydata"
-        yhat_un_std=yhat*y_bandscale_params**-1*self.ystd+self.ymean
-        y_err=yin_un_std-yhat_un_std
-        mse= np.mean(np.power(y_err,2))
-        self.mselist.append((mse,fixed_or_free_paramdict))
-        self.yhat=yhat_un_std
-        assert np.ma.count_masked(yhat)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat),yhat.shape)
-        return mse
-
-
-    def my_NW_KDEreg(self,prob_yx,prob_x,yout):
-        """returns predited values of y for xpredict based on yin, xin, and modeldict
-        """
-        
-        #cdfnorm_prob_yx=prob_yx/np.ma.sum(prob_yx,axis=0)
-        cdfnorm_prob_yx=prob_yx#dropped normalization
-        #cdfnorm_prob_x = prob_x / np.ma.sum(prob_x, axis=0)
-        cdfnorm_prob_x = prob_x#dropped normalization
-        #print(np.ma.count_masked(cdfnorm_prob_yx),'are masked in cdfnorm_prob_yx of shape:',cdfnorm_prob_yx.shape)
-        #print(np.ma.count_masked(cdfnorm_prob_x),'are masked in cdfnorm_prob_x of shape:',cdfnorm_prob_x.shape)
-        
-        yhat= np.ma.sum(y_yxout*cdfnorm_prob_yx/cdfnorm_prob_x,axis=0)#sum over axis=0 collapses across nin for each nout
-        #print(y_yxout,cdfnorm_prob_yx/cdfnorm_prob_x)
-        return yhat
-    
     def makediffmat_itoj(self,xin,xout):
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xout, axis=0)#should return ninXnoutXp if xin an xout were ninXp and noutXp
         #print('type(diffs)=',type(diffs))
         return diffs
 
-    def do_KDEsmalln(self,diffs,bw,modeldict):
-        """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
-        first 2 dimensions of onediffs must be ninXnout
-        """
-        assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
-        #print('diffs',diffs)
-        #print('bw',bw)
-        allkerns=self.gkernh(diffs, bw)
-        #print(np.ma.count_masked(allkerns),'alkerns masked count with shape',allkerns.shape)
-        #print('allkerns:',allkerns)
-        #collapse by random variables indexed in last axis until allkerns.ndim=2
-        normalization=modeldict['product_kern_norm']
-        if normalization =='self':
-            allkerns_sum=np.ma.sum(allkerns,axis=0)
-            #print('allkerns_sum.shape:',allkerns_sum.shape,allkerns_sum.max())               
-            allkerns=allkerns/allkerns_sum    #need to check this logic. should I
-            # collapse just nin dim or both lhs dims?
-        if allkerns.ndim>2:
-            #print('diffs',diffs)
-            #print('bw',bw) 
-            for i in range((allkerns.ndim-2),0,-1):
-                assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
-                                        "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
-                allkerns=np.ma.product(allkerns,axis=i+1)#collapse right most dimension, so if the two items in the 3rd dimension\\
-                #are kernels of x and y, we are creating the product kernel of x and y
-        assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
-        return allkerns
-        #return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout
 
 
     def MY_KDE_gridprep_smalln(self,m,p):
@@ -507,6 +365,152 @@ class kNdtool( object ):
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
+
+    def do_KDEsmalln(self,diffs,bw,modeldict):
+        """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
+        first 2 dimensions of onediffs must be ninXnout
+        """
+        assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
+        #print('diffs',diffs)
+        #print('bw',bw)
+        allkerns=self.gkernh(diffs, bw)
+        #print(np.ma.count_masked(allkerns),'alkerns masked count with shape',allkerns.shape)
+        #print('allkerns:',allkerns)
+        #collapse by random variables indexed in last axis until allkerns.ndim=2
+        normalization=modeldict['product_kern_norm']
+        if normalization =='self':
+            allkerns_sum=np.ma.sum(allkerns,axis=0)
+            #print('allkerns_sum.shape:',allkerns_sum.shape,allkerns_sum.max())               
+            allkerns=allkerns/allkerns_sum    #need to check this logic. should I
+            # collapse just nin dim or both lhs dims?
+        if allkerns.ndim>2:
+            #print('diffs',diffs)
+            #print('bw',bw) 
+            for i in range((allkerns.ndim-2),0,-1):
+                assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
+                                        "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
+                allkerns=np.ma.product(allkerns,axis=i+1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+                #are kernels of x and y, we are creating the product kernel of x and y
+        assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
+        return allkerns
+        #return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
+        
+    def MY_KDEpredictMSE (self,free_params,yin,yout,xin,xout,modeldict,fixed_or_free_paramdict):
+        """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
+            then returns MSE of the fit 
+        Assumes last p elements of free_params are the scale parameters for 'el two' approach to
+        columns of x.
+        """
+        #print('starting optimization of hyperparameters')
+
+        #add/or_refresh free_params back into fixed_or_free_paramdict now that inside optimizer
+        if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
+            self.opt_iter+=1#then it must be a new iteration of optimization
+            print('{}'.format(self.opt_iter),end=',')
+        fixed_or_free_paramdict['free_params']=free_params
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        #pull x_bandscale parameters from the appropriate location and appropriate vector
+        x_bandscale_params=self.pull_value_from_fixed_or_free('x_bandscale',fixed_or_free_paramdict)
+        y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
+        p=x_bandscale_params.shape[0]
+        assert self.p==p,\
+            "p={} but x_bandscale_params.shape={}".format(self.p,x_bandscale_params.shape)
+
+
+        if modeldict['Ndiff_bw_kern']=='rbfkern':
+            
+            xin_scaled=xin*x_bandscale_params
+            xout_scaled=xout*x_bandscale_params
+            #yxout_scaled=yxout*np.concatenate([np.array([1]),x_bandscale_params],axis=0)
+            yin_scaled=yin*y_bandscale_params
+            yout_scaled=yout*y_bandscale_params
+            y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
+            y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
+            onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xout_scaled),2),axis=2),.5)
+            Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
+            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xout.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
+
+            diffdict={}
+            diffdict['onediffs']=onediffs_scaled_l2norm
+            diffdict['Ndiffs']=Ndiffs_scaled_l2norm
+            ydiffdict={}
+            ydiffdict['onediffs']=y_onediffs
+            ydiffdict['Ndiffs']=y_Ndiffs
+            diffdict['ydiffdict']=ydiffdict
+
+
+        if modeldict['Ndiff_bw_kern']=='product':
+            onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
+            #predict
+            yhat=MY_NW_KDEreg(yin_scaled,xin_scaled,xout_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)
+            #not developed yet
+
+        # prepare the Ndiff bandwidth weights
+        if modeldict['Ndiff_type'] == 'product':
+            xbw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
+                modeldict)
+        if modeldict['Ndiff_type'] == 'recursive':
+            xbw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict)
+            ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict['ydiffdict'],
+                                modeldict)
+        #extract and multiply ij varying part of bw times non varying part
+        hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
+        hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
+
+                
+        xbw=xbw*hx#need to make this flexible to blocks of x
+        ybw=ybw*hy
+        #print('xbw masked count:',np.ma.count_masked(xbw),'with shape:',xbw.shape)
+        #print('ybw masked count:',np.ma.count_masked(ybw),'with shape:',ybw.shape)
+        
+        
+        xonediffs=diffdict['onediffs']
+        yonediffs=diffdict['ydiffdict']['onediffs']
+        assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
+        yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
+        yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
+        #print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
+        #print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
+        
+        prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
+        prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
+            #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
+            #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
+
+        if modeldict['regression_model']=='NW':
+            yhat = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
+        #here is the simple MSE objective function. however, I think I need to use
+        #the more sophisticated MISE or mean integrated squared error,
+        #either way need to replace with cost function function
+        yin_un_std=yin_scaled*y_bandscale_params**-1*self.ystd+self.ymean
+        assert np.allclose(yin_un_std,self.ydata),"yin_un_std does not match self.ydata"
+        yhat_un_std=yhat*y_bandscale_params**-1*self.ystd+self.ymean
+        y_err=yin_un_std-yhat_un_std
+        mse= np.mean(np.power(y_err,2))
+        self.mselist.append((mse,fixed_or_free_paramdict))
+        self.yhat=yhat_un_std
+        assert np.ma.count_masked(yhat)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat),yhat.shape)
+        return mse
+
+
+    def my_NW_KDEreg(self,prob_yx,prob_x,yout):
+        """returns predited values of y for xpredict based on yin, xin, and modeldict
+        """
+        
+        #cdfnorm_prob_yx=prob_yx/np.ma.sum(prob_yx,axis=0)
+        cdfnorm_prob_yx=prob_yx#dropped normalization
+        #cdfnorm_prob_x = prob_x / np.ma.sum(prob_x, axis=0)
+        cdfnorm_prob_x = prob_x#dropped normalization
+        #print(np.ma.count_masked(cdfnorm_prob_yx),'are masked in cdfnorm_prob_yx of shape:',cdfnorm_prob_yx.shape)
+        #print(np.ma.count_masked(cdfnorm_prob_x),'are masked in cdfnorm_prob_x of shape:',cdfnorm_prob_x.shape)
+        
+        yhat= np.ma.sum(np.ma.array(np.broadcast_to(yout,(self.nin,self.nout)),mask=self.Ndiff_list_of_masks[0])*(cdfnorm_prob_yx/cdfnorm_prob_x),axis=0)#sum over axis=0 collapses across nin for each nout
+        #print(y_yxout,cdfnorm_prob_yx/cdfnorm_prob_x)
+        return yhat
+    
+    
+    
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
     optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
