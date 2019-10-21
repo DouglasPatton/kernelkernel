@@ -119,7 +119,7 @@ class kNdtool( object ):
                             ),
                         normalize
                         ),
-                    Ndiff_exponent_params[depth-1]#depth-1 b/c product Ndiff has N-1 exponent params.
+                    Ndiff_exponent_params[depth] 
                     )
                 #print('depth:',depth+1,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
                 #print('this_depth_bw.shape=',this_depth_bw.shape)
@@ -127,7 +127,25 @@ class kNdtool( object ):
                     this_depth_bw=this_depth_bw*np.ma.sum(deeper_depth_bw,axis=0)#this line is where the product part of the product Ndiff is happening
                 if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             
-            this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]
+           # this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]#simple version that doesn't vary with i, but j only
+            
+            
+            this_depth_bw=np.ma.power(
+                    self.sum_then_normalize_bw(
+                        self.do_bw_kern(
+                            Ndiff_bw_kern,np.ma.array(
+                                onediffs,#depth+1 b/c depth is in index form
+                                mask=self.Ndiff_list_of_masks[0]
+                                ),
+                            Ndiff_depth_bw_params[depth]
+                            ),
+                        normalize
+                        ),
+                    Ndiff_exponent_params[depth] 
+                    )
+
+                                    
+                                    
             assert this_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(this_depth_bw.shape,self.nin,self.nout)
             
             return this_depth_bw
@@ -447,7 +465,7 @@ class kNdtool( object ):
 
 
         if modeldict['Ndiff_bw_kern']=='product':
-            onediffs=makediffmat_itoj(xout,xin)#scale now? if so, move if...='rbfkern' down 
+            onediffs=makediffmat_itoj(xin,xout)#scale now? if so, move if...='rbfkern' down 
             #predict
             yhat=MY_NW_KDEreg(yin_scaled,xin_scaled,xout_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)
             #not developed yet
@@ -470,7 +488,9 @@ class kNdtool( object ):
         ybw=ybw*hy
         #print('xbw masked count:',np.ma.count_masked(xbw),'with shape:',xbw.shape)
         #print('ybw masked count:',np.ma.count_masked(ybw),'with shape:',ybw.shape)
-        
+        print('xbw.shape',xbw.shape)
+        print('xbw:',xbw)
+        print('ybw.shape',ybw.shape)
         
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
@@ -491,12 +511,12 @@ class kNdtool( object ):
                     ]
                 ,axis=len(y_tup))
             print('before reshape',yx_onediffs_end.shape)
-            newshape_tupple=yx_onediffs_end.shape[:-2]+(yx_onediffs_end.shape[-1]*yx_onediffs_end.shape[-2],)
+            newshape_tupple=yx_onediffs_end.shape[:-3]+(yx_onediffs_end.shape[-2]*yx_onediffs_end.shape[-3],)+(2,)
             yx_onediffs_endstack=yx_onediffs_end.reshape(newshape_tupple)
             print('after reshape',yx_onediffs_endstack.shape)
         
         
-            newshape_tupple=y_bw.shape+(yx_bw_end.shape[-2]*yx_bw_end.shape[-1],)
+            #newshape_tupple=ybw.shape+(yx_bw_end.shape[-2]*yx_bw_end.shape[-1],)
             yx_bw_end=np.ma.concatenate(
                 [
                     np.expand_dims(np.broadcast_to(np.expand_dims(ybw,axis=ybw.ndim),y_tup),axis=len(y_tup)).reshape(),
@@ -507,17 +527,13 @@ class kNdtool( object ):
             
             yx_bw_endstack=yx_bw_end.reshape(newshape_tupple)
             print('after reshape',yx_bw_endstack.shape)
-                
-        
         
             yx_bw_endstack
         
         #yx_onediffs_endstack=np.concatenate([np.tile(yonediffs,[self.nin,self.nout*xonediffs.shape[1]])[:,:,None],np.repeat(xonediffs,yonediffs.shape[1],axis=1)[:,:,None]],axis=2)
-        
-
         #print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
         #print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
-        
+                        
         prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
         prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
