@@ -1,3 +1,58 @@
+
+def Ndiff_datastacker(self,Ndiffs,depth):
+        """After working on two other approaches, I think this approach to replicating the differences with views via
+        np.broadcast_to and then masking them using the pre-optimization-start-built lists of progressively deeper masks
+        (though it may prove more effective not to have masks of each depth pre-built)
+        """
+        #prepare tuple indicating shape to broadcast to
+        #print(type(Ndiffs))
+        Ndiff_shape=Ndiffs.shape
+        if Ndiff_bw_kern=='rbfkern':
+            assert Ndiff_shape==(self.nin,self.nin),"Ndiff shape is {}, not nin X nin but bwkern is rbfkern".format(Ndiff_shape)
+        if Ndiff_bw_kern=='product':
+            assert Ndiff_shape==(self.nin,self.nin,self.p),"Ndiff shape not nin X nin X p but bwkern is product"
+        
+        #reindex:Ndiff_shape_out_tup=(Ndiff_shape[1],)*depth+(Ndiff_shape[0],)#these are tupples, so read as python not numpy
+        Ndiff_shape_out_tup=(self.nin,)*depth+(self.nout,)+(self.npr,)#these are tupples, so read as python not numpy
+        if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
+            Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
+            # at the end of the tupple
+        Ndiff_shape_out_tup=Ndiff_shape_out_tup+(self.npr,)#do all of this for each value that will be predicted
+        return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
+        #broadcast nin times over <depth> dimensions added to the left side of np.shape      
+        '''
+        if depth>2:
+            Ndiff_shape_out_tup=(self.nin,)*depth+(self.nout,)#these are tupples, so read as python not numpy
+            if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
+                Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
+            # at the end of the tupple
+            return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
+            #broadcast nin times over <depth> dimensions added to the left side of np.shape       
+        if depth==2:
+            Ndiff_shape_out_tup=(self.nin,self.nin,self.nout)
+            if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
+                Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
+            return np.broadcast_to(np.expand_dims(Ndiffs,2),Ndiff_shape_out_tup)
+        '''
+        
+        
+        
+        
+        
+        
+        --------------------------------------------------------
+
+
+
+                test=self.do_bw_kern(
+                    Ndiff_bw_kern,np.ma.array(
+                        self.Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),#depth+1 b/c depth is in index form
+                        mask=self.Ndiff_list_of_masks[depth]
+                        ),
+                    this_depth_bw_param
+                    )
+                print('test.shape is {}'.format(test.shape))
+
 """optimize_free_params( should be totally duplicated now that inheritance is setup, but juts in case, I'm saving it here too
 """
 '''   

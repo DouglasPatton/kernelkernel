@@ -72,24 +72,18 @@ class kNdtool( object ):
             return last_depth_bw
         if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
             n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
-                                                      x_bandscale_params)
-            #not developed yet
+                x_bandscale_params)
+            return "n/a"
+        pass    
 
     def product_BWmaker(self,max_bw_Ndiff,Ndiff_list_of_masks,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
-         """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
+        """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
         ? or nin X npr if x_or_y=='x' ?
         """
-        #for loop starts at deepest Ndiff and works to front
-        #axis=depth+1 b/c we want to sum over the last (rbf kern) or 2nd to last (product kern). As can be seen from the
-        #tup construction algorithm in Ndiff_datastacker(), there are the first two dimensions that are from the
-        #original Ndiff, which is noutXNin. Then there is a dimension added *depth* times and the last one is what we are
-        #collapsing with np.ma.sum.
-
-
         Ndiff_exponent_params = self.pull_value_from_fixed_or_free('Ndiff_exponent', fixed_or_free_paramdict)
         Ndiff_depth_bw_params = self.pull_value_from_fixed_or_free('Ndiff_depth_bw', fixed_or_free_paramdict)
         #print('Ndiff_depth_bw_params',Ndiff_depth_bw_params)
-        max_bw_Ndiff = modeldict['max_bw_Ndiff']
+        #max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
         #kern_grid=modeldict['kern_grid']
@@ -100,25 +94,23 @@ class kNdtool( object ):
         if x_or_y=='y':
             masklist=self.Ndiff_list_of_masks_y
             datastacker=self.Ndiff_datastacker_y #this is the function name
-        ix x_or_y=='x':
+        if x_or_y=='x':
             masklist=self.Ndiff_list_of_masks_x
-            datastacker=self.Ndiff_datastacker_x #this is the function name
+            
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             if x_or_y=='y':
                 this_depth_bw=np.ones([self.nin,self.nout,self.npr])
             if x_or_y=='x':
                 this_depth_bw=np.ones([self.nin,1,self.npr])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
-            
-            for depth in range(max_bw_Ndiff-1,0,-1):#depth starts with the last mask first #this loop will be memory
+            deeper_depth_bw=np.array([1])
+            for depth in range(max_bw_Ndiff,0,-1):
                 #print('depth={}'.format(depth))
-                # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
-                # nested summation with broadcasting tools in numpy
-                if normalization == 'own_n':normalize=self.nin-(depth+1)#+1 b/c depth is in index form (0 to depth-1)
+                if normalization == 'own_n':normalize=self.nin-(depth)
                 else:normalize=normalization
-                this_depth_bw_param=Ndiff_depth_bw_params[depth]
+                this_depth_bw_param=Ndiff_depth_bw_params[depth-1]
                 this_depth_mask=masklist[depth]
-                this_depth_exponent=Ndiff_exponent_params[depth]
-                this_depth_data=datastacker(Ndiffs,depth+1,Ndiff_bw_kern)#datastacker contains the name of the function to call, assigned above
+                this_depth_exponent=Ndiff_exponent_params[depth-1]
+                this_depth_data=self.Ndiff_datastacker(Ndiffs,depth)
                 
                 #print('this_depth_bw_param',this_depth_bw_param)
 
@@ -128,37 +120,23 @@ class kNdtool( object ):
                             Ndiff_bw_kern,
                             np.ma.array(this_depth_data,mask=this_depth_mask),
                             this_depth_bw_param
-                            ),
+                            )*deeper_depth_bw,
                         normalize
                         ),
                     this_depth_exponent 
                     )
-                print('depth:',depth+1,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
+                print('depth:',depth,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
                 print('this_depth_bw.shape=',this_depth_bw.shape)
-                if depth<max_bw_Ndiff-1:#at max depth, the starting point, there are no deeper depths, so leave it alone, otherwise multiply each depth by the deeper depth.
-                    this_depth_bw=this_depth_bw*np.ma.sum(deeper_depth_bw,axis=0)#this line is where the product part of the product Ndiff is happening
                 if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             
            # this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]#simple version that doesn't vary with i, but j only
             
             
-            this_depth_bw=np.ma.power(
-                    self.sum_then_normalize_bw(
-                        self.do_bw_kern(
-                            Ndiff_bw_kern,np.ma.array(
-                                self.Ndiff_datastacker(onediffs,2,Ndiff_bw_kern),#0+1=1 now, 0+1 b/c depth is 0 i.e., in index form
-                                mask=self.Ndiff_list_of_masks[0]
-                                ),
-                            Ndiff_depth_bw_params[depth]
-                            ),
-                        normalize
-                        ),
-                    Ndiff_exponent_params[depth] 
-                    )
+            
 
        
                                     
-            assert this_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(this_depth_bw.shape,self.nin,self.nout)
+            #assert this_depth_bw.shape==(self.nin,self.nout),'final bw is {} but expected ninXnout({}X{}) with rbfkernel'.format(this_depth_bw.shape,self.nin,self.nout)
             
             return this_depth_bw
                 
@@ -201,48 +179,16 @@ class kNdtool( object ):
         return kern
         #return np.ma.exp(-np.ma.power(x/h/2, 2))
 
-    def Ndiff_datastacker_y(self,Ndiffs,depth,Ndiff_bw_kern):
+            
+    def Ndiff_datastacker(self,Ndiffs,depth):
+        """
+        """
         Ndiff_shape=Ndiffs.shape
         Ndiff_shape_out_tup=(self.nin,)*depth+Ndiff_shape
         return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tupple
-        
-        
-    def Ndiff_datastacker(self,Ndiffs,depth,Ndiff_bw_kern):
-        """After working on two other approaches, I think this approach to replicating the differences with views via
-        np.broadcast_to and then masking them using the pre-optimization-start-built lists of progressively deeper masks
-        (though it may prove more effective not to have masks of each depth pre-built)
-        """
-        #prepare tuple indicating shape to broadcast to
-        #print(type(Ndiffs))
-        Ndiff_shape=Ndiffs.shape
-        if Ndiff_bw_kern=='rbfkern':
-            assert Ndiff_shape==(self.nin,self.nin),"Ndiff shape is {}, not nin X nin but bwkern is rbfkern".format(Ndiff_shape)
-        if Ndiff_bw_kern=='product':
-            assert Ndiff_shape==(self.nin,self.nin,self.p),"Ndiff shape not nin X nin X p but bwkern is product"
-        
-        #reindex:Ndiff_shape_out_tup=(Ndiff_shape[1],)*depth+(Ndiff_shape[0],)#these are tupples, so read as python not numpy
-        Ndiff_shape_out_tup=(self.nin,)*depth+(self.nout,)+(self.npr,)#these are tupples, so read as python not numpy
-        if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
-            Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
-            # at the end of the tupple
-        Ndiff_shape_out_tup=Ndiff_shape_out_tup+(self.npr,)#do all of this for each value that will be predicted
-        return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
-        #broadcast nin times over <depth> dimensions added to the left side of np.shape      
-        '''
-        if depth>2:
-            Ndiff_shape_out_tup=(self.nin,)*depth+(self.nout,)#these are tupples, so read as python not numpy
-            if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
-                Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
-            # at the end of the tupple
-            return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#the tupples tells us how to
-            #broadcast nin times over <depth> dimensions added to the left side of np.shape       
-        if depth==2:
-            Ndiff_shape_out_tup=(self.nin,self.nin,self.nout)
-            if Ndiff_bw_kern=='product':#if parameter dimension hasn't been collapsed yet,
-                Ndiff_shape_out_tup=Ndiff_shape_out_tup+(Ndiff_shape[2],)#then add parameter dimension
-            return np.broadcast_to(np.expand_dims(Ndiffs,2),Ndiff_shape_out_tup)
-        '''
+    
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
+        #print('nout:',nout)
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
         ykerngrid=modeldict['ykern_grid']
         ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
@@ -258,25 +204,30 @@ class kNdtool( object ):
             list_of_masks.append(firstdiffmask)# this line is indexed (k,j,i,ii)
                 
         if max_bw_Ndiff>1:
-            lastmask=list_of_masks[-1] #second masks always based on self.nin
+            
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
+                lastmask=list_of_masks[-1] #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
+                print(lastmask.shape)
                 list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
-                                
-                for iii in range(ii+1):#if Ndiff is 2, above for loop maxes out at 1,
+                print(lastmask.shape)
+                print(list_of_masks[-1].shape)
+        
+                for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
                     iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),(nin,)+masktup))
+                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
                 if ykerngrid=='no':
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=ii+2),(nin,)+masktup))#this should mask \
+                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=ii+3),masktup))#this should mask \
                     #the yout values from the rest since yout==yin
-                if modeldict['predict_self_without_self']=='yes':
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=ii+3),(nin,)+masktup))#this should mask \
+                #if modeldict['predict_self_without_self']=='yes':
+                #    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=ii+4),(nin,)+masktup))#this should mask \
                     #the yin values when predicting yin
 
-        [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff)]
+        
         if type(ykerngrid) is int:
-            list_of_masks[0]=[np.zeros([nin,nout,npr])]#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
+            list_of_masks[0]=np.zeros([nin,nout,npr])#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
+        [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
         return list_of_masks
         
     def max_bw_Ndiff_maskstacker(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
@@ -422,11 +373,11 @@ class kNdtool( object ):
         if type(ykerngrid) is int and xkerngrid=="no":
             #yout=np.broadcast_to(np.linspace(-3,3,ykerngrid),(xdata_std.shape[0],ykerngrid))
             yout=np.linspace(-3,3,ykerngrid)#will broadcast later
-            self.nout=xpr.shape[0]
+            self.nout=ykerngrid
             #xpr=np.(np.tile(y_out,xdata_std.shape[0],axis=0))
             
         if type(xkerngrid) is int:#this maybe doesn't work yet
-            self.nout=xkerngrid**self.p
+            self.nout=ykerngrid
             xpr=self.MY_KDE_gridprep_smalln(kerngrid,self.p)
             assert xpr.shape[1]==self.p,'xpr has wrong number of columns'
             assert xpr.shape[0]==kerngrid**self.p,'xpr has wrong number of rows'
@@ -536,8 +487,8 @@ class kNdtool( object ):
             diffdict['onediffs']=onediffs_scaled_l2norm
             diffdict['Ndiffs']=Ndiffs_scaled_l2norm
             ydiffdict={}
-            ydiffdict['onediffs']=np.broadcast_to(y_onediffs[:,:,None],y_onediffs.shape+(self.npr))
-            ydiffdict['Ndiffs']=np.broadcast_to(y_Ndiffs[:,:,None],y_Ndiffs.shape+(self.npr))
+            ydiffdict['onediffs']=np.broadcast_to(y_onediffs[:,:,None],y_onediffs.shape+(self.npr,))
+            ydiffdict['Ndiffs']=np.broadcast_to(y_Ndiffs[:,:,None],y_Ndiffs.shape+(self.npr,))
             diffdict['ydiffdict']=ydiffdict
 
 
