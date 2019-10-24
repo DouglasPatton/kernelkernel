@@ -559,6 +559,7 @@ class kNdtool( object ):
         
                         
         prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
+        print('prob_x.shape:',prob_x.shape)
         prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
             #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
@@ -576,15 +577,18 @@ class kNdtool( object ):
     def my_NW_KDEreg(self,prob_yx,prob_x,yout):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        yout_axis=len(prob_yx)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
+        yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         cdfnorm_prob_yx=prob_yx/np.ma.sum(prob_yx,axis=yout_axis)
         #cdfnorm_prob_yx=prob_yx#dropped normalization
         cdfnorm_prob_x = prob_x / np.ma.sum(prob_x, axis=yout_axis)
         #cdfnorm_prob_x = prob_x#dropped normalization
         #print(np.ma.count_masked(cdfnorm_prob_yx),'are masked in cdfnorm_prob_yx of shape:',cdfnorm_prob_yx.shape)
         #print(np.ma.count_masked(cdfnorm_prob_x),'are masked in cdfnorm_prob_x of shape:',cdfnorm_prob_x.shape)
+        yout_stack=np.broadcast_to(np.expand_dims(yout,1),(self.nout,self.npr))
+        prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
+        prob_x_stack=np.broadcast_to(np.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         
-        yhat= np.ma.sum(np.broadcast_to(np.expand_dims(yout,1),(self.nout,self.npr))*(cdfnorm_prob_yx/cdfnorm_prob_x),axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+        yhat= np.ma.sum(yout_stack*(cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(y_yxpr,cdfnorm_prob_yx/cdfnorm_prob_x)
         return yhat
     
