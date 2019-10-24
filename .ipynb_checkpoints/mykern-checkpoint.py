@@ -548,9 +548,9 @@ class kNdtool( object ):
             yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
             yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
         if type(ykern_grid) is int and xkern_grid=='no':
-            xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(onediffs.shape[-1],)
-            xonediffs_stack=np.expand_dims(xonediffs,len(xonediffs.shape)-1,xonedifftup)
-            xbw_stack=np.expand_dims(xbw,len(xonediffs.shape),xonedifftup)
+            xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
+            xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
+            xbw_stack=np.broadcast_to(np.expand_dims(xbw,len(xonediffs.shape)),xonedifftup)
         yx_onediffs_endstack=np.ma.concatenate((xonediffs_stack,yonediffs),axis=len(shape(yonediffs)))
         yx_bw_endstack=np.ma.concatenate((xbw_stack,ybw),axis=len(shape(yonediffs)))
         
