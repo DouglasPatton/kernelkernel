@@ -55,7 +55,7 @@ class kNdtool( object ):
                     self.sum_then_normalize_bw(
                         self.do_bw_kern(
                             Ndiff_bw_kern, np.ma.array(
-                                self.Ndiff_datastacker(Ndiffs, depth+1, Ndiff_bw_kern),
+                                self.Ndiff_datastacker(Ndiffs, noediffs.shape,depth+1),
                                 mask=self.Ndiff_list_of_masks[depth]
                                 ),
                             lower_depth_bw #this is the recursive part
@@ -93,7 +93,7 @@ class kNdtool( object ):
         onediffs=diffdict['onediffs']
         if x_or_y=='y':
             masklist=self.Ndiff_list_of_masks_y
-            datastacker=self.Ndiff_datastacker_y #this is the function name
+            #datastacker=self.Ndiff_datastacker_y #this is the function name
         if x_or_y=='x':
             masklist=self.Ndiff_list_of_masks_x
             
@@ -110,7 +110,7 @@ class kNdtool( object ):
                 this_depth_bw_param=Ndiff_depth_bw_params[depth-1]
                 this_depth_mask=masklist[depth]
                 this_depth_exponent=Ndiff_exponent_params[depth-1]
-                this_depth_data=self.Ndiff_datastacker(Ndiffs,depth)
+                this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
                 
                 #print('this_depth_bw_param',this_depth_bw_param)
 
@@ -180,18 +180,33 @@ class kNdtool( object ):
         #return np.ma.exp(-np.ma.power(x/h/2, 2))
 
             
-    def Ndiff_datastacker(self,Ndiffs,depth):
+    def Ndiff_datastacker(self,Ndiffs,onediffs_shape,depth):
         """
         """
-        Ndiff_shape=Ndiffs.shape
-        Ndiff_shape_out_tup=(self.nin,)*depth+Ndiff_shape
-        return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tupple
+        if len(onediffs_shape)==3:#this should only happen if we're working on y
+            assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
+            ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
+            print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
+            return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
+        if len(onediffs_shape)==2:#this should only happen if we're working on x
+            Ndiff_shape_out_tup=(self.nin,)*depth+onediffs_shape
+            return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tupple
     
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         #print('nout:',nout)
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
         ykerngrid=modeldict['ykern_grid']
-        ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
+        #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
+        
+        if not modeldict['predict_self_without_self']=='yes':
+            ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
+        if modeldict['predict_self_without_self']=='yes' and nin==npr:
+            ninmask3=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
+            ninmask2=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))
+            ninmask1=np.broadcast_to(np.ma.make_mask(np.eye(nin))[None,:,:],(nin,nin,nin))
+            ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
+        
+                
         list_of_masks=[ninmask]
         if max_bw_Ndiff>0:
             if ykerngrid=='no':
@@ -208,10 +223,10 @@ class kNdtool( object ):
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1] #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                print(lastmask.shape)
+                print("y:lastmask.shape:",lastmask.shape)
                 list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
-                print(lastmask.shape)
-                print(list_of_masks[-1].shape)
+                print("y mask stack, lastmask.shape:",lastmask.shape)
+                print("list_of_masks[-1].shape:",list_of_masks[-1].shape)
         
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
@@ -230,7 +245,7 @@ class kNdtool( object ):
         [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
         return list_of_masks
         
-    def max_bw_Ndiff_maskstacker(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
+    def max_bw_Ndiff_maskstacker_x(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         '''match the parameter structure of Ndifflist produced by Ndiff_datastacker
         notably, mostly differences (and thus masks) will be between the nin (n in the original dataset) obeservations.
         though would be interesting to make this more flexible in the future.
@@ -238,39 +253,44 @@ class kNdtool( object ):
         '''
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
         ykerngrid=modeldict['ykern_grid']
-        if Ndiff_bw_kern=='rbfkern':
-            p=1 
-        ninmask=np.ma.make_mask(np.repeat(np.eye(nin)[:,:,None],p,axis=2))#this one will be used extensively to construct masks
-                
-        if ykerngrid=="no":
-            list_of_masks=[ninmask]
-            if max_bw_Ndiff>1:
-                list_of_masks.append(np.broadcast_to(ninmask,(nin,nin,nin,p)))
-        if type(ykerngrid) is int:
-            list_of_masks=[np.zeros([nin,nout,p])]#reindexed to lkjip
-            if max_bw_Ndiff>1:
-                list_of_masks.append(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,p)))
-                
-        lastmask=list_of_masks[-1] #second masks always based on self.nin
-        for ii in range(max_bw_Ndiff-2):#-2 since the first 2 masks in list_of_masks already
-            ii+=1#b/c 2nd mask already completed.
-            #list_of_masks.append(np.repeat(np.expand_dims(lastmask,axis=0),nin,axis=0))
-            #masktup=(nin,)+lastmask.shape#add another dimension of lenght nin to left side of masktup
-            #print('masktup at ii={}:'.format(ii),masktup)
-            #list_of_masks.append(np.broadcast_to(lastmask,masktup))
+        assert Ndiff_bw_kern=='rbfkern','only rbfkern developed and your kern is {}'.format(Ndiff_bw_kern)
             
-            masktup=lastmask.shape
-            list_of_masks.append(lastmask)
-            for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
-                #then this loop maxes at 0,1,2from range(1+2)
-
-                #take the last item we're constructing and merge it with another mask
-                #list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.repeat(np.expand_dims(lastmask,axis=iii),nin,axis=iii))
-                list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),(nin,)+masktup))#nout should stay at 2nd to last position
-                #reindex:ninmask=np.repeat(np.expand_dims(ninmask,ninmask.dim),nin,axis=ninmask.dim)
-            #list_of_masks.append(np.ma.mask_or(maskpartlist))#syntax to merge masks
+        ninmask=np.ma.make_mask(np.eye(nin))
+        list_of_masks=[ninmask]
+        if not modeldict['predict_self_without_self']=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
+            list_of_masks.append(np.broadcast_to(ninmask[:,:,None],(nin,nin,npr)))
+        if modeldict['predict_self_without_self']=='yes' and nin==npr and max_bw_Ndiff>0:
+                ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
+                ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
+                ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
+                list_of_masks.append(np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3)))
+        #ninmask=np.ma.make_mask(np.repeat(np.eye(nin)[:,:,None],p,axis=2))#this one will be used extensively to construct masks
+                
+        if max_bw_Ndiff>1:
+            
+            for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
+                lastmask=list_of_masks[-1] #second masks always based on self.nin
+                masktup=(nin,)+lastmask.shape#expand dimensions on lhs
+                print("x:lastmask.shape:",lastmask.shape)
+                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
+                print("x mask stack, lastmask.shape:",lastmask.shape)
+                print("list_of_masks[-1].shape:",list_of_masks[-1].shape)
+        
+                for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
+                    #then this loop maxes at 0,1 from range(2-1+1)
+                    iii+=1 #since 0 dim added before for_loop
+                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
+                
+                    #the yout values from the rest since yout==yin
+                #if modeldict['predict_self_without_self']=='yes':
+                #    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=ii+4),(nin,)+masktup))#this should mask \
+                    #the yin values when predicting yin
+                
             lastmask=list_of_masks[-1]#copy the last item to lastmask
         [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff)]
+        if not modeldict['predict_self_without_self']=='yes':
+            masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
+
         return list_of_masks
                             
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict):
@@ -479,6 +499,7 @@ class kNdtool( object ):
             yout_scaled=yout*y_bandscale_params
             y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
+            print('y_Ndiffs_shape:{} and self.nout:{}'.format(y_Ndiffs.shape,self.nout))
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
             Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
             assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
@@ -501,12 +522,10 @@ class kNdtool( object ):
         # prepare the Ndiff bandwidth weights
         if modeldict['Ndiff_type'] == 'product':
             xbw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_x, fixed_or_free_paramdict, diffdict, modeldict,'x')
-            ybw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],'y',
-                modeldict)
+            ybw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
         if modeldict['Ndiff_type'] == 'recursive':
             xbw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_x, fixed_or_free_paramdict, diffdict, modeldict,'x')
-            ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],'y',
-                                modeldict)
+            ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
         #extract and multiply ij varying part of bw times non varying part
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
@@ -660,6 +679,7 @@ class optimize_free_params(kNdtool):
 
         #pre-build list of masks
         self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+        self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
 
 
         args_tuple=(self.yin,self.yout,self.xin,self.xpr,modeldict,fixed_or_free_paramdict)
