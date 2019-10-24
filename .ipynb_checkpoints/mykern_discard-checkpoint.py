@@ -1,3 +1,40 @@
+#before realizing that I needed to think more carefully about dimensionality of x vs y for prediction and kernels, this was the code I came up with to try to line things up.
+y_tup=yonediffs.shape+(self.nout,)
+            x_tup=xonediffs.shape[:-1]+(ykern_grid,)+(xonediffs.shape[-1],)
+            yx_onediffs_end=np.ma.concatenate(
+                [
+                    np.expand_dims(np.broadcast_to(np.expand_dims(yonediffs,axis=yonediffs.ndim),y_tup),axis=len(y_tup)),
+                    np.expand_dims(np.broadcast_to(np.expand_dims(xonediffs,axis=xonediffs.ndim-1),x_tup),axis=len(y_tup))
+                    ]
+                ,axis=len(y_tup))
+            print('before reshape',yx_onediffs_end.shape)
+            newshape_tupple=yx_onediffs_end.shape[:-3]+(yx_onediffs_end.shape[-2]*yx_onediffs_end.shape[-3],)+(2,)
+            yx_onediffs_endstack=yx_onediffs_end.reshape(newshape_tupple)
+            print('after reshape',yx_onediffs_endstack.shape)
+        
+        
+            #newshape_tupple=ybw.shape+(yx_bw_end.shape[-2]*yx_bw_end.shape[-1],)
+            yx_bw_end=np.ma.concatenate(
+                [
+                    np.expand_dims(np.broadcast_to(np.expand_dims(ybw,axis=ybw.ndim),y_tup),axis=len(y_tup)).reshape(),
+                    np.expand_dims(np.broadcast_to(np.expand_dims(xbw,axis=xbw.ndim-1),x_tup),axis=len(y_tup)).reshape()
+                    ]
+                ,axis=len(y_tup))
+            print('before reshape',yx_bw_end.shape)
+            
+            yx_bw_endstack=yx_bw_end.reshape(newshape_tupple)
+            print('after reshape',yx_bw_endstack.shape)
+        
+            yx_bw_endstack
+        
+        #yx_onediffs_endstack=np.concatenate([np.tile(yonediffs,[self.nin,self.nout*xonediffs.shape[1]])[:,:,None],np.repeat(xonediffs,yonediffs.shape[1],axis=1)[:,:,None]],axis=2)
+        #print(np.ma.count_masked(xbw),'xbw masked count',np.ma.count_masked(xonediffs),'xonediffs mask count')
+        #print(np.ma.count_masked(yx_bw_endstack),'yx_bw_endstack masked count',np.ma.count_masked(yonediffs),'yonediffs mask count')
+
+
+
+
+
 
 def Ndiff_datastacker(self,Ndiffs,depth):
         """After working on two other approaches, I think this approach to replicating the differences with views via
