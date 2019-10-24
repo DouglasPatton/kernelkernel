@@ -553,7 +553,7 @@ class kNdtool( object ):
             xbw_stack=np.broadcast_to(np.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
         newaxis=len(yonediffs.shape)
         yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
-        yx_bw_endstack=np.ma.concatenate((xbw_stack,ybw),axis=len(yonediffs.shape))
+        yx_bw_endstack=np.ma.concatenate((np.expand_dims(xbw_stack,newaxis),np.expand_dims(ybw,newaxis)),axis=newaxis)
         
         
                         
