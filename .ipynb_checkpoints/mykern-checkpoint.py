@@ -125,8 +125,8 @@ class kNdtool( object ):
                         ),
                     this_depth_exponent 
                     )
-                print('depth:',depth,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
-                print('this_depth_bw.shape=',this_depth_bw.shape)
+                #print('depth:',depth,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
+                #print('this_depth_bw.shape=',this_depth_bw.shape)
                 if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             
            # this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]#simple version that doesn't vary with i, but j only
@@ -159,6 +159,7 @@ class kNdtool( object ):
         #print('h',h)
         
         denom=1/((2*np.pi)**.5*h)
+        #print('gkern_denom:',denom)
         numerator=np.ma.exp(-np.ma.power(x/(h*2), 2))
         #print('excess numerator mask count',np.ma.count_masked(numerator)-np.ma.count_masked(h))    
         #print('excess denom mask count',np.ma.count_masked(denom)-np.ma.count_masked(h))    
@@ -168,7 +169,7 @@ class kNdtool( object ):
         #    print('denom',denom)
         
         kern=denom*numerator
-        
+        #print('kern',kern)
         hmaskcount=np.ma.count_masked(h)
         kernmaskedcount=np.ma.count_masked(kern)
         xmaskedcount=np.ma.count_masked(x)
@@ -186,7 +187,7 @@ class kNdtool( object ):
         if len(onediffs_shape)==3:#this should only happen if we're working on y
             assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
             ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
-            print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
+            #print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
             return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
         if len(onediffs_shape)==2:#this should only happen if we're working on x
             Ndiff_shape_out_tup=(self.nin,)*depth+onediffs_shape
@@ -200,11 +201,20 @@ class kNdtool( object ):
         
         if not modeldict['predict_self_without_self']=='yes':
             ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
-        if modeldict['predict_self_without_self']=='yes' and nin==npr:
+        if modeldict['predict_self_without_self']=='yes' and nin==npr and ykerngrid=='no':
+            
             ninmask3=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
             ninmask2=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))
             ninmask1=np.broadcast_to(np.ma.make_mask(np.eye(nin))[None,:,:],(nin,nin,nin))
             ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
+        
+        if modeldict['predict_self_without_self']=='yes' and nin==npr and type(ykerngrid) is int:
+            
+            #ninmask3=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
+            ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))#nin not used to calculate npr
+            #ninmask1=np.broadcast_to(np.ma.make_mask(np.eye(nin))[None,:,:],(nin,nin,nin))
+            #ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
+        #print('ninmask',ninmask)
         
                 
         list_of_masks=[ninmask]
@@ -223,10 +233,10 @@ class kNdtool( object ):
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1] #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                print("y:lastmask.shape:",lastmask.shape)
+                #print("y:lastmask.shape:",lastmask.shape)
                 list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
-                print("y mask stack, lastmask.shape:",lastmask.shape)
-                print("list_of_masks[-1].shape:",list_of_masks[-1].shape)
+                #print("y mask stack, lastmask.shape:",lastmask.shape)
+                #print("list_of_masks[-1].shape:",list_of_masks[-1].shape)
         
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
@@ -242,7 +252,7 @@ class kNdtool( object ):
         
         if type(ykerngrid) is int:
             list_of_masks[0]=np.zeros([nin,nout,npr])#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
-        [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
+        #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
         return list_of_masks
         
     def max_bw_Ndiff_maskstacker_x(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
@@ -271,10 +281,10 @@ class kNdtool( object ):
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1] #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                print("x:lastmask.shape:",lastmask.shape)
+                #print("x:lastmask.shape:",lastmask.shape)
                 list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
-                print("x mask stack, lastmask.shape:",lastmask.shape)
-                print("list_of_masks[-1].shape:",list_of_masks[-1].shape)
+                #print("x mask stack, lastmask.shape:",lastmask.shape)
+                #print("list_of_masks[-1].shape:",list_of_masks[-1].shape)
         
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
@@ -287,7 +297,7 @@ class kNdtool( object ):
                     #the yin values when predicting yin
                 
             lastmask=list_of_masks[-1]#copy the last item to lastmask
-        [print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff)]
+        #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff)]
         if not modeldict['predict_self_without_self']=='yes':
             masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
 
@@ -430,7 +440,7 @@ class kNdtool( object ):
         first 2 dimensions of onediffs must be ninXnout
         """
         assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
-        #print('diffs',diffs)
+        #print('diffs.shape',diffs.shape,'diffs',diffs)
         #print('bw',bw)
         allkerns=self.gkernh(diffs, bw)
         #print(np.ma.count_masked(allkerns),'alkerns masked count with shape',allkerns.shape)
@@ -456,13 +466,17 @@ class kNdtool( object ):
                 #are kernels of x and y, we are creating the product kernel of x and y
         #assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
         #above assert no longer relevant since x doesn't have nout as it's shape till compared to y
-        return allkerns
-        #return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
+        #return allkerns
+        #print('allkerns:',allkerns)
+        #print('np.ma.count_masked(allkerns)',np.ma.count_masked(allkerns),'allkerns.shape',allkerns.shape)
+        return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
     def MY_KDEpredictMSE(self,free_params,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
             self.call_iter+=1#then it must be a new call during optimization
-            print('{}'.format(self.call_iter),end=',')
+            if self.call_iter>1:
+                print('call_iter:{},last_mse:{}'.format(self.call_iter,self.mselist[-1]),end=',')
+            
         fixed_or_free_paramdict['free_params']=free_params
         
         
@@ -471,10 +485,11 @@ class kNdtool( object ):
         mse= np.mean(np.power(y_err,2))
         self.mselist.append((mse,fixed_or_free_paramdict))
         
-        assert np.ma.count_masked(yhat)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat),yhat.shape)
+        #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
+        if not np.ma.count_masked(yhat_un_std)==0:
+            mse=np.ma.count_masked(yhat_un_std)*100
         return mse
-        return np.mean((yin-yhat)**2)
-    
+            
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
@@ -504,7 +519,7 @@ class kNdtool( object ):
             yout_scaled=yout*y_bandscale_params
             y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
-            print('y_Ndiffs_shape:{} and self.nout:{}'.format(y_Ndiffs.shape,self.nout))
+            #print('y_Ndiffs_shape:{} and self.nout:{}'.format(y_Ndiffs.shape,self.nout))
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
             Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
             assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
@@ -540,19 +555,19 @@ class kNdtool( object ):
         ybw=ybw*hy
         #print('xbw masked count:',np.ma.count_masked(xbw),'with shape:',xbw.shape)
         #print('ybw masked count:',np.ma.count_masked(ybw),'with shape:',ybw.shape)
-        print('xbw.shape',xbw.shape)
-        print('xbw:',xbw)
-        print('ybw.shape',ybw.shape)
+        #print('xbw.shape',xbw.shape)
+        #print('xbw:',xbw)
+        #print('ybw.shape',ybw.shape)
         
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
         assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
         print(yonediffs.shape,xonediffs.shape)
         ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
-        if ykern_grid=='no' and xkern_grid=='no':
-            yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
-            yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
-        if type(ykern_grid) is int and xkern_grid=='no':
+        #if ykern_grid=='no' and xkern_grid=='no':
+        #    yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
+        #    yx_bw_endstack=np.ma.concatenate([ybw[:,:,None],xbw[:,:,None]],axis=2)
+        if True:#type(ykern_grid) is int and xkern_grid=='no':
             xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
             xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
             xbw_stack=np.broadcast_to(np.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
@@ -560,14 +575,23 @@ class kNdtool( object ):
         yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
         yx_bw_endstack=np.ma.concatenate((np.expand_dims(xbw_stack,newaxis),np.expand_dims(ybw,newaxis)),axis=newaxis)
         
-        
+        #print('xbw',xbw,'np.ma.count_masked(xbw)',np.ma.count_masked(xbw))
+        #print('np.ma.count_masked(xonediffs)',np.ma.count_masked(xonediffs))
                         
         prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
-        print('prob_x.shape:',prob_x.shape)
+        
         prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
             #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
-
+        
+        #print('prob_x.shape:',prob_x.shape,'np.ma.count_masked(prob_x):',np.ma.count_masked(prob_x))
+    
+        
+        #print('prob_yx.shape:',prob_yx.shape,'np.ma.count_masked(prob_yx)',np.ma.count_masked(prob_yx))
+        #print('prob_x',prob_x)
+        np.ma.count_masked(prob_x)
+        
+        
         if modeldict['regression_model']=='NW':
             yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
         self.yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
