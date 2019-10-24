@@ -436,14 +436,16 @@ class kNdtool( object ):
         #print(np.ma.count_masked(allkerns),'alkerns masked count with shape',allkerns.shape)
         #print('allkerns:',allkerns)
         #collapse by random variables indexed in last axis until allkerns.ndim=2
+        second_to_last_axis=allkerns.ndim-2
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
-            allkerns_sum=np.ma.sum(allkerns,axis=1)#this should be the nout axis
+            allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
             #print('allkerns_sum.shape:',allkerns_sum.shape,allkerns_sum.max())               
-            allkerns=allkerns/allkerns_sum    #need to check this logic. should I
+            #assert allkerns.ndim==3,"allkerns has ndim:{} but expecting 3 by do_KDEsmalln".format(allkerns.ndim)
+            allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
             # collapse just nin dim or both lhs dims?
-        if normalization =="own_n"
-            allkerns=allkerns/allkerns.count(axis=1)#1 should be the nout axis
+        if normalization =="own_n":
+            allkerns=allkerns/allkerns.count(axis=second_to_last_axis)#1 should be the nout axis
         if allkerns.ndim>3:
             #print('diffs',diffs)
             #print('bw',bw) 
@@ -580,9 +582,13 @@ class kNdtool( object ):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
-        cdfnorm_prob_yx=prob_yx/np.ma.sum(prob_yx,axis=yout_axis)
+        
+        prob_yx_sum=np.broadcast_to(np.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
+        cdfnorm_prob_yx=prob_yx/prob_yx_sum
         #cdfnorm_prob_yx=prob_yx#dropped normalization
-        cdfnorm_prob_x = prob_x / np.ma.sum(prob_x, axis=yout_axis)
+        prob_x_sum=np.broadcast_to(np.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
+        cdfnorm_prob_x = prob_x / prob_x_sum
+        
         #cdfnorm_prob_x = prob_x#dropped normalization
         #print(np.ma.count_masked(cdfnorm_prob_yx),'are masked in cdfnorm_prob_yx of shape:',cdfnorm_prob_yx.shape)
         #print(np.ma.count_masked(cdfnorm_prob_x),'are masked in cdfnorm_prob_x of shape:',cdfnorm_prob_x.shape)
@@ -590,7 +596,7 @@ class kNdtool( object ):
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=np.broadcast_to(np.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         
-        yhat= np.ma.sum(yout_stack*(cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+        yhat= np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(y_yxpr,cdfnorm_prob_yx/cdfnorm_prob_x)
         return yhat
     
