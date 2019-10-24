@@ -438,17 +438,19 @@ class kNdtool( object ):
         #collapse by random variables indexed in last axis until allkerns.ndim=2
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
-            allkerns_sum=np.ma.sum(allkerns,axis=0)
+            allkerns_sum=np.ma.sum(allkerns,axis=1)#this should be the nout axis
             #print('allkerns_sum.shape:',allkerns_sum.shape,allkerns_sum.max())               
             allkerns=allkerns/allkerns_sum    #need to check this logic. should I
             # collapse just nin dim or both lhs dims?
-        if allkerns.ndim>2:
+        if normalization =="own_n"
+            allkerns=allkerns/allkerns.count(axis=1)#1 should be the nout axis
+        if allkerns.ndim>3:
             #print('diffs',diffs)
             #print('bw',bw) 
-            for i in range((allkerns.ndim-2),0,-1):
-                assert allkerns.ndim>2, "allkerns is being collapsed via product on rhs " \
-                                        "but has {} dimensions instead of ndim>2".format(allkerns.ndim)
-                allkerns=np.ma.product(allkerns,axis=i+1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+            for i in range((allkerns.ndim-3),0,-1):
+                assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
+                                        "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
+                allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
                 #are kernels of x and y, we are creating the product kernel of x and y
         #assert allkerns.shape==(self.nin,self.nout), "allkerns is shaped{} not {} X {}".format(allkerns.shape,self.nin,self.nout)
         #above assert no longer relevant since x doesn't have nout as it's shape till compared to y
