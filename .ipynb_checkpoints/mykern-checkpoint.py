@@ -88,6 +88,8 @@ class kNdtool( object ):
         #max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
+        Ndiff_start=modeldict['Ndiff_start']
+        
         #kern_grid=modeldict['kern_grid']
 
         x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
@@ -106,31 +108,37 @@ class kNdtool( object ):
                 this_depth_bw=np.ones([self.nin,1,self.npr])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
             deeper_depth_bw=np.array([1])
             for depth in range(max_bw_Ndiff,0,-1):
-                #print('depth={}'.format(depth))
-                if normalization == 'own_n':normalize=self.nin-(depth)
-                else:normalize=normalization
-                this_depth_bw_param=Ndiff_depth_bw_params[depth-1]
-                this_depth_mask=masklist[depth]
-                this_depth_exponent=Ndiff_exponent_params[depth-1]
-                this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
-                
-                #print('this_depth_bw_param',this_depth_bw_param)
+                if depth>Ndiff_start-1:
+                    #print('depth={}'.format(depth))
+                    if normalization == 'own_n':normalize=self.nin-(depth)
+                    else:normalize=normalization
+                    this_depth_bw_param=Ndiff_depth_bw_params[depth-1]
+                    this_depth_mask=masklist[depth]
+                    this_depth_exponent=Ndiff_exponent_params[depth-1]
+                    this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
 
-                this_depth_bw=np.ma.power(
-                    self.sum_then_normalize_bw(
-                        self.do_bw_kern(
-                            Ndiff_bw_kern,
-                            np.ma.array(this_depth_data,mask=this_depth_mask),
-                            this_depth_bw_param
-                            )*deeper_depth_bw,
-                        normalize
-                        ),
-                    this_depth_exponent 
-                    )
-                #print('depth:',depth,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
-                #print('this_depth_bw.shape=',this_depth_bw.shape)
+                    #print('this_depth_bw_param',this_depth_bw_param)
+
+                    this_depth_bw=np.ma.power(
+                        self.sum_then_normalize_bw(
+                            self.do_bw_kern(
+                                Ndiff_bw_kern,
+                                np.ma.array(this_depth_data,mask=this_depth_mask),
+                                this_depth_bw_param
+                                )*deeper_depth_bw,
+                            normalize
+                            ),
+                        this_depth_exponent 
+                        )
+                if not depth > Ndiff_start-1:
+                    this_depth_bw=self.sum_then_normalize_bw(
+                            deeper_depth_bw,
+                            normalize
+                            )
+                    #print('depth:',depth,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
+                    #print('this_depth_bw.shape=',this_depth_bw.shape)
                 if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
-            
+                
            # this_depth_bw=this_depth_bw*Ndiff_depth_bw_params[0]#simple version that doesn't vary with i, but j only
             
             
