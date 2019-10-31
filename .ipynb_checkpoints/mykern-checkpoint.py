@@ -1,4 +1,5 @@
 import numpy as np
+#from numba import jit
 from scipy.optimize import minimize
 
 class kNdtool( object ):
@@ -76,6 +77,7 @@ class kNdtool( object ):
             return "n/a"
         pass    
 
+    
     def product_BWmaker(self,max_bw_Ndiff,Ndiff_list_of_masks,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
         """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
         ? or nin X npr if x_or_y=='x' ?
@@ -144,14 +146,14 @@ class kNdtool( object ):
             n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
 
 
-
+    
     def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,x_bandscale_params=None):
         if kern_choice=="product":
             return np.ma.product(x_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
             #axis-1 b/c axes counted from zero but ndim counts from 1
         if kern_choice=='rbfkern':
             return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
-
+    
     def gkernh(self, x, h):
         "returns the gaussian kernel at x with bandwidth h"
         #print("x.shape",x.shape)
@@ -180,12 +182,13 @@ class kNdtool( object ):
         return kern
         #return np.ma.exp(-np.ma.power(x/h/2, 2))
 
-            
+    
+    
     def Ndiff_datastacker(self,Ndiffs,onediffs_shape,depth):
         """
         """
         if len(onediffs_shape)==3:#this should only happen if we're working on y
-            assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
+            #assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
             ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
             #print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
             return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
@@ -302,7 +305,23 @@ class kNdtool( object ):
             masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
 
         return list_of_masks
-                            
+    
+    def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
+        params={}
+        paramlist=[key for key,val in modeldict['hyper_param_form_dict'].items()]
+        for param in paramlist:
+            paramdict=fixed_or_free_paramdict[param]
+            form=paramdict['fixed_or_free']
+            const=paramdict['const']
+            start,end=paramdict['location_idx']
+            
+            value=fixed_or_free_paramdict[f'{form}_params'][start:end]
+            if const=='non-neg':
+                const=f'{const}'+':'+f'{np.exp(value)}'
+            params[param]={'value':value,'const':const}
+        return params
+    
+    
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict):
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='fixed':
@@ -475,7 +494,7 @@ class kNdtool( object ):
         if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
             self.call_iter+=1#then it must be a new call during optimization
             if self.call_iter>1:
-                print('call_iter:{},last_mse:{}'.format(self.call_iter,self.mselist[-1]),end=',')
+                print(f'iter:{self.call_iter},mse:{self.mselist[-1][0]}')
             
         fixed_or_free_paramdict['free_params']=free_params
         
@@ -483,11 +502,11 @@ class kNdtool( object ):
         yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
         y_err=self.ydata-yhat_un_std
         mse= np.mean(np.power(y_err,2))
-        self.mselist.append((mse,fixed_or_free_paramdict))
+        self.mselist.append((mse,self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)))
         
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
-            mse=np.ma.count_masked(yhat_un_std)*100
+            mse=np.ma.count_masked(yhat_un_std)*10**199
         return mse
             
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
