@@ -78,7 +78,7 @@ class kNdtool( object ):
         pass    
 
     
-    def product_BWmaker(self,max_bw_Ndiff,Ndiff_list_of_masks,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
+    def product_BWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
         """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
         ? or nin X npr if x_or_y=='x' ?
         """
@@ -104,6 +104,7 @@ class kNdtool( object ):
         if Ndiff_bw_kern=='rbfkern': #parameter column already collapsed
             if x_or_y=='y':
                 this_depth_bw=np.ones([self.nin,self.nout,self.npr])
+                
             if x_or_y=='x':
                 this_depth_bw=np.ones([self.nin,1,self.npr])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
             deeper_depth_bw=np.array([1])
@@ -113,14 +114,33 @@ class kNdtool( object ):
                     #print('depth={}'.format(depth))
                     if normalization == 'own_n':normalize=self.nin-(depth)
                     else:normalize=normalization
-                    this_depth_bw_param=Ndiff_depth_bw_params[depth-1-(Ndiff_start-1)]
+                    param_idx=depth-1-(Ndiff_start-1)
+                    this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
+                    this_depth_exponent=Ndiff_exponent_params[param_idx]
+                    print(f'depth:{depth},param_idx:{param_idx},this_depth_bw_param{this_depth_bw_param},Ndiff_depth_bw_params:{Ndiff_depth_bw_params}')
                     #this_depth_mask=masklist[depth+1-(Ndiff_start-1)]
-                    this_depth_mask=masklist[depth]
-                    this_depth_exponent=Ndiff_exponent_params[depth-1-(Ndiff_start-1)]
                     this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
+                    this_depth_mask=masklist[depth]
+                    Ndiff_start=modeldict['Ndiff_start']
+                    if Ndiff_start>1:# the next few lines collapse the length of Ndiff dimensions before Ndiff start down to lenght 1, but preserves the dimension
+                        select_dims=list((slice(None),)*this_depth_mask.ndim)
+                        for dim in range(Ndiff_start-1,0,-1):
+                            shrinkdim=max_bw_Ndiff-dim
+                            select_dims[shrinkdim]=[0,]
+                        dim_select_tup=tuple(select_dims)
+                        this_depth_mask=this_depth_mask[dim_select_tup]
+                        this_depth_data=this_depth_data[dim_select_tup]
+                        
+                        
+        
+                    
+                    
 
                     #print('this_depth_bw_param',this_depth_bw_param)
-                    
+                    if depth<Ndiff_start:
+                        this_depth_bw_param=1
+                        this_depth_exponent=1
+                        normalize=1
                     this_depth_bw=np.ma.power(
                         self.sum_then_normalize_bw(
                             self.do_bw_kern(
@@ -132,6 +152,9 @@ class kNdtool( object ):
                             ),
                         this_depth_exponent 
                         )
+                    #else: 
+                    #    print(f'depth:{depth},this_depth_bw.shape:{this_depth_bw.shape}')
+                    #    this_depth_bw=np.sum(deeper_depth_bw,axis=0)
                 #if not depth > Ndiff_start-1:
                 #    this_depth_bw=self.sum_then_normalize_bw(
                 #            deeper_depth_bw,
@@ -315,7 +338,7 @@ class kNdtool( object ):
         #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff)]
         if not modeldict['predict_self_without_self']=='yes':
             masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
-
+            
         return list_of_masks
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
@@ -573,8 +596,8 @@ class kNdtool( object ):
 
         # prepare the Ndiff bandwidth weights
         if modeldict['Ndiff_type'] == 'product':
-            xbw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_x, fixed_or_free_paramdict, diffdict, modeldict,'x')
-            ybw = self.product_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+            xbw = self.product_BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
+            ybw = self.product_BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
         if modeldict['Ndiff_type'] == 'recursive':
             xbw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_x, fixed_or_free_paramdict, diffdict, modeldict,'x')
             ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
@@ -729,7 +752,7 @@ class optimize_free_params(kNdtool):
 
         args_tuple=(self.yin,self.yout,self.xin,self.xpr,modeldict,fixed_or_free_paramdict)
         optiondict={
-            'xatol':0.1,
+            'xatol':0.001,
             'fatol':0.1,
             'adaptive':True
         }
