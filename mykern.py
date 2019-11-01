@@ -108,17 +108,18 @@ class kNdtool( object ):
                 this_depth_bw=np.ones([self.nin,1,self.npr])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
             deeper_depth_bw=np.array([1])
             for depth in range(max_bw_Ndiff,0,-1):
-                if depth>Ndiff_start-1:
+                if True:#depth>Ndiff_start-1:
+                    #depth=depth-(Ndiff_start-1)
                     #print('depth={}'.format(depth))
                     if normalization == 'own_n':normalize=self.nin-(depth)
                     else:normalize=normalization
-                    this_depth_bw_param=Ndiff_depth_bw_params[depth-1]
-                    this_depth_mask=masklist[depth]
-                    this_depth_exponent=Ndiff_exponent_params[depth-1]
+                    this_depth_bw_param=Ndiff_depth_bw_params[depth-1-(Ndiff_start-1)]
+                    this_depth_mask=masklist[depth-(Ndiff_start-1)]
+                    this_depth_exponent=Ndiff_exponent_params[depth-1-(Ndiff_start-1)]
                     this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
 
                     #print('this_depth_bw_param',this_depth_bw_param)
-
+                    
                     this_depth_bw=np.ma.power(
                         self.sum_then_normalize_bw(
                             self.do_bw_kern(
@@ -130,11 +131,11 @@ class kNdtool( object ):
                             ),
                         this_depth_exponent 
                         )
-                if not depth > Ndiff_start-1:
-                    this_depth_bw=self.sum_then_normalize_bw(
-                            deeper_depth_bw,
-                            normalize
-                            )
+                #if not depth > Ndiff_start-1:
+                #    this_depth_bw=self.sum_then_normalize_bw(
+                #            deeper_depth_bw,
+                #            normalize
+                #            )
                     #print('depth:',depth,'this_depth_bw masked count:',np.ma.count_masked(this_depth_bw),'with shape:',this_depth_bw.shape)
                     #print('this_depth_bw.shape=',this_depth_bw.shape)
                 if depth>1: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
@@ -199,6 +200,8 @@ class kNdtool( object ):
             #assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
             ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
             #print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
+            print(f'depth:{depth},ytup{ytup},onediffs_shape{onediffs_shape}')
+            if depth==0:return Ndiffs
             return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
         if len(onediffs_shape)==2:#this should only happen if we're working on x
             Ndiff_shape_out_tup=(self.nin,)*depth+onediffs_shape
