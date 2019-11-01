@@ -114,7 +114,8 @@ class kNdtool( object ):
                     if normalization == 'own_n':normalize=self.nin-(depth)
                     else:normalize=normalization
                     this_depth_bw_param=Ndiff_depth_bw_params[depth-1-(Ndiff_start-1)]
-                    this_depth_mask=masklist[depth-(Ndiff_start-1)]
+                    #this_depth_mask=masklist[depth+1-(Ndiff_start-1)]
+                    this_depth_mask=masklist[depth]
                     this_depth_exponent=Ndiff_exponent_params[depth-1-(Ndiff_start-1)]
                     this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
 
