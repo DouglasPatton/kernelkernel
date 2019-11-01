@@ -117,13 +117,29 @@ class kNdtool( object ):
                     param_idx=depth-1-(Ndiff_start-1)
                     this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
                     this_depth_exponent=Ndiff_exponent_params[param_idx]
-                    print(f'depth:{depth},param_idx:{param_idx},this_depth_bw_param{this_depth_bw_param},Ndiff_depth_bw_params:{Ndiff_depth_bw_params}')
+                    #print(f'depth:{depth},param_idx:{param_idx},this_depth_bw_param{this_depth_bw_param},Ndiff_depth_bw_params:{Ndiff_depth_bw_params}')
                     #this_depth_mask=masklist[depth+1-(Ndiff_start-1)]
-                    this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
+                    if depth%2==0: #every other set of Ndiffs is transposed
+                        print(f'Ndiffs.ndim:{Ndiffs.ndim}')
+                        transposelist=[]
+                        if Ndiffs.ndim==3:
+                            tranposelist=[1,0,2]
+                            print(transposelist)
+                        if Ndiffs.ndim==2:
+                            transposelist=[1,0]
+                            print(transposelist)                      
+                        print(Ndiffs.ndim,tranposelist)
+                        
+                        Ndiffs_for_depth=np.transpose(Ndiffs,transposelist)
+                    elif depth==1:
+                        Ndiffs_for_depth=onediffs
+                    else:
+                        Ndiffs_for_depth=Ndiffs
+                    this_depth_data=self.Ndiff_datastacker(Ndiffs_for_depth,onediffs.shape,depth)
                     this_depth_mask=masklist[depth]
                     Ndiff_start=modeldict['Ndiff_start']
                     if Ndiff_start>1:# the next few lines collapse the length of Ndiff dimensions before Ndiff start down to lenght 1, but preserves the dimension
-                        select_dims=list((slice(None),)*this_depth_mask.ndim)
+                        select_dims=list((slice(None),)*this_depth_mask.ndim)#slice(None) is effectively a colon when the list is turned into a tuple of dimensions
                         for dim in range(Ndiff_start-1,0,-1):
                             shrinkdim=max_bw_Ndiff-dim
                             select_dims[shrinkdim]=[0,]
@@ -224,7 +240,7 @@ class kNdtool( object ):
             #assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
             ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
             #print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
-            print(f'depth:{depth},ytup{ytup},onediffs_shape{onediffs_shape}')
+           # print(f'depth:{depth},ytup{ytup},onediffs_shape{onediffs_shape}')
             if depth==0:return Ndiffs
             return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
         if len(onediffs_shape)==2:#this should only happen if we're working on x

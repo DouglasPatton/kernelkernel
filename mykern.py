@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
@@ -117,13 +119,29 @@ class kNdtool( object ):
                     param_idx=depth-1-(Ndiff_start-1)
                     this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
                     this_depth_exponent=Ndiff_exponent_params[param_idx]
-                    print(f'depth:{depth},param_idx:{param_idx},this_depth_bw_param{this_depth_bw_param},Ndiff_depth_bw_params:{Ndiff_depth_bw_params}')
+
+                    #print(f'depth:{depth},param_idx:{param_idx},this_depth_bw_param{this_depth_bw_param},Ndiff_depth_bw_params:{Ndiff_depth_bw_params}')
                     #this_depth_mask=masklist[depth+1-(Ndiff_start-1)]
+
                     this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
-                    this_depth_mask=masklist[depth]
+                    this_depth_mask = masklist[depth]
+                    if depth % 2 == 0:  # every other set of Ndiffs is transposed
+                        #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
+                        dimcount=this_depth_data.ndim
+                        transposelist=[i for i in range(dimcount)]
+                        transposelist[dimcount-3]=dimcount-4#make 3rd to last dimension have the dimension number of 4th to last
+                        transposelist[dimcount - 4] = dimcount - 3#and make 4th to last dimension have dimension number of 3rd to last
+                        this_depth_data = np.transpose(this_depth_data, transposelist)#implement the tranpose of 3rd to last and 2nd to last dimensions
+                        this_depth_mask = np.transpose(this_depth_mask,transposelist)
+
+
+
+
+
+
                     Ndiff_start=modeldict['Ndiff_start']
                     if Ndiff_start>1:# the next few lines collapse the length of Ndiff dimensions before Ndiff start down to lenght 1, but preserves the dimension
-                        select_dims=list((slice(None),)*this_depth_mask.ndim)
+                        select_dims=list((slice(None),)*this_depth_mask.ndim)#slice(None) is effectively a colon when the list is turned into a tuple of dimensions
                         for dim in range(Ndiff_start-1,0,-1):
                             shrinkdim=max_bw_Ndiff-dim
                             select_dims[shrinkdim]=[0,]
@@ -224,7 +242,7 @@ class kNdtool( object ):
             #assert depth>0,"depth is not greater than zero, depth is:{}".format(depth)
             ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
             #print('Ndiffs.shape',Ndiffs.shape,'ytup',ytup,'depth',depth)
-            print(f'depth:{depth},ytup{ytup},onediffs_shape{onediffs_shape}')
+           # print(f'depth:{depth},ytup{ytup},onediffs_shape{onediffs_shape}')
             if depth==0:return Ndiffs
             return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
         if len(onediffs_shape)==2:#this should only happen if we're working on x
@@ -617,7 +635,7 @@ class kNdtool( object ):
         xonediffs=diffdict['onediffs']
         yonediffs=diffdict['ydiffdict']['onediffs']
         assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
-        print(yonediffs.shape,xonediffs.shape)
+        #print(yonediffs.shape,xonediffs.shape)
         ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
         #if ykern_grid=='no' and xkern_grid=='no':
         #    yx_onediffs_endstack=np.concatenate([yonediffs[:,:,None],xonediffs[:,:,None]],axis=2)
