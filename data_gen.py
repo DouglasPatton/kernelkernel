@@ -29,7 +29,7 @@ class data_gen():
         self.x=shiftx+spreadx*randx
         if ftype=='quadratic':
             p=2*p-1#-1 for constant
-            self.x=np.concatenate(self.x,self.x**2)
+            self.x=np.concatenate([self.x,self.x**2],axis=1)
         
         #generate error~N(0,1)
         self.e=np.random.randn(n)*evar**.5
@@ -40,5 +40,5 @@ class data_gen():
         self.b=(np.random.randint(betamax, size=(p+1,))+1)*(2*np.random.randint(2, size=(p+1,))-np.ones(p+1,)) #if beta is a random integer, it could be 0
         #make a simple y for testing
         
-        self.x = np.concatenate((np.ones([n,1]),shiftx+spreadx*randx),axis=1)
+        self.x = np.concatenate((np.ones([n,1]),self.x),axis=1)
         self.y=np.matmul(self.x, self.b)+self.e
