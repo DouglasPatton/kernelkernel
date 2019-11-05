@@ -4,6 +4,9 @@ import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
 
+
+    
+
 class kNdtool( object ):
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
@@ -596,8 +599,10 @@ class optimize_free_params(kNdtool):
         xkerngrid=modeldict['xkern_grid']
         ykerngrid=modeldict['ykern_grid']
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        optiondict=optimizedict['option']
         method=optimizedict['method']
         param_valdict=optimizedict['hyper_param_dict']
+        
         #self.optdict=optimizedict
         
         #save and transform the data
@@ -630,11 +635,7 @@ class optimize_free_params(kNdtool):
 
 
         args_tuple=(self.yin,self.yout,self.xin,self.xpr,modeldict,fixed_or_free_paramdict)
-        optiondict={
-            'xatol':0.001,
-            'fatol':0.1,
-            'adaptive':True
-        }
+        
         self.mse=minimize(self.MY_KDEpredictMSE,free_params,args=args_tuple,method=method, options=optiondict)
         
         
