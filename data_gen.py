@@ -30,6 +30,7 @@ class data_gen():
         if ftype=='quadratic':
             p=2*self.p#-1 for constant
             self.x=np.concatenate([self.x,self.x**2],axis=1)
+            
         
         #generate error~N(0,1)
         self.e=np.random.randn(n)*evar**.5
@@ -41,4 +42,5 @@ class data_gen():
         #make a simple y for testing
         
         self.x = np.concatenate((np.ones([n,1]),self.x),axis=1)
+        #print(f'self.x.shape{self.x.shape}')
         self.y=np.matmul(self.x, self.b)+self.e
