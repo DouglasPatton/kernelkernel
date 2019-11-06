@@ -448,6 +448,7 @@ class kNdtool( object ):
         y_err=self.ydata-yhat_un_std
         mse= np.mean(np.power(y_err,2))
         self.mselist.append((mse,self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)))
+        
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
         
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
