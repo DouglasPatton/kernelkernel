@@ -1,5 +1,7 @@
 from typing import List
-
+import os
+import datetime as dt
+import pickle
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
@@ -438,8 +440,11 @@ class kNdtool( object ):
     def MY_KDEpredictMSE(self,free_params,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
             self.call_iter+=1#then it must be a new call during optimization
-            if self.call_iter>1:
-                print(f'iter:{self.call_iter},mse:{self.mselist[-1]}')
+            #if self.call_iter>1 and self.call_iter%5==0:
+            #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
+            if self.call_iter>1:# and self.call_iter%5>0:
+                print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
+            
             
         fixed_or_free_paramdict['free_params']=free_params
         
@@ -447,15 +452,60 @@ class kNdtool( object ):
         yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
         y_err=self.ydata-yhat_un_std
         mse= np.mean(np.power(y_err,2))
-        self.mselist.append((mse,self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)))
-        
+        self.mse_param_list.append((mse,fixed_or_free_paramdict))
+        #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
         
+        save_interval=2
+        if self.call_iter%save_interval==0 and mse<100:
+            
+            self.sort_then_saveit(mse_param_list[-save_interval],modeldict)
+                
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
             mse=np.ma.count_masked(yhat_un_std)*10**199
         return mse
             
+    def sort_then_saveit(self,mse_param_list,modeldict):
+        mse_list=[i[0] for i in mse_paramlist]
+        minmse=min(mse_list)
+        fof_param_dict_list=[i[1] for i in mse_paramlist]
+        bestparams=fof_param_dict_list[mse_list.index(minmse)]
+        savedict={}
+        savedict['mse']=minmse
+        savedict['xdata']=self.xdata #inherit data description?
+        savedict['ydata']=self.ydata
+        savedict['params']=bestparams
+        savedict['modeldict']=modeldict
+        savedict['whensaved']=dt.datetime.now()
+        try:
+            with open('model_save','rb') as modelfile:
+                modellist=pickle.load(modelfile)
+                #print('---------------success----------')
+        except:
+            modellist=[]
+        modellist.append(savedict)
+        with open('model_save','wb') as thefile:
+            pickle.dump(modellist,thefile)
+    
+    def final_saveit(self,mse,paramdict,modeldict):
+        savedict={}
+        savedict['mse']=mse
+        savedict['xdata']=self.xdata #inherit data description?
+        savedict['ydata']=self.ydata
+        savedict['params']=paramdict
+        savedict['modeldict']=modeldict
+        savedict['when_saved']=dt.datetime.now()
+        try:
+            with open('final_model_save','rb') as modelfile:
+                modellist=pickle.load(modelfile)
+                #print('---------------success----------')
+        except:
+            modellist=[]
+        modellist.append(savedict)
+        with open('final_model_save','wb') as thefile:
+            pickle.dump(modellist,thefile)        
+        
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
@@ -498,14 +548,9 @@ class kNdtool( object ):
             yhat=MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)
             #not developed yet
 
-        # prepare the Ndiff bandwidth weights
-        #if modeldict['Ndiff_type'] == 'product':
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
-        #if modeldict['Ndiff_type'] == 'recursive':
-        #    xbw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_x, fixed_or_free_paramdict, diffdict, modeldict,'x')
-        #    ybw = self.recursive_BWmaker(max_bw_Ndiff, self.Ndiff_list_of_masks_y, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
-        #extract and multiply ij varying part of bw times non varying part
+
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
 
@@ -582,8 +627,8 @@ class optimize_free_params(kNdtool):
     def __init__(self,ydata,xdata,optimizedict):
         kNdtool.__init__(self)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
-        self.mselist=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
-
+        self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
+        
         #Extract from outer optimizedict
         modeldict=optimizedict['model_dict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']
@@ -625,8 +670,12 @@ class optimize_free_params(kNdtool):
         #setup and run scipy minimize
         args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
         print(f'modeldict:{modeldict}')
-        self.mse=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-        
+        self.minimized=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+        lastmse=self.mselist[-1][0]
+        lastparamdict=self.mselist[-1][1]
+        self.sort_then_saveit([[lastmse,lastparamdict]],modeldict)
+        self.final_saveit(lastmse,lastparamdict,modeldict)
+        return self.minimized
         
 
 if __name__=="_main__":
