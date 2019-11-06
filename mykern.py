@@ -3,8 +3,6 @@ from typing import List
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
-
-
     
 
 class kNdtool( object ):
@@ -26,11 +24,6 @@ class kNdtool( object ):
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
             return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)#dividing by sum across the sums at "this_depth"
-
-        # if normalization=='across': #does this make sense? not working now.
-        #    this_depth_not_summed=kernstack
-        #   one_deeper_summed=np.ma.sum(do_bw_kern(Ndiff_bw_kern,np.ma.array(Ndiff_datastacker(Ndiffs,depth+1,Ndiff_bw_kern),mask=self.Ndiff_list_of_masks[depth+1])),axis=0)
-        #  n_depth_total=np.ma.sum(np.ma.divide(this_depth_not_summed,one_deeper_summed),axis=0)
 
     def recursive_BWmaker(self, max_bw_Ndiff, Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict, x_or_y):
         """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
