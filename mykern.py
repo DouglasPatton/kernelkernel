@@ -574,7 +574,6 @@ class optimize_free_params(kNdtool):
     self.xdata,self.ydata contain the original data
     self.xdata_std, self.xmean,self.xstd
     self.ydata_std,self.ymean,self.ystd
-    self.Ndiff - the nout X nin X p matrix of first differences of xdata_std
     self.Ndiff_list_of_masks - a list of progressively higher dimension (len=nin)
         masks to broadcast(views) Ndiff to.
     """
@@ -583,21 +582,24 @@ class optimize_free_params(kNdtool):
         kNdtool.__init__(self)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mselist=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
+
+        #Extract from outer optimizedict
+        modeldict=optimizedict['model_dict'] 
+        opt_settings_dict=optimizedict['opt_settings_dict']
+        param_valdict=optimizedict['hyper_param_dict']
         
-        #extract optimization information, including modeling information in model dict,
-        #parameter structure in model dict, and starting free parameter values from paramdict
-        #these options are still not fully mature and actually flexible
-        modeldict=optimizedict['model_dict'] #reserve _dict for names of dicts in *keys* of parent dicts
+        method=opt_settings_dict['method']
+        opt_method_options=opt_settings_dict['options']
+        
         model_param_formdict=modeldict['hyper_param_form_dict']
         xkerngrid=modeldict['xkern_grid']
         ykerngrid=modeldict['ykern_grid']
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
-        optiondict=optimizedict['option']
-        method=optimizedict['method']
-        param_valdict=optimizedict['hyper_param_dict']
         
-        #self.optdict=optimizedict
-        
+        #build dictionary for parameters
+        free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
+        self.fixed_or_free_paramdict=fixed_or_free_paramdict
+                
         #save and transform the data
         self.xdata=xdata;self.ydata=ydata
         self.nin,self.p=xdata.shape
@@ -607,12 +609,6 @@ class optimize_free_params(kNdtool):
         xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
         #store the standardized (by column or parameter,p) versions of x and y
         self.xdata_std=xdata_std;self.ydata_std=ydata_std
-        
-
-        #create a list of free paramters for optimization  and
-        # dictionary for keeping track of them and the list of fixed parameters too
-        free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
-        self.fixed_or_free_paramdict=fixed_or_free_paramdict
                                  
         xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
         self.xin=xdata_std;self.yin=ydata_std
@@ -621,15 +617,14 @@ class optimize_free_params(kNdtool):
         self.npr=xpr.shape[0]#probably redundant
         self.yout=yout
 
-
         #pre-build list of masks
         self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-
-
-        args_tuple=(self.yin,self.yout,self.xin,self.xpr,modeldict,fixed_or_free_paramdict)
         
-        self.mse=minimize(self.MY_KDEpredictMSE,free_params,args=args_tuple,method=method, options=optiondict)
+        #setup and run scipy minimize
+        args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
+        print(f'modeldict:{modeldict}')
+        self.mse=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         
 
