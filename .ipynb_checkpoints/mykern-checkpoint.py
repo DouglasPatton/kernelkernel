@@ -1,6 +1,6 @@
 from typing import List
 import os
-import datetime as dt
+from time import strftime
 import pickle
 import numpy as np
 #from numba import jit
@@ -455,10 +455,12 @@ class kNdtool( object ):
         self.mse_param_list.append((mse,fixed_or_free_paramdict))
         #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
-        
-        save_interval=2
+        self.iter_start_time_list.append(strftime("%Y%m%d-%H%M%S"))
+        if self.call_iter>3:
+            
+        save_interval=1
         if self.call_iter%save_interval==0 and mse<100:
-            self.sort_then_saveit(mse_param_list[-save_interval],modeldict)
+            self.sort_then_saveit(self.mse_param_list[-save_interval:],modeldict)
                 
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
@@ -467,9 +469,9 @@ class kNdtool( object ):
             
     def sort_then_saveit(self,mse_param_list,modeldict):
         
-        mse_list=[i[0] for i in mse_paramlist]
+        mse_list=[i[0] for i in mse_param_list]
         minmse=min(mse_list)
-        fof_param_dict_list=[i[1] for i in mse_paramlist]
+        fof_param_dict_list=[i[1] for i in mse_param_list]
         bestparams=fof_param_dict_list[mse_list.index(minmse)]
         savedict={}
         savedict['mse']=minmse
@@ -477,7 +479,7 @@ class kNdtool( object ):
         savedict['ydata']=self.ydata
         savedict['params']=bestparams
         savedict['modeldict']=modeldict
-        savedict['whensaved']=dt.datetime.now()
+        savedict['whensaved']=strftime("%Y%m%d-%H%M%S")
         try:
             with open('model_save','rb') as modelfile:
                 modellist=pickle.load(modelfile)
@@ -487,7 +489,7 @@ class kNdtool( object ):
         modellist.append(savedict)
         with open('model_save','wb') as thefile:
             pickle.dump(modellist,thefile)
-        print(f'saved to model_save at about {dt.datetime.now()} with mse={minmse}')
+        print(f'saved to model_save at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
     
     def final_saveit(self,mse,paramdict,modeldict):
         savedict={}
@@ -496,7 +498,7 @@ class kNdtool( object ):
         savedict['ydata']=self.ydata
         savedict['params']=paramdict
         savedict['modeldict']=modeldict
-        savedict['when_saved']=dt.datetime.now()
+        savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
         try:
             with open('final_model_save','rb') as modelfile:
                 modellist=pickle.load(modelfile)
@@ -506,7 +508,7 @@ class kNdtool( object ):
         modellist.append(savedict)
         with open('final_model_save','wb') as thefile:
             pickle.dump(modellist,thefile)   
-        print(f'saved to final_model_save at about {dt.datetime.now()} with mse={minmse}')
+        print(f'saved to final_model_save at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
         
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
@@ -630,7 +632,7 @@ class optimize_free_params(kNdtool):
         kNdtool.__init__(self)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
-        
+        self.iter_start_time_list=[]
         #Extract from outer optimizedict
         modeldict=optimizedict['model_dict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']
