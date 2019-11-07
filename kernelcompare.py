@@ -15,9 +15,12 @@ class DoKernelOpt(object):
         
         y=self.train_y
         x=self.train_x
-        optimizedict=self.optimizedict
-        optimizedict=self.run_opt_complete_check(y,x,optimizedict,replace=1)
-        self.optimizer_obj=self.run_optimization(y,x,optimizedict)
+        
+        self.optimizedict=self.run_opt_complete_check(y,x,self.optimizedict,replace=1)
+        
+        
+    def do_optimization(self):
+        self.run_optimization(self.train_y,self.train_x,self.optimizedict)
         
         
     def run_opt_complete_check(self,y,x,optimizedict,replace=None):
@@ -61,22 +64,22 @@ class DoKernelOpt(object):
         return(optimizedict)
     
     def rebuild_hyper_param_dict(self,old_opt_dict,replacement_fixedfreedict,verbose=None):
-        if verbose==None or verbose.lower()=='no':
+        if verbose==None or verbose=='no':
             verbose=0
-        if verbose.lower()=='yes':
+        if verbose=='yes':
             verbose=1
         vstring=''
         for key,val in old_opt_dict['hyper_param_dict'].items():
-            new_val=mk.pull_value_from_fixed_or_free(key,replacement_fixedfreedict)
+            new_val=mk.kNdtool.pull_value_from_fixed_or_free(self,key,replacement_fixedfreedict,transform='no')
             vstring+=f"for {key} old val({val})replaced with new val({new_val})"
             old_opt_dict['hyper_param_dict'][key]=new_val
         print(f'rebuild hyper param dict vstring:{vstring}')
         return old_opt_dict#except, now it's new
     
     def merge_and_condense_saved_models(self,filename1,filename2,condense=None,verbose=None):
-        if condense==None or condense.lower()=='no':
+        if condense==None or condense=='no':
             condense=0
-        if condense.lower()=='yes'
+        if condense=='yes':
             condense=1
         
         with open(filename1,'rb') as savedfile:
@@ -100,7 +103,7 @@ class DoKernelOpt(object):
                     else:
                         jbest[j]=0
             if ibest==1:#only true if dict_1[i] never lost, because it won or was unique
-                new_model_list.append(condensed_list1[i]
+                new_model_list.append(condensed_list1[i])
         for i,dict_2 in enumerate(condensed_list2):
             if jbest[i]==1:
                 new_model_list.append(condensed_list2[i])
@@ -111,7 +114,7 @@ class DoKernelOpt(object):
         keep_model=[1]*len(saved_model_list)
         for i,modeli in enumerate(saved_model_list):
             for j,modelj in enumerate(saved_model_list[i+1:]):
-                if modeli['modeldict']=modelj['modeldict']:
+                if modeli['modeldict']==modelj['modeldict']:
                     if modeli['mse']<modelj['mse']:
                         keep_model[j]=0
                     else:
@@ -151,7 +154,7 @@ class DoKernelOpt(object):
     def run_optimization(self,y,x,optimizedict):
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         print(start_msg)
-        return mk.optimize_free_params(y,x,optimizedict)
+        mk.optimize_free_params(y,x,optimizedict)
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         if verbose==None or verbose=='no':

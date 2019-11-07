@@ -297,14 +297,19 @@ class kNdtool( object ):
         return params
     
     
-    def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict):
+    def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict,transform=None):
+        if transform==None:
+            transform=1
+        if transform=='no':
+            transform=0
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='fixed':
             the_param_values=fixed_or_free_paramdict['fixed_params'][start:end]#end already includes +1 to make range inclusive of the end value
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='free':
-            the_param_values=fixed_or_free_paramdict['free_params'][start:end]#end already includes +1 to make range inclusive of the end value 
-        if fixed_or_free_paramdict[param_name]['const']=='non-neg':#transform variable with e^(.) if there is a non-negative constraint
-            the_param_values=np.exp(the_param_values)
+            the_param_values=fixed_or_free_paramdict['free_params'][start:end]#end already includes +1 to make range inclusive of the end value
+        if transform==1:
+            if fixed_or_free_paramdict[param_name]['const']=='non-neg':#transform variable with e^(.) if there is a non-negative constraint
+                the_param_values=np.exp(the_param_values)
         return the_param_values
 
     def setup_fixed_or_free(self,model_param_formdict,param_valdict):
@@ -515,7 +520,7 @@ class kNdtool( object ):
         modellist.append(savedict)
         with open('final_model_save','wb') as thefile:
             pickle.dump(modellist,thefile)   
-        print(f'saved to final_model_save at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+        print(f'saved to final_model_save at about {strftime("%Y%m%d-%H%M%S")} with mse={mse}')
         
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
@@ -684,8 +689,8 @@ class optimize_free_params(kNdtool):
         args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
         print(f'modeldict:{modeldict}')
         self.minimized=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-        lastmse=self.mselist[-1][0]
-        lastparamdict=self.mselist[-1][1]
+        lastmse=self.mse_param_list[-1][0]
+        lastparamdict=self.mse_param_list[-1][1]
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict)
         self.final_saveit(lastmse,lastparamdict,modeldict)
         return self.minimized
