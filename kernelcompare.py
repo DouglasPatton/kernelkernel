@@ -34,33 +34,82 @@ class DoKernelOpt(object):
             replace=0
         best_dict_list=[]
         
-        same_modelxy_dict_list=self.open_and_compare('model_save',optimizedict,y,x)
+        same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x)
         if len(same_modelxy_dict_list)>0:
             print(f"This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
-            mse_list=[dict['mse'] for dict in same_modelxy_dict_list]
+            mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             lowest_mse=min(mse_list)
             best_dict_list.append(same_modelxy_dict_list[mse_list.index(lowest_mse)])
             
-        same_modelxy_dict_list=self.open_and_compare('final_model_save',optimizedict,y,x)
+        same_modelxy_dict_list=self.open_and_compare_optdict('final_model_save',optimizedict,y,x)
         if len(same_modelxy_dict_list)>0:
-            mse_list=[dict['mse'] for dict in same_modelxy_dict_list]
+            mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             lowest_mse=min(mse_list)
             best_dict_list.append(same_modelxy_dict_list[mse_list.index(lowest_mse)])
             
-        mse_list=[dict['mse'] for dict in best_dict_list]
+        mse_list=[dict_i['mse'] for dict_i in best_dict_list]
         if len(mse_list)>0:
             lowest_mse=min(mse_list)
             best_dict=best_dict_list[mse_list.index(lowest_mse)]
             print(f'optimiziation dict with lowest mse:{lowest_mse}was last saved{best_dict["whensaved"]}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
-                self.do_dict_override(optimizedict['model_dict'],best_dict['modeldict'],verbose=1)
+                self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=1)
             else:
                 print('continuing without replacing parameters with their saved values')
                 
         return(optimizedict)
     
-    def open_and_compare(self,saved_filename,optimizedict,y,x):
+    def rebuild_hyper_param_dict(self,old_opt_dict,replacement_fixedfreedict,verbose=None):
+        if verbose==None or verbose.lower()=='no':
+            verbose=0
+        if verbose.lower()=='yes':
+            verbose=1
+        vstring=''
+        for key,val in old_opt_dict['hyper_param_dict'].items():
+            new_val=mk.pull_value_from_fixed_or_free(key,replacement_fixedfreedict)
+            vstring+=f"for {key} old val({val})replaced with new val({new_val})"
+            old_opt_dict['hyper_param_dict'][key]=new_val
+        print(f'rebuild hyper param dict vstring:{vstring}')
+        return old_opt_dict#except, now it's new
+    
+    def merge_and_condense_saved_models(self,filename1,filename2,condense=None,verbose=None):
+        if condense==None or condense.lower()=='no':
+            condense=0
+        if condense.lower()=='yes'
+            condense=1
+        
+        with open(filename1,'rb') as savedfile:
+            saved_model_list1=pickle.load(savedfile)
+        with open(filename2,'rb') as savedfile:
+            saved_model_list2=pickle.load(savedfile)
+        condensed_list1=self.condense_saved_models(saved_model_list1)
+        condensed_list2=self.condense_saved_models(saved_model_list2)
+        new_model_list=[]
+        model_dict_list1=[dict_i['modeldict'] for dict_i in condensed_list1]
+        model_dict_list2=[dict_i['modeldict'] for dict_i in condensed_list2]
+        #matching_model_dict_list[dict_1==dict_2 for dict_1 in model_dict_list1 for dict_2 in model_dict_list2]
+        i=0
+        for dict_1 in model_dict_list1:
+            j=0;i+=1
+            ibest=1#start optimistic
+            for dict_2 in model_dict_list2:
+                j+=1
+                
+                if dict_1==dict_2:
+                    if condensed_list1[i]>condensed_list2[j]:
+                        ibest=0
+                        jbest=1
+                
+            if ibest==1:
+                new_model_list.append(condensed_list1[i]
+                        
+                    
+                    
+        
+        
+    
+    def open_and_compare_optdict(self,saved_filename,optimizedict,y,x):
         assert type(saved_filename) is str, f'saved_filename expected to be string but is type:{type(saved_filename)}'
         try:    
             with open(saved_filename,'rb') as saved_model_bytes:
@@ -74,11 +123,11 @@ class DoKernelOpt(object):
         thismodeldict=optimizedict['model_dict']
         #print(saved_filename)
         #print(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
-        modeldict_compare_list=[dict['modeldict']==thismodeldict for dict in saved_dict_list]#list of boolean
+        modeldict_compare_list=[dict_i['modeldict']==thismodeldict for dict_i in saved_dict_list]#list of boolean
         same_model_dict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
-        xcompare_list=[np.all(dict['xdata']==x) for dict in same_model_dict_list]
+        xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in same_model_dict_list]
         same_model_and_x_dict_list=[same_model_dict_list[i] for i,is_same in enumerate(xcompare_list) if is_same]
-        ycompare_list=[np.all(dict['ydata']==y) for dict in same_model_and_x_dict_list]
+        ycompare_list=[np.all(dict_i['ydata']==y) for dict_i in same_model_and_x_dict_list]
         same_modelxy_dict_list=[same_model_and_x_dict_list[i] for i,is_same in enumerate(ycompare_list) if is_same]
         return same_modelxy_dict_list
         
@@ -92,15 +141,15 @@ class DoKernelOpt(object):
             verbose=0
         if verbose=='yes':
             verbose=1
-            vstring=''
+        vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
                 print(f'vstring:{vstring}')
             return old_dict
         for key,val in new_dict.items():
+            if verbose==1:
+                vstring=vstring+f":key({key})"
             if type(val) is dict:
-                if verbose==1:
-                    vstring=vstring+f":key({key})"
                 old_dict[key]=self.do_dict_override(old_dict[key],new_dict[key])
             else:
                 try:
