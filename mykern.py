@@ -487,7 +487,7 @@ class kNdtool( object ):
         modellist.append(savedict)
         with open('model_save','wb') as thefile:
             pickle.dump(modellist,thefile)
-        print(f'saved to model_save at about {dt.datetime.now()} with mse={minmse}'
+        print(f'saved to model_save at about {dt.datetime.now()} with mse={minmse}')
     
     def final_saveit(self,mse,paramdict,modeldict):
         savedict={}
@@ -506,7 +506,7 @@ class kNdtool( object ):
         modellist.append(savedict)
         with open('final_model_save','wb') as thefile:
             pickle.dump(modellist,thefile)   
-        print(f'saved to final_model_save at about {dt.datetime.now()} with mse={minmse}'
+        print(f'saved to final_model_save at about {dt.datetime.now()} with mse={minmse}')
         
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
