@@ -83,26 +83,43 @@ class DoKernelOpt(object):
             saved_model_list1=pickle.load(savedfile)
         with open(filename2,'rb') as savedfile:
             saved_model_list2=pickle.load(savedfile)
-        condensed_list1=self.condense_saved_models(saved_model_list1)
-        condensed_list2=self.condense_saved_models(saved_model_list2)
+        condensed_list1=self.condense_saved_model_list(saved_model_list1)
+        condensed_list2=self.condense_saved_model_list(saved_model_list2)
         new_model_list=[]
         model_dict_list1=[dict_i['modeldict'] for dict_i in condensed_list1]
         model_dict_list2=[dict_i['modeldict'] for dict_i in condensed_list2]
         #matching_model_dict_list[dict_1==dict_2 for dict_1 in model_dict_list1 for dict_2 in model_dict_list2]
-        i=0
+        
+        jbest=[1]*len(condensed_list2)
         for dict_1 in model_dict_list1:
-            j=0;i+=1
             ibest=1#start optimistic
-            for dict_2 in model_dict_list2:
-                j+=1
-                
+            for j,dict_2 in enumerate(model_dict_list2):
                 if dict_1==dict_2:
                     if condensed_list1[i]>condensed_list2[j]:
                         ibest=0
-                        jbest=1
-                
-            if ibest==1:
+                    else:
+                        jbest[j]=0
+            if ibest==1:#only true if dict_1[i] never lost, because it won or was unique
                 new_model_list.append(condensed_list1[i]
+        for i,dict_2 in enumerate(condensed_list2):
+            if jbest[i]==1:
+                new_model_list.append(condensed_list2[i])
+        with open(condensed+filename1[:-1]),'wb' as newfile:
+            pickle.dump(new_model_list,newfile)
+                                      
+    def condense_saved_model_list(self,saved_model_list):
+        keep_model=[1]*len(saved_model_list)
+        for i,modeli in enumerate(saved_model_list):
+            for j,modelj in enumerate(saved_model_list[i+1:]):
+                if modeli['modeldict']=modelj['modeldict']:
+                    if modeli['mse']<modelj['mse']:
+                        keep_model[j]=0
+                    else:
+                        kee_model[i]=0
+        return [model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
+                                      
+        
+                                
                         
                     
                     
