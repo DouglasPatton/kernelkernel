@@ -458,7 +458,6 @@ class kNdtool( object ):
         
         save_interval=2
         if self.call_iter%save_interval==0 and mse<100:
-            
             self.sort_then_saveit(mse_param_list[-save_interval],modeldict)
                 
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
@@ -467,6 +466,7 @@ class kNdtool( object ):
         return mse
             
     def sort_then_saveit(self,mse_param_list,modeldict):
+        
         mse_list=[i[0] for i in mse_paramlist]
         minmse=min(mse_list)
         fof_param_dict_list=[i[1] for i in mse_paramlist]
@@ -487,6 +487,7 @@ class kNdtool( object ):
         modellist.append(savedict)
         with open('model_save','wb') as thefile:
             pickle.dump(modellist,thefile)
+        print(f'saved to model_save at about {dt.datetime.now()} with mse={minmse}'
     
     def final_saveit(self,mse,paramdict,modeldict):
         savedict={}
@@ -495,7 +496,7 @@ class kNdtool( object ):
         savedict['ydata']=self.ydata
         savedict['params']=paramdict
         savedict['modeldict']=modeldict
-        savedict['whensaved']=dt.datetime.now()
+        savedict['when_saved']=dt.datetime.now()
         try:
             with open('final_model_save','rb') as modelfile:
                 modellist=pickle.load(modelfile)
@@ -504,7 +505,8 @@ class kNdtool( object ):
             modellist=[]
         modellist.append(savedict)
         with open('final_model_save','wb') as thefile:
-            pickle.dump(modellist,thefile)        
+            pickle.dump(modellist,thefile)   
+        print(f'saved to final_model_save at about {dt.datetime.now()} with mse={minmse}'
         
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
