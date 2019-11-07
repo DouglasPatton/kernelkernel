@@ -1,6 +1,7 @@
 from typing import List
 import os
 from time import strftime
+import datetime
 import pickle
 import numpy as np
 #from numba import jit
@@ -207,14 +208,14 @@ class kNdtool( object ):
         ykerngrid=modeldict['ykern_grid']
         #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
         
-        if not modeldict['predict_self_without_self']=='yes':
+        if not self.predict_self_without_self=='yes':
             ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
-        if modeldict['predict_self_without_self']=='yes' and nin==npr and ykerngrid=='no':
+        if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
             ninmask3=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
             ninmask2=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))
             ninmask1=np.broadcast_to(np.ma.make_mask(np.eye(nin))[None,:,:],(nin,nin,nin))
             ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
-        if modeldict['predict_self_without_self']=='yes' and nin==npr and type(ykerngrid) is int:
+        if self.predict_self_without_self=='yes' and nin==npr and type(ykerngrid) is int:
             ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))#nin not used to calculate npr
         list_of_masks=[ninmask]
         if max_bw_Ndiff>0:
@@ -258,9 +259,9 @@ class kNdtool( object ):
             
         ninmask=np.ma.make_mask(np.eye(nin))
         list_of_masks=[ninmask]
-        if not modeldict['predict_self_without_self']=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
+        if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
             list_of_masks.append(np.broadcast_to(ninmask[:,:,None],(nin,nin,npr)))
-        if modeldict['predict_self_without_self']=='yes' and nin==npr and max_bw_Ndiff>0:
+        if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
                 ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
                 ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
                 ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
@@ -276,7 +277,7 @@ class kNdtool( object ):
                     iii+=1 #since 0 dim added before for_loop
                     list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
             lastmask=list_of_masks[-1]#copy the last item to lastmask
-        if not modeldict['predict_self_without_self']=='yes':
+        if not self.predict_self_without_self=='yes':
             masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
         return list_of_masks
     
@@ -380,9 +381,9 @@ class kNdtool( object ):
         #    self.data_is_small='yes'
         if xpr==None:
             xpr=xdata_std
-            modeldict['predict_self_without_self']='yes'
+            self.predict_self_without_self='yes'
         if not np.allclose(xpr,xdata_std):
-            modeldict['predict_self_without_self']='n/a'
+            self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
             #yout=np.broadcast_to(np.linspace(-3,3,ykerngrid),(xdata_std.shape[0],ykerngrid))
             yout=np.linspace(-3,3,ykerngrid)#will broadcast later
@@ -442,8 +443,8 @@ class kNdtool( object ):
             self.call_iter+=1#then it must be a new call during optimization
             #if self.call_iter>1 and self.call_iter%5==0:
             #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
-            if self.call_iter>1:# and self.call_iter%5>0:
-                print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
+            #if self.call_iter>1:# and self.call_iter%5>0:
+            #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
             
             
         fixed_or_free_paramdict['free_params']=free_params
@@ -455,12 +456,18 @@ class kNdtool( object ):
         self.mse_param_list.append((mse,fixed_or_free_paramdict))
         #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
-        self.iter_start_time_list.append(strftime("%Y%m%d-%H%M%S"))
-        if self.call_iter>3:
+        t_format="%Y%m%d-%H%M%S"
+        self.iter_start_time_list.append(strftime(t_format))
+        
+        if self.call_iter==3:
             
-        save_interval=1
-        if self.call_iter%save_interval==0 and mse<100:
-            self.sort_then_saveit(self.mse_param_list[-save_interval:],modeldict)
+            tdiff=np.abs(datetime.datetime.strptime(self.iter_start_time_list[-1],t_format)-datetime.datetime.strptime(self.iter_start_time_list[-2],t_format))
+            self.save_interval= int(max([10-np.round(np.log(tdiff.total_seconds()+1),0)**2,1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
+            print(f'save_interval changed to {self.save_interval}')
+            
+        
+        if self.call_iter%self.save_interval==0:
+            self.sort_then_saveit(self.mse_param_list[-self.save_interval:],modeldict)
                 
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
@@ -633,6 +640,8 @@ class optimize_free_params(kNdtool):
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
+        self.save_interval=1
+        
         #Extract from outer optimizedict
         modeldict=optimizedict['model_dict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']

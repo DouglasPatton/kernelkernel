@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 import data_gen as dg
 import mykern as mk
-from datetime import datetime.strptime
+#import datetime
 
 class DoKernelOpt(object):
     def __init__(self,datagen_dict_override=None,opt_dict_override=None):
@@ -38,20 +38,20 @@ class DoKernelOpt(object):
         if len(same_modelxy_dict_list)>0:
             print(f"This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             mse_list=[dict['mse'] for dict in same_modelxy_dict_list]
-            lowest_mse=min(mselist)
-            best_dict_list.append(same_modelxy_dict_list[mselist.index(lowest_mse)])
+            lowest_mse=min(mse_list)
+            best_dict_list.append(same_modelxy_dict_list[mse_list.index(lowest_mse)])
             
         same_modelxy_dict_list=self.open_and_compare('final_model_save',optimizedict,y,x)
         if len(same_modelxy_dict_list)>0:
             mse_list=[dict['mse'] for dict in same_modelxy_dict_list]
-            lowest_mse=min(mselist)
-            best_dict_list.append(same_modelxy_dict_list[mselist.index(lowest_mse)])
+            lowest_mse=min(mse_list)
+            best_dict_list.append(same_modelxy_dict_list[mse_list.index(lowest_mse)])
             
         mse_list=[dict['mse'] for dict in best_dict_list]
         if len(mse_list)>0:
             lowest_mse=min(mse_list)
             best_dict=best_dict_list[mse_list.index(lowest_mse)]
-            print(f'optimiziation dict with lowest mse:{lowest_mse}was last saved{best_dict["when_saved"]}')
+            print(f'optimiziation dict with lowest mse:{lowest_mse}was last saved{best_dict["whensaved"]}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
                 self.do_dict_override(optimizedict['model_dict'],best_dict['modeldict'],verbose=1)
@@ -65,6 +65,8 @@ class DoKernelOpt(object):
         try:    
             with open(saved_filename,'rb') as saved_model_bytes:
                 saved_dict_list=pickle.load(saved_model_bytes)
+                print(f'last in saved_dict_list:{saved_dict_list[-1]["modeldict"]}')
+                print(f'optimizedict["model_dict"]:{optimizedict["model_dict"]}')
         except:
             print(f'saved_filename is {saved_filename}, but does not seem to exist')
             return []
@@ -74,9 +76,9 @@ class DoKernelOpt(object):
         #print(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
         modeldict_compare_list=[dict['modeldict']==thismodeldict for dict in saved_dict_list]#list of boolean
         same_model_dict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
-        xcompare_list=[dict['xdata']==x for dict in same_model_dict_list]
+        xcompare_list=[np.all(dict['xdata']==x) for dict in same_model_dict_list]
         same_model_and_x_dict_list=[same_model_dict_list[i] for i,is_same in enumerate(xcompare_list) if is_same]
-        ycompare_list=[dict['ydata']==y for dict in same_model_and_x_dict_list]
+        ycompare_list=[np.all(dict['ydata']==y) for dict in same_model_and_x_dict_list]
         same_modelxy_dict_list=[same_model_and_x_dict_list[i] for i,is_same in enumerate(ycompare_list) if is_same]
         return same_modelxy_dict_list
         
@@ -113,7 +115,6 @@ class DoKernelOpt(object):
         return old_dict
     
     def build_start_values(self,modeldict):
-        #try self.mselist[-1]
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
