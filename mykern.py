@@ -37,7 +37,7 @@ class kNdtool( object ):
         max_bw_Ndiff = modeldict['max_bw_Ndiff']
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
-        ykern_grid = model_dict['ykern_grid']
+        ykern_grid = modeldict['ykern_grid']
 
         x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
         Ndiffs = diffdict['Ndiffs']
@@ -491,7 +491,7 @@ class kNdtool( object ):
         savedict['ydata']=self.ydata
         savedict['params']=bestparams
         savedict['modeldict']=modeldict
-        savedict['whensaved']=strftime("%Y%m%d-%H%M%S")
+        savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
         try:
             with open('model_save','rb') as modelfile:
                 modellist=pickle.load(modelfile)
@@ -511,6 +511,7 @@ class kNdtool( object ):
         savedict['params']=paramdict
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
+        savedict['runtime']=(self.iter_start_time_list[0],self.iter_start_time_list[-1])
         try:
             with open('final_model_save','rb') as modelfile:
                 modellist=pickle.load(modelfile)
@@ -621,7 +622,7 @@ class kNdtool( object ):
         """
         xpr=(xpr-self.xmean)/self.xstd
         self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xpr,modeldict,fixed_or_free_paramdict)
-        return self.prediciton.yhat  
+        return self.prediction.yhat  
     
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
@@ -648,7 +649,7 @@ class optimize_free_params(kNdtool):
         self.save_interval=1
         
         #Extract from outer optimizedict
-        modeldict=optimizedict['model_dict'] 
+        modeldict=optimizedict['modeldict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']
         param_valdict=optimizedict['hyper_param_dict']
         
@@ -688,12 +689,12 @@ class optimize_free_params(kNdtool):
         #setup and run scipy minimize
         args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
         print(f'modeldict:{modeldict}')
-        self.minimized=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+        self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         lastmse=self.mse_param_list[-1][0]
         lastparamdict=self.mse_param_list[-1][1]
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict)
         self.final_saveit(lastmse,lastparamdict,modeldict)
-        return self.minimized
+        
         
 
 if __name__=="_main__":
