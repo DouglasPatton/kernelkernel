@@ -329,6 +329,7 @@ class kNdtool( object ):
         '''
         fixed_params=np.array([]);free_params=np.array([]);fixed_or_free_paramdict={}
         #build fixed and free vectors of hyper-parameters based on hyper_param_formdict
+        print(f'param_valdict:{param_valdict}')
         for param_name,param_form in model_param_formdict.items():
             param_feature_dict={}
             param_val=param_valdict[param_name]
