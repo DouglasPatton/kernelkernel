@@ -16,7 +16,8 @@ class DoKernelOpt(object):
         
         y=self.train_y
         x=self.train_x
-        
+        self.open_condense_resave('model_save')
+        self.open_condense_resave('final_model_save')
         optimizedict=self.run_opt_complete_check(y,x,self.optimizedict,replace=1)
         self.optimizedict=optimizedict.copy()
         self.minimize_obj=self.run_optimization(self.train_y,self.train_x,self.optimizedict)
@@ -41,15 +42,15 @@ class DoKernelOpt(object):
         partial_match=optimizedict['opt_settings_dict']['partial_match']
         same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
         
-        expscale=0.7
+        
         if len(same_modelxy_dict_list)>0:
             #print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             train_n=[dict_i['ydata'].shape[0] for dict_i in same_modelxy_dict_list]
-            n_wt_mse_list=[mse_list[i]*train_n[i]**-expscale for i in range(len(mse_list))]
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
-            #print('boom')
+            
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
             
         same_modelxy_dict_list=self.open_and_compare_optdict('final_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
@@ -57,7 +58,7 @@ class DoKernelOpt(object):
             #print(f"from final_model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             train_n=[dict_i['ydata'].shape[0] for dict_i in same_modelxy_dict_list]
-            n_wt_mse_list=[mse_list[i]*train_n[i]**-expscale for i in range(len(mse_list))]
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
         
@@ -66,11 +67,11 @@ class DoKernelOpt(object):
         if len(mse_list)>0:
             mse_list=[dict_i['mse'] for dict_i in best_dict_list]
             train_n=[dict_i['ydata'].shape[0] for dict_i in best_dict_list]
-            n_wt_mse_list=[mse_list[i]*train_n[i]**-expscale for i in range(len(mse_list))]
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
-            #print(f'optimization dict with lowest mse:{best_dict["mse"]}was last saved{best_dict["when_saved"]}')
-            #print(f'best_dict:{best_dict}')
+            print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["when_saved"]}')
+            print(f'best_dict:{best_dict}')
             if replace==1:
                 #print("overriding start parameters with saved parameters")
                 self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
@@ -94,19 +95,41 @@ class DoKernelOpt(object):
             new_opt_dict['hyper_param_dict'][key]=new_val
         #print(f'rebuild hyper param dict vstring:{vstring}')
         return new_opt_dict
-    
+                  
+    def open_condense_resave(self,filename1,verbose=None):
+        if verbose==None or verbose=='no':
+            verbose=0
+        if verbose=='yes':
+            verbose=1
+        try:
+            with open(filename1,'rb') as savedfile:
+                saved_model_list1=pickle.load(savedfile)
+            condensed_list=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=verbose)
+        except:
+            print(f'filename:{filename1} not found')
+            return
+        try:
+            with open(filename1,'wb') as writefile:
+                pickle.dump(condensed_list,writefile)
+        except:
+                print(f'filewrite for filename:{filename1} failed')
+                
+
+        
+            
     def merge_and_condense_saved_models(self,filename1,filename2,condense=None,verbose=None):
         if condense==None or condense=='no':
             condense=0
         if condense=='yes':
             condense=1
         
+        
         with open(filename1,'rb') as savedfile:
             saved_model_list1=pickle.load(savedfile)
         with open(filename2,'rb') as savedfile:
             saved_model_list2=pickle.load(savedfile)
-        condensed_list1=self.condense_saved_model_list(saved_model_list1)
-        condensed_list2=self.condense_saved_model_list(saved_model_list2)
+        condensed_list1=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=0)
+        condensed_list2=self.condense_saved_model_list(saved_model_list2, help_start=0, strict=1,verbose=0)
         new_model_list=[]
         modeldict_list1=[dict_i['modeldict'] for dict_i in condensed_list1]
         modeldict_list2=[dict_i['modeldict'] for dict_i in condensed_list2]
@@ -126,16 +149,19 @@ class DoKernelOpt(object):
         for i,dict_2 in enumerate(condensed_list2):
             if jbest[i]==1:
                 new_model_list.append(condensed_list2[i])
-        with open(condensed+filename1[:-1]),'wb' as newfile:
+        with open('condensed'+filename1,'wb') as newfile:
             pickle.dump(new_model_list,newfile)
                                       
-    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None):
+    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
+        if verbose==None or verbose=='yes': verbose=1
+        if verbose=='no':verbose=0
         if strict=='yes':strict=1
         if strict=='no':strict=0
         keep_model=[1]*len(saved_model_list)
         for i,full_model_i in enumerate(saved_model_list):
             if keep_model[i]==1:
                 for j,full_model_j in enumerate(saved_model_list[i+1:]):
+                    j=j+i+1
                     matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=0,strict=strict)
                     #if full_model_i['modeldict']==full_model_j['modeldict']:
                     if len(matchlist)>0:
@@ -145,18 +171,20 @@ class DoKernelOpt(object):
                         j_n=full_model_j['ydata'].shape[0]
                         iwt=self.do_nwt_mse(i_mse,i_n)
                         jwt=self.do_nwt_mse(j_mse,j_n)
-                        print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
+                        if verbose==1:print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
                         if iwt<jwt:
-                            print('model j loses')
+                            if verbose==1:print('model j loses')
                             keep_model[j]=0
                         else:
-                            print('model i loses')
+                            if verbose==1:print('model i loses')
                             keep_model[i]=0
                     
-        return [model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
+        final_match_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
+        print(f'len(final_match_list):{len(final_match_list)}')
+        return final_match_list
     def do_nwt_mse(self,mse,n):
-        return mse/(n**3)
+        return mse/(np.log(n/10.1)**10)
     def open_and_compare_optdict(self,saved_filename,optimizedict,y,x,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
@@ -194,7 +222,7 @@ class DoKernelOpt(object):
             print('--------------------------------help_start is triggered---------------------------')
             optdict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
             #print(f'optdict_match_list2:{optdict_match_list}')
-            return self.condense_saved_model_list(optdict_match_list)
+            return self.condense_saved_model_list(optdict_match_list,help_start=0,strict=1)
         elif len(optdict_match_list)==0 and partial_match==1:
             print('--------------here----------------')
             return self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
@@ -281,12 +309,12 @@ class DoKernelOpt(object):
                 print(f'val is dict in {key}, recursive call')
                 old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1)
                 vstring=vstring+vstring2
-                print('made it back from recursive call')
+                #print('made it back from recursive call')
             else:
                 try:
-                    print(f":val({new_dict[key]}) replaces val({old_dict_copy[key]})\n")
                     old_dict_copy[key]=val
                     if verbose==1:
+                        print(f":val({new_dict[key]}) replaces val({old_dict_copy[key]})\n")
                         vstring=vstring+f":val({new_dict[key]}) or ({val}) replaces val({old_dict_copy[key]})\n"
                         
                 except:
