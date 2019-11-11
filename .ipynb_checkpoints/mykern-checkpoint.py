@@ -359,7 +359,8 @@ class kNdtool( object ):
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
-
+        
+        print(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
         return free_params,fixed_or_free_paramdict
 
     
@@ -445,7 +446,7 @@ class kNdtool( object ):
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
     def MY_KDEpredictMSE(self,free_params,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
-        if not type(fixed_or_free_paramdict['free_params']) is dict: #it would be the string "outside" otherwise
+        if not type(fixed_or_free_paramdict['free_params']) is list: #it would be the string "outside" otherwise
             self.call_iter+=1#then it must be a new call during optimization
             #if self.call_iter>1 and self.call_iter%5==0:
             #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
@@ -454,6 +455,7 @@ class kNdtool( object ):
             
             
         fixed_or_free_paramdict['free_params']=free_params
+        print(f'free_params added to dict. free_params:{free_params}')
         
         
         yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
@@ -473,7 +475,7 @@ class kNdtool( object ):
             
         
         if self.call_iter%self.save_interval==0:
-            self.sort_then_saveit(self.mse_param_list[-self.save_interval:],modeldict,'model_save')
+            self.sort_then_saveit(self.mse_param_list[-self.save_interval*2:],modeldict,'model_save')
                 
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
@@ -696,6 +698,7 @@ class optimize_free_params(kNdtool):
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')
         #self.sort_then_saveit(self.mse_param_list[-self.save_interval*3:],modeldict,'final_model_save')
         self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
+        print(f'lastparamdict:{lastparamdict}')
         
         
         
