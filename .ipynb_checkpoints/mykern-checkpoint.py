@@ -468,19 +468,19 @@ class kNdtool( object ):
         if self.call_iter==3:
             
             tdiff=np.abs(datetime.datetime.strptime(self.iter_start_time_list[-1],t_format)-datetime.datetime.strptime(self.iter_start_time_list[-2],t_format))
-            self.save_interval= int(max([10-np.round(np.log(tdiff.total_seconds()+1),0)**2,1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
+            self.save_interval= int(max([10-np.round(np.log(tdiff.total_seconds()+1)**3,0),1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
             print(f'save_interval changed to {self.save_interval}')
             
         
         if self.call_iter%self.save_interval==0:
-            self.sort_then_saveit(self.mse_param_list[-self.save_interval:],modeldict)
+            self.sort_then_saveit(self.mse_param_list[-self.save_interval:],modeldict,'model_save')
                 
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
             mse=np.ma.count_masked(yhat_un_std)*10**199
         return mse
             
-    def sort_then_saveit(self,mse_param_list,modeldict):
+    def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
         mse_list=[i[0] for i in mse_param_list]
         minmse=min(mse_list)
@@ -494,15 +494,15 @@ class kNdtool( object ):
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
         try:
-            with open('model_save','rb') as modelfile:
+            with open(filename,'rb') as modelfile:
                 modellist=pickle.load(modelfile)
                 #print('---------------success----------')
         except:
             modellist=[]
         modellist.append(savedict)
-        with open('model_save','wb') as thefile:
+        with open(filename,'wb') as thefile:
             pickle.dump(modellist,thefile)
-        print(f'saved to model_save at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+        print(f'saved to {filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
     
     def final_saveit(self,mse,paramdict,modeldict):
         savedict={}
@@ -693,8 +693,10 @@ class optimize_free_params(kNdtool):
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         lastmse=self.mse_param_list[-1][0]
         lastparamdict=self.mse_param_list[-1][1]
-        self.sort_then_saveit([[lastmse,lastparamdict]],modeldict)
-        self.final_saveit(lastmse,lastparamdict,modeldict)
+        self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')
+        #self.sort_then_saveit(self.mse_param_list[-self.save_interval*3:],modeldict,'final_model_save')
+        self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
+        
         
         
 

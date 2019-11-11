@@ -39,14 +39,16 @@ class DoKernelOpt(object):
         print(f'help_start:{help_start}')
         partial_match=optimizedict['opt_settings_dict']['partial_match']
         same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+        
         expscale=0.7
         if len(same_modelxy_dict_list)>0:
             print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
+            #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             train_n=[dict_i['ydata'].shape[0] for dict_i in same_modelxy_dict_list]
             n_wt_mse_list=[mse_list[i]*train_n[i]**-expscale for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
-            print('boom')
+            #print('boom')
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
             
         same_modelxy_dict_list=self.open_and_compare_optdict('final_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
@@ -127,18 +129,18 @@ class DoKernelOpt(object):
                                       
     def condense_saved_model_list(self,saved_model_list,help_start=1):
         keep_model=[1]*len(saved_model_list)
-        for i,modeli in enumerate(saved_model_list):
-            for j,modelj in enumerate(saved_model_list[i+1:]):
-                matchlist=self.do_partial_match([modeli],modelj,help_start)
-                #if modeli['modeldict']==modelj['modeldict']:
-                if len(matchlist>0):
-                    if self.do_nwt_mse(modeli['mse'],modeli['ydata'].shape[0])<self.do_nwt_mse(modelj['mse'],modelj['ydata'].shape[0]):
+        for i,full_model_i in enumerate(saved_model_list):
+            for j,full_model_j in enumerate(saved_model_list[i+1:]):
+                matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=0,strict='yes')
+                #if full_model_i['modeldict']==full_model_j['modeldict']:
+                if len(matchlist)>0:
+                    if self.do_nwt_mse(full_model_i['mse'],full_model_i['ydata'].shape[0])<self.do_nwt_mse(full_model_j['mse'],full_model_j['ydata'].shape[0]):
                         keep_model[j]=0
                     else:
                         keep_model[i]=0
         return [model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
-    def do_nwt_mse(self,mse,n,scale=0.7):
-        return mse*(n**-scale)
+    def do_nwt_mse(self,mse,n,nscale=3):
+        return mse/(np.log(n**nscale))
     def open_and_compare_optdict(self,saved_filename,optimizedict,y,x,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
@@ -165,6 +167,7 @@ class DoKernelOpt(object):
         modeldict_list=[dict_i['modeldict'] for dict_i in saved_dict_list]
         optdict_match_list_select=[dict_i==thismodeldict for dict_i in modeldict_list]#list of boolean
         optdict_match_list=[saved_dict_list[i] for i,ismatch in enumerate(optdict_match_list_select) if ismatch]
+        #print(f'optdict_match_list1:{optdict_match_list}')
         testlist1=[dict_i['modeldict'] for dict_i in saved_dict_list]
         testlist2=[thismodeldict==dict_i for dict_i in testlist1]
         finallist=[dict_i for i,dict_i in enumerate(saved_dict_list) if testlist2[i]]
@@ -172,8 +175,9 @@ class DoKernelOpt(object):
         print(f'finallist length:{len(finallist)},optdict_match_list length:{len(optdict_match_list)}')
         
         if help_start==1 and len(optdict_match_list)>0:
-            print('------help_start is triggered------')
-            self.do_partial_match(saved_dict_list,thismodeldict,help_start)
+            print('--------------------------------help_start is triggered---------------------------')
+            optdict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start)
+            #print(f'optdict_match_list2:{optdict_match_list}')
             return self.condense_saved_model_list(optdict_match_list)
         elif len(optdict_match_list)==0 and partial_match==1:
             return self.condense_saved_model_list(self.do_partial_match(saved_dict_list,thismodeldict))
@@ -190,31 +194,43 @@ class DoKernelOpt(object):
                 else: 
                     print('found matching models but not matching x or matching y')
                     return modeldict_compare_list
+            print('')
             return same_modelxy_dict_list
     
-    def do_partial_match(self,saved_optdict_list,amodeldict,help_start):
+    def do_partial_match(self,saved_optdict_list,afullmodel,help_start,strict=None):
+        if strict==None or strict=='no':
+            strict=0
+        if strict=='yes': strict=1
+        amodeldict=afullmodel['modeldict']
         saved_modeldict_list=[dict_i['modeldict'] for dict_i in saved_optdict_list]
         same_modeldict_compare=[amodeldict==dict_i for dict_i in saved_modeldict_list]
-        matchcount=len([i for i in saved_optdict_list if same_modeldict_compare])
         
-        if matchcount>help_start*5:
+        matches=[item for i,item in enumerate(saved_optdict_list) if same_modeldict_compare[i]]
+        matchcount=len(matches)
+        if strict==1:
+            n,k=afullmodel['xdata'].shape
+            same_modeldict_compare=[dict_i for dict_i in matches if dict_i['ydata'].shape==(n,k)]
+        if help_start==0:
+            return matches
+        if matchcount>help_start*1:
             print(f'partial match found a full match.....matchcount:{matchcount}')
-            return [i for i in saved_optdict_list if same_modeldict_compare]
+            return matches
         #print(simplifying1)
         new_dict_list=[]
+        string_list=['ykern_grid','xkern_grid','hyper_param_form_dict','regression_model']
+        for string in string_list:
+            new_dict_list.append({string:amodeldict[string]})#make the list match amodeldict, so optimization settings aren't changed
+        #new_dict_list.append(amodeldict['xkern_grid'])
+        #new_dict_list.append(amodeldict['hyper_param_form_dict'])
+        #new_dict_list.append(amodeldict['regression_model'])
         
-        new_dict_list.append(amodeldict['ykern_grid'])#make the list match amodeldict, so optimization settings aren't changed
-        new_dict_list.append(amodeldict['xkern_grid'])
-        new_dict_list.append(amodeldict['hyper_param_form_dict'])
-        new_dict_list.append(amodeldict['regression_model'])
-        
-        simple_modeldict_list=saved_modeldict_list['modeldict'].copy()#initialize these as copies that will be progressively simplified
-        simple_thismodeldict=thismodeldict.copy()
+        simple_modeldict_list=saved_modeldict_list.copy()#initialize these as copies that will be progressively simplified
+        simple_amodeldict=amodeldict.copy()
         for new_dict in new_dict_list:
             print(f'partial match trying {new_dict}')
             simple_modeldict_list=[self.do_dict_override(dict_i,new_dict) for dict_i in simple_modeldict_list]
-            simple_thismodeldict=self.do_dict_override(simple_thismodeldict,new_dict)
-            matchlist_idx=[simple_thismodeldict==dict_i for dict_i in simple_modeldict_list]
+            simple_amodeldict=self.do_dict_override(simple_amodeldict,new_dict)
+            matchlist_idx=[simple_amodeldict==dict_i for dict_i in simple_modeldict_list]
             matchlist=[dict_i for i,dict_i in enumerate(saved_optdict_list) if matchlist_idx[i]]
             if len(matchlist)>0:
                 print(f'{len(matchlist)} partial matches found after substituting {new_dict}')
