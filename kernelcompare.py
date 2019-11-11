@@ -36,7 +36,7 @@ class DoKernelOpt(object):
             replace=0
         best_dict_list=[]
         help_start=optimizedict['opt_settings_dict']['help_start']
-        print(f'help_start:{help_start}')
+        #print(f'help_start:{help_start}')
         partial_match=optimizedict['opt_settings_dict']['partial_match']
         same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
         
@@ -68,7 +68,7 @@ class DoKernelOpt(object):
             n_wt_mse_list=[mse_list[i]*train_n[i]**-expscale for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
-            print(f'optimiziation dict with lowest mse:{best_dict["mse"]}was last saved{best_dict["when_saved"]}')
+            print(f'optimization dict with lowest mse:{best_dict["mse"]}was last saved{best_dict["when_saved"]}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
                 self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=1)
@@ -127,11 +127,13 @@ class DoKernelOpt(object):
         with open(condensed+filename1[:-1]),'wb' as newfile:
             pickle.dump(new_model_list,newfile)
                                       
-    def condense_saved_model_list(self,saved_model_list,help_start=1):
+    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None):
+        if strict=='yes':strict=1
+        if strict=='no':strict=0
         keep_model=[1]*len(saved_model_list)
         for i,full_model_i in enumerate(saved_model_list):
             for j,full_model_j in enumerate(saved_model_list[i+1:]):
-                matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=0,strict='yes')
+                matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=0,strict=1)
                 #if full_model_i['modeldict']==full_model_j['modeldict']:
                 if len(matchlist)>0:
                     if self.do_nwt_mse(full_model_i['mse'],full_model_i['ydata'].shape[0])<self.do_nwt_mse(full_model_j['mse'],full_model_j['ydata'].shape[0]):
@@ -180,7 +182,8 @@ class DoKernelOpt(object):
             #print(f'optdict_match_list2:{optdict_match_list}')
             return self.condense_saved_model_list(optdict_match_list)
         elif len(optdict_match_list)==0 and partial_match==1:
-            return self.condense_saved_model_list(self.do_partial_match(saved_dict_list,thismodeldict))
+            print('--------------here----------------')
+            return self.condense_saved_model_list(self.do_partial_match(saved_dict_list,thismodeldict,help_start=1,strict=0))
         else:
             #same_modeldict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
             xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in optdict_match_list]
