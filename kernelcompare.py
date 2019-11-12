@@ -159,6 +159,7 @@ class KernelOptModelTool:
                 with open(file_i,'rb') as savedfile2:
                     try: saved_model_list2=pickle.load(savedfile2)
                     except:saved_model_list2=[]
+                print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
                 condensed_list2=self.condense_saved_model_list(saved_model_list2, help_start=0, strict=1,verbose=0)
                 new_model_list=[]
                 modeldict_list2=[dict_i['modeldict'] for dict_i in condensed_list2]
@@ -194,7 +195,7 @@ class KernelOptModelTool:
             if keep_model[i]==1:
                 for j,full_model_j in enumerate(saved_model_list[i+1:]):
                     j=j+i+1
-                    matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=0,strict=strict)
+                    matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=help_start,strict=strict)
                     #if full_model_i['modeldict']==full_model_j['modeldict']:
                     if len(matchlist)>0:
                         i_mse=full_model_i['mse']
@@ -203,20 +204,23 @@ class KernelOptModelTool:
                         j_n=full_model_j['ydata'].shape[0]
                         iwt=self.do_nwt_mse(i_mse,i_n)
                         jwt=self.do_nwt_mse(j_mse,j_n)
-                        if verbose==1:print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
+                        if verbose==1:
+                            print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
                         if iwt<jwt:
-                            if verbose==1:print('model j loses')
+                            if verbose==1:
+                                print('model j loses')
                             keep_model[j]=0
                         else:
-                            if verbose==1:print('model i loses')
+                            if verbose==1:
+                                print('model i loses')
                             keep_model[i]=0
                     
         final_match_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
         print(f'len(final_match_list):{len(final_match_list)}')
         return final_match_list
     def do_nwt_mse(self,mse,n):
-        return mse/(np.log(n/10.1)**10)
+        return np.log(mse+1)/(np.log(n)**2)
     def open_and_compare_optdict(self,saved_filename,optimizedict,y,x,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
@@ -290,6 +294,7 @@ class KernelOptModelTool:
             try:n,k=afullmodel['xdata'].shape
             except:n,k=self.train_x.shape
             same_modeldict_compare=[dict_i for dict_i in matches if dict_i['xdata'].shape==(n,k)]
+            return same_modeldict_compare
         if help_start==0:
             return matches
         if matchcount>help_start*1:
