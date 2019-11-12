@@ -20,19 +20,24 @@ class KernelOptModelTool:
             self.datagen_dict=self.do_dict_override(default_datagen_dict,datagen_dict_override)
             self.build_dataset()#create x,y 
         
-    def do_monte_opt(self,opt_dict_override=None):
+    def do_monte_opt(self,optimizedict,force_start_params=None):
+        if force_start_params==None or force_start_params=='no':
+            force_start_params=0
+        if force_start_params=='yes':
+            force_start_params=1
+            
         
        
-        self.build_dict(opt_dict_override)#
+        #self.build_dict(opt_dict_override)#
         #self.data_and_modeldict={'data':self.dg_data,'model':self.optimizedict}
         
         y=self.train_y
         x=self.train_x
         self.open_condense_resave('model_save')
         self.open_condense_resave('final_model_save')
-        optimizedict=self.run_opt_complete_check(y,x,self.optimizedict,replace=1)
-        self.optimizedict=optimizedict.copy()
-        self.minimize_obj=self.run_optimization(self.train_y,self.train_x,self.optimizedict)
+        if force_start_params==0
+            optimizedict=self.run_opt_complete_check(y,x,optimizedict,replace=1)
+        self.minimize_obj=self.run_optimization(self.train_y,self.train_x,optimizedict)
         
         
     def run_opt_complete_check(self,y,x,optimizedict_orig,replace=None):
@@ -481,7 +486,7 @@ class KernelOptModelTool:
         except:
             print('------no start value overrides encountered------')
         print(f'newoptimizedict1{newoptimizedict1}')
-        self.optimizedict=newoptimizedict1
+        return newoptimizedict1
 
         
         
@@ -489,9 +494,13 @@ class Kernelcompare(KernelOptModelTool):
     def __init__(self):
         datagen_dict_override=self.build_datagen_dict_override()
         KernelOptModelTool.__init__(self,datagen_dict_override=datagen_dict_override)
-        opt_dict_override=self.build_opt_dict_override()
         self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=1)
-        self.do_monte_opt(opt_dict_override=opt_dict_override)
+        
+    def run_kernel_set(self, kernel_run_dict_set)   
+        for dict_i in kernel_run_dict_set:
+            #opt_dict_override=self.test_build_opt_dict_override()
+            optimizedict=self.build_dict(opt_dict_override=dict_i)
+            self.do_monte_opt(optimizedict)
         
         
     def build_datagen_dict_override(self):
@@ -502,7 +511,7 @@ class Kernelcompare(KernelOptModelTool):
         return datagen_dict_override
     
     
-    def build_opt_dict_override(self):
+    def test_build_opt_dict_override(self):
         opt_dict_override={}
         modeldict={}
         hyper_param_form_dict={}
