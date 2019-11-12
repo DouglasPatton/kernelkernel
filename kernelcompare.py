@@ -8,14 +8,21 @@ import re
 
 #import datetime
 
-class KernelOptModelTool:
-    def __init__(self):
-        pass
+
         
-    def do_monte_opt(self,datagen_dict_override=None,opt_dict_override=None):
-        default_datagen_dict={'train_n':40,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
-        self.datagen_dict=self.do_dict_override(default_datagen_dict,datagen_dict_override)
-        self.build_dataset()#create x,y
+
+class KernelOptModelTool:
+    def __init__(self,datagen_dict_override=None):
+        try: 
+            self.dg_data
+        except:
+            default_datagen_dict={'train_n':40,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
+            self.datagen_dict=self.do_dict_override(default_datagen_dict,datagen_dict_override)
+            self.build_dataset()#create x,y 
+        
+    def do_monte_opt(self,opt_dict_override=None):
+        
+       
         self.build_dict(opt_dict_override)#
         #self.data_and_modeldict={'data':self.dg_data,'model':self.optimizedict}
         
@@ -186,6 +193,8 @@ class KernelOptModelTool:
             pickle.dump(condensed_list1,newfile)
                                       
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
+        if saved_model_list==None:
+            return []
         if verbose==None or verbose=='yes': verbose=1
         if verbose=='no':verbose=0
         if strict=='yes':strict=1
@@ -220,7 +229,7 @@ class KernelOptModelTool:
         print(f'len(final_match_list):{len(final_match_list)}')
         return final_match_list
     def do_nwt_mse(self,mse,n):
-        return np.log(mse+1)/(np.log(n)**2)
+        return np.log(mse+1)/(np.log(n)**3)
     def open_and_compare_optdict(self,saved_filename,optimizedict,y,x,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
@@ -261,7 +270,9 @@ class KernelOptModelTool:
             return self.condense_saved_model_list(optdict_match_list,help_start=0,strict=1)
         elif len(optdict_match_list)==0 and partial_match==1:
             print('--------------here----------------')
-            return self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
+            tryagain= self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
+            if tryagain==None:return []
+            else:return tryagain
         else:
             #same_modeldict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
             xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in optdict_match_list]
@@ -373,7 +384,7 @@ class KernelOptModelTool:
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
                 'Ndiff_exponent':.3*np.ones([Ndiff_param_count,]),
-                'x_bandscale':-0.3*np.ones([self.p,]),
+                'x_bandscale':1*np.ones([self.p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
                 'Ndiff_depth_bw':.5*np.ones([Ndiff_param_count,]),
@@ -382,12 +393,12 @@ class KernelOptModelTool:
 
         if modeldict['Ndiff_type']=='recursive':
             hyper_paramdict1={
-                'Ndiff_exponent':.3*np.ones([Ndiff_param_count,]),
-                'x_bandscale':-0.03*np.ones([self.p,]),
-                'outer_x_bw':np.array([1,]),
-                'outer_y_bw':np.array([3,]),
+                'Ndiff_exponent':0*np.ones([Ndiff_param_count,]),
+                'x_bandscale':1*np.ones([self.p,]),#
+                'outer_x_bw':np.array([0.3,]),
+                'outer_y_bw':np.array([0.3,]),
                 'Ndiff_depth_bw':np.array([0.5]),
-                'y_bandscale':2*np.ones([1,])
+                'y_bandscale':0.2*np.ones([1,])
                 }
         return hyper_paramdict1
             
@@ -471,4 +482,47 @@ class KernelOptModelTool:
             print('------no start value overrides encountered------')
         print(f'newoptimizedict1{newoptimizedict1}')
         self.optimizedict=newoptimizedict1
-   
+
+        
+        
+class Kernelcompare(KernelOptModelTool):
+    def __init__(self):
+        datagen_dict_override=self.build_datagen_dict_override()
+        KernelOptModelTool.__init__(self,datagen_dict_override=datagen_dict_override)
+        opt_dict_override=self.build_opt_dict_override()
+        self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=1)
+        self.do_monte_opt(opt_dict_override=opt_dict_override)
+        
+        
+    def build_datagen_dict_override(self):
+        self.trainsize=45
+        datagen_dict_override={}
+        datagen_dict_override['train_n']=self.trainsize
+        datagen_dict_override['ftype']='quadratic'
+        return datagen_dict_override
+    
+    
+    def build_opt_dict_override(self):
+        opt_dict_override={}
+        modeldict={}
+        hyper_param_form_dict={}
+        hyper_param_dict={}
+        opt_settings_dict={}
+        options={}
+
+        modeldict['Ndiff_type']='recursive'
+        modeldict['max_bw_Ndiff']=3
+        modeldict['Ndiff_start']=2
+        modeldict['ykern_grid']=self.trainsize+1
+        #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
+        #hyper_param_dict['y_bandscale']=np.array([1])
+        #opt_dict_override['hyper_param_dict']=hyper_param_dict
+        opt_dict_override['modeldict']=modeldict
+
+        options['fatol']=0.05
+        options['xatol']=.005
+        opt_settings_dict['options']=options
+        #opt_settings_dict['help_start']='no'
+        #opt_settings_dict['partial_match']='no'
+        opt_dict_override['opt_settings_dict']=opt_settings_dict
+        return opt_dict_override
