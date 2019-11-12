@@ -6,8 +6,11 @@ import mykern as mk
 
 #import datetime
 
-class DoKernelOpt(object):
-    def __init__(self,datagen_dict_override=None,opt_dict_override=None):
+class KernelOptModelTool:
+    def __init__(self):
+        pass
+        
+    def do_monte_opt(self,datagen_dict_override=None,opt_dict_override=None):
         default_datagen_dict={'train_n':40,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         self.datagen_dict=self.do_dict_override(default_datagen_dict,datagen_dict_override)
         self.build_dataset()#create x,y
