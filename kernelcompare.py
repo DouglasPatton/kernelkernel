@@ -33,9 +33,9 @@ class KernelOptModelTool:
         
         y=self.train_y
         x=self.train_x
-        self.open_condense_resave('model_save')
-        self.open_condense_resave('final_model_save')
-        if force_start_params==0
+        #self.open_condense_resave('model_save')
+        #self.open_condense_resave('final_model_save')
+        if force_start_params==0:
             optimizedict=self.run_opt_complete_check(y,x,optimizedict,replace=1)
         self.minimize_obj=self.run_optimization(self.train_y,self.train_x,optimizedict)
         
@@ -153,10 +153,10 @@ class KernelOptModelTool:
         try:
             with open('condensed_model_save','rb') as savedfile:
                 saved_model_list1=pickle.load(savedfile)
-            condensed_list1=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=0)
-            modeldict_list1=[dict_i['modeldict'] for dict_i in condensed_list1]
+            list_i=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=0)
+            modeldict_list1=[dict_i['modeldict'] for dict_i in list_i]
         except:
-            condensed_list1=[]
+            list_i=[]
             modeldict_list1=[]
                     
         
@@ -166,36 +166,46 @@ class KernelOptModelTool:
         if len(model_save_filelist)==1:
             print('only 1 model_save file found, no merge completed')
             return
+        new_model_list=[]
+        condensed_list_of_saved_lists=[]
         if len(model_save_filelist)>1:
             for file_i in model_save_filelist:
-                with open(file_i,'rb') as savedfile2:
-                    try: saved_model_list2=pickle.load(savedfile2)
-                    except:saved_model_list2=[]
-                print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
-                condensed_list2=self.condense_saved_model_list(saved_model_list2, help_start=0, strict=1,verbose=0)
-                new_model_list=[]
-                modeldict_list2=[dict_i['modeldict'] for dict_i in condensed_list2]
+                with open(file_i,'rb') as savedfile:
+                    try: 
+                        saved_model_list=pickle.load(savedfile)
+                        print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
+                    except:
+                        print('warning!saved_model_list{file_i} could not load')
+                        break
+                condensed_list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=0))
+            
+            for i,list_i in enumerate(condensed_list_of_saved_lists):
+                for j,list_j in enumerate(condensed_list_of_saved_lists[i+1:]):
+                    modeldict_list1=[dict_i['modeldict'] for dict_i in list_i]
+                    modeldict_list2=[dict_i['modeldict'] for dict_i in list_j]
+                    
+                    
         #matching_modeldict_list[dict_1==dict_2 for dict_1 in modeldict_list1 for dict_2 in modeldict_list2]
-        
-                jbest=[1]*len(condensed_list2)
-                
-                for i,dict_1 in enumerate(modeldict_list1):
-                    ibest=1#start optimistic
-                    for j,dict_2 in enumerate(modeldict_list2):
-                        if dict_1==dict_2:
-                            if condensed_list1[i]['mse']>condensed_list2[j]['mse']:
-                                ibest=0
-                            else:
-                                jbest[j]=0
-                    if ibest==1:#only true if dict_1[i] never lost, because it won or was unique
-                        new_model_list.append(condensed_list1[i])
-                for i,dict_2 in enumerate(condensed_list2):
-                    if jbest[i]==1:
-                        new_model_list.append(condensed_list2[i])
-                condensed_list1=new_model_list
+
+                    jbest=[1]*len(list_j)
+
+                    for i,dict_1 in enumerate(modeldict_list1):
+                        ibest=1#start optimistic
+                        for j,dict_2 in enumerate(modeldict_list2):
+                            if dict_1==dict_2:
+                                if list_i[i]['mse']>list_j[j]['mse']:
+                                    ibest=0
+                                else:
+                                    jbest[j]=0
+                        if ibest==1:#only true if dict_1[i] never lost, because it won or was unique
+                            new_model_list.append(list_i[i])
+                    for i,dict_2 in enumerate(list_j):
+                        if jbest[i]==1:
+                            new_model_list.append(list_j[i])
+                   
         with open('condensed_model_save','wb') as newfile:
-            print(f'condensed_list1:{condensed_list1}')
-            pickle.dump(condensed_list1,newfile)
+            #print(f'list_i:{new_model_list}')
+            pickle.dump(new_model_list,newfile)
                                       
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
         if saved_model_list==None:
@@ -255,10 +265,12 @@ class KernelOptModelTool:
             print(f'saved_filename is {saved_filename}, but does not seem to exist')
             return []
         #saved_dict_list=[model for model in saved_model]
+        
         thismodeldict=optimizedict['modeldict']
         #print(saved_filename)
         #print(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
         modeldict_list=[dict_i['modeldict'] for dict_i in saved_dict_list]
+        print(f'in saved_filename:{saved_filename}, len(modeldict_list):{len(modeldict_list)},len(saved_dict_list):{len(saved_dict_list)}')
         optdict_match_list_select=[dict_i==thismodeldict for dict_i in modeldict_list]#list of boolean
         optdict_match_list=[saved_dict_list[i] for i,ismatch in enumerate(optdict_match_list_select) if ismatch]
         #print(f'optdict_match_list1:{optdict_match_list}')
@@ -496,8 +508,11 @@ class Kernelcompare(KernelOptModelTool):
         KernelOptModelTool.__init__(self,datagen_dict_override=datagen_dict_override)
         self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=1)
         
-    def run_kernel_set(self, kernel_run_dict_set)   
-        for dict_i in kernel_run_dict_set:
+    def run_kernel_list(self, kernel_run_dict_list=None):
+        if kernel_run_dict_list==None:
+            kernel_run_dict_list=[self.test_build_opt_dict_override()]
+    
+        for dict_i in kernel_run_dict_list:
             #opt_dict_override=self.test_build_opt_dict_override()
             optimizedict=self.build_dict(opt_dict_override=dict_i)
             self.do_monte_opt(optimizedict)
