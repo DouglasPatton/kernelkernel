@@ -23,7 +23,7 @@ class KernelOptModelTools:
         
         
        
-        #self.build_dict(opt_dict_override)#
+        #self.build_optdict(opt_dict_override)#
         #self.data_and_modeldict={'data':self.dg_data,'model':self.optimizedict}
         
         y=self.train_y
@@ -428,7 +428,7 @@ class KernelOptModelTools:
         self.val_x=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
         self.val_y=self.dg_data.y[train_n:]
     
-    def build_dict(self,opt_dict_override=None):
+    def build_optdict(self,opt_dict_override=None):
         if opt_dict_override==None:
             opt_dict_override={}
         max_bw_Ndiff=2
@@ -510,10 +510,11 @@ class KernelCompare(KernelOptModelTools):
         for alternative in data_gen_variation_list:
             self.build_dataset(self.do_dict_override(datagen_dict,alternative))#create x,y       
             if opt_model_variation_list==None:
-                kernel_run_dict_list=[self.build_dict()]
+                kernel_run_dict_list=[self.build_optdict()]
             else:
-                initial_opt_dict=self.build_dict()
+                initial_opt_dict=self.build_optdict()
                 kernel_run_dict_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
+                #print('kernel_run_dict_list:',kernel_run_dict_list)
 
             for optimizedict_i in kernel_run_dict_list:
                 minimize_obj=self.do_monte_opt(optimizedict_i)
@@ -521,28 +522,28 @@ class KernelCompare(KernelOptModelTools):
                 self.monte_run_minimize_obj_list.append(minimize_obj)
                 #do_monte_opt(self,optimizedict,datagen_dict_override=None,force_start_params=None
             
-    def build_opt_dict_variations(self,initial_opt_dict,variation_list,opt_dict_combo_list=None):
-        if opt_dict_combo_list==None:
-            opt_dict_combo_list=[]
+    def build_opt_dict_variations(self,initial_opt_dict,variation_list):
+        opt_dict_combo_list=[]
+            
         
         for i,tup_i in enumerate(variation_list):
             sub_list=[not_tup_i for j,not_tup_i in enumerate(variation_list) if not j==i]
             for k,val in enumerate(tup_i[1]):
                 override_dict_ik=self.build_override_dict_from_str(tup_i[0],val)
                 opt_dict_ik=self.do_dict_override(initial_opt_dict,override_dict_ik)
+                #print('opt_dict_combo_list',opt_dict_combo_list)
                 opt_dict_combo_list.append(opt_dict_ik)
                 if len(sub_list)>0:
-                    self.build_opt_dict_variations(opt_dict_i,sub_list,opt_dict_combo_list)
+                    new_items=self.build_opt_dict_variations(opt_dict_ik,sub_list)
+                    opt_dict_combo_list=opt_dict_combo_list+new_items
                 else: 
                     return opt_dict_combo_list
+                
+        return opt_dict_combo_list
 
     def build_override_dict_from_str(self,string_address,val):
-        dict_out={}
         colon_loc=[i for i,char in enumerate(string_address) if char==':']
-        depth=len(colon_loc)
-        
-        return self.recursive_string_dict_helper(dict_string,colon_loc,val)
-        
+        return self.recursive_string_dict_helper(string_address,colon_loc,val)
             
     def recursive_string_dict_helper(self,dict_string,colon_loc,val):
         if len(colon_loc)==0:
