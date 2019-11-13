@@ -11,21 +11,16 @@ import re
 
         
 
-class KernelOptModelTool:
-    def __init__(self,datagen_dict_override=None):
-        try: 
-            self.dg_data
-        except:
-            default_datagen_dict={'train_n':40,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
-            self.datagen_dict=self.do_dict_override(default_datagen_dict,datagen_dict_override)
-            self.build_dataset()#create x,y 
+class KernelOptModelTools:
+    def __init__(self):
+        pass
         
     def do_monte_opt(self,optimizedict,force_start_params=None):
         if force_start_params==None or force_start_params=='no':
             force_start_params=0
         if force_start_params=='yes':
             force_start_params=1
-            
+        
         
        
         #self.build_dict(opt_dict_override)#
@@ -38,7 +33,7 @@ class KernelOptModelTool:
         if force_start_params==0:
             optimizedict=self.run_opt_complete_check(y,x,optimizedict,replace=1)
         self.minimize_obj=self.run_optimization(self.train_y,self.train_x,optimizedict)
-        
+        return self.minimize_obj
         
     def run_opt_complete_check(self,y,x,optimizedict_orig,replace=None):
         '''
@@ -243,8 +238,10 @@ class KernelOptModelTool:
         final_match_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
         print(f'len(final_match_list):{len(final_match_list)}')
         return final_match_list
+
     def do_nwt_mse(self,mse,n):
         return np.log(mse+1)/(np.log(n)**3)
+
     def open_and_compare_optdict(self,saved_filename,optimizedict,y,x,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
@@ -393,7 +390,7 @@ class KernelOptModelTool:
             return old_dict_copy, vstring
         else: return old_dict_copy
     
-    def build_start_values(self,modeldict):
+    def build_hyper_param_start_values(self,modeldict):
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
@@ -421,13 +418,15 @@ class KernelOptModelTool:
             
         
         
-    def build_dataset(self):
-        param_count=self.datagen_dict['param_count']
-        seed=self.datagen_dict['seed']
-        ftype=self.datagen_dict['ftype']
-        evar=self.datagen_dict['evar']
-        train_n=self.datagen_dict['train_n']
-        n=self.datagen_dict['n']
+    def build_dataset(self,datagen_dict):
+        param_count=datagen_dict['param_count']
+        self.p=param_count
+        seed=datagen_dict['seed']
+        ftype=datagen_dict['ftype']
+        evar=datagen_dict['evar']
+        train_n=datagen_dict['train_n']
+        n=datagen_dict['n']
+        self.train_n=train_n
         
         self.dg_data=dg.data_gen(data_shape=(n,param_count),seed=seed,ftype=ftype,evar=evar)
         self.train_x=self.dg_data.x[0:train_n,1:param_count+1]#drop constant from x and interaction/quadratic terms
@@ -440,7 +439,7 @@ class KernelOptModelTool:
     def build_dict(self,opt_dict_override):
         
         max_bw_Ndiff=2
-        self.p=self.datagen_dict['param_count']
+        
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
@@ -449,7 +448,7 @@ class KernelOptModelTool:
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
             'xkern_grid':'no',
-            'ykern_grid':50,
+            'ykern_grid':60,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
@@ -464,7 +463,7 @@ class KernelOptModelTool:
                 'y_bandscale':'non-neg'
                 }
             }
-        #hyper_paramdict1=self.build_start_values(modeldict1)
+        #hyper_paramdict1=self.build_hyper_param_start_values(modeldict1)
         hyper_paramdict1={}
         
         #optimization settings for Nelder-Mead optimization algorithm
@@ -488,7 +487,7 @@ class KernelOptModelTool:
         
         newoptimizedict1=self.do_dict_override(optimizedict1,opt_dict_override,verbose=0)
         
-        newhyper_paramdict1=self.build_start_values(newoptimizedict1['modeldict'])
+        newhyper_paramdict1=self.build_hyper_param_start_values(newoptimizedict1['modeldict'])
         newoptimizedict1['hyper_param_dict']=newhyper_paramdict1
         try: 
             start_val_override_dict=opt_dict_override['hyper_param_dict']
@@ -502,31 +501,68 @@ class KernelOptModelTool:
 
         
         
-class KernelCompare(KernelOptModelTool):
+class KernelCompare(KernelOptModelTools):
     def __init__(self):
-        datagen_dict_override=self.build_datagen_dict_override()
-        KernelOptModelTool.__init__(self,datagen_dict_override=datagen_dict_override)
+        KernelOptModelTools.__init__(self)
         self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=1)
         
-    def run_kernel_list(self, kernel_run_dict_list=None):
-        if kernel_run_dict_list==None:
-            kernel_run_dict_list=[self.test_build_opt_dict_override()]
-    
-        for dict_i in kernel_run_dict_list:
-            #opt_dict_override=self.test_build_opt_dict_override()
-            optimizedict=self.build_dict(opt_dict_override=dict_i)
-            self.do_monte_opt(optimizedict)
+    def run_kernel_list(self, opt_model_variation_list=None,data_gen_variation_list=None):
+        datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
+        if data_gen_variation_list==None:
+            data_gen_variation_list=[{}]#will default to paramteres in datagen_dict below
+        assert type(data_gen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
         
+        self.monte_run_minimize_obj_list=[]
+        for alternative in data_gen_variation_list:
+            self.build_dataset(self.do_dict_override(datagen_dict,alternative))#create x,y       
+            if opt_model_variation_list==None:
+                kernel_run_dict_list=[self.build_dict(self.test_build_opt_dict_override())]
+            else:
+                initial_opt_dict=self.build_dict(self.test_build_opt_dict_override())
+                kernel_run_dict_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
+
+            for optimizedict_i in kernel_run_dict_list:
+                minimize_obj=self.do_monte_opt(optimizedict_i)
+                print(f'minimize_obj:{minimize_obj}')
+                self.monte_run_minimize_obj_list.append(minimize_obj)
+                #do_monte_opt(self,optimizedict,datagen_dict_override=None,force_start_params=None
+            
+    def build_opt_dict_variations(self,initial_opt_dict,variation_list,opt_dict_combo_list=None):
+        if opt_dict_combo_list==None:
+            opt_dict_combo_list=[]
         
-    def build_datagen_dict_override(self):
-        self.trainsize=45
+        for i,tup_i in enumerate(variation_list):
+            sub_list=[not_tup_i for j,not_tup_i in enumerate(variation_list) if not j==i]
+            for k,val in enumerate(tup_i[1]):
+                override_dict_ik=self.build_override_dict_from_str(tup_i[0],val)
+                opt_dict_ik=self.do_dict_override(initial_opt_dict,override_dict_ik)
+                opt_dict_combo_list.append(opt_dict_ik)
+                if len(sub_list)>0:
+                    self.build_opt_dict_variations(opt_dict_i,sub_list,opt_dict_combo_list)
+                else: 
+                    return opt_dict_combo_list
+
+    def build_override_dict_from_str(self,string_address,val):
+        dict_out={}
+        colon_loc=[i for i,char in enumerate(string_address) if char==':']
+        depth=len(colon_loc)
+        
+        return self.recursive_string_dict_helper(dict_string,colon_loc,val)
+        
+            
+    def recursive_string_dict_helper(self,dict_string,colon_loc,val):
+        if len(colon_loc)==0:
+            return {dict_string:val}
+        if len(colon_loc)>0:
+            return {dict_string[0:colon_loc[0]]:self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],colon_loc[1:],val)}
+        
+    def build_quadratic_datagen_dict_override(self):
         datagen_dict_override={}
-        datagen_dict_override['train_n']=self.trainsize
         datagen_dict_override['ftype']='quadratic'
         return datagen_dict_override
-    
-    
+        
     def test_build_opt_dict_override(self):
+        trainsize=self.train_n
         opt_dict_override={}
         modeldict={}
         hyper_param_form_dict={}
@@ -536,8 +572,8 @@ class KernelCompare(KernelOptModelTool):
 
         modeldict['Ndiff_type']='recursive'
         modeldict['max_bw_Ndiff']=3
-        modeldict['Ndiff_start']=2
-        modeldict['ykern_grid']=self.trainsize+1
+        modeldict['Ndiff_start']=1
+        modeldict['ykern_grid']=trainsize+1
         #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
         #hyper_param_dict['y_bandscale']=np.array([1])
         #opt_dict_override['hyper_param_dict']=hyper_param_dict
