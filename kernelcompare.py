@@ -502,7 +502,7 @@ class KernelOptModelTool:
 
         
         
-class Kernelcompare(KernelOptModelTool):
+class KernelCompare(KernelOptModelTool):
     def __init__(self):
         datagen_dict_override=self.build_datagen_dict_override()
         KernelOptModelTool.__init__(self,datagen_dict_override=datagen_dict_override)
