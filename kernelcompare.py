@@ -15,6 +15,7 @@ class KernelOptModelTools:
     def __init__(self):
         pass
         
+            
     def do_monte_opt(self,optimizedict,force_start_params=None):
         if force_start_params==None or force_start_params=='no':
             force_start_params=0
@@ -346,6 +347,7 @@ class KernelOptModelTools:
     def run_optimization(self,y,x,optimizedict):
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         print(start_msg)
+        optimizedict['datagen_dict']=self.datagen_dict
         self.optimize_obj=mk.optimize_free_params(y,x,optimizedict)
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
@@ -508,7 +510,8 @@ class KernelCompare(KernelOptModelTools):
         
         self.monte_run_minimize_obj_list=[]
         for alternative in data_gen_variation_list:
-            self.build_dataset(self.do_dict_override(datagen_dict,alternative))#create x,y       
+            self.datagen_dict=self.do_dict_override(datagen_dict,alternative)
+            self.build_dataset(datagen_dict)#create x,y       
             if opt_model_variation_list==None:
                 kernel_run_dict_list=[self.build_optdict()]
             else:

@@ -495,6 +495,7 @@ class kNdtool( object ):
         savedict['params']=bestparams
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
+        savedict['datagen_dict']=self.datagen_dict
         try:
             with open(filename,'rb') as modelfile:
                 modellist=pickle.load(modelfile)
@@ -650,7 +651,7 @@ class optimize_free_params(kNdtool):
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
         self.save_interval=1
-        
+        self.datagen_dict=optimizedict['datagen_dict']
         #Extract from outer optimizedict
         modeldict=optimizedict['modeldict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']
