@@ -1,7 +1,8 @@
 import pickle
 import os
 import re
-
+from time import strftime
+import datetime
 
 class run_cluster:
     def __init__(self,mytype):
@@ -37,6 +38,8 @@ def initialize(self,mytype):
         except:
             return self.initialize(myname) #this should re-start the process if something went wrong
         self.runnode(myname)
+        
+
                 
         
 
@@ -60,12 +63,22 @@ def add_to_namelist(self,newname):
         assert False,"naming failure"
             
 def getnamelist(self):
-    try: with open(self.savedirectory+'namelist','rb') as namelist
+    try: 
+        with open(self.savedirectory+'namelist','rb') as namelist
             return pickle.load(namelist)
     except:
+        print('no file called namelist found')
+        return []
+    
+def runnode(self,myname):
+    start_time=strftime("%Y%m%d-%H%M%S")
+    i_have_opt_job=0
+    while i_have_opt_job==0:
+        my_opt_job=self.check_for_opt_job(myname,start_time)
+        i_have_opt_job=1
     
     
-def check_for_opt_job(self,myname):
+def check_for_opt_job(self,myname,start_time):
     assert type(myname) is str,f"myname should be type str not type:{type(myname)}"
     try: 
         os.chdir(self.savedirectory)
@@ -88,14 +101,22 @@ def check_for_opt_job(self,myname):
                     if myjob['job_to_do']==1:
                         return pickle.load(myjob)
                     else:
-                        print('jo_to_do:',myjob['job_to_do'])
+                        print('job_to_do:',myjob['job_to_do'])
                         waiting=1
             except:
                 i+=1
-                if i%100==0:
+                if i%500==0:
                     print("waiting...i=",i,end='. ')
+                    now=strftime("%Y%m%d-%H%M%S")
+                s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S"))
+                if s_since_start>60*10:#10 minutes
+                    print(f'time out after {s_since_start}')
+                    waiting=1
+        return None
+                
+            
                     
-def 
+
         
                     
                 
