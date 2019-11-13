@@ -63,16 +63,8 @@ class KernelOptModelTools:
             lowest_n_wt_mse=min(n_wt_mse_list)
             
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
-        '''  
-        same_modelxy_dict_list=self.open_and_compare_optdict('final_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
-        if len(same_modelxy_dict_list)>0:
-            #print(f"from final_model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
-            mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
-            train_n=[dict_i['ydata'].shape[0] for dict_i in same_modelxy_dict_list]
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
-            lowest_n_wt_mse=min(n_wt_mse_list)
-            best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
-        '''
+        if len(same_modelxy_dict_list)==0:
+            print('--------------no matching models found----------')
         
         mse_list=[dict_i['mse'] for dict_i in best_dict_list]
         if len(mse_list)>0:
@@ -86,7 +78,7 @@ class KernelOptModelTools:
             except:print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["when_saved"]}')
             print(f'best_dict:{best_dict}')
             if replace==1:
-                #print("overriding start parameters with saved parameters")
+                print("overriding start parameters with saved parameters")
                 self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
             else:
                 print('continuing without replacing parameters with their saved values')
@@ -337,13 +329,13 @@ class KernelOptModelTools:
         simple_modeldict_list=saved_modeldict_list.copy()#initialize these as copies that will be progressively simplified
         simple_amodeldict=amodeldict.copy()
         for new_dict in new_dict_list:
-            print(f'partial match trying {new_dict}')
+            #print(f'partial match trying {new_dict}')
             simple_modeldict_list=[self.do_dict_override(dict_i,new_dict) for dict_i in simple_modeldict_list]
             simple_amodeldict=self.do_dict_override(simple_amodeldict,new_dict)
             matchlist_idx=[simple_amodeldict==dict_i for dict_i in simple_modeldict_list]
             matchlist=[dict_i for i,dict_i in enumerate(saved_optdict_list) if matchlist_idx[i]]
             if len(matchlist)>0:
-                print(f'{len(matchlist)} partial matches found after substituting {new_dict}')
+                #print(f'{len(matchlist)} partial matches found after substituting {new_dict}')
                 return matchlist
             
         
@@ -371,7 +363,7 @@ class KernelOptModelTools:
             if verbose==1:
                 vstring=vstring+f":key({key})"
             if type(val) is dict:
-                print(f'val is dict in {key}, recursive call')
+                if verbose==1:print(f'val is dict in {key}, recursive call')
                 old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1)
                 vstring=vstring+vstring2
                 #print('made it back from recursive call')
@@ -436,10 +428,12 @@ class KernelOptModelTools:
         self.val_x=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
         self.val_y=self.dg_data.y[train_n:]
     
-    def build_dict(self,opt_dict_override):
-        
+    def build_dict(self,opt_dict_override=None):
+        if opt_dict_override==None:
+            opt_dict_override={}
         max_bw_Ndiff=2
-        
+        try:train_n=self.train_n
+        except:train_n=60
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
@@ -448,7 +442,7 @@ class KernelOptModelTools:
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
             'xkern_grid':'no',
-            'ykern_grid':60,
+            'ykern_grid':train_n+1,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
@@ -504,7 +498,7 @@ class KernelOptModelTools:
 class KernelCompare(KernelOptModelTools):
     def __init__(self):
         KernelOptModelTools.__init__(self)
-        self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=1)
+        self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=0)
         
     def run_kernel_list(self, opt_model_variation_list=None,data_gen_variation_list=None):
         datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
@@ -516,9 +510,9 @@ class KernelCompare(KernelOptModelTools):
         for alternative in data_gen_variation_list:
             self.build_dataset(self.do_dict_override(datagen_dict,alternative))#create x,y       
             if opt_model_variation_list==None:
-                kernel_run_dict_list=[self.build_dict(self.test_build_opt_dict_override())]
+                kernel_run_dict_list=[self.build_dict()]
             else:
-                initial_opt_dict=self.build_dict(self.test_build_opt_dict_override())
+                initial_opt_dict=self.build_dict()
                 kernel_run_dict_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
 
             for optimizedict_i in kernel_run_dict_list:
