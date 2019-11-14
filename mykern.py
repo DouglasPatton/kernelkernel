@@ -18,7 +18,7 @@ class kNdtool( object ):
     def sum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
-        if normalization=='none':
+        if normalization=='none' or normalization==None:
             return np.ma.sum(kernstack,axis=0)
 
         if type(normalization) is int:
@@ -470,7 +470,7 @@ class kNdtool( object ):
         if self.call_iter==3:
             
             tdiff=np.abs(datetime.datetime.strptime(self.iter_start_time_list[-1],t_format)-datetime.datetime.strptime(self.iter_start_time_list[-2],t_format))
-            self.save_interval= int(max([10-np.round(np.log(tdiff.total_seconds()+1)**3,0),1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
+            self.save_interval= int(max([15-np.round(np.log(tdiff.total_seconds()+1)**3,0),1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
             print(f'save_interval changed to {self.save_interval}')
             
         

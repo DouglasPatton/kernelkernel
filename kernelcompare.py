@@ -498,11 +498,14 @@ class KernelOptModelTools:
         
         
 class KernelCompare(KernelOptModelTools):
-    def __init__(self):
+    def __init__(self,directory=None):
+        if directory==None:
+            self.directory=os.getcwd()
+        else: self.directory=directory
         KernelOptModelTools.__init__(self)
         self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=0)
         
-    def run_kernel_list(self, opt_model_variation_list=None,data_gen_variation_list=None):
+    def prep__list(self, opt_model_variation_list=None,data_gen_variation_list=None):
         datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         if data_gen_variation_list==None:
             data_gen_variation_list=[{}]#will default to paramteres in datagen_dict below
@@ -524,7 +527,8 @@ class KernelCompare(KernelOptModelTools):
                 print(f'minimize_obj:{minimize_obj}')
                 self.monte_run_minimize_obj_list.append(minimize_obj)
                 #do_monte_opt(self,optimizedict,datagen_dict_override=None,force_start_params=None
-            
+        return self.monte_run_minimize_obj_list 
+        
     def build_opt_dict_variations(self,initial_opt_dict,variation_list):
         opt_dict_combo_list=[]
             
