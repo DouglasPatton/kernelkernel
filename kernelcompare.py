@@ -505,29 +505,27 @@ class KernelCompare(KernelOptModelTools):
         KernelOptModelTools.__init__(self)
         self.merge_and_condense_saved_models(merge_directory=None,save_directory=None,condense=1,verbose=0)
         
-    def prep__list(self, opt_model_variation_list=None,data_gen_variation_list=None):
+    def prep_model_list(self, opt_model_variation_list=None,data_gen_variation_list=None):
         datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         if data_gen_variation_list==None:
             data_gen_variation_list=[{}]#will default to paramteres in datagen_dict below
         assert type(data_gen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
-        
-        self.monte_run_minimize_obj_list=[]
+
         for alternative in data_gen_variation_list:
             self.datagen_dict=self.do_dict_override(datagen_dict,alternative)
             self.build_dataset(datagen_dict)#create x,y       
             if opt_model_variation_list==None:
-                kernel_run_dict_list=[self.build_optdict()]
+                model_run_dict_list=[self.build_optdict()]
             else:
                 initial_opt_dict=self.build_optdict()
-                kernel_run_dict_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
-                #print('kernel_run_dict_list:',kernel_run_dict_list)
-
-            for optimizedict_i in kernel_run_dict_list:
-                minimize_obj=self.do_monte_opt(optimizedict_i)
-                print(f'minimize_obj:{minimize_obj}')
-                self.monte_run_minimize_obj_list.append(minimize_obj)
-                #do_monte_opt(self,optimizedict,datagen_dict_override=None,force_start_params=None
-        return self.monte_run_minimize_obj_list 
+                model_run_dict_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
+                #print('model_run_dict_list:',model_run_dict_list)
+        return model_run_dict_list
+    
+    def run_model_as_node(optimizedict,force_start_params=None)            
+            minimize_obj=self.do_monte_opt(optimizedict,force_start_params=force_start_params)
+            print(f'minimize_obj:{minimize_obj}')
+        return minimize_obj
         
     def build_opt_dict_variations(self,initial_opt_dict,variation_list):
         opt_dict_combo_list=[]

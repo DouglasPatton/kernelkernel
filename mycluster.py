@@ -10,11 +10,11 @@ class run_cluster(kernelcompare.KernelCompare):
         self.old_threshold=60*20#60 seconds times 20 times before master assumes name is old and removes from list
         self.savedirectory='O:/Public/DPatton/kernel/'
         kernelcompare.Kernelcompare.__init__(self,self.savedirectory)
-        
         self.initialize(mytype)
         
         
 def initialize(self,mytype):
+    os.chdir(self.savedirectory)
     if mytype="master":
         self.runmaster()
     else:
@@ -44,9 +44,65 @@ def initialize(self,mytype):
         
 
 def runmaster(self,opt_model_variation_list)
+    self.savedirectory+myname
+    
+    try: 
+        os.chdir(self.savedirectory)
+    except:
+        os.mkdir(self.savedirectory)
+        os.chdir(self.savedirectory)
+    
     self.rebuild_current_namelist()
     namelist=self.getnamelist()
-    self.build_opt_dict_variations()
+    list_of_opt_dicts=self.build_opt_dict_variations()
+    model_run_count=len(list_of_opt_dicts)
+    i=0
+    nodecount=len(namelist)
+    while i<model_run_count:
+        for name in namelist:
+            try:
+                status=self.check_if_node_ready(name)
+                if status:
+                    try:
+                        self.setup_job_for_node(name,list_of_opt_dicts[i])
+                        i+=1
+                    except:
+                        print(f'setup_job_for_node named:{name}, opt_dict:{i} has failed')
+                else:
+                    print(f'status of node named:{name} is {status}, not True')
+            except:
+                print(f'status check for_node named:{name} has failed')
+    assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
+    
+    
+def setup_job_for_node(self,name,optimizedict)
+    jobdict={}
+    jobdict['optimizedict']=optimizedict
+    jobdict['node_status']='ready for node'
+    
+    
+def check_if_name_ready(self,name):
+    nodes_dir=self.savedirectory+name
+    try:
+        os.chdir(nodes_dir)
+    except:
+        print(f'can not change to nodes directory:{nodes_dir}')
+        return False
+    nodes_job_filename=nodes_dir+'_job'
+    try:
+        with: open(nodes_job_filename,'rb') as save_job_file:
+                nodesjob_dict=pickled.load(saved_job_file)
+            print(f'nodesjob_dict["status"]:{nodesjob_dict["node_status"]}''
+        return False
+    except:
+        return True
+        
+    #files=os.listdir():
+    #jobfile=[filename in files if name+'_job'=filename]
+    
+            
+        
+        
     
         
 def rebuild_current_namelist():
@@ -64,9 +120,11 @@ def rebuild_current_namelist():
     
 
 def add_to_namelist(self,newname):
+    os.chdir(self.savedirectory)
     try: 
         namelist=self.getnamelist()
     except: 
+        print('namelist not found')
         namelist=[]
     
     namelist.append((newname,node_checkin_list))
@@ -103,6 +161,7 @@ def runnode(self,myname):
         print("mydir:{mydir} doesn't exist, so creating it")
         os.mkdir(mydir)
         os.chdir(mydir)
+        my_job_save_file=mydir+'_job'
     start_time=strftime("%Y%m%d-%H%M%S")
     i_have_opt_job=0
     i=0
@@ -113,50 +172,50 @@ def runnode(self,myname):
         else:
             print(f'checking_for_opt_job repeated {i} times')
     if i_have_opt_job==1:
-        data_gen_variation_list=my_opt_job['data_gen_variation_list']
-        opt_model_variation_list=my_opt_job['opt_model_variation_list']
-        my_job_save_file=my_opt_job['my_job_save_file']
-        self.update_node_status(myname,working='starting'mydir=mydir,my_job_save_file=my_job_save_file)
+        my_optimizedict=my_opt_job['optimizedict']
+        
+        
+        self.node_update_job_status(myname,working='starting'mydir=mydir,my_job_save_file=my_job_save_file)
         try:
-            opt_results=kc.KernelCompare().run_kernel_list(opt_model_variation_list=opt_model_variation_list,data_gen_variation_list=data_gen_variation_list)
+            opt_results=kc.KernelCompare().run_model_as_node(my_optimizedict,force_start_params=0)
             #was_successful_list=[minimize_obj.success for minimize_obj in opt_result]
-            self.update_node_status(myname,working=opt_results,mydir=mydir,my_job_save_file=my_job_save_file)
+            self.node_update_job_status(myname,working=opt_results,mydir=mydir,my_job_save_file=my_job_save_file)
         except:
-            self.update_node_status(myname,working='failed',mydir=mydir,my_job_save_file=my_job_save_file)
+            self.node_update_job_status(myname,working='failed',mydir=mydir,my_job_save_file=my_job_save_file)
     
     
     
 def check_for_opt_job(self,myname,start_time,mydir):
     assert type(myname) is str,f"myname should be type str not type:{type(myname)}"
-    
-    myjobcheck_file=mydir+'_jobcheck'
+    os.chdir(mydir)
+    my_job_save_file=myname+'_job'
     waiting=0
     i=0
     while waiting==0:
-        try: with open(myjobcheck_file,'rb') as myjob:
-                if myjob['job_to_do']==1:
-                    myjob_id=myjob['job_id']
-                    my_job_save_file=mydir+myname+'myjob_id'
-                    self.update_node_status(myname,working='accepted',mydir=mydir,my_job_save_file=my_job_save_file)
-                    my_opt_job=pickle.load(myjob)
-                    my_opt_job['my_job_save_file']=my_job_save_file
-                    return my_opt_job
-                else:
-                    print('job_to_do:',myjob['job_to_do'])
-                    waiting=1#need to develop
+        try:
+            with open(my_job_save_file,'rb') as myjob_save:
+                myjob=pickled.load(myjob_save)
+            if myjob['node_status']=='ready for node':
+                    self.node_update_job_status(myname,working='accepted',mydir=mydir,my_job_save_file=my_job_save_file)
+                    return myjob
+            else:
+                print('myjob status:',myjob['node_status'])
+                waiting=1#need to develop
         except:
             i+=1
             if i%500==0:
                 print("waiting...i=",i,end='. ')
+                self.update_myname_in_namelist(myname)#signal that this node is still active
             now=strftime("%Y%m%d-%H%M%S")
             s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S"))
             if s_since_start<60*10:
-                self.update_node_status(myname,checktime=s_since_start,time_out=0,working=0)
+                self.node_update_job_status(myname,checktime=s_since_start,time_out=0,working=0)
                 
             if s_since_start>60*10:#10 minutes
-                self.update_node_status(myname,checktime=s_since_start,time_out=1,working=0)
-                self.update_myname_in_namelist(myname)
+                self.node_update_job_status(myname,checktime=s_since_start,time_out=1,working=0)
+                
                 waiting=1
+    print(f'myname:{myname} timed out after finding no jobs')
     return None
 
 def update_myname_in_namelist(self, myname)
@@ -173,7 +232,7 @@ def update_myname_in_namelist(self, myname)
     except:
         assert False, 'update_of namelist_failed'
     
-def update_node_status(self,myname,checktime=None,time_out=None,working=None,mydir=None,my_job_save_file=None):
+def node_update_job_status(self,myname,checktime=None,time_out=None,working=None,mydir=None,my_job_save_file=None):
     self.update_myname_in_namelist(myname)
     success=0
     now=strftime("%Y%m%d-%H%M%S")
@@ -187,7 +246,7 @@ def update_node_status(self,myname,checktime=None,time_out=None,working=None,myd
             with open(my_job_save_file,'rb') as job_save_file
                 job_save_dict=pickle.load(job_save_file)
         except:
-            assert False,"could not open my_job_save_file when updating node status to started"
+            assert False,"could not open my_job_save_file when updating node_status to started"
         now=strftime("%Y%m%d-%H%M%S")
         job_save_dict['node_status'].append("finished",now)
         job_save_dict['optimize_obj_list']=working
@@ -219,7 +278,7 @@ def update_node_status(self,myname,checktime=None,time_out=None,working=None,myd
             with open(my_job_save_file,'rb') as job_save_file
                 job_save_dict=pickle.load(job_save_file)
         except:
-            assert False,"could not open my_job_save_file when updating node status to started"
+            assert False,"could not open my_job_save_file when updating node_status to started"
         job_save_dict['node_status'].append("started",now)
         success=1
     
@@ -232,7 +291,7 @@ def update_node_status(self,myname,checktime=None,time_out=None,working=None,myd
             with open(my_job_save_file,'rb') as job_save_file
                 job_save_dict=pickle.load(job_save_file)
         except:
-            assert False,"could not open my_job_save_file when updating node status to started"
+            assert False,"could not open my_job_save_file when updating node_status to failed"
         job_save_dict['node_status'].append("failed",now)
         success=1
     
