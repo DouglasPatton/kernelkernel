@@ -61,17 +61,19 @@ def runmaster(self,opt_model_variation_list)
     while i<model_run_count:
         for name in namelist:
             try:
-                status=self.check_if_node_ready(name)
-                if status:
+                status=self.check_node_job_status(name)
+                if status=="no file found":
                     try:
                         self.setup_job_for_node(name,list_of_opt_dicts[i])
                         i+=1
                     except:
                         print(f'setup_job_for_node named:{name}, opt_dict:{i} has failed')
+                if status==""
                 else:
-                    print(f'status of node named:{name} is {status}, not True')
+                    print(f'status of node:{name} is:{status} not "no file found"')
             except:
                 print(f'status check for_node named:{name} has failed')
+        
     assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
     
     
@@ -81,21 +83,21 @@ def setup_job_for_node(self,name,optimizedict)
     jobdict['node_status']='ready for node'
     
     
-def check_if_name_ready(self,name):
+def check_node_job_status(self,name):
     nodes_dir=self.savedirectory+name
-    try:
-        os.chdir(nodes_dir)
-    except:
-        print(f'can not change to nodes directory:{nodes_dir}')
-        return False
+    
+    os.chdir(nodes_dir)
+    
+        
     nodes_job_filename=nodes_dir+'_job'
     try:
         with: open(nodes_job_filename,'rb') as save_job_file:
                 nodesjob_dict=pickled.load(saved_job_file)
-            print(f'nodesjob_dict["status"]:{nodesjob_dict["node_status"]}''
-        return False
+            print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["node_status"]}''
+        return nodesjob_dict['status']
     except:
-        return True
+        return 
+            "no file found"#if the file doesn't exist, then assign the job
         
     #files=os.listdir():
     #jobfile=[filename in files if name+'_job'=filename]
@@ -149,7 +151,8 @@ def getnamelist(self):
     
 def runnode(self,myname):
     mydir=self.savedirectory+myname
-    
+    my_job_file=mydir+'_job'
+    my_node_status_file=mydir+'status'
     try: 
         os.chdir(self.savedirectory)
     except:
@@ -161,7 +164,7 @@ def runnode(self,myname):
         print("mydir:{mydir} doesn't exist, so creating it")
         os.mkdir(mydir)
         os.chdir(mydir)
-        my_job_save_file=mydir+'_job'
+        
     start_time=strftime("%Y%m%d-%H%M%S")
     i_have_opt_job=0
     i=0
@@ -169,34 +172,35 @@ def runnode(self,myname):
         my_opt_job=self.check_for_opt_job(myname,start_time,mydir)
         if try:type(my_opt_job) is dict:
                 i_have_opt_job=1
-        else:
-            print(f'checking_for_opt_job repeated {i} times')
+        
     if i_have_opt_job==1:
         my_optimizedict=my_opt_job['optimizedict']
         
         
-        self.node_update_job_status(myname,working='starting'mydir=mydir,my_job_save_file=my_job_save_file)
+        self.update_node_status(myname,status='starting'mydir=mydir)
         try:
-            opt_results=kc.KernelCompare().run_model_as_node(my_optimizedict,force_start_params=0)
+            opt_results=KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,force_start_params=0)
             #was_successful_list=[minimize_obj.success for minimize_obj in opt_result]
-            self.node_update_job_status(myname,working=opt_results,mydir=mydir,my_job_save_file=my_job_save_file)
+            self.update_node_status(myname,status=opt_results,mydir=mydir)
         except:
-            self.node_update_job_status(myname,working='failed',mydir=mydir,my_job_save_file=my_job_save_file)
+            self.update_node_status(myname,status='failed',mydir=mydir)
     
     
     
 def check_for_opt_job(self,myname,start_time,mydir):
     assert type(myname) is str,f"myname should be type str not type:{type(myname)}"
     os.chdir(mydir)
-    my_job_save_file=myname+'_job'
+    my_node_status_file=mydir+'status'
+    my_job_file=mydir+'_job'
     waiting=0
     i=0
     while waiting==0:
         try:
             with open(my_job_save_file,'rb') as myjob_save:
                 myjob=pickled.load(myjob_save)
-            if myjob['node_status']=='ready for node':
-                    self.node_update_job_status(myname,working='accepted',mydir=mydir,my_job_save_file=my_job_save_file)
+            last_node_status=myjob['node_status'][-1][0]
+            if last_node_status=='ready for node':
+                    self.update_node_status(myname,status='accepted',mydir=mydir)
                     return myjob
             else:
                 print('myjob status:',myjob['node_status'])
@@ -208,14 +212,10 @@ def check_for_opt_job(self,myname,start_time,mydir):
                 self.update_myname_in_namelist(myname)#signal that this node is still active
             now=strftime("%Y%m%d-%H%M%S")
             s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S"))
-            if s_since_start<60*10:
-                self.node_update_job_status(myname,checktime=s_since_start,time_out=0,working=0)
-                
             if s_since_start>60*10:#10 minutes
-                self.node_update_job_status(myname,checktime=s_since_start,time_out=1,working=0)
-                
                 waiting=1
-    print(f'myname:{myname} timed out after finding no jobs')
+        print(f'myname:{myname} timed out after finding no jobs')
+                
     return None
 
 def update_myname_in_namelist(self, myname)
@@ -232,31 +232,36 @@ def update_myname_in_namelist(self, myname)
     except:
         assert False, 'update_of namelist_failed'
     
-def node_update_job_status(self,myname,checktime=None,time_out=None,working=None,mydir=None,my_job_save_file=None):
+def update_node_status(self,myname,status=None,mydir=None):
     self.update_myname_in_namelist(myname)
     success=0
     now=strftime("%Y%m%d-%H%M%S")
-    if type(working)==list:
+    
+    
+    my_node_status_file=mydir+'status'
+    my_job_file=mydir+'_job'
+    with open(my_job_file,'rb') as job_save_file
+        job_save_dict=pickle.load(job_save_file)
+    with open(my_node_status_file) as node_status_file
+        node_status_list=pickle.load(node_status_file)
+    
+    
+    if type(status)==list:
+        now=strftime("%Y%m%d-%H%M%S")
+        node_status_list.append("finished",now)
+        
+       
+        
+        
+        
         now=strftime("%Y%m%d-%H%M%S")
         job_save_dict['node_status'].append("finished",now)
-        try:
-            os.chdir(mydir)
-        except: assert False, "chdir failed"
-        try:
-            with open(my_job_save_file,'rb') as job_save_file
-                job_save_dict=pickle.load(job_save_file)
-        except:
-            assert False,"could not open my_job_save_file when updating node_status to started"
-        now=strftime("%Y%m%d-%H%M%S")
-        job_save_dict['node_status'].append("finished",now)
-        job_save_dict['optimize_obj_list']=working
+        job_save_dict['optimize_obj_list']=status
         now=strftime("%Y%m%d-%H%M%S")
         job_save_dict['node_status'].append("waiting",now)
         success=1
-    if working=='accepted':
-        try:
-            os.chdir(mydir)
-        except: assert False, "chdir failed"
+    if status=='accepted':
+                
         try:
             with open(my_job_save_file,'rb') as job_save_file
                 job_save_dict=pickle.load(job_save_file)
@@ -266,10 +271,10 @@ def node_update_job_status(self,myname,checktime=None,time_out=None,working=None
             job_save_dict={'node_status':[('created',now)]}
             print(f'my_job_save_file:{my_job_save_file}  does not exist')
         now=strftime("%Y%m%d-%H%M%S")
-        job_save_dict['node_status'].append("accepted",now)
+        node_status_list.append("accepted",now)
         success=1
     
-    if working=='started':
+    if status=='started':
         now=strftime("%Y%m%d-%H%M%S")
         try:
             os.chdir(mydir)
@@ -279,10 +284,10 @@ def node_update_job_status(self,myname,checktime=None,time_out=None,working=None
                 job_save_dict=pickle.load(job_save_file)
         except:
             assert False,"could not open my_job_save_file when updating node_status to started"
-        job_save_dict['node_status'].append("started",now)
+        node_status_list.append("started",now)
         success=1
     
-    if working=='failed':
+    if status=='failed':
         now=strftime("%Y%m%d-%H%M%S")
         try:
             os.chdir(mydir)
@@ -292,10 +297,10 @@ def node_update_job_status(self,myname,checktime=None,time_out=None,working=None
                 job_save_dict=pickle.load(job_save_file)
         except:
             assert False,"could not open my_job_save_file when updating node_status to failed"
-        job_save_dict['node_status'].append("failed",now)
+        node_status_list.append("failed",now)
         success=1
     
-    assert success==1,f"something went wrong when updating node. working:{working}"
+    assert success==1,f"something went wrong when updating node. status:{status}"
     try:
         with open(my_job_save_file,'wb') as job_save_file
             pickle.dump(job_save_dict,job_save_file)
