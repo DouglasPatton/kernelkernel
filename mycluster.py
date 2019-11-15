@@ -91,7 +91,7 @@ class run_cluster(kernelcompare.KernelCompare):
         return
 
 
-    def rebuild_current_namelist():
+    def rebuild_current_namelist(self):
         namelist=self.getnamelist()#get a new copy just in case
         now=strftime("%Y%m%d-%H%M%S")
         now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")
