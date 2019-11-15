@@ -306,6 +306,8 @@ class run_cluster(kernelcompare.KernelCompare):
         return
 
 if __name__=="__main__":
+    import kernelcompare as kc
+    import mycluster
     data_gen_variation_list=[kc.KernelCompare().build_quadratic_datagen_dict_override()]
     Ndiff_type_variations=('modeldict:Ndiff_type',['recursive','product'])
     max_bw_Ndiff_variations=('modeldict:max_bw_Ndiff',[2])
