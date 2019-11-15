@@ -6,7 +6,9 @@ import datetime
 import kernelcompare 
 
 class run_cluster(kernelcompare.KernelCompare):
-    def __init__(self,mytype):
+    def __init__(self,mytype=None):
+        if mytype==None:
+            mytype='master'
         self.oldnode_threshold=60*20#60 seconds times 20 times before master assumes name is old and removes from list
         self.savedirectory='O:/Public/DPatton/kernel/'
         kernelcompare.Kernelcompare.__init__(self,self.savedirectory)
@@ -15,21 +17,21 @@ class run_cluster(kernelcompare.KernelCompare):
         
 def initialize(self,mytype):
     os.chdir(self.savedirectory)
-    if mytype="master":
+    if mytype=="master":
         self.runmaster()
     else:
         myname=mytype
         mytype="node"
         name_regex=r'^'+re.escape(myname)
         namelist=self.getnamelist()
-        namematch=[1 for name in namelist if re.search(name_regex,name[0])]
+        namematch=[1 for name_tup in namelist if re.search(name_regex,name_tup[0])]
         namecount=len(namematch)
         if namecount>0
             nameset=0
             while nameset==0:
                 mynametry=myname+f'{namecount}'
                 name_regex2=r'^'+mynametry
-                namematch2=[1 for name in namelist if re.search(name_regex2,name[0])]
+                namematch2=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
                 if len(namematch2)>0:
                     namecount+=1
                 if len(namematch2)==0:
@@ -39,6 +41,7 @@ def initialize(self,mytype):
         try:
             self.add_to_namelist(myname):
         except:
+            print(f'cluster is re_initializing node named:{myname}')
             return self.initialize(myname) #this should re-start the process if something went wrong
         self.runnode(myname)
         
@@ -52,9 +55,9 @@ def runmaster(self,opt_model_variation_list)
         os.mkdir(self.savedirectory)
         os.chdir(self.savedirectory)
     
-    self.rebuild_current_namelist()
+    self.rebuild_current_namelist()#get rid of the old names that are inactive
     namelist=self.getnamelist()
-    list_of_opt_dicts=self.build_opt_dict_variations()
+    list_of_opt_dicts=self.build_opt_dict_variations(opt_model_variation_list)
     model_run_count=len(list_of_opt_dicts)
     i=0
     nodecount=len(namelist)
@@ -67,15 +70,15 @@ def runmaster(self,opt_model_variation_list)
                         self.setup_job_for_node(name[0],list_of_opt_dicts[i])
                         i+=1
                     except:
-                        print(f'setup_job_for_node named:{name}, opt_dict:{i} has failed')
-                elif status="finished" or status="waiting":
-                    merge_directory=self.savedirectory+name
+                        print(f'setup_job_for_node named:{name[0]}, opt_dict:{i} has failed')
+                '''elif status="finished" or status="waiting":
+                    merge_directory=self.savedirectory+name[0]
                     self.merge_and_condense_saved_models(
                         merge_directory=merge_directory,
                         save_directory=self.savedirectory,
                         condense=None,
                         verbose=None)
-                    
+                   '''#removed above merge call and will have node do it when finished. 
                     
                     #print(f'status of node:{name} is:{status} not "no file found"')
             except:
@@ -88,12 +91,10 @@ def setup_job_for_node(self,name,optimizedict)
     jobdict={}
     jobdict['optimizedict']=optimizedict
     jobdict['node_status']='ready for node'
-    
-    
-
-            
-        
-        
+    with open(self.savedirectory+'/'+name+'_job','wb') as newjob:
+        pickled.dump(jobdict,newjob)
+    print(f'job setup for node:{name}')
+    return
     
         
 def rebuild_current_namelist():
@@ -101,9 +102,9 @@ def rebuild_current_namelist():
     now=strftime("%Y%m%d-%H%M%S")
     now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")
     name_last_update_list=[(name,times_status_tup_list[-1][0]) for name,times_status_tup_list in namelist]#times_status_tup_list[-1][0]:-1 for last item in list, and 0 for first item in time_status tuple
-    name_s_since_update_list=[(name,now_s-datetime.datetime.strptime(time,"%Y%m%d-%H%M%S")) for name,time in name_last_update_list]
+    s_since_update_list=[now_s-datetime.datetime.strptime(time,"%Y%m%d-%H%M%S") for _,time in name_last_update_list]
     current_name_list=
-                  [name_times_tup for i,name_times_tup in enumerate(namelist) if name_s_since_update_list[i]<self.oldnode_threshold]
+                  [name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
     try: 
         with open(self.savedirectory+'namelist','wb') as savednamelist:
             pickle.dump(current_name_list,savednamelist)
@@ -118,25 +119,23 @@ def add_to_namelist(self,newname):
     except: 
         print('namelist not found')
         namelist=[]
+    assert len([1 for name in namelist if name[0]==newname])==0,"newname has a match already!"
+    now=strftime("%Y%m%d-%H%M%S")
+    time_status_tup_list=[(now,"created")]
+    namelist.append((newname,time_status_tup_list))
+    with open(self.savedirectory+'namelist','wb') as savednamelist:
+        pickle.dump(namelist,savednamelist)
+    namelist_check=self.getnamelist()
+    assert len([1 for name in namelist_check if name[0]==newname])>1,"newname has too many matches!!!"
     
-    namelist.append((newname,node_checkin_list))
-    try: 
-        with open(self.savedirectory+'namelist','wb') as savednamelist:
-            assert len([1 for name in namelist if name[0]==newname])==1,"newname has more than 1 match"
-            pickle.dump(savedname,savednamelist)
-        with open(self.savedirectory+'namelist','rb') as savednamelist:
-            namelist_check=pickle.load(savednamelist)
-            assert len([1 for name in namelist_check if name[0]==newname])>1,"newname has too many matches!!!"
-            
-    except:
-        assert False,"naming failure"
             
 def getnamelist(self):
+    os.chdir(self.savedirectory)
     try: 
-        with open(self.savedirectory+'namelist','rb') as namelist
+        with open('namelist','rb') as namelist
             return pickle.load(namelist)
     except:
-        print('no file called namelist found')
+        print(f'getnamelist() found no file called namelist found in {os.getcwd()}')
         return []
     
 def runnode(self,myname):
@@ -167,13 +166,14 @@ def runnode(self,myname):
         my_optimizedict=my_opt_job['optimizedict']
         
         
-        self.update_node_status(myname,status='starting'mydir=mydir)
+        self.update_node_job_status(myname,status='starting'mydir=mydir)
         try:
-            opt_results=KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,force_start_params=0)
+            KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,force_start_params=0)
             #was_successful_list=[minimize_obj.success for minimize_obj in opt_result]
-            self.update_node_status(myname,status=opt_results,mydir=mydir)
+            self.update_node_job_status(myname,status="finished",mydir=mydir)
+            
         except:
-            self.update_node_status(myname,status='failed',mydir=mydir)
+            self.update_node_job_status(myname,status='failed',mydir=mydir)
     
     
     
@@ -188,9 +188,9 @@ def check_for_opt_job(self,myname,start_time,mydir):
         try:
             with open(my_job_save_file,'rb') as myjob_save:
                 myjob=pickled.load(myjob_save)
-            last_node_status=myjob['node_status'][-1][0]
+            last_node_status=myjob['node_status'][-1][1]
             if last_node_status=='ready for node':
-                    self.update_node_status(myname,status='accepted',mydir=mydir)
+                    self.update_node_job_status(myname,status='accepted',mydir=mydir)
                     return myjob
             else:
                 print('myjob status:',myjob['node_status'])
@@ -210,19 +210,17 @@ def check_for_opt_job(self,myname,start_time,mydir):
 
 def update_myname_in_namelist(self, myname,status=None)
     namelist=self.getnamelist()
-    myname_match_list=[i for i,name in enumerate(namelist) if name[0]==myname]
+    myname_match_list=[i for i,name_tup in enumerate(namelist) if name_tup[0]==myname]
     assert len(myname_match_list)==1, f'somehow len(myname_match_list) is not 1 but len:{len(myname_match_list)}'
     i=myname_match_list[0]
-    myname_tup=namelist[i][1]
+    myname_tup=namelist[i]
     now=strftime("%Y%m%d-%H%M%S")
     time_status_tup=(now,status)
     myname_tup[1].append(time_status_tup)
     namelist[i]=myname_tup
-    try:
-        with open(self.savedirectory+'namelist','wb') as savednamelist:
-            pickle.dump(namelist,savednamelist)
-    except:
-        assert False, 'update_of namelist_failed'
+    with open(self.savedirectory+'namelist','wb') as savednamelist:
+        pickle.dump(namelist,savednamelist)
+    
         
         
 def check_node_job_status(self,name):
@@ -247,79 +245,20 @@ def check_node_job_status(self,name):
     #jobfile=[filename in files if name+'_job'=filename]
         
 def update_node_job_status(self,myname,status=None,mydir=None):
-    self.update_myname_in_namelist(myname)
-    success=0
-    now=strftime("%Y%m%d-%H%M%S")
+    self.update_myname_in_namelist(myname,status)
     
-    
-    my_node_status_file=mydir+'status'
     my_job_file=mydir+'_job'
+    
+    os.chdir(mydir)
     with open(my_job_file,'rb') as job_save_file
         job_save_dict=pickle.load(job_save_file)
-    with open(my_node_status_file) as node_status_file
-        node_status_list=pickle.load(node_status_file)
     
+    if type(status) is str
+        now=strftime("%Y%m%d-%H%M%S")
+        job_save_dict['node_status'].append(now,status)
     
-    if type(status)==list:
-        now=strftime("%Y%m%d-%H%M%S")
-        node_status_list.append("finished",now)
-        
-       
-        
-        
-        
-        now=strftime("%Y%m%d-%H%M%S")
-        job_save_dict['node_status'].append("finished",now)
-        job_save_dict['optimize_obj_list']=status
-        now=strftime("%Y%m%d-%H%M%S")
-        job_save_dict['node_status'].append("waiting",now)
-        success=1
-    if status=='accepted':
-                
-        try:
-            with open(my_job_save_file,'rb') as job_save_file
-                job_save_dict=pickle.load(job_save_file)
-            print(f'my_job_save_file:{my_job_save_file} already exists.') 
-            assert type(job_save_dict) is dict, f'job_save_dict type is {type(job_save_dict)}'
-        except:
-            job_save_dict={'node_status':[('created',now)]}
-            print(f'my_job_save_file:{my_job_save_file}  does not exist')
-        now=strftime("%Y%m%d-%H%M%S")
-        node_status_list.append("accepted",now)
-        success=1
-    
-    if status=='started':
-        now=strftime("%Y%m%d-%H%M%S")
-        try:
-            os.chdir(mydir)
-        except: assert False, "chdir failed"
-        try:
-            with open(my_job_save_file,'rb') as job_save_file
-                job_save_dict=pickle.load(job_save_file)
-        except:
-            assert False,"could not open my_job_save_file when updating node_status to started"
-        node_status_list.append("started",now)
-        success=1
-    
-    if status=='failed':
-        now=strftime("%Y%m%d-%H%M%S")
-        try:
-            os.chdir(mydir)
-        except: assert False, "chdir failed"
-        try:
-            with open(my_job_save_file,'rb') as job_save_file
-                job_save_dict=pickle.load(job_save_file)
-        except:
-            assert False,"could not open my_job_save_file when updating node_status to failed"
-        node_status_list.append("failed",now)
-        success=1
-    
-    assert success==1,f"something went wrong when updating node. status:{status}"
-    try:
-        with open(my_job_save_file,'wb') as job_save_file
-            pickle.dump(job_save_dict,job_save_file)
-    except:
-        assert False,'could not dump my_job_save_file'
+    with open(my_job_save_file,'wb') as job_save_file
+        pickle.dump(job_save_dict,job_save_file)
             
     return
             

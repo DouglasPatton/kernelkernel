@@ -497,6 +497,10 @@ class kNdtool( object ):
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
         savedict['datagen_dict']=self.datagen_dict
         try:
+            savedict['minimize_obj']=self.minimize_obj
+        except:
+            pass
+        try:
             with open(filename,'rb') as modelfile:
                 modellist=pickle.load(modelfile)
                 #print('---------------success----------')
@@ -507,26 +511,7 @@ class kNdtool( object ):
             pickle.dump(modellist,thefile)
         print(f'saved to {filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
     
-    def final_saveit(self,mse,paramdict,modeldict):
-        savedict={}
-        savedict['mse']=mse
-        savedict['xdata']=self.xdata #inherit data description?
-        savedict['ydata']=self.ydata
-        savedict['params']=paramdict
-        savedict['modeldict']=modeldict
-        savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
-        savedict['runtime']=(self.iter_start_time_list[0],self.iter_start_time_list[-1])
-        try:
-            with open('final_model_save','rb') as modelfile:
-                modellist=pickle.load(modelfile)
-                #print('---------------success----------')
-        except:
-            modellist=[]
-        modellist.append(savedict)
-        with open('final_model_save','wb') as thefile:
-            pickle.dump(modellist,thefile)   
-        print(f'saved to final_model_save at about {strftime("%Y%m%d-%H%M%S")} with mse={mse}')
-        
+    
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
@@ -694,6 +679,7 @@ class optimize_free_params(kNdtool):
         args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
         print(f'modeldict:{modeldict}')
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+        
         lastmse=self.mse_param_list[-1][0]
         lastparamdict=self.mse_param_list[-1][1]
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')

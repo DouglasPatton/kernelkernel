@@ -26,8 +26,8 @@ class KernelOptModelTools:
         if force_start_params==0:
             optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
 
-        self.minimize_obj=self.run_optimization(self.train_y,self.train_x,optimizedict)
-        return self.minimize_obj
+        self.run_optimization(self.train_y,self.train_x,optimizedict)
+        return
         
     def run_opt_complete_check(self,optimizedict_orig,replace=None):
         '''
@@ -369,7 +369,8 @@ class KernelOptModelTools:
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         print(start_msg)
         optimizedict['datagen_dict']=self.datagen_dict
-        self.optimize_obj=mk.optimize_free_params(y,x,optimizedict)
+        mk.optimize_free_params(y,x,optimizedict)
+        return
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=old_dict.copy()
@@ -551,9 +552,8 @@ class KernelCompare(KernelOptModelTools):
         return model_run_dict_list
     
     def run_model_as_node(optimizedict,force_start_params=None)            
-            minimize_obj=self.do_monte_opt(optimizedict,force_start_params=force_start_params)
-            print(f'minimize_obj:{minimize_obj}')
-        return minimize_obj
+            self.do_monte_opt(optimizedict,force_start_params=force_start_params)
+        return 
         
     def build_opt_dict_variations(self,initial_opt_dict,variation_list):
         opt_dict_combo_list=[]
