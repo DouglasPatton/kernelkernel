@@ -44,7 +44,7 @@ def initialize(self,mytype):
         
 
 def runmaster(self,opt_model_variation_list)
-    self.savedirectory+myname
+    #self.savedirectory+myname
     
     try: 
         os.chdir(self.savedirectory)
@@ -69,6 +69,12 @@ def runmaster(self,opt_model_variation_list)
                     except:
                         print(f'setup_job_for_node named:{name}, opt_dict:{i} has failed')
                 elif status="finished" or status="waiting":
+                    merge_directory=self.savedirectory+name
+                    self.merge_and_condense_saved_models(
+                        merge_directory=merge_directory,
+                        save_directory=self.savedirectory,
+                        condense=None,
+                        verbose=None)
                     
                     
                     #print(f'status of node:{name} is:{status} not "no file found"')
