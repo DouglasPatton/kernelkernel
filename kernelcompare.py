@@ -623,7 +623,7 @@ class KernelCompare(KernelOptModelTools):
         #opt_dict_override['hyper_param_dict']=hyper_param_dict
         opt_dict_override['modeldict']=modeldict
 
-        options['fatol']=0.1
+        options['fatol']=0.5
         options['xatol']=.05
         opt_settings_dict['options']=options
         #opt_settings_dict['help_start']='no'
