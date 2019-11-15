@@ -7,7 +7,7 @@ import kernelcompare
 
 class run_cluster(kernelcompare.KernelCompare):
     def __init__(self,mytype):
-        self.old_threshold=60*20#60 seconds times 20 times before master assumes name is old and removes from list
+        self.oldnode_threshold=60*20#60 seconds times 20 times before master assumes name is old and removes from list
         self.savedirectory='O:/Public/DPatton/kernel/'
         kernelcompare.Kernelcompare.__init__(self,self.savedirectory)
         self.initialize(mytype)
@@ -61,16 +61,17 @@ def runmaster(self,opt_model_variation_list)
     while i<model_run_count:
         for name in namelist:
             try:
-                status=self.check_node_job_status(name)
+                job_status=self.check_node_job_status(name[0])
                 if status=="no file found":
                     try:
-                        self.setup_job_for_node(name,list_of_opt_dicts[i])
+                        self.setup_job_for_node(name[0],list_of_opt_dicts[i])
                         i+=1
                     except:
                         print(f'setup_job_for_node named:{name}, opt_dict:{i} has failed')
-                if status==""
-                else:
-                    print(f'status of node:{name} is:{status} not "no file found"')
+                elif status="finished" or status="waiting":
+                    
+                    
+                    #print(f'status of node:{name} is:{status} not "no file found"')
             except:
                 print(f'status check for_node named:{name} has failed')
         
@@ -83,25 +84,7 @@ def setup_job_for_node(self,name,optimizedict)
     jobdict['node_status']='ready for node'
     
     
-def check_node_job_status(self,name):
-    nodes_dir=self.savedirectory+name
-    
-    os.chdir(nodes_dir)
-    
-        
-    nodes_job_filename=nodes_dir+'_job'
-    try:
-        with: open(nodes_job_filename,'rb') as save_job_file:
-                nodesjob_dict=pickled.load(saved_job_file)
-            print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["node_status"]}''
-        return nodesjob_dict['status']
-    except:
-        return 
-            "no file found"#if the file doesn't exist, then assign the job
-        
-    #files=os.listdir():
-    #jobfile=[filename in files if name+'_job'=filename]
-    
+
             
         
         
@@ -111,9 +94,10 @@ def rebuild_current_namelist():
     namelist=self.getnamelist()#get a new copy just in case
     now=strftime("%Y%m%d-%H%M%S")
     now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")
-    name_last_update_list=[(name,times[-1]) for name,times in namelist]
+    name_last_update_list=[(name,times_status_tup_list[-1][0]) for name,times_status_tup_list in namelist]#times_status_tup_list[-1][0]:-1 for last item in list, and 0 for first item in time_status tuple
     name_s_since_update_list=[(name,now_s-datetime.datetime.strptime(time,"%Y%m%d-%H%M%S")) for name,time in name_last_update_list]
-    current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if name_s_since_update_list[i]<self.old_threshold]
+    current_name_list=
+                  [name_times_tup for i,name_times_tup in enumerate(namelist) if name_s_since_update_list[i]<self.oldnode_threshold]
     try: 
         with open(self.savedirectory+'namelist','wb') as savednamelist:
             pickle.dump(current_name_list,savednamelist)
@@ -207,32 +191,56 @@ def check_for_opt_job(self,myname,start_time,mydir):
                 waiting=1#need to develop
         except:
             i+=1
-            if i%500==0:
+            if i%100==0:
                 print("waiting...i=",i,end='. ')
                 self.update_myname_in_namelist(myname)#signal that this node is still active
             now=strftime("%Y%m%d-%H%M%S")
             s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S"))
-            if s_since_start>60*10:#10 minutes
+            if s_since_start>self.oldnode_threshold
                 waiting=1
         print(f'myname:{myname} timed out after finding no jobs')
                 
     return None
 
-def update_myname_in_namelist(self, myname)
+def update_myname_in_namelist(self, myname,status=None)
     namelist=self.getnamelist()
     myname_match_list=[i for i,name in enumerate(namelist) if name[0]==myname]
     assert len(myname_match_list)==1, f'somehow len(myname_match_list) is not 1 but len:{len(myname_match_list)}'
-    myname_tup=namelist[i]
+    i=myname_match_list[0]
+    myname_tup=namelist[i][1]
     now=strftime("%Y%m%d-%H%M%S")
-    myname_tup[1].append(now)
+    time_status_tup=(now,status)
+    myname_tup[1].append(time_status_tup)
     namelist[i]=myname_tup
     try:
         with open(self.savedirectory+'namelist','wb') as savednamelist:
             pickle.dump(namelist,savednamelist)
     except:
         assert False, 'update_of namelist_failed'
+        
+        
+def check_node_job_status(self,name):
+    #returns the status of the job in the directory of a node
+    nodes_dir=self.savedirectory+name
     
-def update_node_status(self,myname,status=None,mydir=None):
+    os.chdir(nodes_dir)
+    
+        
+    nodes_job_filename=nodes_dir+'_job'
+    try:
+        with: open(nodes_job_filename,'rb') as save_job_file:
+                nodesjob_dict=pickled.load(saved_job_file)
+            print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["node_status"]}'
+        os.chdir(self.savedirectory)
+        return nodesjob_dict['status']
+    except:
+        os.chdir(self.savedirectory)          
+        return "no file found"#if the file doesn't exist, then assign the job
+        
+    #files=os.listdir():
+    #jobfile=[filename in files if name+'_job'=filename]
+        
+def update_node_job_status(self,myname,status=None,mydir=None):
     self.update_myname_in_namelist(myname)
     success=0
     now=strftime("%Y%m%d-%H%M%S")
