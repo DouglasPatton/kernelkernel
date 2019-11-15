@@ -25,8 +25,12 @@ class KernelOptModelTools:
 
         if force_start_params==0:
             optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
-        self.build_dataset(datagen_dict)
-        self.run_optimization(self.train_y,self.train_x,optimizedict)
+        data_dict=self.build_dataset_dict(datagen_dict)
+        y=data_dict['train_y']
+        x=data_dict['train_x']
+        start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
+        optimizedict['datagen_dict']=self.datagen_dict
+        mk.optimize_free_params(y,x,optimizedict)
         return
         
     def run_opt_complete_check(self,optimizedict_orig,replace=None):
@@ -365,12 +369,7 @@ class KernelOptModelTools:
             
             
     
-    def run_optimization(self,y,x,optimizedict):
-        start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
-        print(start_msg)
-        optimizedict['datagen_dict']=self.datagen_dict
-        mk.optimize_free_params(y,x,optimizedict)
-        return
+ 
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=old_dict.copy()
@@ -410,11 +409,12 @@ class KernelOptModelTools:
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
-        
+        p=modeldict['param_count']
+        assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
                 'Ndiff_exponent':.3*np.ones([Ndiff_param_count,]),
-                'x_bandscale':1*np.ones([self.p,]),
+                'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
                 'Ndiff_depth_bw':.5*np.ones([Ndiff_param_count,]),
@@ -434,25 +434,27 @@ class KernelOptModelTools:
             
         
         
-    def build_dataset(self,datagen_dict):
+    def build_dataset_dict(self,datagen_dict):
+        data_dict={}
         param_count=datagen_dict['param_count']
-        self.p=param_count
+        data_dict['p']=param_count
         seed=datagen_dict['seed']
         ftype=datagen_dict['ftype']
         evar=datagen_dict['evar']
         train_n=datagen_dict['train_n']
         n=datagen_dict['n']
-        self.train_n=train_n
+        data_dict['train_n']=train_n
         
         self.dg_data=dg.data_gen(data_shape=(n,param_count),seed=seed,ftype=ftype,evar=evar)
-        self.train_x=self.dg_data.x[0:train_n,1:param_count+1]#drop constant from x and interaction/quadratic terms
-        self.train_y=self.dg_data.y[0:train_n]
+        data_dict['train_x']=self.dg_data.x[0:train_n,1:param_count+1]#drop constant from x and interaction/quadratic terms
+        data_dict['train_y']=self.dg_data.y[0:train_n]
         
         val_n=n-train_n;assert not val_n<0,f'val_n expected non-neg, but val_n:{val_n}'
-        self.val_x=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
-        self.val_y=self.dg_data.y[train_n:]
+        data_dict['val_x']=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
+        data_dict['val_y']=self.dg_data.y[train_n:]
+        return data_dict
     
-    def build_optdict(self,opt_dict_override=None):
+    def build_optdict(self,opt_dict_override=None,param_count=None):
         if opt_dict_override==None:
             opt_dict_override={}
         max_bw_Ndiff=2
@@ -462,6 +464,7 @@ class KernelOptModelTools:
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
             'Ndiff_type':'product',
+            'param_count':param_count
             'Ndiff_start':Ndiff_start,
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
@@ -535,23 +538,26 @@ class KernelCompare(KernelOptModelTools):
                       #through mycluster.
         
     def prep_model_list(self, optdict_variation_list=None,data_gen_variation_list=None):
-        datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
+        param_count=2
+        datagen_dict={'train_n':60,'n':200, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
         if data_gen_variation_list==None:
             data_gen_variation_list=[{}]#will default to paramteres in datagen_dict below
         assert type(data_gen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
         
-        initial_opt_dict=self.build_optdict()
+        initial_opt_dict=self.build_optdict(param_count=datagen_dict['param_count'])
         
-        if opt_model_variation_list==None:
+        if optdict_variation_list==None:
             optdict_variation_list=initial_opt_dict
-        else:
-            optdict_variation_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
+        
+            
         
         model_run_dict_list=[]
                 
         for alternative in data_gen_variation_list:
             alt_datagen_dict=self.do_dict_override(datagen_dict,alternative)
-            for optdict_i in model_variation_list:
+            initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
+            optdict_variation_list=self.build_opt_dict_variations(initial_opt_dict,optdict_variation_list)    
+            for optdict_i in optdict_variation_list:
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
                 #print('model_run_dict_list:',model_run_dict_list)
