@@ -23,17 +23,21 @@ class KernelOptModelTools:
         if force_start_params=='yes':
             force_start_params=1
 
-        if force_start_params==0:
-            optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
+
         data_dict=self.build_dataset_dict(datagen_dict)
         y=data_dict['train_y']
         x=data_dict['train_x']
+        
+        if force_start_params==0:
+            optimizedict=self.run_opt_complete_check(optimizedict,y,x,replace=1)
+        
+        
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
-        optimizedict['datagen_dict']=self.datagen_dict
+        optimizedict['datagen_dict']=datagen_dict
         mk.optimize_free_params(y,x,optimizedict)
         return
         
-    def run_opt_complete_check(self,optimizedict_orig,replace=None):
+    def run_opt_complete_check(self,optimizedict_orig,y,x,replace=None):
         '''
         checks model_save and then final_model_save to see if the same modeldict has been run before (e.g.,
         same model featuers, same starting parameters, same data).
@@ -464,7 +468,7 @@ class KernelOptModelTools:
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
             'Ndiff_type':'product',
-            'param_count':param_count
+            'param_count':param_count,
             'Ndiff_start':Ndiff_start,
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
@@ -489,7 +493,7 @@ class KernelOptModelTools:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.001,
+            'xatol':0.01,
             'fatol':0.1,
             'adaptive':True
             }
@@ -563,7 +567,7 @@ class KernelCompare(KernelOptModelTools):
                 #print('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
-    def run_model_as_node(optimizedict,datagen_dict,force_start_params=None):
+    def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
         return
         
@@ -619,8 +623,8 @@ class KernelCompare(KernelOptModelTools):
         #opt_dict_override['hyper_param_dict']=hyper_param_dict
         opt_dict_override['modeldict']=modeldict
 
-        options['fatol']=0.05
-        options['xatol']=.005
+        options['fatol']=0.1
+        options['xatol']=.05
         opt_settings_dict['options']=options
         #opt_settings_dict['help_start']='no'
         #opt_settings_dict['partial_match']='no'
