@@ -200,9 +200,9 @@ class KernelOptModelTools:
                     ilen=len(list_i)
                     jbest=[1]*jlen
 
-                    for ii range(ilen)
+                    for ii in range(ilen):
                         ibest=1#start optimistic
-                        for jj in range(jlen)
+                        for jj in range(jlen):
                             both_dicts_match=doubledict_list_i[ii]==doubledict_list_j[jj]# and datagen_dict_list_i[ii]==datagen_dict_list_j[jj]
                             if both_dicts_match:
                                 if list_i[ii]['mse']>list_j[jj]['mse']:
@@ -330,7 +330,7 @@ class KernelOptModelTools:
         
         matches=[item for i,item in enumerate(saved_optdict_list) if same_model_datagen_compare[i]]
         matchcount=len(matches)
-        if strict==1
+        if strict==1:
             #keys=[key for key,val in afullmodel.items()]
             #print(f'keys:{keys}')
             return matches
@@ -551,9 +551,9 @@ class KernelCompare(KernelOptModelTools):
                 #print('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
-    def run_model_as_node(optimizedict,force_start_params=None)            
-            self.do_monte_opt(optimizedict,force_start_params=force_start_params)
-        return 
+    def run_model_as_node(optimizedict,force_start_params=None):
+        self.do_monte_opt(optimizedict,force_start_params=force_start_params)
+        return
         
     def build_opt_dict_variations(self,initial_opt_dict,variation_list):
         opt_dict_combo_list=[]
