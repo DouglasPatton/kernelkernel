@@ -17,7 +17,7 @@ class KernelOptModelTools:
         pass
         
             
-    def do_monte_opt(self,optimizedict,force_start_params=None):
+    def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         if force_start_params==None or force_start_params=='no':
             force_start_params=0
         if force_start_params=='yes':
@@ -25,7 +25,7 @@ class KernelOptModelTools:
 
         if force_start_params==0:
             optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
-
+        self.build_dataset(datagen_dict)
         self.run_optimization(self.train_y,self.train_x,optimizedict)
         return
         
@@ -534,25 +534,31 @@ class KernelCompare(KernelOptModelTools):
                       #or if not, everything happens in the current working directory, which is good for testing without running
                       #through mycluster.
         
-    def prep_model_list(self, opt_model_variation_list=None,data_gen_variation_list=None):
+    def prep_model_list(self, optdict_variation_list=None,data_gen_variation_list=None):
         datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         if data_gen_variation_list==None:
             data_gen_variation_list=[{}]#will default to paramteres in datagen_dict below
         assert type(data_gen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
-
+        
+        initial_opt_dict=self.build_optdict()
+        
+        if opt_model_variation_list==None:
+            optdict_variation_list=initial_opt_dict
+        else:
+            optdict_variation_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
+        
+        model_run_dict_list=[]
+                
         for alternative in data_gen_variation_list:
-            self.datagen_dict=self.do_dict_override(datagen_dict,alternative)
-            self.build_dataset(datagen_dict)#create x,y       
-            if opt_model_variation_list==None:
-                model_run_dict_list=[self.build_optdict()]
-            else:
-                initial_opt_dict=self.build_optdict()
-                model_run_dict_list=self.build_opt_dict_variations(initial_opt_dict,opt_model_variation_list)
+            alt_datagen_dict=self.do_dict_override(datagen_dict,alternative)
+            for optdict_i in model_variation_list:
+                optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
+                model_run_dict_list.append(optmodel_run_dict)
                 #print('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
-    def run_model_as_node(optimizedict,force_start_params=None):
-        self.do_monte_opt(optimizedict,force_start_params=force_start_params)
+    def run_model_as_node(optimizedict,datagen_dict,force_start_params=None):
+        self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
         return
         
     def build_opt_dict_variations(self,initial_opt_dict,variation_list):

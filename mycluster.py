@@ -6,19 +6,19 @@ import datetime
 import kernelcompare 
 
 class run_cluster(kernelcompare.KernelCompare):
-    def __init__(self,mytype=None):
+    def __init__(self,mytype=None,optdict_variation_list=None,data_gen_variation_list=None):
         if mytype==None:
             mytype='master'
         self.oldnode_threshold=datetime.timedelta(minutes=3)
         self.savedirectory='O:/Public/DPatton/kernel/'
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
-        self.initialize(mytype)
+        self.initialize(mytype,optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
         
         
-    def initialize(self,mytype):
+    def initialize(self,mytype,optdict_variation_list=None,data_gen_variation_list=None):
         os.chdir(self.savedirectory)
         if mytype=="master":
-            self.runmaster()
+            self.runmaster(optdict_variation_list,data_gen_variation_list)
         else:
             myname=mytype
             mytype="node"
@@ -41,7 +41,7 @@ class run_cluster(kernelcompare.KernelCompare):
             self.add_to_namelist(myname)
             self.runnode(myname)
 
-    def runmaster(self,opt_model_variation_list):
+    def runmaster(self,optdict_variation_list,data_gen_variation_list):
         try: 
             os.chdir(self.savedirectory)
         except:
@@ -50,8 +50,8 @@ class run_cluster(kernelcompare.KernelCompare):
 
         self.rebuild_current_namelist()#get rid of the old names that are inactive
         namelist=self.getnamelist()
-        list_of_opt_dicts=self.build_opt_dict_variations(opt_model_variation_list)
-        model_run_count=len(list_of_opt_dicts)
+        list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
+        model_run_count=len(list_of_run_dicts)
         i=0
         nodecount=len(namelist)
         while i<model_run_count:
@@ -60,7 +60,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     job_status=self.check_node_job_status(name[0])
                     if status=="no file found":
                         try:
-                            self.setup_job_for_node(name[0],list_of_opt_dicts[i])
+                            self.setup_job_for_node(name[0],list_of_run_dicts[i])
                             i+=1
                         except:
                             print(f'setup_job_for_node named:{name[0]}, opt_dict:{i} has failed')
@@ -80,11 +80,12 @@ class run_cluster(kernelcompare.KernelCompare):
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
 
 
-    def setup_job_for_node(self,name,optimizedict):
+    def setup_job_for_node(self,name,rundict):
         jobdict={}
-        jobdict['optimizedict']=optimizedict
+        jobdict['optimizedict']=rundict['optimizedict']
+        jobdict['datagen_dict']=rundict['datagen_dict']
         jobdict['node_status']='ready for node'
-        with open(self.savedirectory++name+'/_job','wb') as newjob:
+        with open(self.savedirectory+name+'/_job','wb') as newjob:
             pickled.dump(jobdict,newjob)
         print(f'job setup for node:{name}')
         return
@@ -154,11 +155,12 @@ class run_cluster(kernelcompare.KernelCompare):
 
         if i_have_opt_job==1:
             my_optimizedict=my_opt_job['optimizedict']
+            my_datagen_dict=my_opt_job['datagen_dict']
 
 
             self.update_node_job_status(myname,status='starting',mydir=mydir)
             try:
-                KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,force_start_params=0)
+                KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
                 #was_successful_list=[minimize_obj.success for minimize_obj in opt_result]
                 self.update_node_job_status(myname,status="finished",mydir=mydir)
 
