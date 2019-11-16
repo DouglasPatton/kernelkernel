@@ -105,7 +105,7 @@ class KernelOptModelTools:
         #print(f'rebuild hyper param dict vstring:{vstring}')
         return new_opt_dict
                   
-    def open_condense_resave(self,filename1,verbose=None):#not calling this. delete?
+    def open_condense_resave(self,filename1,verbose=None):
         if verbose==None or verbose=='no':
             verbose=0
         if verbose=='yes':
@@ -115,6 +115,7 @@ class KernelOptModelTools:
             with open(filename1,'rb') as savedfile:
                 saved_model_list1=pickle.load(savedfile)
             condensed_list=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=verbose)
+                         
         except:
             print(traceback.format_exc())
             print(f'filename:{filename1} not found')
@@ -231,8 +232,8 @@ class KernelOptModelTools:
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
         if saved_model_list==None:
             return []
-        if verbose==None or verbose=='yes': verbose=1
-        if verbose=='no':verbose=0
+        if verbose=='yes': verbose=1
+        if verbose==None or verbose=='no':verbose=0
         if strict=='yes':strict=1
         if strict=='no':strict=0
         keep_model=[1]*len(saved_model_list)
@@ -242,9 +243,9 @@ class KernelOptModelTools:
                     j=j+i+1
                     matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=help_start,strict=strict)
                     #if full_model_i['modeldict']==full_model_j['modeldict']:
-                    if len(matchlist)>0:
+                    if len(matchlist)>1:
                         i_mse=full_model_i['mse']
-                        i_n=full_model_i['ydata'].shape[0]
+                        i_n=full_model_i['ydata'].shape[0]#replace with ['datagen_dict']:train_n?
                         j_mse=full_model_j['mse']
                         j_n=full_model_j['ydata'].shape[0]
                         iwt=self.do_nwt_mse(i_mse,i_n)
@@ -531,7 +532,7 @@ class KernelCompare(KernelOptModelTools):
             merge_directory=".."
         os.chdir(self.kc_savedirectory)
         KernelOptModelTools.__init__(self,directory=self.kc_savedirectory)
-        self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
+        #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
                       #this should gather all directories from parent directory if directory is specified in object_init__()
                       #or if not, everything happens in the current working directory, which is good for testing without running
                       #through mycluster.
@@ -556,7 +557,6 @@ class KernelCompare(KernelOptModelTools):
         print(f'len(datagen_dict_list):{len(datagen_dict_list)}')
         for alt_datagen_dict in datagen_dict_list:
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
-            print('here1')
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_list:
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    

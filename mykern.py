@@ -455,7 +455,7 @@ class kNdtool( object ):
             
             
         fixed_or_free_paramdict['free_params']=free_params
-        print(f'free_params added to dict. free_params:{free_params}')
+        #print(f'free_params added to dict. free_params:{free_params}')
         
         
         yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
