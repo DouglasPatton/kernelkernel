@@ -28,12 +28,22 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,mytype=None,optdict_variation_list=None,data_gen_variation_list=None):
+    def __init__(self,mytype=None,optdict_variation_list=None,data_gen_variation_list=None,local_test='yes'):
+        
         if mytype==None:
-            mytype='master'
+            mytype='node'
         self.oldnode_threshold=datetime.timedelta(minutes=1,seconds=10)
-        #self.savedirectory='C:/users/dpatton/gits/test/'
-        self.savedirectory='O:/Public/DPatton/kernel/'
+        
+        if local_test=='No' or local_test=='no' or local_test==0:
+            os.chdir('O:/Public/DPatton/kernel/')
+        elif local_test=='yes' or local_test==None or local_test=='Yes' or local_test==1:
+            try:
+                os.chdir(test)
+            except:
+                os.mkdir(test)
+                os.chdir(test)
+        
+        self.savedirectory=os.getcwd()
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
         self.initialize(mytype,optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
         
