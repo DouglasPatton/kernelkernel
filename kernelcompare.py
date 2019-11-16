@@ -10,7 +10,11 @@ import traceback
 #import datetime
 
 class KernelOptModelTools:
-    def __init__(self):
+    def __init__(self,directory=None):
+        if directory==None:
+            self.kc_savedirectory=os.getcwd
+        else:
+            self.kc_savedirectory=directory
         pass
         
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
@@ -523,7 +527,7 @@ class KernelCompare(KernelOptModelTools):
             self.kc_savedirectory=directory
             merge_directory=".."
         os.chdir(self.kc_savedirectory)
-        KernelOptModelTools.__init__(self)
+        KernelOptModelTools.__init__(self,directory=self.kc_savedirectory)
         self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
                       #this should gather all directories from parent directory if directory is specified in object_init__()
                       #or if not, everything happens in the current working directory, which is good for testing without running
