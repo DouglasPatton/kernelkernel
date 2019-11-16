@@ -6,7 +6,7 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-
+import traceback
 #import datetime
 
 class KernelOptModelTools:
@@ -50,8 +50,11 @@ class KernelOptModelTools:
         help_start=optimizedict['opt_settings_dict']['help_start']
         #print(f'help_start:{help_start}')
         partial_match=optimizedict['opt_settings_dict']['partial_match']
-        
-        same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+        try:
+            same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+        except:
+            print(traceback.format_exc())
+            same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
         if len(same_modelxy_dict_list)>0:
             #print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
@@ -107,6 +110,7 @@ class KernelOptModelTools:
                 saved_model_list1=pickle.load(savedfile)
             condensed_list=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=verbose)
         except:
+            print(traceback.format_exc())
             print(f'filename:{filename1} not found')
             return
         try:
@@ -503,6 +507,7 @@ class KernelOptModelTools:
             start_override_opt_dict={'hyper_param_dict':start_val_override_dict}
             newoptimizedict1=self.do_dict_override(newoptimizedict1,start_override_opt_dict,verbose=0)
         except:
+            print(traceback.format_exc())             
             print('------no start value overrides encountered------')
         print(f'newoptimizedict1{newoptimizedict1}')
         return newoptimizedict1
@@ -541,9 +546,10 @@ class KernelCompare(KernelOptModelTools):
         
         model_run_dict_list=[]
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list)
-                         
+        print(f'len(datagen_dict_list):{len(datagen_dict_list)}')
         for alt_datagen_dict in datagen_dict_list:
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
+            print('here1')
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_list:
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
