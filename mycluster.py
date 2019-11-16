@@ -6,7 +6,28 @@ import datetime
 import kernelcompare 
 import traceback
 
+'''to do:
+master needs to maintain a modelrun status list to make sure models don't get left behind.
+
+master and node can communicate with each other by adding a third item to namelist tupple
+    or by having distinct update status options for master/node
+
+master needs to maintain a node list and reassign/update finished/failed appropriately
+
+add master record file and give restart option
+
+let nodes decide if job is too big and refuse and get another
+'''
+
 class run_cluster(kernelcompare.KernelCompare):
+    '''
+    There should be 1 master and 1 node. each node makes sure its assigned name is not already in the namelist
+    appending a number for the number of matches+1. Then nodelist appends and posts back to namelist its name and a time,status tupple with
+    status='created'(this process should keep namelist open, so other nodes can't do the exact same thing at the
+    same time and both think they got the right name....
+    When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
+    and that are not working on a job. The master can also check the nodes model_save file
+    '''
     def __init__(self,mytype=None,optdict_variation_list=None,data_gen_variation_list=None):
         if mytype==None:
             mytype='master'

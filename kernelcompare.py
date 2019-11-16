@@ -541,13 +541,17 @@ class KernelCompare(KernelOptModelTools):
                       #or if not, everything happens in the current working directory, which is good for testing without running
                       #through mycluster.
         
-    def prep_model_list(self, optdict_variation_list=None,data_gen_variation_list=None):
+    def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None):
         param_count=2
         datagen_dict={'train_n':60,'n':200, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
-        if data_gen_variation_list==None:
-            data_gen_variation_list=[{}]#will default to parameters in datagen_dict below
-        assert type(data_gen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
-        
+        if datagen_variation_list==None:
+            datagen_variation_list=[{}]#will default to parameters in datagen_dict below
+        assert type(datagen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
+        assert type(datagen_variation_list[0])==dict,f'first item of data_gen_variation_list type:{type(data_gen_variation_list[0])} but expected a dict'
+                        
+        assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
+        assert type(optdict_variation_list[0])==dict,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a dict'
+                         
         #initial_opt_dict=self.build_optdict(param_count=datagen_dict['param_count'])
         #if optdict_variation_list==None:
         #    optdict_list=[initial_opt_dict]
