@@ -9,14 +9,10 @@ import re
 
 #import datetime
 
-
-        
-
 class KernelOptModelTools:
     def __init__(self):
         pass
         
-            
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         if force_start_params==None or force_start_params=='no':
             force_start_params=0
@@ -84,9 +80,6 @@ class KernelOptModelTools:
                 self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
             else:
                 print('continuing without replacing parameters with their saved values')
-        
-        
-        #if len(mse_list)==0 and 
         return(optimizedict)
     
     def rebuild_hyper_param_dict(self,old_opt_dict,replacement_fixedfreedict,verbose=None):
@@ -122,8 +115,6 @@ class KernelOptModelTools:
         except:
                 print(f'filewrite for filename:{filename1} failed')
                 
-
-        
             
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
@@ -146,8 +137,6 @@ class KernelOptModelTools:
             verbose=1
         model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
         print('here',model_save_filelist)
-        
-        
         
         os.chdir(save_directory)
 
@@ -368,12 +357,6 @@ class KernelOptModelTools:
                 print(f'{len(matchlist)} partial matches found only after substituting {new_dict}')
                 return matchlist
             
-        
-        
-            
-            
-    
- 
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=old_dict.copy()
@@ -437,7 +420,6 @@ class KernelOptModelTools:
         return hyper_paramdict1
             
         
-        
     def build_dataset_dict(self,datagen_dict):
         data_dict={}
         param_count=datagen_dict['param_count']
@@ -458,6 +440,7 @@ class KernelOptModelTools:
         data_dict['val_y']=self.dg_data.y[train_n:]
         return data_dict
     
+                         
     def build_optdict(self,opt_dict_override=None,param_count=None):
         if opt_dict_override==None:
             opt_dict_override={}
@@ -594,7 +577,8 @@ class KernelCompare(KernelOptModelTools):
     def build_override_dict_from_str(self,string_address,val):
         colon_loc=[i for i,char in enumerate(string_address) if char==':']
         return self.recursive_string_dict_helper(string_address,colon_loc,val)
-            
+          
+                         
     def recursive_string_dict_helper(self,dict_string,colon_loc,val):
         if len(colon_loc)==0:
             return {dict_string:val}
