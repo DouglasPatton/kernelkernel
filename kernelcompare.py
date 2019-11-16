@@ -542,10 +542,10 @@ class KernelCompare(KernelOptModelTools):
         model_run_dict_list=[]
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list)
                          
-        for alt_datagen_dict in datagen_list:
+        for alt_datagen_dict in datagen_dict_list:
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
-            for optdict_i in optdict_variation_list:
+            for optdict_i in optdict_list:
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
                 #print('model_run_dict_list:',model_run_dict_list)
