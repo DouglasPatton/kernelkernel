@@ -545,51 +545,48 @@ class KernelCompare(KernelOptModelTools):
         param_count=2
         datagen_dict={'train_n':60,'n':200, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
         if data_gen_variation_list==None:
-            data_gen_variation_list=[{}]#will default to paramteres in datagen_dict below
+            data_gen_variation_list=[{}]#will default to parameters in datagen_dict below
         assert type(data_gen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
         
-        initial_opt_dict=self.build_optdict(param_count=datagen_dict['param_count'])
-        
-        if optdict_variation_list==None:
-            optdict_variation_list=initial_opt_dict
-        
-            
+        #initial_opt_dict=self.build_optdict(param_count=datagen_dict['param_count'])
+        #if optdict_variation_list==None:
+        #    optdict_list=[initial_opt_dict]
         
         model_run_dict_list=[]
-                
-        for alternative in data_gen_variation_list:
-            alt_datagen_dict=self.do_dict_override(datagen_dict,alternative)
+        datagen_dict_list=self.build_dict_variations(datagen_dict,data_gen_variation_list)
+                         
+        for alt_datagen_dict in data_gen_list:
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
-            optdict_variation_list=self.build_opt_dict_variations(initial_opt_dict,optdict_variation_list)    
+            optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_variation_list:
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
                 #print('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
+                         
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
         return
         
-    def build_opt_dict_variations(self,initial_opt_dict,variation_list):
-        opt_dict_combo_list=[]
-            
-        
+                         
+    def build_dict_variations(self,initial_dict,variation_list):
+        dict_combo_list=[]
         for i,tup_i in enumerate(variation_list):
             sub_list=[not_tup_i for j,not_tup_i in enumerate(variation_list) if not j==i]
             for k,val in enumerate(tup_i[1]):
                 override_dict_ik=self.build_override_dict_from_str(tup_i[0],val)
-                opt_dict_ik=self.do_dict_override(initial_opt_dict,override_dict_ik)
-                #print('opt_dict_combo_list',opt_dict_combo_list)
-                opt_dict_combo_list.append(opt_dict_ik)
+                dict_ik=self.do_dict_override(initial_dict,override_dict_ik)
+                #print('dict_combo_list',dict_combo_list)
+                dict_combo_list.append(dict_ik)
                 if len(sub_list)>0:
-                    new_items=self.build_opt_dict_variations(opt_dict_ik,sub_list)
-                    opt_dict_combo_list=opt_dict_combo_list+new_items
+                    new_items=self.build_dict_variations(dict_ik,sub_list)
+                    dict_combo_list=dict_combo_list+new_items
                 else: 
-                    return opt_dict_combo_list
-                
-        return opt_dict_combo_list
+                    return dict_combo_list
+        return dict_combo_list
 
+                         
     def build_override_dict_from_str(self,string_address,val):
         colon_loc=[i for i,char in enumerate(string_address) if char==':']
         return self.recursive_string_dict_helper(string_address,colon_loc,val)
@@ -600,11 +597,13 @@ class KernelCompare(KernelOptModelTools):
         if len(colon_loc)>0:
             return {dict_string[0:colon_loc[0]]:self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],colon_loc[1:],val)}
         
+                         
     def build_quadratic_datagen_dict_override(self):
         datagen_dict_override={}
         datagen_dict_override['ftype']='quadratic'
         return datagen_dict_override
         
+                         
     def test_build_opt_dict_override(self):
         trainsize=self.train_n
         opt_dict_override={}

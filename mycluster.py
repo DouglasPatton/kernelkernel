@@ -32,7 +32,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 nameset=0
                 while nameset==0:
                     mynametry=myname+f'{namecount}'
-                    name_regex2=r'^'+mynametry
+                    name_regex2=r'^'+re.escape(mynametry)
                     namematch2=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
                     if len(namematch2)>0:
                         namecount+=1
