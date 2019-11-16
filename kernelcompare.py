@@ -170,12 +170,12 @@ class KernelOptModelTools:
         if len(model_save_filelist)==0:
             print('no models found when merging')
             return
-        if len(model_save_filelist)==1 and saved_condensed_list==[]:
-            print('only 1 model_save file found, and saved_condensed_list is empty, so no merge completed')
-            return
+        #if len(model_save_filelist)==1 and saved_condensed_list==[]:
+        #    print('only 1 model_save file found, and saved_condensed_list is empty, so no merge completed')
+        #    return
         new_model_list=[]
         list_of_saved_lists=[]
-        if len(model_save_filelist)>1:
+        if len(model_save_filelist)>0:
             for file_i in model_save_filelist:
                 with open(file_i,'rb') as savedfile:
                     try: 
