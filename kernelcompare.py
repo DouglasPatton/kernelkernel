@@ -18,6 +18,8 @@ class KernelOptModelTools:
         pass
         
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
+        optimizedict['datagen_dict']=datagen_dict
+        
         if force_start_params==None or force_start_params=='no':
             force_start_params=0
         if force_start_params=='yes':
@@ -33,7 +35,7 @@ class KernelOptModelTools:
         
         
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
-        optimizedict['datagen_dict']=datagen_dict
+        
         mk.optimize_free_params(y,x,optimizedict)
         return
         
@@ -511,9 +513,10 @@ class KernelOptModelTools:
             start_override_opt_dict={'hyper_param_dict':start_val_override_dict}
             newoptimizedict1=self.do_dict_override(newoptimizedict1,start_override_opt_dict,verbose=0)
         except:
-            print(traceback.format_exc())             
-            print('------no start value overrides encountered------')
-        print(f'newoptimizedict1{newoptimizedict1}')
+            pass
+        #    print(traceback.format_exc())             
+        #    print('------no start value overrides encountered------')
+        #print(f'newoptimizedict1{newoptimizedict1}')
         return newoptimizedict1
 
         
