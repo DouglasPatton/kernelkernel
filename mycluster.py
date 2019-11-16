@@ -17,6 +17,8 @@ master needs to maintain a node list and reassign/update finished/failed appropr
 add master record file and give restart option
 
 let nodes decide if job is too big and refuse and get another
+
+have mycluster search for and merge model_save files in parent and child directories to its own directory
 '''
 
 class run_cluster(kernelcompare.KernelCompare):
@@ -34,18 +36,26 @@ class run_cluster(kernelcompare.KernelCompare):
             mytype='node'
         self.oldnode_threshold=datetime.timedelta(minutes=1,seconds=10)
         
+        self.savedirectory=self.setdirectory(local_test=local_test)
+        kernelcompare.KernelCompare.__init__(self,self.savedirectory)
+        self.initialize(mytype,optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
+
+        
+    def setdirectory(self,local_test='yes'):
         if local_test=='No' or local_test=='no' or local_test==0:
             os.chdir('O:/Public/DPatton/kernel/')
         elif local_test=='yes' or local_test==None or local_test=='Yes' or local_test==1:
             try:
-                os.chdir(test)
+                os.chdir(cluster_test)
             except:
-                os.mkdir(test)
-                os.chdir(test)
+                os.mkdir(cluster_test)
+                os.chdir(cluster_test)
+        else: 
+            assert False,f"local_test not understood. value:{local_test}"
+        return os.getcwd()
         
-        self.savedirectory=os.getcwd()
-        kernelcompare.KernelCompare.__init__(self,self.savedirectory)
-        self.initialize(mytype,optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
+        
+        
         
         
     def initialize(self,mytype,optdict_variation_list=None,data_gen_variation_list=None):

@@ -3,7 +3,7 @@ from time import strftime
 import numpy as np
 import pickle
 import os
-import data_gen as dg
+import datagen as dg
 import mykern as mk
 import re
 
@@ -449,7 +449,7 @@ class KernelOptModelTools:
         n=datagen_dict['n']
         data_dict['train_n']=train_n
         
-        self.dg_data=dg.data_gen(data_shape=(n,param_count),seed=seed,ftype=ftype,evar=evar)
+        self.dg_data=dg.datagen(data_shape=(n,param_count),seed=seed,ftype=ftype,evar=evar)
         data_dict['train_x']=self.dg_data.x[0:train_n,1:param_count+1]#drop constant from x and interaction/quadratic terms
         data_dict['train_y']=self.dg_data.y[0:train_n]
         
@@ -546,8 +546,8 @@ class KernelCompare(KernelOptModelTools):
         datagen_dict={'train_n':60,'n':200, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict below
-        assert type(datagen_variation_list)==list,f'data_gen_variation_list type:{type(data_gen_variation_list)} but expected a list'
-        assert type(datagen_variation_list[0])==dict,f'first item of data_gen_variation_list type:{type(data_gen_variation_list[0])} but expected a dict'
+        assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
+        assert type(datagen_variation_list[0])==dict,f'first item of datagen_variation_list type:{type(datagen_variation_list[0])} but expected a dict'
                         
         assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
         assert type(optdict_variation_list[0])==dict,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a dict'
@@ -557,9 +557,9 @@ class KernelCompare(KernelOptModelTools):
         #    optdict_list=[initial_opt_dict]
         
         model_run_dict_list=[]
-        datagen_dict_list=self.build_dict_variations(datagen_dict,data_gen_variation_list)
+        datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list)
                          
-        for alt_datagen_dict in data_gen_list:
+        for alt_datagen_dict in datagen_list:
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_variation_list:

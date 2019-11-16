@@ -1,7 +1,7 @@
 
 import numpy as np
 
-class data_gen():
+class datagen():
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
@@ -42,5 +42,5 @@ class data_gen():
         #make a simple y for testing
         
         self.x = np.concatenate((np.ones([n,1]),self.x),axis=1)
-        print(f'self.x.shape{self.x.shape}')
+        #print(f'self.x.shape{self.x.shape}')
         self.y=np.matmul(self.x, self.b)+self.e
