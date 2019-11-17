@@ -307,7 +307,7 @@ class KernelOptModelTools:
             print('--------------------------------help_start is triggered---------------------------')
             optdict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
             #print(f'optdict_match_list2:{optdict_match_list}')
-            if len(opdict_match_list)>0:
+            if len(optdict_match_list)>0:
                 return self.condense_saved_model_list(optdict_match_list,help_start=0,strict=1)
         if len(optdict_match_list)==0 and help_start==1 and partial_match==1:
             print('--------------help_start with partial match triggered----------------')
@@ -351,7 +351,7 @@ class KernelOptModelTools:
             #print(f'keys:{keys}')
             return matches
         
-        if not matchcount<help_start*2:
+        if not matchcount>help_start*2:
             return matches
         print('-----partial match is looking for a partial match------')
         new_dict_list=[]
