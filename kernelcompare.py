@@ -111,20 +111,12 @@ class KernelOptModelTools:
         if verbose=='yes':
             verbose=1
 
-        try:
-            with open(filename1,'rb') as savedfile:
-                saved_model_list1=pickle.load(savedfile)
-            condensed_list=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=verbose)
-                         
-        except:
-            print(traceback.format_exc())
-            print(f'filename:{filename1} not found')
-            return
-        try:
-            with open(filename1,'wb') as writefile:
-                pickle.dump(condensed_list,writefile)
-        except:
-                print(f'filewrite for filename:{filename1} failed')
+        with open(filename1,'rb') as savedfile:
+            saved_model_list1=pickle.load(savedfile)
+        condensed_list=self.condense_saved_model_list(saved_model_list1, help_start=0, strict=1,verbose=verbose)
+          
+        with open(filename1,'wb') as writefile:
+            pickle.dump(condensed_list,writefile)
                 
             
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
@@ -173,6 +165,7 @@ class KernelOptModelTools:
         if len(model_save_filelist)==0:
             print('no models found when merging')
             return
+                         
         #if len(model_save_filelist)==1 and saved_condensed_list==[]:
         #    print('only 1 model_save file found, and saved_condensed_list is empty, so no merge completed')
         #    return
@@ -194,6 +187,8 @@ class KernelOptModelTools:
                 else:
                     list_of_saved_lists.append(saved_model_list)
             if not saved_condensed_list==[]:
+                if condense==1:
+                    saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
                 list_of_saved_lists.append(saved_condensed_list)
             for i,list_i in enumerate(list_of_saved_lists):#each saved_list is from a different file, and they have been put in a list
                 for list_j in list_of_saved_lists[i:]:#no plus 1, so compare list_i to itself, but not ones before it.
@@ -234,37 +229,43 @@ class KernelOptModelTools:
             return []
         if verbose=='yes': verbose=1
         if verbose==None or verbose=='no':verbose=0
+        assert type(verbose)==int, f'type(verbose) should be int but :{type(verbose)}'
         if strict=='yes':strict=1
         if strict=='no':strict=0
-        keep_model=[1]*len(saved_model_list)
+        modelcount=len(saved_model_list)
+        keep_model=[1]*modelcount
         for i,full_model_i in enumerate(saved_model_list):
+            if verbose>0:
+                print(f'{100*i/modelcount}%',end=',')
+                
             if keep_model[i]==1:
                 for j,full_model_j in enumerate(saved_model_list[i+1:]):
                     j=j+i+1
                     matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=help_start,strict=strict)
                     #if full_model_i['modeldict']==full_model_j['modeldict']:
-                    if len(matchlist)>1:
+                    if len(matchlist)>0:
                         i_mse=full_model_i['mse']
                         i_n=full_model_i['ydata'].shape[0]#replace with ['datagen_dict']:train_n?
                         j_mse=full_model_j['mse']
                         j_n=full_model_j['ydata'].shape[0]
                         iwt=self.do_nwt_mse(i_mse,i_n)
                         jwt=self.do_nwt_mse(j_mse,j_n)
-                        if verbose==1:
+                        if verbose>1:
                             print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
                         if iwt<jwt:
-                            if verbose==1:
+                            if verbose>1:
                                 print('model j loses')
                             keep_model[j]=0
                         else:
-                            if verbose==1:
+                            if verbose>1:
                                 print('model i loses')
                             keep_model[i]=0
                     
-        final_match_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
-        print(f'len(final_match_list):{len(final_match_list)}')
-        return final_match_list
+        final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
+        if verbose>0:
+            print(f'len(final_keep_list):{len(final_keep_list)}')
+        return final_keep_list
 
     def do_nwt_mse(self,mse,n):
         return np.log(mse+1)/(np.log(n)**3)
@@ -302,16 +303,19 @@ class KernelOptModelTools:
         optdict_match_list=[saved_dict_list[i] for i,ismatch in enumerate(optdict_match_list_select) if ismatch]
         
         
-        if help_start==1 and len(optdict_match_list)>0:
+        if help_start==1 and len(optdict_match_list)==0:
             print('--------------------------------help_start is triggered---------------------------')
             optdict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
             #print(f'optdict_match_list2:{optdict_match_list}')
-            return self.condense_saved_model_list(optdict_match_list,help_start=0,strict=1)
-        elif len(optdict_match_list)==0 and partial_match==1:
-            print('--------------here----------------')
+            if len(opdict_match_list)>0:
+                return self.condense_saved_model_list(optdict_match_list,help_start=0,strict=1)
+        if len(optdict_match_list)==0 and help_start==1 and partial_match==1:
+            print('--------------help_start with partial match triggered----------------')
             tryagain= self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
-            if tryagain==None:return []
-            else:return tryagain
+            if tryagain==None:
+                return []
+            else:
+                return tryagain
         else:
             #same_doubledict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
             xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in optdict_match_list]
@@ -332,8 +336,12 @@ class KernelOptModelTools:
         if strict==None or strict=='no':
             strict=0
         if strict=='yes': strict=1
-        adoubledict=self.pull2dicts(afullmodel)
-        saved_doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_optdict_list]
+        saved_optdict_list_copy=deepcopy(saved_optdict_list)
+        afullmodel_copy=deepcopy(afullmodel)
+        
+        
+        adoubledict=self.pull2dicts(afullmodel_copy)
+        saved_doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_optdict_list_copy]
         same_model_datagen_compare=[adoubledict==dict_i for dict_i in saved_doubledict_list]
         
         matches=[item for i,item in enumerate(saved_optdict_list) if same_model_datagen_compare[i]]
@@ -343,10 +351,9 @@ class KernelOptModelTools:
             #print(f'keys:{keys}')
             return matches
         
-        if matchcount>help_start*2:
-            print(f'partial match found a full match.....matchcount:{matchcount}')
+        if not matchcount<help_start*2:
             return matches
-        
+        print('-----partial match is looking for a partial match------')
         new_dict_list=[]
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         string_list=[('datagen_dict','seed'),('datagen_dict','n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','train_n'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model')]
@@ -356,7 +363,7 @@ class KernelOptModelTools:
         #new_dict_list.append(amodeldict['hyper_param_form_dict'])
         #new_dict_list.append(amodeldict['regression_model'])
         
-        simple_doubledict_list=deepcopy(saved_doubledict_list)#initialize these as copies that will be progressively simplified
+        simple_doubledict_list=saved_doubledict_list#added deepcopy abovedeepcopy(saved_doubledict_list)#initialize these as copies that will be progressively simplified
         #simple_adoubledict=deepcopy(adoubledict)
         for new_dict in new_dict_list:
             #print(f'partial match trying {new_dict}')
@@ -567,6 +574,7 @@ class KernelCompare(KernelOptModelTools):
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
+        
         return
         
                          
@@ -606,7 +614,7 @@ class KernelCompare(KernelOptModelTools):
         
                          
     def test_build_opt_dict_override(self):
-        trainsize=self.train_n
+        
         opt_dict_override={}
         modeldict={}
         hyper_param_form_dict={}
@@ -617,7 +625,7 @@ class KernelCompare(KernelOptModelTools):
         modeldict['Ndiff_type']='recursive'
         modeldict['max_bw_Ndiff']=3
         modeldict['Ndiff_start']=1
-        modeldict['ykern_grid']=trainsize+1
+        modeldict['ykern_grid']=51
         #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
         #hyper_param_dict['y_bandscale']=np.array([1])
         #opt_dict_override['hyper_param_dict']=hyper_param_dict
