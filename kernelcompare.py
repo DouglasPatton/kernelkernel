@@ -241,26 +241,28 @@ class KernelOptModelTools:
             if keep_model[i]==1:
                 for j,full_model_j in enumerate(saved_model_list[i+1:]):
                     j=j+i+1
-                    matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=help_start,strict=strict)
-                    #if full_model_i['modeldict']==full_model_j['modeldict']:
-                    if len(matchlist)>0:
-                        i_mse=full_model_i['mse']
-                        i_n=full_model_i['ydata'].shape[0]#replace with ['datagen_dict']:train_n?
-                        j_mse=full_model_j['mse']
-                        j_n=full_model_j['ydata'].shape[0]
-                        iwt=self.do_nwt_mse(i_mse,i_n)
-                        jwt=self.do_nwt_mse(j_mse,j_n)
-                        if verbose>1:
-                            print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
+                    if keep_model[j]==1:
+                        matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=help_start,strict=strict)
+                        #if full_model_i['modeldict']==full_model_j['modeldict']:
+                        if len(matchlist)>0:
+                            i_mse=full_model_i['mse']
+                            i_n=full_model_i['ydata'].shape[0]#replace with ['datagen_dict']:train_n?
+                            j_mse=full_model_j['mse']
+                            j_n=full_model_j['ydata'].shape[0]
+                            iwt=self.do_nwt_mse(i_mse,i_n)
+                            jwt=self.do_nwt_mse(j_mse,j_n)
+                            if verbose>1:
+                                print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
-                        if iwt<jwt:
-                            if verbose>1:
-                                print('model j loses')
-                            keep_model[j]=0
-                        else:
-                            if verbose>1:
-                                print('model i loses')
-                            keep_model[i]=0
+                            if iwt<jwt:
+                                if verbose>1:
+                                    print('model j loses')
+                                keep_model[j]=0
+                            else:
+                                if verbose>1:
+                                    print('model i loses')
+                                keep_model[i]=0
+                                break
                     
         final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
         if verbose>0:
@@ -631,8 +633,8 @@ class KernelCompare(KernelOptModelTools):
         #opt_dict_override['hyper_param_dict']=hyper_param_dict
         opt_dict_override['modeldict']=modeldict
 
-        options['fatol']=0.5
-        options['xatol']=.05
+        options['fatol']=0.9
+        options['xatol']=.1
         opt_settings_dict['options']=options
         #opt_settings_dict['help_start']='no'
         #opt_settings_dict['partial_match']='no'

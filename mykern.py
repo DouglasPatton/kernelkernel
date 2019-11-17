@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List
 import os
 from time import strftime
@@ -461,7 +462,7 @@ class kNdtool( object ):
         yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
         y_err=self.ydata-yhat_un_std
         mse= np.mean(np.power(y_err,2))
-        self.mse_param_list.append((mse,fixed_or_free_paramdict))
+        self.mse_param_list.append((mse,deepcopy(fixed_or_free_paramdict)))
         #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
         t_format="%Y%m%d-%H%M%S"
