@@ -447,6 +447,8 @@ class kNdtool( object ):
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
     def MY_KDEpredictMSE(self,free_params,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
+        
+            
         if not type(fixed_or_free_paramdict['free_params']) is list: #it would be the string "outside" otherwise
             self.call_iter+=1#then it must be a new call during optimization
             #if self.call_iter>1 and self.call_iter%5==0:
@@ -481,6 +483,7 @@ class kNdtool( object ):
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         if not np.ma.count_masked(yhat_un_std)==0:
             mse=np.ma.count_masked(yhat_un_std)*10**199
+        
         return mse
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
@@ -632,6 +635,7 @@ class optimize_free_params(kNdtool):
     """
 
     def __init__(self,ydata,xdata,optimizedict):
+        
         kNdtool.__init__(self)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
@@ -645,6 +649,11 @@ class optimize_free_params(kNdtool):
         
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
+        mse_threshold=opt_settings_dict['mse_threshold']
+        inherited_mse=optimizedict['mse']
+        if inherited_mse<mse_threshold:
+            print(f'optimization halted because inherited mse:{inherited_mse}<mse_threshold:{mse_threshold}')
+            return
         
         model_param_formdict=modeldict['hyper_param_form_dict']
         xkerngrid=modeldict['xkern_grid']

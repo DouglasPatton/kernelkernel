@@ -86,7 +86,7 @@ class KernelOptModelTools:
             print(f'best_dict:{best_dict}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
-                self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
+                optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
             else:
                 print('continuing without replacing parameters with their saved values')
         return(optimizedict)
@@ -139,7 +139,7 @@ class KernelOptModelTools:
         if verbose=='yes':
             verbose=1
         model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
-        print('here',model_save_filelist)
+        #print('here',model_save_filelist)
         
         os.chdir(save_directory)
 
@@ -163,7 +163,7 @@ class KernelOptModelTools:
 
 
         if len(model_save_filelist)==0:
-            print('no models found when merging')
+            print('0 models found in save_directory when merging')
             return
                          
         #if len(model_save_filelist)==1 and saved_condensed_list==[]:
@@ -179,8 +179,7 @@ class KernelOptModelTools:
                         if verbose==1:
                             print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
                     except:
-                        if verbose==1:
-                            print(f'warning!saved_model_list{file_i} could not pickle.load')
+                        print(f'warning!saved_model_list{file_i} could not pickle.load')
                         
                 if condense==1:
                     list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
@@ -503,6 +502,7 @@ class KernelOptModelTools:
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
+            'mse_threshold':2,
             'help_start':1,
             'partial_match':1
             }
@@ -633,9 +633,11 @@ class KernelCompare(KernelOptModelTools):
         #opt_dict_override['hyper_param_dict']=hyper_param_dict
         opt_dict_override['modeldict']=modeldict
 
+        #options['mse_threshold']=32.0
         options['fatol']=0.9
         options['xatol']=.1
         opt_settings_dict['options']=options
+        opt_settings_dict['mse_threshold']=32.0
         #opt_settings_dict['help_start']='no'
         #opt_settings_dict['partial_match']='no'
         opt_dict_override['opt_settings_dict']=opt_settings_dict
