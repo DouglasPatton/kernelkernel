@@ -352,7 +352,7 @@ if __name__=="__main__":
     data_gen_variation_list=[kc.KernelCompare().build_quadratic_datagen_dict_override()]
     Ndiff_type_variations=('modeldict:Ndiff_type',['recursive','product'])
     max_bw_Ndiff_variations=('modeldict:max_bw_Ndiff',[2])
-    Ndiff_start_variations=('modeldict:Ndiff_start',[0])
+    Ndiff_start_variations=('modeldict:Ndiff_start',[2])
     product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])#include None too?
     normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
     optdict_variation_list=[Ndiff_type_variations,max_bw_Ndiff_variations,Ndiff_start_variations]

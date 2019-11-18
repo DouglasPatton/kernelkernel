@@ -378,7 +378,7 @@ class KernelOptModelTools:
             
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
-        old_dict_copy=old_dict.copy()
+        old_dict_copy=deepcopy(old_dict)
         if verbose==None or verbose=='no':
             verbose=0
         if verbose=='yes':
@@ -546,7 +546,7 @@ class KernelCompare(KernelOptModelTools):
                       #or if not, everything happens in the current working directory, which is good for testing without running
                       #through mycluster.
         
-    def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None):
+    def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,verbose=0):
         param_count=2
         datagen_dict={'train_n':60,'n':200, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
         if datagen_variation_list==None:
@@ -562,7 +562,7 @@ class KernelCompare(KernelOptModelTools):
         #    optdict_list=[initial_opt_dict]
         
         model_run_dict_list=[]
-        datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list)
+        datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)
         print(f'len(datagen_dict_list):{len(datagen_dict_list)}')
         for alt_datagen_dict in datagen_dict_list:
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
@@ -576,11 +576,33 @@ class KernelCompare(KernelOptModelTools):
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
-        
         return
         
-                         
-    def build_dict_variations(self,initial_dict,variation_list):
+
+    def build_dict_variations(self,initial_dict,variation_list,verbose=1):
+        dict_combo_list=[]
+        sub_list=[]
+        dict_ik=deepcopy(initial_dict)
+
+        #pull and replace first value from each variation
+        for tup_i in variation_list:
+            override_dict_ik=self.build_override_dict_from_str(tup_i[0],tup_i[1][0])
+            dict_ik=self.do_dict_override(initial_dict,override_dict_ik)
+        dict_combo_list.append(dict_ik)#this is now the starting dictionary.
+        remaining_variation_list=[(tup_i[0],tup_i[1][1:]) for tup_i in variation_list if len(tup_i[1])>1]
+        for tup_i in remaining_variation_list:
+            additions=[]
+            for val in tup_i[1]:
+                for dict_i in dict_combo_list:
+                    override_dict=self.build_override_dict_from_str(tup_i[0],val)
+                    newdict=self.do_dict_override(dict_i,override_dict)
+                    additions.append(newdict)
+            dict_combo_list=dict_combo_list+additions
+        if verbose==1:
+            print(f'dict_combo_list has {len(dict_combo_list)} variations to run')
+        return dict_combo_list    
+            
+    '''def build_dict_variations(self,initial_dict,variation_list):
         dict_combo_list=[]
         for i,tup_i in enumerate(variation_list):
             sub_list=[not_tup_i for j,not_tup_i in enumerate(variation_list) if not j==i]
@@ -593,8 +615,8 @@ class KernelCompare(KernelOptModelTools):
                     new_items=self.build_dict_variations(dict_ik,sub_list)
                     dict_combo_list=dict_combo_list+new_items
                 else: 
-                    return dict_combo_list
-        return dict_combo_list
+                    return dict_combo_list 
+        return dict_combo_list'''
 
                          
     def build_override_dict_from_str(self,string_address,val):
