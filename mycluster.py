@@ -35,7 +35,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
         if mytype==None:
             mytype='node'
-        self.oldnode_threshold=datetime.timedelta(minutes=1,seconds=10)
+        self.oldnode_threshold=datetime.timedelta(minutes=59,seconds=10)
         
         self.savedirectory=self.setdirectory(local_test=local_test)
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
@@ -122,6 +122,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
                             i+=1
                             run_dict_status[first_ready_dict_idx]='assigned'
+                            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node'] 
                             assignment_tracker.append((name[0],first_ready_dict_idx))
                         except:
                             print(traceback.format_exc())
@@ -152,7 +153,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     
                     #print(Exception)
                     #print(f'status check for_node named:{name} has failed')
-            sleep(3*log((i+1)**3)+1)
+            sleep(40)
             
 
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
@@ -186,11 +187,12 @@ class run_cluster(kernelcompare.KernelCompare):
     def rebuild_current_namelist(self):
         os.chdir(self.savedirectory)
         namelist=self.getnamelist()#get a new copy just in case
-        now=strftime("%Y%m%d-%H%M%S")
-        now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")
+        
         name_last_update_list=[(name,times_status_tup_list[-1][0]) for name,times_status_tup_list in namelist]#times_status_tup_list[-1][0]:-1 for last item in list, and 0 for first item in time_status tuple
-        s_since_update_list=[now_s-datetime.datetime.strptime(time,"%Y%m%d-%H%M%S") for _,time in name_last_update_list]
-        current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
+        s_since_update_list=[self.s_before_now(time) for _,time in name_last_update_list]
+        
+        current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold or self.activitycheck(name_times_tup[0])<self.oldnode_threshold]
+        
         old_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if not s_since_update_list[i]<self.oldnode_threshold]
         try:
             [os.rmdir(name[0]) for name in old_name_list]
@@ -204,6 +206,38 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 print(traceback.format_exc())
                 sleep(0.35)
+    
+    def s_before_now(self,then):
+        now=strftime("%Y%m%d-%H%M%S")
+        now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")
+        return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
+                        
+    
+    def activitycheck(self,name):
+        nodedir=os.path.join(self.savedirectory,name)
+        node_job=os.path.join(nodedir,name+'_job')
+        node_model_save=os.path.join(self.savedirectory,'model_save')
+        
+'''        for _ in range(10):
+            try:
+                with open(node_job) as saved_jobfile:
+                    job=pickled.load(saved_jobfile)
+                break
+            except:pass
+        last_status=job['node_status'][-1]
+        
+        if last_status[1]=='starting':'''
+        for i in range(10):
+            try:
+                with open(node_model_save) as saved_model_save:
+                    model_save=pickled.load(saved_model_save)
+                return model_save[-1]['when_saved']
+                break
+            except:
+                if i==9:print(traceback.format_exc())
+
+                
+            
             
                     
 
@@ -237,7 +271,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     return pickle.load(namelist)
             except:
                 print(traceback.format_exc())
-                sleep(0.05)
+                sleep(0.25)
             return []
 
     def runnode(self,myname):
@@ -303,7 +337,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 else:
                     #print('myjob status:',myjob['node_status'])
                     i+=1
-                    sleep(.25*i**.5)
+                    sleep(.25*log(10*i+1))
             except:
                 print(traceback.format_exc())
                 i+=1
@@ -317,7 +351,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 if s_since_start>self.oldnode_threshold:
                     print(s_since_start-self.oldnode_threshold)
                     assert False,f'myname:{myname} timed out after finding no jobs'
-                sleep(.25*i**.5)
+                sleep(.25*log(10*i+1))
 
 
         return None
@@ -342,7 +376,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 i+=1
                 print(traceback.format_exc())
-                sleep(.2*i**.5)
+                sleep(.25*log(10*i+1))
         
 
 
