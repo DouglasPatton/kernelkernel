@@ -94,12 +94,19 @@ class run_cluster(kernelcompare.KernelCompare):
         
         list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
         model_run_count=len(list_of_run_dicts)
+        run_dict_status=['ready for node']*model_run_count
+        
         i=0
-        while i<model_run_count:
+        while all([status=='finished' for status in run_dict_status])==False:
             sleep(.95)
+            
             self.rebuild_current_namelist()#get rid of the old names that are inactive
             namelist=self.getnamelist()
+            assignment_tracker=[]
             for name in namelist:
+                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+                
+                #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
                 try:
                     job_time,job_status=self.check_node_job_status(name[0],time=1)
                     print(f"job_time:{job_time},job_status:{job_status}")
@@ -110,30 +117,51 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=="no file found":# and (not late):
                         print(f'about to setup the job for node:{name}')
                         try:
-                            self.setup_job_for_node(name[0],list_of_run_dicts[i])
+                            first_ready_dict_idx=ready_dict_idx[0]
+                            self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
                             i+=1
+                            run_dict_status[first_ready_dict_idx]='assigned'
+                            assignment_tracker.append((name[0],first_ready_dict_idx))
                         except:
                             print(traceback.format_exc())
-                            print(f'setup_job_for_node named:{name[0]}, opt_dict:{i} has failed')
-                    '''elif status="finished" or status="waiting":
-                        merge_directory=self.savedirectory+name[0]+'/'
-                        self.merge_and_condense_saved_models(
-                            merge_directory=merge_directory,
-                            save_directory=self.savedirectory,
-                            condense=None,
-                            verbose=None)
-                       '''#removed above merge call and will have node do it when finished. 
-
-                        #print(f'status of node:{name} is:{status} not "no file found"')
+                            print(f'setup_job_for_node named:{name[0]}, i:{i} has failed')
+                    if job_status=='failed':
+                        job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
+                        assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
+                        try:
+                            self.discard_job_for_node(name[0],list_of_run_dicts)
+                            run_dict_status[job_idx]='ready for node'
+                            self.update_myname_in_namelist(name[0],status='ready')
+                        except:
+                            print(traceback.format_exc())
+                            print(f'node:{name[0]} has failed but could not free-up node and/or job_idx:{job_idx}')
+                    if job_status=='finished':
+                        job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
+                        assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
+                        try:
+                            self.discard_job_for_node(name[0],list_of_run_dicts)
+                            run_dict_status[job_idx]='finished'
+                            self.update_myname_in_namelist(name[0],status='ready')
+                        except:
+                            print(traceback.format_exc())
+                            print(f'node:{name[0]} has finished but could not free-up node and/or job_idx:{job_idx}')
+                        
                 except:
                     print(traceback.format_exc())
                     
                     #print(Exception)
                     #print(f'status check for_node named:{name} has failed')
             sleep(3)
+            self.find_failed_dicts
 
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
-
+        print('all jobs finished')
+        
+    def discard_job_for_node(self,name):
+        os.remove(self.savedirectory+name+'/'+name+'_job')
+        return
+    
+    
 
     def setup_job_for_node(self,name,rundict,repeat=None):
         jobdict={}
