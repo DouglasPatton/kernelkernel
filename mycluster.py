@@ -143,7 +143,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             self.discard_job_for_node(name[0],list_of_run_dicts)
                             run_dict_status[job_idx]='finished'
-                            self.update_myname_in_namelist(name[0],status='ready')
+                            #self.update_myname_in_namelist(name[0],status='ready')
                         except:
                             print(traceback.format_exc())
                             print(f'node:{name[0]} has finished but could not free-up node and/or job_idx:{job_idx}')
@@ -218,7 +218,7 @@ class run_cluster(kernelcompare.KernelCompare):
         node_job=os.path.join(nodedir,name+'_job')
         node_model_save=os.path.join(self.savedirectory,'model_save')
         
-'''        for _ in range(10):
+        '''        for _ in range(10):
             try:
                 with open(node_job) as saved_jobfile:
                     job=pickled.load(saved_jobfile)
@@ -316,6 +316,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 print(traceback.format_exc())
                 self.update_node_job_status(myname,status='failed',mydir=mydir)
+        self.runnode(myname)
 
 
 
