@@ -5,6 +5,7 @@ from time import strftime,sleep
 import datetime
 import kernelcompare 
 import traceback
+from numpy import log
 
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
@@ -30,7 +31,7 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,mytype=None,optdict_variation_list=None,data_gen_variation_list=None,local_test='yes'):
+    def __init__(self,mytype=None,optdict_variation_list=None,datagen_variation_list=None,local_test='yes'):
         
         if mytype==None:
             mytype='node'
@@ -38,7 +39,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
         self.savedirectory=self.setdirectory(local_test=local_test)
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
-        self.initialize(mytype,optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
+        self.initialize(mytype,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
         
     def setdirectory(self,local_test='yes'):
@@ -46,10 +47,10 @@ class run_cluster(kernelcompare.KernelCompare):
             os.chdir('O:/Public/DPatton/kernel/')
         elif local_test=='yes' or local_test==None or local_test=='Yes' or local_test==1:
             try:
-                os.chdir(cluster_test)
+                os.chdir('cluster_test')
             except:
-                os.mkdir(cluster_test)
-                os.chdir(cluster_test)
+                os.mkdir('cluster_test')
+                os.chdir('cluster_test')
         else: 
             assert False,f"local_test not understood. value:{local_test}"
         return os.getcwd()
@@ -58,10 +59,10 @@ class run_cluster(kernelcompare.KernelCompare):
         
         
         
-    def initialize(self,mytype,optdict_variation_list=None,data_gen_variation_list=None):
+    def initialize(self,mytype,optdict_variation_list=None,datagen_variation_list=None):
         os.chdir(self.savedirectory)
         if mytype=="master":
-            self.runmaster(optdict_variation_list,data_gen_variation_list)
+            self.runmaster(optdict_variation_list,datagen_variation_list)
         else:
             myname=mytype
             mytype="node"
@@ -84,21 +85,21 @@ class run_cluster(kernelcompare.KernelCompare):
             self.add_to_namelist(myname)
             self.runnode(myname)
 
-    def runmaster(self,optdict_variation_list,data_gen_variation_list):
+    def runmaster(self,optdict_variation_list,datagen_variation_list):
         try: 
             os.chdir(self.savedirectory)
         except:
             os.mkdir(self.savedirectory)
             os.chdir(self.savedirectory)
-
         
-        list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list)
+        
+        list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
         model_run_count=len(list_of_run_dicts)
         run_dict_status=['ready for node']*model_run_count
         
         i=0
         while all([status=='finished' for status in run_dict_status])==False:
-            sleep(.95)
+            
             
             self.rebuild_current_namelist()#get rid of the old names that are inactive
             namelist=self.getnamelist()
@@ -109,7 +110,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
                 try:
                     job_time,job_status=self.check_node_job_status(name[0],time=1)
-                    print(f"job_time:{job_time},job_status:{job_status}")
+                    #print(f"job_time:{job_time},job_status:{job_status}")
                     now=strftime("%Y%m%d-%H%M%S")
                     #elapsed=now-job_time
                     #late=elapsed>datetime.timedelta(seconds=30)
@@ -145,43 +146,40 @@ class run_cluster(kernelcompare.KernelCompare):
                         except:
                             print(traceback.format_exc())
                             print(f'node:{name[0]} has finished but could not free-up node and/or job_idx:{job_idx}')
-                        
+                    ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
                 except:
                     print(traceback.format_exc())
                     
                     #print(Exception)
                     #print(f'status check for_node named:{name} has failed')
-            sleep(3)
-            self.find_failed_dicts
+            sleep(3*log((i+1)**3)+1)
+            
 
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
         print('all jobs finished')
         
     def discard_job_for_node(self,name):
-        os.remove(self.savedirectory+name+'/'+name+'_job')
+        os.remove(os.path.join(self.savedirectory,name,name+'_job'))
         return
     
     
 
-    def setup_job_for_node(self,name,rundict,repeat=None):
+    def setup_job_for_node(self,name,rundict):
         jobdict={}
         jobdict['optimizedict']=rundict['optimizedict']
         jobdict['datagen_dict']=rundict['datagen_dict']
         now=strftime("%Y%m%d-%H%M%S")
         jobdict['node_status']=[(now,'ready for node')]
-        try:
-            with open(self.savedirectory+name+'/'+name+'_job','wb') as newjob:
-                pickle.dump(jobdict,newjob)
-            print(f'job setup for node:{name}')
-        except:
-            if repeat==None:
-                repeat=1
-            elif repeat>10:
-                assert False,"too many repeats"
-            else:
-                repeat+=1
-                sleep(.05)
-            self.setup_job_for_node(name,rundict,repeat=repeat)
+        for _ in range(10):
+            try:
+                with open(os.path.join(self.savedirectory,name,name+'_job'),'wb') as newjob:
+                    pickle.dump(jobdict,newjob)
+                print(f'job setup for node:{name}')
+                break
+            except:
+                print(traceback.format_exc())
+                sleep(0.35)
+                
         return
 
 
@@ -197,12 +195,17 @@ class run_cluster(kernelcompare.KernelCompare):
         try:
             [os.rmdir(name[0]) for name in old_name_list]
         except Exception as e: print(e)
+        
+        for _ in range(10):
+            try: 
+                with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
+                    pickle.dump(current_name_list,savednamelist)
+                return
+            except:
+                print(traceback.format_exc())
+                sleep(0.35)
             
-        try: 
-            with open(self.savedirectory+'namelist','wb') as savednamelist:
-                pickle.dump(current_name_list,savednamelist)
-        except:
-            assert False,"could not write current_name_list to disc"
+                    
 
 
     def add_to_namelist(self,newname):
@@ -212,8 +215,15 @@ class run_cluster(kernelcompare.KernelCompare):
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup_list=[(now,"created")]
         namelist.append((newname,time_status_tup_list))
-        with open(self.savedirectory+'namelist','wb') as savednamelist:
-            pickle.dump(namelist,savednamelist)
+        for _ in range(20):
+            try:
+                with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
+                    pickle.dump(namelist,savednamelist)
+                break
+            except:
+                print(traceback.format_exc())
+                sleep(0.15)
+            
         namelist_check=self.getnamelist()
         matches=len([1 for name in namelist_check if name[0]==newname])
         assert matches==1,f"newname has too many matches:{matches}!!!"
@@ -221,16 +231,18 @@ class run_cluster(kernelcompare.KernelCompare):
 
     def getnamelist(self):
         os.chdir(self.savedirectory)
-        try: 
-            with open('namelist','rb') as namelist:
-                return pickle.load(namelist)
-        except:
-            print('getnamelist found no namelist')
+        for _ in range(20):
+            try: 
+                with open('namelist','rb') as namelist:
+                    return pickle.load(namelist)
+            except:
+                print(traceback.format_exc())
+                sleep(0.05)
             return []
 
     def runnode(self,myname):
-        mydir=self.savedirectory+myname+'/'
-        my_job_file=mydir+'_job'
+        mydir=os.path.join(self.savedirectory,myname)
+        my_job_file=os.path.join(mydir,myname+'_job')
         
         try: 
             os.chdir(self.savedirectory)
@@ -276,11 +288,11 @@ class run_cluster(kernelcompare.KernelCompare):
     def check_for_opt_job(self,myname,start_time,mydir):
         assert type(myname) is str,f"myname should be type str not type:{type(myname)}"
         os.chdir(mydir)
-        my_job_file=mydir+myname+'_job'
+        my_job_file=os.path.join(mydir,myname+'_job')
         waiting=0
         i=0
         while waiting==0:
-            sleep(1.5)
+            
             try:
                 with open(my_job_file,'rb') as myjob_save:
                     myjob=pickle.load(myjob_save)
@@ -289,8 +301,9 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.update_node_job_status(myname,status='accepted',mydir=mydir)
                     return myjob
                 else:
-                    print('myjob status:',myjob['node_status'])
-                    waiting=1#need to develop
+                    #print('myjob status:',myjob['node_status'])
+                    i+=1
+                    sleep(.25*i**.5)
             except:
                 print(traceback.format_exc())
                 i+=1
@@ -303,8 +316,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 if s_since_start>self.oldnode_threshold:
                     print(s_since_start-self.oldnode_threshold)
-                    waiting=1
-        print(f'myname:{myname} timed out after finding no jobs')
+                    assert False,f'myname:{myname} timed out after finding no jobs'
+                sleep(.25*i**.5)
+
 
         return None
 
@@ -319,9 +333,17 @@ class run_cluster(kernelcompare.KernelCompare):
         time_status_tup=(now,status)
         myname_tup[1].append(time_status_tup)
         namelist[i]=myname_tup
-        with open(self.savedirectory+'namelist','wb') as savednamelist:
-            pickle.dump(namelist,savednamelist)
-        return
+        i=0
+        for _ in range(10):
+            try:
+                with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
+                    pickle.dump(namelist,savednamelist)
+                return
+            except:
+                i+=1
+                print(traceback.format_exc())
+                sleep(.2*i**.5)
+        
 
 
     def check_node_job_status(self,name,time=None):
@@ -330,61 +352,77 @@ class run_cluster(kernelcompare.KernelCompare):
             time=0
         if time=='yes':
             time=1
-        nodes_dir=self.savedirectory+name+'/'
+        nodes_dir=os.path.join(self.savedirectory,name)
 
-        os.chdir(nodes_dir)
+        #os.chdir(nodes_dir)
 
 
-        nodes_job_filename=nodes_dir+name+'_job'
-        try:
-            with open(nodes_job_filename,'rb') as saved_job_file:
-                nodesjob_dict=pickle.load(saved_job_file)
-            print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["node_status"]}')
-            os.chdir(self.savedirectory)
-            if time==0:
-                return nodesjob_dict['node_status'][-1][1]
-            if time==1:
-                print(f"nodesjob_dict['node_status'][-1]:{nodesjob_dict['node_status'][-1]}")
-                return nodesjob_dict['node_status'][-1][0],nodesjob_dict['node_status'][-1][1]#time_status tup
-        except:
-            print(traceback.format_exc())
-            os.chdir(self.savedirectory)          
-            if time==0:
-                return "no file found"#if the file doesn't exist, then assign the job
-            if time==1:
-                
-                return strftime("%Y%m%d-%H%M%S"), "no file found"
-
+        nodes_job_filename=os.path.join(nodes_dir,name+'_job')
+        for _ in range(5):
+            try:
+                with open(nodes_job_filename,'rb') as saved_job_file:
+                    nodesjob_dict=pickle.load(saved_job_file)
+                #print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["node_status"]}')
+                os.chdir(self.savedirectory)
+                if time==0:
+                    return nodesjob_dict['node_status'][-1][1]
+                if time==1:
+                    #print(f"nodesjob_dict['node_status'][-1]:{nodesjob_dict['node_status'][-1]}")
+                    return nodesjob_dict['node_status'][-1][0],nodesjob_dict['node_status'][-1][1]#time_status tup
+            except(FileNotFoundError):
+                print(traceback.format_exc())
+                os.chdir(self.savedirectory)          
+                if time==0:
+                    return "no file found"#if the file doesn't exist, then assign the job
+                if time==1:
+                    return strftime("%Y%m%d-%H%M%S"), "no file found"
+            sleep(1)
+                    
+            
 
     def update_node_job_status(self,myname,status=None,mydir=None):
         self.update_myname_in_namelist(myname,status)
 
-        my_job_file=mydir+myname+'_job'
+        my_job_file=os.path.join(mydir,myname+'_job')
 
         os.chdir(mydir)
-        with open(my_job_file,'rb') as job_save_file:
-            job_save_dict=pickle.load(job_save_file)
-
+        for _ in range(10):
+            try:
+                with open(my_job_file,'rb') as job_save_file:
+                    job_save_dict=pickle.load(job_save_file)
+                break
+            except:pass
         if type(status) is str:
             now=strftime("%Y%m%d-%H%M%S")
             job_save_dict['node_status'].append((now,status))
-
-        with open(my_job_file,'wb') as job_save_file:
-            pickle.dump(job_save_dict,job_save_file)
+        for _ in range(10):
+            try:
+                with open(my_job_file,'wb') as job_save_file:
+                    pickle.dump(job_save_dict,job_save_file)
+                break
+            except:pass
 
         return
 
 if __name__=="__main__":
     import kernelcompare as kc
     import mycluster
-    data_gen_variation_list=[kc.KernelCompare().build_quadratic_datagen_dict_override()]
+    
     Ndiff_type_variations=('modeldict:Ndiff_type',['recursive','product'])
-    max_bw_Ndiff_variations=('modeldict:max_bw_Ndiff',[2])
-    Ndiff_start_variations=('modeldict:Ndiff_start',[2])
-    product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])#include None too?
+    max_bw_Ndiff_variations=('modeldict:max_bw_Ndiff',[2,3])
+    Ndiff_start_variations=('modeldict:Ndiff_start',[1,2])
+    product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])
     normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
-    optdict_variation_list=[Ndiff_type_variations,max_bw_Ndiff_variations,Ndiff_start_variations]
-    mycluster.run_cluster(mytype='master',optdict_variation_list=optdict_variation_list)
+    optdict_variation_list=[Ndiff_type_variations,max_bw_Ndiff_variations,Ndiff_start_variations,product_kern_norm_variations,normalize_Ndiffwtsum_variations]
+    
+    train_n_variations=('train_n',[30,45,60])
+    ykern_grid_variations=('ykern_grid',[31,46,61])
+    ftype_variations=('ftype',['linear','quadratic'])
+    param_count_variations=('param_count',[1,2])
+    datagen_variation_list=[train_n_variations,ftype_variations,param_count_variations]
+    
+    
+    mycluster.run_cluster(mytype='master',optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
 
 

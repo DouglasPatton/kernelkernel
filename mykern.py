@@ -500,13 +500,18 @@ class kNdtool( object ):
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
         savedict['datagen_dict']=self.datagen_dict
-        try:
+        try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
         except:
             pass
         try:
-            with open(filename,'rb') as modelfile:
-                modellist=pickle.load(modelfile)
+            for _ in range(20):
+                try: 
+                    with open(filename,'rb') as modelfile:
+                        modellist=pickle.load(modelfile)
+                    break
+                except:
+                    sleep(0.1)
                 #print('---------------success----------')
         except:
             modellist=[]

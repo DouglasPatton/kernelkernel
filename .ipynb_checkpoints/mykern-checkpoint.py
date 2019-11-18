@@ -500,7 +500,7 @@ class kNdtool( object ):
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
         savedict['datagen_dict']=self.datagen_dict
-        try:
+        try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
         except:
             pass
