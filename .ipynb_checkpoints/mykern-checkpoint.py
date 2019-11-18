@@ -649,11 +649,11 @@ class optimize_free_params(kNdtool):
         
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
-        mse_threshold=opt_settings_dict['mse_threshold']
+        '''mse_threshold=opt_settings_dict['mse_threshold']
         inherited_mse=optimizedict['mse']
         if inherited_mse<mse_threshold:
             print(f'optimization halted because inherited mse:{inherited_mse}<mse_threshold:{mse_threshold}')
-            return
+            return'''
         
         model_param_formdict=modeldict['hyper_param_form_dict']
         xkerngrid=modeldict['xkern_grid']
