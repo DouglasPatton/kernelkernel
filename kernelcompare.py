@@ -474,8 +474,7 @@ class KernelOptModelTools:
         if opt_dict_override==None:
             opt_dict_override={}
         max_bw_Ndiff=2
-        try:train_n=self.train_n
-        except:train_n=60
+        
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
@@ -485,7 +484,7 @@ class KernelOptModelTools:
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
             'xkern_grid':'no',
-            'ykern_grid':train_n+1,
+            'ykern_grid':61,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
@@ -505,8 +504,8 @@ class KernelOptModelTools:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.01,
-            'fatol':0.1,
+            'xatol':0.5,
+            'fatol':1,
             'adaptive':True
             }
         optimizer_settings_dict1={
