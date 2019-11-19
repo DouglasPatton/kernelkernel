@@ -26,7 +26,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     There should be 1 master and 1 node. each node makes sure its assigned name is not already in the namelist
     appending a number for the number of matches+1. Then nodelist appends and posts back to namelist its name and a time,status tupple with
-    status='created'(this process should keep namelist open, so other nodes can't do the exact same thing at the
+    status='ready for job'(this process should keep namelist open, so other nodes can't do the exact same thing at the
     same time and both think they got the right name....
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
@@ -38,22 +38,19 @@ class run_cluster(kernelcompare.KernelCompare):
         self.oldnode_threshold=datetime.timedelta(minutes=59,seconds=10)
         
         self.savedirectory=self.setdirectory(local_test=local_test)
+        print(f'self.savedirectory{self.savedirectory}')
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
         self.initialize(mytype,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
         
     def setdirectory(self,local_test='yes'):
         if local_test=='No' or local_test=='no' or local_test==0:
-            os.chdir('O:/Public/DPatton/kernel/')
+            savedirectory='O:/Public/DPatton/kernel/'
         elif local_test=='yes' or local_test==None or local_test=='Yes' or local_test==1:
-            try:
-                os.chdir('cluster_test')
-            except:
-                os.mkdir('cluster_test')
-                os.chdir('cluster_test')
+            savedirectory=os.path.join(os.getcwd(),'cluster_test')
         else: 
             assert False,f"local_test not understood. value:{local_test}"
-        return os.getcwd()
+        return savedirectory
         
         
         
@@ -85,6 +82,12 @@ class run_cluster(kernelcompare.KernelCompare):
             self.add_to_namelist(myname)
             self.runnode(myname)
 
+            
+    def getreadynames(self,namelist):
+        return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
+            
+            
+            
     def runmaster(self,optdict_variation_list,datagen_variation_list):
         try: 
             os.chdir(self.savedirectory)
@@ -95,6 +98,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
         list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
         model_run_count=len(list_of_run_dicts)
+        
         run_dict_status=['ready for node']*model_run_count
         
         i=0
@@ -103,8 +107,10 @@ class run_cluster(kernelcompare.KernelCompare):
             
             self.rebuild_current_namelist()#get rid of the old names that are inactive
             namelist=self.getnamelist()
+            readynamelist=self.getreadynames(namelist)
+            
             assignment_tracker=[]
-            for name in namelist:
+            for name in readynamelist:
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
@@ -130,37 +136,52 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=='failed':
                         job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
                         assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
-                        try:
-                            self.discard_job_for_node(name[0],list_of_run_dicts)
-                            run_dict_status[job_idx]='ready for node'
-                            self.update_myname_in_namelist(name[0],status='ready')
-                        except:
-                            print(traceback.format_exc())
-                            print(f'node:{name[0]} has failed but could not free-up node and/or job_idx:{job_idx}')
+                        self.discard_job_for_node(name[0])
+                        run_dict_status[job_idx]='ready for node'
+                        ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
+                        self.update_myname_in_namelist(name[0],status='ready for job')
+                        self.mergethisnode(name[0])
                     if job_status=='finished':
                         job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
                         assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
-                        try:
-                            self.discard_job_for_node(name[0],list_of_run_dicts)
-                            run_dict_status[job_idx]='finished'
-                            #self.update_myname_in_namelist(name[0],status='ready')
-                        except:
-                            print(traceback.format_exc())
-                            print(f'node:{name[0]} has finished but could not free-up node and/or job_idx:{job_idx}')
-                    ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
+                        self.discard_job_for_node(name[0])
+                        run_dict_status[job_idx]='finished'
+                        self.update_myname_in_namelist(name[0],status='ready for job')
+                        self.mergethisnode(name[0])
                 except:
                     print(traceback.format_exc())
                     
                     #print(Exception)
                     #print(f'status check for_node named:{name} has failed')
-            sleep(40)
+            sleep(15)
             
 
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
         print('all jobs finished')
+    
+    def mergethisnode(self,name):
+        nodesdir=os.path.join(self.savedirectory,name)
+        for i in range(10):
+            try:
+                self.merge_and_condense_saved_models(merge_directory=nodesdir,savedirectory=self.savedirectory,condense=1,verbose=0)
+                break
+            except:
+                if i==9:
+                    try:
+                        self.merge_and_condense_saved_models(merge_directory=nodesdir,savedirectory=self.savedirectory,condense=1,verbose=1)
+                    except:
+                        print(traceback.format_exc())
+                
+                
         
     def discard_job_for_node(self,name):
-        os.remove(os.path.join(self.savedirectory,name,name+'_job'))
+        for i in range(10):
+            try:
+                os.remove(os.path.join(self.savedirectory,name,name+'_job'))
+                break
+            except:
+                if i==9:
+                    print(traceback.format_exc())
         return
     
     
@@ -216,26 +237,17 @@ class run_cluster(kernelcompare.KernelCompare):
     def activitycheck(self,name):
         nodedir=os.path.join(self.savedirectory,name)
         node_job=os.path.join(nodedir,name+'_job')
-        node_model_save=os.path.join(self.savedirectory,'model_save')
-        
-        '''        for _ in range(10):
-            try:
-                with open(node_job) as saved_jobfile:
-                    job=pickled.load(saved_jobfile)
-                break
-            except:pass
-        last_status=job['node_status'][-1]
-        
-        if last_status[1]=='starting':'''
+        node_model_save=os.path.join(self.savedirectory,name,'model_save')
+        #print(node_model_save)
         for i in range(10):
             try:
                 with open(node_model_save) as saved_model_save:
-                    model_save=pickled.load(saved_model_save)
+                    model_save=pickle.load(saved_model_save)
                 return model_save[-1]['when_saved']
                 break
             except:
                 if i==9:print(traceback.format_exc())
-
+        return None
                 
             
             
@@ -247,7 +259,7 @@ class run_cluster(kernelcompare.KernelCompare):
         namelist=self.getnamelist()
         assert len([1 for name in namelist if name[0]==newname])==0,"newname has a match already!"
         now=strftime("%Y%m%d-%H%M%S")
-        time_status_tup_list=[(now,"created")]
+        time_status_tup_list=[(now,'ready for job')]
         namelist.append((newname,time_status_tup_list))
         for _ in range(20):
             try:
@@ -264,10 +276,10 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
     def getnamelist(self):
-        os.chdir(self.savedirectory)
+        
         for _ in range(20):
             try: 
-                with open('namelist','rb') as namelist:
+                with open(os.path.join(self.savedirectory,'namelist'),'rb') as namelist:
                     return pickle.load(namelist)
             except:
                 print(traceback.format_exc())
@@ -308,14 +320,11 @@ class run_cluster(kernelcompare.KernelCompare):
             self.update_node_job_status(myname,status='starting',mydir=mydir)
             try:
                 kernelcompare.KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
-            except:
-                print(traceback.format_exc())
-            try:
                 self.update_node_job_status(myname,status="finished",mydir=mydir)
-
             except:
-                print(traceback.format_exc())
                 self.update_node_job_status(myname,status='failed',mydir=mydir)
+                print(traceback.format_exc())
+            
         self.runnode(myname)
 
 
