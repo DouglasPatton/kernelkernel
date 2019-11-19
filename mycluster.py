@@ -147,13 +147,15 @@ class run_cluster(kernelcompare.KernelCompare):
                     assert False, 'masterfile problem'
     
     def runmaster(self,optdict_variation_list,datagen_variation_list):
-        if self.checkmaster(): masterfile=self.getmaster()
-        if type(masterfile) is dict:
-            assignment_tracker=masterfile['assignment_tracker']
-            list_of_run_dicts=masterfile['list_of_run_dicts']
-            run_dict_status=masterfile['run_dict_status']
-            model_run_count=len(list_of_run_dicts)
-        else:
+        if self.checkmaster(): 
+            masterfile=self.getmaster()
+        try: 
+            if type(masterfile) is dict:
+                assignment_tracker=masterfile['assignment_tracker']
+                list_of_run_dicts=masterfile['list_of_run_dicts']
+                run_dict_status=masterfile['run_dict_status']
+                model_run_count=len(list_of_run_dicts)
+        except:
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
             model_run_count=len(list_of_run_dicts)
