@@ -113,7 +113,7 @@ class run_cluster(kernelcompare.KernelCompare):
         for i in range(10):
             try:
                 with open('masterfile_archive','wb') as savefile:
-                    pickled.dump(masterfile,savefile)
+                    pickle.dump(masterfile,savefile)
                     
                 break
             except:
