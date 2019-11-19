@@ -89,7 +89,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
             
     def getreadynames(self,namelist):
-        return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job' or name_i[1][-1][1]= ]
+        return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
     
     def checkmaster(self):
         return os.path.exists(os.path.join(self.savedirectory,'masterfile'))
