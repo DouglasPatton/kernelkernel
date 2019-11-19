@@ -306,7 +306,7 @@ class run_cluster(kernelcompare.KernelCompare):
             print("mydir:{mydir} doesn't exist, so creating it")
             os.mkdir(mydir)
             os.chdir(mydir)
-
+        self.update_myname_in_namelist(myname,status='ready for job')
         start_time=strftime("%Y%m%d-%H%M%S")
         i_have_opt_job=0
         i=0
@@ -325,10 +325,23 @@ class run_cluster(kernelcompare.KernelCompare):
             self.update_node_job_status(myname,status='starting',mydir=mydir)
             try:
                 kernelcompare.KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
-                self.update_node_job_status(myname,status="finished",mydir=mydir)
+                success=1
             except:
-                self.update_node_job_status(myname,status='failed',mydir=mydir)
+                success=0
+                try:
+                    self.update_node_job_status(myname,status='failed',mydir=mydir)
+                except:
+                    print(traceback.format_exc())
+                    self.runnode(myname+'0')
                 print(traceback.format_exc())
+                
+            if success==1:
+                try:
+                    self.update_node_job_status(myname,status="finished",mydir=mydir)
+                except:
+                    print(f'could not update node status for {myname} to finished')
+                    print(traceback.format_exc())
+                    self.runnode(myname+'0')
             
         self.runnode(myname)
 

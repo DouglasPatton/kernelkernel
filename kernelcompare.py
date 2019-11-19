@@ -359,7 +359,7 @@ class KernelOptModelTools:
             #print(f'keys:{keys}')
             return matches
         
-        if not matchcount>help_start*2:
+        if not matchcount<help_start:
             return matches
         print('-----partial match is looking for a partial match------')
         new_dict_list=[]
@@ -382,6 +382,9 @@ class KernelOptModelTools:
             if len(matchlist)>0:
                 print(f'{len(matchlist)} partial matches found only after substituting {new_dict}')
                 return matchlist
+        if len(matchlist)==0:
+            print(f'partial_match could not find any partial matches')
+        return matchlist
             
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
