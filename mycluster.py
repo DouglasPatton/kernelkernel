@@ -139,7 +139,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             print(traceback.format_exc())
                             print(f'setup_job_for_node named:{name[0]}, i:{i} has failed')
                     if job_status=='failed':
-                        job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
+                        job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]][-1]
                         assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
                         self.discard_job_for_node(name[0])
                         run_dict_status[job_idx]='ready for node'
@@ -202,6 +202,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 with open(os.path.join(self.savedirectory,name,name+'_job'),'wb') as newjob:
                     pickle.dump(jobdict,newjob)
                 print(f'job setup for node:{name}')
+                print(f'newjob has jobdict:{jobdict})
                 break
             except:
                 print(traceback.format_exc())
