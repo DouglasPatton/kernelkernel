@@ -148,7 +148,10 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.update_myname_in_namelist(name[0],status='ready for job')
                         self.mergethisnode(name[0])
                     if job_status=='finished':
-                        job_idx=assignment_tracker[name[0]]
+                        try:job_idx=assignment_tracker[name[0]]
+                        except:
+                            print(f'assignment_tracker failed for key{name[0]}')
+                            print(f'assignment_tracker:{assignment_tracker}')
                         self.discard_job_for_node(name[0])
                         del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='finished'
