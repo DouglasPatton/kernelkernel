@@ -196,19 +196,14 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=="no file found":# and (not late):
                         print(f'about to setup the job for node:{name[0]}')
                         try:
-                            if len(ready_dict_idx)==0:
-                                print('ready_dict_idx has length==0')
-                                print(f'run_dict_status:{run_dict_status}')
-                                print(f'readynamelist:{readynamelist}')
-                                break
-                            first_ready_dict_idx=ready_dict_idx[0]
-                            self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
-                            i+=1
-                            run_dict_status[first_ready_dict_idx]='assigned'
-                            assignment_tracker[name[0]]=first_ready_dict_idx
-                            print('assignment_tracker',assignment_tracker)
-                            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node'] 
-                            
+                            if len(ready_dict_idx)>0:
+                                first_ready_dict_idx=ready_dict_idx[0]
+                                self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
+                                i+=1
+                                run_dict_status[first_ready_dict_idx]='assigned'
+                                assignment_tracker[name[0]]=first_ready_dict_idx
+                                print('assignment_tracker',assignment_tracker)
+                                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node'] 
                         except:
                             print(traceback.format_exc())
                             print(f'setup_job_for_node named:{name[0]}, i:{i} has failed')
