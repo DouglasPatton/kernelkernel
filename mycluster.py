@@ -156,9 +156,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=='finished':
                         try:job_idx=assignment_tracker[name[0]]
                         except:
-                            print(f'assignment_tracker failed for key:{name[0]}')
+                            print(f'assignment_tracker failed for key:{name[0]}, job_status:{job_status} ')
                             print(f'assignment_tracker:{assignment_tracker}')
                         self.discard_job_for_node(name[0])
+                        print(f'deleting assignment_tracker for key:{name[0]} with job_status:{job_status}')
                         del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='finished'
                         self.update_myname_in_namelist(name[0],status='ready for job')
