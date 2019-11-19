@@ -120,7 +120,11 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
                 try:
-                    job_time,job_status=self.check_node_job_status(name[0],time=1)
+                    try:
+                        job_time,job_status=self.check_node_job_status(name[0],time=1)
+                    except:
+                        break
+                        
                     #print(f"job_time:{job_time},job_status:{job_status}")
                     now=strftime("%Y%m%d-%H%M%S")
                     #elapsed=now-job_time
@@ -143,6 +147,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=='failed':
                         job_idx=assignment_tracker[name[0]]
                         self.discard_job_for_node(name[0])
+                        print(f'deleting assignmen_tracker for key:{name[0]} with job_status:{job_status}')
                         del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='ready for node'
                         ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
