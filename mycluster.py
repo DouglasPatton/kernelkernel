@@ -162,7 +162,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
         assignment_tracker={}
         i=0
-        while not all([status=='finished' for status in run_dict_status])==True:
+        while all([status=='finished' for status in run_dict_status])==False:
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
             self.rebuild_current_namelist()#get rid of the old names that are inactive
@@ -188,6 +188,9 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=="no file found":# and (not late):
                         print(f'about to setup the job for node:{name}')
                         try:
+                            if len(ready_dict_idx)==0:
+                                print('ready_dict_idx has length==0')
+                                break
                             first_ready_dict_idx=ready_dict_idx[0]
                             self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
                             i+=1
