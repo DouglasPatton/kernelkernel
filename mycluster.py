@@ -89,7 +89,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
             
     def getreadynames(self,namelist):
-        return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
+        return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job' or name_i[1][-1][1]= ]
     
     def checkmaster(self):
         return os.path.exists(os.path.join(self.savedirectory,'masterfile'))
@@ -198,6 +198,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             if len(ready_dict_idx)==0:
                                 print('ready_dict_idx has length==0')
                                 print(f'run_dict_status:{run_dict_status}')
+                                print(f'readynamelist:{readynamelist}'')
                                 break
                             first_ready_dict_idx=ready_dict_idx[0]
                             self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
@@ -303,6 +304,7 @@ class run_cluster(kernelcompare.KernelCompare):
         current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold or self.activitycheck(name_times_tup[0])<self.oldnode_threshold]
         
         old_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if not s_since_update_list[i]<self.oldnode_threshold]
+        if len(old_name_list)>0:print(f'old_name_list:{old_name_list}')
         try:
             [os.rmdir(name[0]) for name in old_name_list]
         except Exception as e: print(e)
