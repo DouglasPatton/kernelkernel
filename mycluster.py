@@ -193,10 +193,11 @@ class run_cluster(kernelcompare.KernelCompare):
                     #late=elapsed>datetime.timedelta(seconds=30)
                     
                     if job_status=="no file found":# and (not late):
-                        print(f'about to setup the job for node:{name}')
+                        print(f'about to setup the job for node:{name[0]}')
                         try:
                             if len(ready_dict_idx)==0:
                                 print('ready_dict_idx has length==0')
+                                print(f'run_dict_status:{run_dict_status}')
                                 break
                             first_ready_dict_idx=ready_dict_idx[0]
                             self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
