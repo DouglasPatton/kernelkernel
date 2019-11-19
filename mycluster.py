@@ -121,7 +121,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(traceback.format_exc())
                     print('arechivemaster has failed')
                     return
-        for i in range(10):
+        for i in range(10): 
             try:
                 os.remove('masterfile')
                 return
