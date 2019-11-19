@@ -326,8 +326,8 @@ class run_cluster(kernelcompare.KernelCompare):
         current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
         old_name_list1 = [name_times_tup for i, name_times_tup in enumerate(namelist) if not s_since_update_list[i] < self.oldnode_threshold]
 
-
-        for i in range(len(old_name_list)):
+        old_name_list=[]
+        for i in range(len(old_name_list1)):
             name_times_tup=old_name_list[i]
             iname=name_times_tup[0]
             for j in range(10):
