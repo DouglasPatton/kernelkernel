@@ -105,7 +105,7 @@ class run_cluster(kernelcompare.KernelCompare):
         model_run_count=len(list_of_run_dicts)
         
         run_dict_status=['ready for node']*model_run_count
-        
+        assignment_tracker={}
         i=0
         while any([status=='ready for node' for status in run_dict_status])==True:
             
@@ -114,7 +114,7 @@ class run_cluster(kernelcompare.KernelCompare):
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
             
-            assignment_tracker={}
+            
             for name in readynamelist:
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                 
