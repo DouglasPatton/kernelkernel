@@ -115,7 +115,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(traceback.format_exc())
                     print('arechivemaster has failed')
                     return
-        for i in ragne (10):
+        for i in range(10):
             try:
                 os.remove('mastefile')
                 return
@@ -225,7 +225,7 @@ class run_cluster(kernelcompare.KernelCompare):
             sleep(15)
             
 
-        assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
+        #assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
         self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
         self.archivemaster()
         print('all jobs finished')
@@ -475,16 +475,17 @@ class run_cluster(kernelcompare.KernelCompare):
         time_status_tup=(now,status)
         myname_tup[1].append(time_status_tup)
         namelist[i]=myname_tup
-        i=0
-        for _ in range(10):
+        
+        for i in range(10):
             try:
                 with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
                     pickle.dump(namelist,savednamelist)
                 return
             except:
-                i+=1
-                print(traceback.format_exc())
+                if i==9:
+                    print(traceback.format_exc())
                 sleep(.25*log(10*i+1))
+        return
         
 
 
