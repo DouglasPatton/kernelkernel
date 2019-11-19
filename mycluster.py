@@ -202,7 +202,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 with open(os.path.join(self.savedirectory,name,name+'_job'),'wb') as newjob:
                     pickle.dump(jobdict,newjob)
                 print(f'job setup for node:{name}')
-                print(f'newjob has jobdict:{jobdict}'')
+                print(f'newjob has jobdict:{jobdict}')
                 break
             except:
                 print(traceback.format_exc())
