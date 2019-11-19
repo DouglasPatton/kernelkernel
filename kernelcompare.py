@@ -166,7 +166,7 @@ class KernelOptModelTools:
                     print("---------no existing files named condensed_model_save could be found. "
                         "if it is in merge_directory, it will be picked up and merged anyways--------")
         
-        os.chdir(self.kc_savedirectory)
+        os.chdir(merge_directory)
 
 
         if len(model_save_filelist)==0:
@@ -180,13 +180,17 @@ class KernelOptModelTools:
         list_of_saved_lists=[]
         if len(model_save_filelist)>0:
             for file_i in model_save_filelist:
-                with open(file_i,'rb') as savedfile:
-                    try: 
-                        saved_model_list=pickle.load(savedfile)
-                        if verbose==1:
-                            print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
-                    except:
-                        print(f'warning!saved_model_list{file_i} could not pickle.load')
+                for i in range(10)
+                    with open(file_i,'rb') as savedfile:
+                        try: 
+                            saved_model_list=pickle.load(savedfile)
+                            if verbose==1:
+                                print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
+                            break
+                        except:
+                            if i==9:
+                                print(f'warning!saved_model_list{file_i} could not pickle.load')
+                                print(traceback.format_exc()))
                         
                 if condense==1:
                     list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
