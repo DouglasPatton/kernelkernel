@@ -185,6 +185,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     try:
                         job_time,job_status=self.check_node_job_status(name[0],time=1)
                     except:
+                        print(f'check_node_job_status failed for node:{name[0]}')
                         break
                         
                     #print(f"job_time:{job_time},job_status:{job_status}")
@@ -221,6 +222,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.update_myname_in_namelist(name[0],status='ready for job')
                         self.mergethisnode(name[0])
                     if job_status=='finished':
+                        print(f'node:{name[0]} has finished')
                         try:job_idx=assignment_tracker[name[0]]
                         except:
                             print(f'assignment_tracker failed for key:{name[0]}, job_status:{job_status} ')
@@ -236,7 +238,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     
                     #print(Exception)
                     #print(f'status check for_node named:{name} has failed')
-            sleep(15)
+            sleep(5)
             
 
         #assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
