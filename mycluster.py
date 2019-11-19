@@ -134,6 +134,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             i+=1
                             run_dict_status[first_ready_dict_idx]='assigned'
                             assignment_tracker[name[0]]=first_ready_dict_idx
+                            print('assignment_tracker',assignment_tracker)
                             ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node'] 
                             
                         except:
@@ -150,7 +151,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     if job_status=='finished':
                         try:job_idx=assignment_tracker[name[0]]
                         except:
-                            print(f'assignment_tracker failed for key{name[0]}')
+                            print(f'assignment_tracker failed for key:{name[0]}')
                             print(f'assignment_tracker:{assignment_tracker}')
                         self.discard_job_for_node(name[0])
                         del assignment_tracker[name[0]]
