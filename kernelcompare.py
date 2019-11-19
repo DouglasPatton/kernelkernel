@@ -180,7 +180,7 @@ class KernelOptModelTools:
         list_of_saved_lists=[]
         if len(model_save_filelist)>0:
             for file_i in model_save_filelist:
-                for i in range(10)
+                for i in range(10):
                     with open(file_i,'rb') as savedfile:
                         try: 
                             saved_model_list=pickle.load(savedfile)
