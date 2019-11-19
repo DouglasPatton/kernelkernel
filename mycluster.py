@@ -97,10 +97,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 with open('masterfile','rb') as themasterfile:
                     masterfile=pickle.load(themasterfile)
                 return masterfile
+            except(FileNotFoundError):
+                return False
             except:
-                sleep(.25)
                 if i==9:
-                    return False
+                    sleep(.5)
+                    assert False, "checkmaster can't open masterfile"
      
     def archivemaster(self):
         masterfile=self.checkmaster()
@@ -371,6 +373,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     assert False,f"runnode named {myname} could not check master"
         if master_status==False:
             print(f'master_status returns False, so {myname} is exiting')
+            print(f'master_status:{master_status}')
             return
         mydir=os.path.join(self.savedirectory,myname)
         my_job_file=os.path.join(mydir,myname+'_job')
