@@ -90,8 +90,11 @@ class run_cluster(kernelcompare.KernelCompare):
             
     def getreadynames(self,namelist):
         return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
-            
+    
     def checkmaster(self):
+        return os.path.exists(os.path.join(self.savedirectory,'masterfile'))
+    
+    def getmaster(self):
         for i in range(10):
             try:
                 with open('masterfile','rb') as themasterfile:
@@ -103,10 +106,10 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 if i==9:
                     sleep(.5)
-                    assert False, "checkmaster can't open masterfile"
+                    assert False, "getmaster can't open masterfile"
      
     def archivemaster(self):
-        masterfile=self.checkmaster()
+        masterfile=self.getmaster()
         for i in range(10):
             try:
                 with open('masterfile_archive','wb') as savefile:
@@ -144,7 +147,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     assert False, 'masterfile problem'
     
     def runmaster(self,optdict_variation_list,datagen_variation_list):
-        masterfile=self.checkmaster()
+        if self.checkmaster(): masterfile=self.getmaster()
         if type(masterfile) is dict:
             assignment_tracker=masterfile['assignment_tracker']
             list_of_run_dicts=masterfile['list_of_run_dicts']
@@ -371,12 +374,12 @@ class run_cluster(kernelcompare.KernelCompare):
     def runnode(self,myname):
         for i in range(10):
             try:
-                master_status=self.checkmaster()
+                masterfile_exists=self.checkmaster()
             except:
                 if i==9:
                     print(traceback.format_exc())
                     assert False,f"runnode named {myname} could not check master"
-        if master_status==False:
+        if masterfile_exists==False:
             print(f'master_status returns False, so {myname} is exiting')
             print(f'master_status:{master_status}')
             return
