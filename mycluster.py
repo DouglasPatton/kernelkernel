@@ -115,7 +115,7 @@ class run_cluster(kernelcompare.KernelCompare):
     
     def runmaster(self,optdict_variation_list,datagen_variation_list):
         masterfile=self.checkmaster()
-        if not type(masterfile) is dict:
+        if type(masterfile) is dict:
             assignment_tracker=masterfile['assignment_tracker']
             list_of_run_dicts=masterfile['list_of_run_dicts']
             run_dict_status=masterfile['run_dict_status']
