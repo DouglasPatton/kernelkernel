@@ -102,6 +102,32 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==9:
                     return False
      
+    def archivemaster(self):
+        masterfile=self.checkmaster()
+        for i in range(10):
+            try:
+                with open('masterfile_archive','wb') as savefile:
+                    pickled.dump(masterfile,savefile)
+                    
+                break
+            except:
+                if i==9:
+                    print(traceback.format_exc())
+                    print('arechivemaster has failed')
+                    return
+        for i in ragne (10):
+            try:
+                os.remove('mastefile')
+                return
+            except:
+                if i==9:
+                    print('mastefile_archive created, but removal of old file has failed')
+                    print(traceback.format_exc())
+                    return
+                    
+            
+                
+    
     def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts):
         savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
         for i in range(10):
@@ -130,10 +156,6 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             os.mkdir(self.savedirectory)
             os.chdir(self.savedirectory)
-        
-        
-        
-        
         
         
         assignment_tracker={}
@@ -204,8 +226,12 @@ class run_cluster(kernelcompare.KernelCompare):
             
 
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
-        
+        self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
+        self.archivemaster()
         print('all jobs finished')
+        return
+    
+    
     
     def mergethisnode(self,name):
         nodesdir=os.path.join(self.savedirectory,name)
@@ -344,7 +370,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(traceback.format_exc())
                     assert False,f"runnode named {myname} could not check master"
         if master_status==False:
-            print(f'master_status returns False, so {newname} is exiting')
+            print(f'master_status returns False, so {myname} is exiting')
             return
         mydir=os.path.join(self.savedirectory,myname)
         my_job_file=os.path.join(mydir,myname+'_job')
