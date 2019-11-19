@@ -35,12 +35,37 @@ class run_cluster(kernelcompare.KernelCompare):
         
         if mytype==None:
             mytype='node'
+        if optdict_variation_list==None:
+            optdict_variation_list=self.getoptdictvariations()
+        if datagen_variation_list==None:
+            datagen_variation_list=self.getdatagenvariations()
+
         self.oldnode_threshold=datetime.timedelta(minutes=59,seconds=10)
-        
         self.savedirectory=self.setdirectory(local_test=local_test)
         print(f'self.savedirectory{self.savedirectory}')
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
         self.initialize(mytype,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+
+
+    def getoptdictvariations(self):
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
+        Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self', 'own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
+        # ykern_grid_variations=('ykern_grid',[31,46,61])
+        optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations, Ndiff_start_variations,
+                                  product_kern_norm_variations, normalize_Ndiffwtsum_variations]
+
+        return optdict_variation_list
+
+     def getdatagenvariations(self):
+        train_n_variations = ('train_n', [30, 45, 60])
+        ftype_variations = ('ftype', ['linear', 'quadratic'])
+        param_count_variations = ('param_count', [1, 2])
+        datagen_variation_list = [train_n_variations, ftype_variations, param_count_variations]
+        return datagen_variation_list
+
 
         
     def setdirectory(self,local_test='yes'):
@@ -298,9 +323,30 @@ class run_cluster(kernelcompare.KernelCompare):
         name_last_update_list=[(name,times_status_tup_list[-1][0]) for name,times_status_tup_list in namelist]#times_status_tup_list[-1][0]:-1 for last item in list, and 0 for first item in time_status tuple
         s_since_update_list=[self.s_before_now(time) for _,time in name_last_update_list]
         
-        current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold or self.activitycheck(name_times_tup[0])<self.oldnode_threshold]
+        current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
+        old_name_list1 = [name_times_tup for i, name_times_tup in enumerate(namelist) if not s_since_update_list[i] < self.oldnode_threshold]
+
+
+        for i in range(len(old_name_list)):
+            name_times_tup=old_name_list[i]
+            iname=name_times_tup[0]
+            for j in range(10):
+                try:
+                    itime=self.activitycheck(iname)
+                    if itime==None:
+                        old_name_list.append(iname)
+                    if itime<self.oldnode_threshold:
+                        current_name_list.append(iname)
+                    break
+                except:
+                    if j==9:
+                        print(traceback.format_exc())
+                        old_name_list.append(iname)
+
+
+
         
-        old_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if not s_since_update_list[i]<self.oldnode_threshold]
+
         if len(old_name_list)>0:print(f'old_name_list:{old_name_list}')
         try:
             [os.rmdir(name[0]) for name in old_name_list]
