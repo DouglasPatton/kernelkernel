@@ -107,14 +107,14 @@ class run_cluster(kernelcompare.KernelCompare):
         run_dict_status=['ready for node']*model_run_count
         
         i=0
-        while all([status=='finished' for status in run_dict_status])==False:
+        while any([status=='ready for node' for status in run_dict_status])==True:
             
             
             self.rebuild_current_namelist()#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
             
-            assignment_tracker=[]
+            assignment_tracker={}
             for name in readynamelist:
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                 
@@ -133,24 +133,24 @@ class run_cluster(kernelcompare.KernelCompare):
                             self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
                             i+=1
                             run_dict_status[first_ready_dict_idx]='assigned'
+                            assignment_tracker[name[0]]=first_ready_dict_idx
                             ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node'] 
-                            assignment_tracker.append((name[0],first_ready_dict_idx))
+                            
                         except:
                             print(traceback.format_exc())
                             print(f'setup_job_for_node named:{name[0]}, i:{i} has failed')
                     if job_status=='failed':
-                        job_idx_list=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
-                        job_idx=job_idx_list[-1]
-                        assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
+                        job_idx=assignment_tracker[name[0]]
                         self.discard_job_for_node(name[0])
+                        del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='ready for node'
                         ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
                         self.update_myname_in_namelist(name[0],status='ready for job')
                         self.mergethisnode(name[0])
                     if job_status=='finished':
-                        job_idx=[name_idx_tup[1] for name_idx_tup in assignment_tracker if name_idx_tup[0]==name[0]]
-                        assignment_tracker=[name_idx_tup for name_idx_tup in assignment_tracker if not name_idx_tup[0]==name[0]]
+                        job_idx=assignment_tracker[name[0]]
                         self.discard_job_for_node(name[0])
+                        del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='finished'
                         self.update_myname_in_namelist(name[0],status='ready for job')
                         self.mergethisnode(name[0])
