@@ -98,6 +98,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     masterfile=pickle.load(themasterfile)
                 return masterfile
             except(FileNotFoundError):
+                print(traceback.format_exc())
                 return False
             except:
                 if i==9:
@@ -136,6 +137,7 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 with open('masterfile','wb') as themasterfile:
                     pickle.dump(savedict,themasterfile)
+                break
             except:
                 if i==9:
                     print(traceback.format_exc())
