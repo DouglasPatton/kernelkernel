@@ -198,7 +198,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             if len(ready_dict_idx)==0:
                                 print('ready_dict_idx has length==0')
                                 print(f'run_dict_status:{run_dict_status}')
-                                print(f'readynamelist:{readynamelist}'')
+                                print(f'readynamelist:{readynamelist}')
                                 break
                             first_ready_dict_idx=ready_dict_idx[0]
                             self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
