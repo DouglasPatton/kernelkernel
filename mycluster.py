@@ -59,7 +59,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
         return optdict_variation_list
 
-     def getdatagenvariations(self):
+    def getdatagenvariations(self):
         train_n_variations = ('train_n', [30, 45, 60])
         ftype_variations = ('ftype', ['linear', 'quadratic'])
         param_count_variations = ('param_count', [1, 2])

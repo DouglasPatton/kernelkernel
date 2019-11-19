@@ -17,7 +17,7 @@ if __name__=="__main__":
     datagen_variation_list=[train_n_variations,ftype_variations,param_count_variations]
     '''
     
-    
+    '''
     Ndiff_type_variations=('modeldict:Ndiff_type',['recursive','product'])
     optdict_variation_list=[Ndiff_type_variations]
     
