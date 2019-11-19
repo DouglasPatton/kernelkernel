@@ -48,6 +48,11 @@ class run_cluster(kernelcompare.KernelCompare):
             savedirectory='O:/Public/DPatton/kernel/'
         elif local_test=='yes' or local_test==None or local_test=='Yes' or local_test==1:
             savedirectory=os.path.join(os.getcwd(),'cluster_test')
+            try:
+                os.chdir(savedirectory)
+            except:
+                os.mkdir(savedirectory)
+                os.chdir(savedirectory)
         else: 
             assert False,f"local_test not understood. value:{local_test}"
         return savedirectory

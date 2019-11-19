@@ -24,7 +24,7 @@ if __name__=="__main__":
     datagen_variation_list=[train_n_variations]
     '''
     
-    mycluster.run_cluster(mytype='master',optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,local_test='no')
+    mycluster.run_cluster(mytype='master',optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,local_test='yes')
     
     
 
