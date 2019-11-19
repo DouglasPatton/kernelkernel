@@ -91,9 +91,38 @@ class run_cluster(kernelcompare.KernelCompare):
     def getreadynames(self,namelist):
         return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
             
-            
-            
+    def checkmaster(self):
+        for i in range(10):
+            try:
+                with open('masterfile','rb') as themasterfile:
+                    masterfile=pickle.load(themasterfile)
+                return masterfile
+            except:
+                sleep(.25)
+                if i==9:
+                    return False
+     
+    def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts):
+        savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
+        for i in range(10):
+            try:
+                with open('masterfile','wb') as themasterfile:
+                    pickle.dump(savedict,themasterfile)
+            except:
+                if i==9:
+                    print(traceback.format_exc())
+                    assert False, 'masterfile problem'
+    
     def runmaster(self,optdict_variation_list,datagen_variation_list):
+        masterfile=self.checkmaster()
+        if not type(masterfile) is dict:
+            assignment_tracker=masterfile['assignment_tracker']
+            list_of_run_dicts=masterfile['list_of_run_dicts']
+            run_dict_status=masterfile['run_dict_status']
+        else:
+            assignment_tracker={}
+            list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+            run_dict_status=['ready for node']*model_run_count
         try: 
             os.chdir(self.savedirectory)
         except:
@@ -101,14 +130,14 @@ class run_cluster(kernelcompare.KernelCompare):
             os.chdir(self.savedirectory)
         
         
-        list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+        
         model_run_count=len(list_of_run_dicts)
         
-        run_dict_status=['ready for node']*model_run_count
+        
         assignment_tracker={}
         i=0
-        while any([status=='ready for node' for status in run_dict_status])==True:
-            
+        while not all([status=='finished' for status in run_dict_status])==True:
+            self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
             self.rebuild_current_namelist()#get rid of the old names that are inactive
             namelist=self.getnamelist()
@@ -173,6 +202,7 @@ class run_cluster(kernelcompare.KernelCompare):
             
 
         assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
+        
         print('all jobs finished')
     
     def mergethisnode(self,name):
@@ -304,6 +334,16 @@ class run_cluster(kernelcompare.KernelCompare):
             return []
 
     def runnode(self,myname):
+        for i in range(10):
+            try:
+                master_status=self.checkmaster()
+            except:
+                if i==9:
+                    print(traceback.format_exc())
+                    assert False,f"runnode named {myname} could not check master"
+        if master_status==False:
+            print(f'master_status returns False, so {newname} is exiting')
+            return
         mydir=os.path.join(self.savedirectory,myname)
         my_job_file=os.path.join(mydir,myname+'_job')
         
