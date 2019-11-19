@@ -123,11 +123,11 @@ class run_cluster(kernelcompare.KernelCompare):
                     return
         for i in range(10):
             try:
-                os.remove('mastefile')
+                os.remove('masterfile')
                 return
             except:
                 if i==9:
-                    print('mastefile_archive created, but removal of old file has failed')
+                    print('masterfile_archive created, but removal of old file has failed')
                     print(traceback.format_exc())
                     return
                     
