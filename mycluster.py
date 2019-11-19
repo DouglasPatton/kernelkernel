@@ -179,12 +179,12 @@ class run_cluster(kernelcompare.KernelCompare):
         nodesdir=os.path.join(self.savedirectory,name)
         for i in range(10):
             try:
-                self.merge_and_condense_saved_models(merge_directory=nodesdir,savedirectory=self.savedirectory,condense=1,verbose=0)
+                self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=1,verbose=0)
                 break
             except:
                 if i==9:
                     try:
-                        self.merge_and_condense_saved_models(merge_directory=nodesdir,savedirectory=self.savedirectory,condense=1,verbose=1)
+                        self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=1,verbose=1)
                     except:
                         print(traceback.format_exc())
                 
