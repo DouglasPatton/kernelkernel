@@ -119,9 +119,11 @@ class run_cluster(kernelcompare.KernelCompare):
             assignment_tracker=masterfile['assignment_tracker']
             list_of_run_dicts=masterfile['list_of_run_dicts']
             run_dict_status=masterfile['run_dict_status']
+            model_run_count=len(list_of_run_dicts)
         else:
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+            model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node']*model_run_count
         try: 
             os.chdir(self.savedirectory)
@@ -131,7 +133,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
         
         
-        model_run_count=len(list_of_run_dicts)
+        
         
         
         assignment_tracker={}
