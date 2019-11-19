@@ -190,7 +190,7 @@ class KernelOptModelTools:
                         except:
                             if i==9:
                                 print(f'warning!saved_model_list{file_i} could not pickle.load')
-                                print(traceback.format_exc()))
+                                print(traceback.format_exc())
                         
                 if condense==1:
                     list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
