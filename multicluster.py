@@ -40,7 +40,7 @@ if __name__=='__main__':
         include_master=include_master.lower()
 
     assert type(workercount) is int and workercount>0, f"workercount should be positive int but is type:{type(workercount)}"
-    if include_master=0 or include_master=='no':
+    if include_master==0 or include_master=='no':
         test=mypool(workercount,0)
-    if include_master=1 or include_master='yes':
+    if include_master==1 or include_master=='yes':
         test=mypool(workercount-1,1)
