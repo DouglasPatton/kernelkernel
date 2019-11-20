@@ -53,10 +53,10 @@ class run_cluster(kernelcompare.KernelCompare):
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['self', 'own_n'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
         # ykern_grid_variations=('ykern_grid',[31,46,61])
         optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations, Ndiff_start_variations,
-                                  product_kern_norm_variations, normalize_Ndiffwtsum_variations]
+                                  product_kern_norm_variations]#, normalize_Ndiffwtsum_variations]
         return optdict_variation_list
 
     def getdatagenvariations(self):
@@ -91,25 +91,33 @@ class run_cluster(kernelcompare.KernelCompare):
         if mytype=="master":
             self.runmaster(optdict_variation_list,datagen_variation_list)
         else:
-            myname=mytype
-            mytype="node"
-            name_regex=r'^'+re.escape(myname)
-            namelist=self.getnamelist()
-            namematch=[1 for name_tup in namelist if re.search(name_regex,name_tup[0])]
-            namecount=len(namematch)
-            if namecount>0:
-                nameset=0
-                while nameset==0:
-                    mynametry=myname+f'{namecount}'
-                    name_regex2=r'^'+re.escape(mynametry)
-                    namematch2=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
-                    if len(namematch2)>0:
-                        namecount+=1
-                    if len(namematch2)==0:
-                        myname=mynametry
-                        break
-            self.add_to_namelist(myname)
-            self.runnode(myname)
+            self.namenode(mytype)
+
+    def namenode(self,myname):
+
+        name_regex=r'^'+re.escape(myname)
+        namelist=self.getnamelist()
+        namematch=[1 for name_tup in namelist if re.search(name_regex,name_tup[0])]
+        namecount=len(namematch)
+        if namecount>0:
+            nameset=0
+            while nameset==0:
+                mynametry=myname+f'{namecount}'
+                name_regex2=r'^'+re.escape(mynametry)
+                namelist=self.getnamelist()
+                namematch2=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
+                if len(namematch2)>0:
+                    namecount+=1
+                if len(namematch2)==0:
+                    myname=mynametry
+                    self.add_to_namelist(myname)
+                    namelist=self.getnamelist()
+                    namematch3=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
+                    if len(namematch3)>1:
+                        self.namenode(myname+str(1))
+                    break
+
+        self.runnode(myname)
 
             
     def getreadynames(self,namelist):
