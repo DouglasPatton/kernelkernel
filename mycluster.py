@@ -32,20 +32,24 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,mytype=None,optdict_variation_list=None,datagen_variation_list=None,local_test='yes'):
+    def __init__(self,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test='yes'):
         
-        if mytype==None:
-            mytype='node'
+        if myname==None:
+            myname='node'
         if optdict_variation_list==None:
             optdict_variation_list=self.getoptdictvariations()
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
 
-        self.oldnode_threshold=datetime.timedelta(minutes=59,seconds=10)
+        self.oldnode_threshold=datetime.timedelta(minutes=60,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
+        self.masterdirectory=self.setmasterdir(self.savedirectory)
+
         print(f'self.savedirectory{self.savedirectory}')
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
-        self.initialize(mytype,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+        self.initialize(myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+
+
 
 
     def getoptdictvariations(self):
@@ -66,18 +70,31 @@ class run_cluster(kernelcompare.KernelCompare):
         datagen_variation_list = [train_n_variations, ftype_variations, param_count_variations]
         return datagen_variation_list
 
-
+    def setmasterdir(self,savedirectory):
+        masterdir=os.path.join(savedirectory,'master')
+        if not os.path.exists(masterdir):
+            for i in range(10):
+                try:
+                    os.mkdir(masterdir)
+                except:
+                    if i==9:
+                        print(traceback.format_exc())
+        return masterdir
         
     def setdirectory(self,local_test='yes'):
         if local_test=='No' or local_test=='no' or local_test==0:
             savedirectory='O:/Public/DPatton/kernel/'
         elif local_test=='yes' or local_test==None or local_test=='Yes' or local_test==1:
             savedirectory=os.path.join(os.getcwd(),'cluster_test')
-            try:
-                os.chdir(savedirectory)
-            except:
-                os.mkdir(savedirectory)
-                os.chdir(savedirectory)
+            if not os.path.exists(savedirectory):
+                for i in range(10):
+                    try:
+                        os.mkdir(savedirectory)
+                        os.chdir(savedirectory)
+                    except:
+                        if i==9:
+                            print(traceback.format_exc())
+
         else: 
             assert False,f"local_test not understood. value:{local_test}"
         return savedirectory
@@ -86,14 +103,45 @@ class run_cluster(kernelcompare.KernelCompare):
         
         
         
-    def initialize(self,mytype,optdict_variation_list=None,datagen_variation_list=None):
+    def initialize(self,myname,optdict_variation_list=None,datagen_variation_list=None):
         os.chdir(self.savedirectory)
-        if mytype=="master":
+        if myname=="master":
             self.runmaster(optdict_variation_list,datagen_variation_list)
         else:
-            self.namenode(mytype)
+            nodename=self.createnamefile(myname)
+            #self.update_my_namefile(myname, status='created'):
+            self.runnode(nodename)
 
-    def namenode(self,myname):
+
+    def createnamefile(self,name):
+        namefilename=os.path.join(self.masterdirectory,name+'.name')
+        if os.path.exists(namefilename):
+            oldname=name
+            nameset=0
+            while nameset==0:
+                name=oldname+randint(0,10000)
+                namefilename = os.path.join(self.masterdirectory, name+'.name')
+                if not os.path.exists(namefilename):
+                    break
+            print(f' {oldname} taken; new name is {name}')
+        else:
+            now = strftime("%Y%m%d-%H%M%S")
+            time_status_tup_list = [(now, 'created')]
+            for i in range(10):
+                try:
+                    with open(namefilename,'wb') as savednamefile:
+                        pickle.dump(time_status_tup_list,savednamefile)
+                except:
+                    if i==9:
+                        print(traceback.format_exc())
+                        print(f'problem creating:{name}, restarting createnamefile')
+                        name=self.createnamefile(name)
+        return name
+
+
+
+
+    '''def namenode(self,myname):
 
         name_regex=r'^'+re.escape(myname)
         namelist=self.getnamelist()
@@ -117,7 +165,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.namenode(myname+str(1))
                     break
 
-        self.runnode(myname)
+        self.runnode(myname)'''
 
             
     def getreadynames(self,namelist):
@@ -129,7 +177,7 @@ class run_cluster(kernelcompare.KernelCompare):
     def getmaster(self):
         for i in range(10):
             try:
-                with open('masterfile','rb') as themasterfile:
+                with open(os.path.join(self.masterdirectory,'masterfile'),'rb') as themasterfile:
                     masterfile=pickle.load(themasterfile)
                 return masterfile
             except(FileNotFoundError):
@@ -139,6 +187,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==9:
                     sleep(.5)
                     assert False, "getmaster can't open masterfile"
+
      
     def archivemaster(self):
         masterfile=self.getmaster()
@@ -155,7 +204,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     return
         for i in range(10): 
             try:
-                os.remove('masterfile')
+                os.remove(os.path.join(self.masterdirectory,'masterfile'))
                 return
             except:
                 if i==9:
@@ -170,10 +219,11 @@ class run_cluster(kernelcompare.KernelCompare):
         savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
         for i in range(10):
             try:
-                with open('masterfile','wb') as themasterfile:
+                with open(self.masterdirectory,'masterfile','wb') as themasterfile:
                     pickle.dump(savedict,themasterfile)
                 break
             except:
+                sleep(.2)
                 if i==9:
                     print(traceback.format_exc())
                     assert False, 'masterfile problem'
@@ -182,21 +232,16 @@ class run_cluster(kernelcompare.KernelCompare):
         if self.checkmaster(): 
             masterfile=self.getmaster()
         try: 
-            if type(masterfile) is dict:
-                assignment_tracker=masterfile['assignment_tracker']
-                list_of_run_dicts=masterfile['list_of_run_dicts']
-                run_dict_status=masterfile['run_dict_status']
-                model_run_count=len(list_of_run_dicts)
+            assignment_tracker=masterfile['assignment_tracker']
+            list_of_run_dicts=masterfile['list_of_run_dicts']
+            run_dict_status=masterfile['run_dict_status']
+            model_run_count=len(list_of_run_dicts)
         except:
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node']*model_run_count
-        try: 
-            os.chdir(self.savedirectory)
-        except:
-            os.mkdir(self.savedirectory)
-            os.chdir(self.savedirectory)
+        os.chdir(self.masterdirectory)
         
         
         assignment_tracker={}
@@ -204,7 +249,7 @@ class run_cluster(kernelcompare.KernelCompare):
         while all([status=='finished' for status in run_dict_status])==False:
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
-            self.rebuild_current_namelist()#get rid of the old names that are inactive
+            self.rebuild_namefiles()#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
             
@@ -246,7 +291,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='ready for node'
                         ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
-                        self.update_myname_in_namelist(name[0],status='ready for job')
+                        self.update_my_namefile(name[0],status='ready for job')
                         self.mergethisnode(name[0])
                     if job_status=='finished':
                         print(f'node:{name[0]} has finished')
@@ -258,7 +303,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'deleting assignment_tracker for key:{name[0]} with job_status:{job_status}')
                         del assignment_tracker[name[0]]
                         run_dict_status[job_idx]='finished'
-                        self.update_myname_in_namelist(name[0],status='ready for job')
+                        self.update_my_namefile(name[0],status='ready for job')
                         self.mergethisnode(name[0])
                 except:
                     print(traceback.format_exc())
@@ -322,43 +367,48 @@ class run_cluster(kernelcompare.KernelCompare):
                 
         return
 
+    def namefile_statuscheck(self,name):
+        for i in range(10):
+            try:
+                with open(self.masterdirecotry,name+'.name','rb') as savednamefile:
+                    namefile=pickle.load(savednamefile)
+            except:
+                if i==9:
+                    print(traceback.format_exc())
+                    namefile=[(None,None)]
+        return namefile[-1]
 
-    def rebuild_current_namelist(self):
-        os.chdir(self.savedirectory)
+    def rebuild_namefiles(self):
+        os.chdir(self.masterdirectory)
         namelist=self.getnamelist()#get a new copy just in case
-        
-        name_last_update_list=[(name,times_status_tup_list[-1][0]) for name,times_status_tup_list in namelist]#times_status_tup_list[-1][0]:-1 for last item in list, and 0 for first item in time_status tuple
-        s_since_update_list=[self.s_before_now(time) for _,time in name_last_update_list]
-        
-        current_name_list=[name_times_tup for i,name_times_tup in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
-        old_name_list1 = [name_times_tup for i, name_times_tup in enumerate(namelist) if not s_since_update_list[i] < self.oldnode_threshold]
+        namefile_tuplist=[self.namefile_statuscheck(name) for name in namelist]
+        s_since_update_list=[self.s_before_now(time) for time,status in namefile_tuplist]
+
+        current_name_list=[name for i,name in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
+        old_name_list1 = [name for i,name in enumerate(namelist) if not s_since_update_list[i]<self.oldnode_threshold]
 
         old_name_list=[]
-        for i in range(len(old_name_list1)):
-            name_times_tup=old_name_list1[i]
-            iname=name_times_tup[0]
+        for name_i in old_name_list1:
+
+
             for j in range(10):
                 try:
-                    itime=self.activitycheck(iname)
+                    itime=self.activitycheck(name_i)
                     if itime==None:
-                        old_name_list.append(iname)
-                    if itime<self.oldnode_threshold:
-                        current_name_list.append(iname)
+                        old_name_list.append(name_i)
+                    if itime<self.oldnode_threshold*2:
+                        current_name_list.append(name_i)
                     break
                 except:
                     if j==9:
                         print('timeout', traceback.format_exc())
-                        old_name_list.append(iname)
-
-
-
-        
+                        old_name_list.append(name_i)
 
         if len(old_name_list)>0:print(f'old_name_list:{old_name_list}')
         for name in old_name_list:
             for i in range(10):
                 try:
-                    self.mergethisnode(name[0])
+                    self.mergethisnode(name)
                 except:
                     if i==9:
                         print(traceback.format_exc())
@@ -410,7 +460,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     
 
 
-    def add_to_namelist(self,newname):
+    '''def add_to_namelist(self,newname):
         os.chdir(self.savedirectory)
         namelist=self.getnamelist()
         if len([1 for name in namelist if name[0]==newname])>0:
@@ -431,47 +481,56 @@ class run_cluster(kernelcompare.KernelCompare):
         matches=len([1 for name in namelist_check if name[0]==newname])
         if not matches==1:
             self.add_to_namelist(newname+str(randint(0,9)))
-        return newname
+        return newname'''
 
 
     def getnamelist(self):
         
-        for _ in range(20):
-            try: 
-                with open(os.path.join(self.savedirectory,'namelist'),'rb') as namelist:
-                    return pickle.load(namelist)
+        for i in range(20):
+            try:
+                name_regex=r'\.'+re.escape('name')+r'$'#matches anything ending with .name
+                allfiles=os.listdir(self.masterdirectory)
+                namefilelist=[name for name in allfiles if re.search(name_regex,name)]
+                namelist=[name[:-5] for name in namefilelist]
+                return namelist
             except:
-                print(traceback.format_exc())
+                if i==19:
+                    print(traceback.format_exc())
                 sleep(0.25)
             return []
+
 
     def runnode(self,myname):
         for i in range(10):
             try:
                 masterfile_exists=self.checkmaster()
+                break
             except:
                 if i==9:
                     print(traceback.format_exc())
                     assert False,f"runnode named {myname} could not check master"
         if masterfile_exists==False:
-            print(f'master_status returns False, so {myname} is exiting')
-            print(f'master_status:{master_status}')
-            return
+            for i in range(120):
+                sleep(30)
+                try:
+                    masterfile_exists = self.checkmaster()
+                    if masterfile_exists:break
+                except:
+                    if i == 9:
+                        print(traceback.format_exc())
+                        assert False, f"runnode named {myname} could not check master"
+
         mydir=os.path.join(self.savedirectory,myname)
         my_job_file=os.path.join(mydir,myname+'_job')
         
-        try: 
-            os.chdir(self.savedirectory)
-        except:
-            os.mkdir(self.savedirectory)
-            os.chdir(self.savedirectory)
+
         try:
             os.chdir(mydir)
         except:
             print("mydir:{mydir} doesn't exist, so creating it")
             os.mkdir(mydir)
             os.chdir(mydir)
-        self.update_myname_in_namelist(myname,status='ready for job')
+        self.update_my_namefile(myname,status='ready for job')
         start_time=strftime("%Y%m%d-%H%M%S")
         i_have_opt_job=0
         i=0
@@ -536,9 +595,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
-                if s_since_start%datetime.timedelta(seconds=10)==0:
+                if s_since_start>self.oldnode_threshold-datetime.timedelta(minutes=1)==0:
                     print("s_since_start=",s_since_start,end='. ')
-                    self.update_myname_in_namelist(myname,'waiting for job')#signal that this node is still active
+                    self.update_my_namefile(myname,'ready for node')#signal that this node is still active
                 
                 
                 if s_since_start>self.oldnode_threshold:
@@ -549,27 +608,30 @@ class run_cluster(kernelcompare.KernelCompare):
 
         return None
 
-    def update_myname_in_namelist(self, myname,status=None):
-        namelist=self.getnamelist()
+    def update_my_namefile(self, myname,status=None):
+        ''' namelist=self.getnamelist()
         print(f'namelist:{namelist},myname:{myname}')
         myname_match_list=[i for i,name_tup in enumerate(namelist) if name_tup[0]==myname]
         assert len(myname_match_list)==1, f'somehow len(myname_match_list) is not 1 but len:{len(myname_match_list)}'
         i=myname_match_list[0]
-        myname_tup=namelist[i]
+        myname_tup=namelist[i]'''
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,status)
-        myname_tup[1].append(time_status_tup)
-        namelist[i]=myname_tup
-        
+        namefilename=os.path.join(self.savedirectory,name+'.name')
         for i in range(10):
             try:
-                with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
-                    pickle.dump(namelist,savednamelist)
-                return
+                with open(namefilename,'rb') as namefile:
+                    listoftups=pickle.load(namefile)
+                    listoftups.append(time_status_tup)
+                with open(namefilename,'wb') as namefile:
+                    pickle.dump(listoftups,namefile)
+                break
             except:
                 if i==9:
                     print(traceback.format_exc())
-                sleep(.25*log(10*i+1))
+                sleep(.15)
+
+
         return
         
 
@@ -609,7 +671,7 @@ class run_cluster(kernelcompare.KernelCompare):
             
 
     def update_node_job_status(self,myname,status=None,mydir=None):
-        self.update_myname_in_namelist(myname,status)
+        self.update_my_namefile(myname,status)
 
         my_job_file=os.path.join(mydir,myname+'_job')
 
@@ -650,7 +712,7 @@ if __name__=="__main__":
     datagen_variation_list=[train_n_variations,ftype_variations,param_count_variations]
     
     
-    mycluster.run_cluster(mytype='master',optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+    mycluster.run_cluster(myname='master',optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
 
 
