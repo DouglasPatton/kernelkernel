@@ -34,14 +34,10 @@ class mypool:
 
 
 if __name__=='__main__':
-    include_master=input('1 for include master, 0 for not')
+    include_master=int(input('1 for include master, 0 for not'))
     workercount=int(input('worker count:'))
-    if type(include_master) is str:
-        include_master=include_master.lower()
-
-
-    print(f'workercount type is {type(workercount)}')
-    if include_master==0 or include_master=='no':
+    
+    if include_master==0:
         test=mypool(workercount)
-    if include_master==1 or include_master=='yes':
+    if include_master==1:
         test=mypool(workercount-1,1)
