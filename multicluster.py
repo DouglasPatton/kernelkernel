@@ -1,6 +1,3 @@
-import mycluster
-import multiprocessing as mp
-from random import randint
 from time import sleep
 
 
@@ -13,10 +10,6 @@ class mypool:
             self.arg_list = ['node'] * (workercount)
         self.runpool(self.arg_list,self.workercount)
         self.i=0
-
-    def runpool_async(self,arg_list,workercount):
-        with mp.Pool(processes=workercount) as pool:
-            [pool.apply_async(self.runcluster,self.arg_list) for i in range(self.workercount)]
 
     def runpool(self,arg_list,workercount):
         with mp.Pool(processes=workercount) as pool:
