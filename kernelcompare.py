@@ -137,9 +137,9 @@ class KernelOptModelTools:
             try:
                 exists=os.path.exists(file_loc)
                 if not exists:
-                    print(f'file:{file_loc} has os.path.exists value:{exists})
+                    print(f'file:{file_loc} has os.path.exists value:{exists}')
                     return
-                with open(file_loc) as model_save:
+                with open(file_loc,'rb') as model_save:
                     model_save_list=pickle.load(model_save)
             except:
                 if i==9:
@@ -156,15 +156,19 @@ class KernelOptModelTools:
             os.mkdir(output_loc)
 
         filecount=len(os.listdir(output_loc))
-        output_filename = os.path.join(output_loc + f'models{filecount}')
+        output_filename = os.path.join(output_loc,f'models{filecount}'+'.html')
 
         modeltablehtml=''
-        for i,model in enumerate(model_save_list):
-            modeltablehtml=modeltablehtml+f'model:{i+1}<br>'+pd.DataFrame(model).to_html()+"<br"
+        keylist = ['mse','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
+        print(f'len(model_save_list:{len(model_save_list)}')
+        for j,model in enumerate(model_save_list):
+            simpledicti=self.myflatdict(model,keys=keylist)
+            this_model_html_string=pd.DataFrame(simpledicti).T.to_html()
+            modeltablehtml=modeltablehtml+f'model:{j+1}<br>'+this_model_html_string+"<br>"
         for i in range(10):
             try:
-                with open(output_filename,wb) as _htmlfile:
-                    _htmlfile=modeltablehtml
+                with open(output_filename,'w') as _htmlfile:
+                    _htmlfile.write(modeltablehtml)
                 return
             except:
                 if i==9:
@@ -172,6 +176,55 @@ class KernelOptModelTools:
                     print(traceback.format_exc())
                     return
 
+    def myflatdict(self, complexdict, keys=None):
+        thistype = type(complexdict)
+        if not thistype is dict:
+            return {'val': complexdict}
+
+        if keys == None and thistype is dict:
+            keys = [key for key, val in complexdict.items()]
+        flatdict = {}
+
+        for key in keys:
+            try:
+                val = complexdict[key]
+            except:
+                val = 'no val found'
+            newdict = self.myflatdict(val)
+            for key2, val2 in newdict.items():
+
+                flatdict[f'{key}:{key2}'] = [val2]
+
+        return flatdict
+
+
+    '''def myflatdict(self,complexdict,keys=None):
+        thistype=type(complexdict)
+        if thistype is np.ndarray:
+            complexdict=np.array_str(complexdict)
+
+        if not (thistype is dict or thistype is list):
+            return {'val':complexdict}
+
+        if keys==None and thistype is dict:
+            keys=[key for key,val in complexdict.items()]
+        flatdict = {}
+
+        if thistype is list:
+            for key,val in enumerate(complexdict):
+                newdict=self.myflatdict(val)
+                for key2,val2 in newdict.items():
+                    flatdict[f'{key}:{key2}']=
+
+        if thistype is dict:
+            for key in keys:
+                try:val=complexdict[key]
+                except:val='no val found'
+                newdict=self.myflatdict(val)
+                for key2,val2 in newdict.items():
+                    flatdict[f'{key}:{key2}'] = val2
+
+        return flatdict'''
 
     def getmodelrunmse(self,modelrundict):
         return modelrundict['mse']
