@@ -39,8 +39,9 @@ if __name__=='__main__':
     if type(include_master) is str:
         include_master=include_master.lower()
 
-    assert type(workercount) is int and workercount>0, f"workercount should be positive int but is type:{type(workercount)}"
+
+    print(f'workercount type is {type(workercount)}')
     if include_master==0 or include_master=='no':
-        test=mypool(workercount,0)
+        test=mypool(workercount)
     if include_master==1 or include_master=='yes':
         test=mypool(workercount-1,1)
