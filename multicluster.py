@@ -1,7 +1,7 @@
 from time import sleep
 import multiprocessing as mp
 from random import randint
-
+import traceback
 
 class mypool:
     def __init__(self, workercount=2,includemaster=0):
@@ -25,6 +25,7 @@ class mypool:
                 mycluster.run_cluster(mytype=name,local_test='no')
 
             except:
+                print(traceback.format_exc())
                 print(f'restarting:{name}')
 
 
