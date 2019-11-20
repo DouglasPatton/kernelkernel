@@ -2,6 +2,7 @@ from time import sleep
 import multiprocessing as mp
 from random import randint
 import traceback
+import mycluster
 
 class mypool:
     def __init__(self, workercount=2,includemaster=0):
