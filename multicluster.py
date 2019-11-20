@@ -35,7 +35,7 @@ class mypool:
 
 if __name__=='__main__':
     include_master=input('1 for include master, 0 for not')
-    workercount=input('worker count:')
+    workercount=int(input('worker count:'))
     if type(include_master) is str:
         include_master=include_master.lower()
 
