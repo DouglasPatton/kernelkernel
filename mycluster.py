@@ -105,14 +105,14 @@ class run_cluster(kernelcompare.KernelCompare):
                 mynametry=myname+f'{namecount}'
                 name_regex2=r'^'+re.escape(mynametry)
                 namelist=self.getnamelist()
-                namematch2=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
+                namematch2=[1 for name_tup in namelist if name_tup[0]==mynametry]
                 if len(namematch2)>0:
                     namecount+=1
                 if len(namematch2)==0:
                     myname=mynametry
-                    self.add_to_namelist(myname)
+                    myname=self.add_to_namelist(myname)
                     namelist=self.getnamelist()
-                    namematch3=[1 for name_tup in namelist if re.search(name_regex2,name_tup[0])]
+                    namematch3=[1 for name_tup in namelist if name_tup[0]==myname]
                     if len(namematch3)>1:
                         self.namenode(myname+str(1))
                     break
@@ -413,7 +413,8 @@ class run_cluster(kernelcompare.KernelCompare):
     def add_to_namelist(self,newname):
         os.chdir(self.savedirectory)
         namelist=self.getnamelist()
-        assert len([1 for name in namelist if name[0]==newname])==0,"newname has a match already!"
+        if len([1 for name in namelist if name[0]==newname])>0:
+            newname=newname+str(randint(0,9))
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup_list=[(now,'ready for job')]
         namelist.append((newname,time_status_tup_list))
@@ -428,7 +429,9 @@ class run_cluster(kernelcompare.KernelCompare):
             
         namelist_check=self.getnamelist()
         matches=len([1 for name in namelist_check if name[0]==newname])
-        assert matches==1,f"newname has too many matches:{matches}!!!"
+        if not matches==1:
+            self.add_to_namelist(newname+str(randint(0,9)))
+        return newname
 
 
     def getnamelist(self):
