@@ -8,9 +8,9 @@ class mypool:
     def __init__(self, workercount=2,includemaster=0):
         self.workercount=workercount
         if includemaster==1:
-            self.arg_list=['master']+['node'+str(randint(0,100))]*(workercount-1)
+            self.arg_list=['master']+[f'node{str(randint(0,10000))}']*(workercount-1)
         else:
-            self.arg_list = ['node'] * (workercount)
+            self.arg_list = [f'node{str(randint(0,10000))}'] * (workercount)
         self.runpool(self.arg_list,self.workercount)
         self.i=0
 
