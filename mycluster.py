@@ -5,6 +5,7 @@ from time import strftime,sleep
 import datetime
 import kernelcompare 
 import traceback
+import shutil
 from numpy import log
 
 '''to do:
@@ -56,7 +57,6 @@ class run_cluster(kernelcompare.KernelCompare):
         # ykern_grid_variations=('ykern_grid',[31,46,61])
         optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations, Ndiff_start_variations,
                                   product_kern_norm_variations, normalize_Ndiffwtsum_variations]
-
         return optdict_variation_list
 
     def getdatagenvariations(self):
@@ -108,7 +108,6 @@ class run_cluster(kernelcompare.KernelCompare):
                     if len(namematch2)==0:
                         myname=mynametry
                         break
-                        nameset=1
             self.add_to_namelist(myname)
             self.runnode(myname)
 
@@ -328,7 +327,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
         old_name_list=[]
         for i in range(len(old_name_list1)):
-            name_times_tup=old_name_list[i]
+            name_times_tup=old_name_list1[i]
             iname=name_times_tup[0]
             for j in range(10):
                 try:
@@ -340,7 +339,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     break
                 except:
                     if j==9:
-                        print(traceback.format_exc())
+                        print('timeout', traceback.format_exc())
                         old_name_list.append(iname)
 
 
@@ -348,9 +347,22 @@ class run_cluster(kernelcompare.KernelCompare):
         
 
         if len(old_name_list)>0:print(f'old_name_list:{old_name_list}')
-        try:
-            [os.rmdir(name[0]) for name in old_name_list]
-        except Exception as e: print(e)
+        for name in old_name_list:
+            for i in range(10):
+                try:
+                    self.mergethisnode(name[0])
+                except:
+                    if i==9:
+                        print(traceback.format_exc())
+
+
+        for name in old_name_list:
+            for i in range(10):
+                try:
+                    shutil.rmtree(name[0])
+                except:
+                    if i==9:
+                        print(traceback.format_exc())
         
         for _ in range(10):
             try: 
@@ -367,19 +379,22 @@ class run_cluster(kernelcompare.KernelCompare):
         return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
                         
     
-    def activitycheck(self,name):
+    def activitycheck(self,name,filename=None):
+        if filename==None: filename='model_save'
         nodedir=os.path.join(self.savedirectory,name)
         node_job=os.path.join(nodedir,name+'_job')
-        node_model_save=os.path.join(self.savedirectory,name,'model_save')
+        node_model_save=os.path.join(self.savedirectory,name,filename)
         #print(node_model_save)
         for i in range(10):
             try:
                 with open(node_model_save) as saved_model_save:
                     model_save=pickle.load(saved_model_save)
                 return model_save[-1]['when_saved']
-                break
+
             except:
-                if i==9:print(traceback.format_exc())
+                if i==9:
+                    print(traceback.format_exc())
+                    self.activitycheck(name,filename='final_model_save')
         return None
                 
             

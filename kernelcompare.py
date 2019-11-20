@@ -124,7 +124,59 @@ class KernelOptModelTools:
           
         with open(filename1,'wb') as writefile:
             pickle.dump(condensed_list,writefile)
-                
+
+    def print_model_save(self,filename=None,directory=None):
+        import pandas as pd
+        if directory==None:
+            directory=os.getcwd()
+        if filename==None:
+            filename='model_save'
+        pd.set_option('display.max_colwidth', -1)
+        file_loc=os.path.join(directory,filename)
+        for i in range(10):
+            try:
+                exists=os.path.exists(file_loc)
+                if not exists:
+                    print(f'file:{file_loc} has os.path.exists value:{exists})
+                    return
+                with open(file_loc) as model_save:
+                    model_save_list=pickle.load(model_save)
+            except:
+                if i==9:
+                    print(f'could not open{file_loc}')
+                    print(traceback.format_exc())
+                    return
+        if len(model_save_list)==0:
+            print(f'no models in model_save_list for printing')
+            return
+        model_save_list.sort(key=self.getmodelrunmse)  #sorts by mse
+
+        output_loc=os.path.join(directory,'output')
+        if not os.path.exists(output_loc):
+            os.mkdir(output_loc)
+
+        filecount=len(os.listdir(output_loc))
+        output_filename = os.path.join(output_loc + f'models{filecount}')
+
+        modeltablehtml=''
+        for i,model in enumerate(model_save_list):
+            modeltablehtml=modeltablehtml+f'model:{i+1}<br>'+pd.DataFrame(model).to_html()+"<br"
+        for i in range(10):
+            try:
+                with open(output_filename,wb) as _htmlfile:
+                    _htmlfile=modeltablehtml
+                return
+            except:
+                if i==9:
+                    print(f'could not write modeltablehtml to location:{output_filename}')
+                    print(traceback.format_exc())
+                    return
+
+
+    def getmodelrunmse(self,modelrundict):
+        return modelrundict['mse']
+
+
             
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
