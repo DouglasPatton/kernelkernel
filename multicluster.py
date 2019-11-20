@@ -27,7 +27,7 @@ class mypool:
             sleep(randint(25,200)/25)#make nodes start at different times
         while True:
             try:
-                mycluster.run_cluster(mytype=name)
+                mycluster.run_cluster(mytype=name,local_test='no')
 
             except:
                 print(f'restarting:{name}')
@@ -36,7 +36,7 @@ class mypool:
 if __name__=='__main__':
     include_master=int(input('1 for include master, 0 for not'))
     workercount=int(input('worker count:'))
-    
+
     if include_master==0:
         test=mypool(workercount)
     if include_master==1:
