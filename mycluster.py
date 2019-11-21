@@ -422,6 +422,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     try:
                         self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=1,verbose=1)
                     except:
+                        print(f'merge this node failed for node named:{name}')
                         print(traceback.format_exc())
                 
                 
