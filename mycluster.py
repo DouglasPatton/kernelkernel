@@ -101,10 +101,7 @@ class run_cluster(kernelcompare.KernelCompare):
         else: 
             assert False,f"local_test not understood. value:{local_test}"
         return savedirectory
-        
-        
-        
-        
+
         
     def initialize(self,myname,optdict_variation_list=None,datagen_variation_list=None):
         os.chdir(self.savedirectory)
@@ -175,7 +172,12 @@ class run_cluster(kernelcompare.KernelCompare):
 
             
     def getreadynames(self,namelist):
-        return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
+        readylist=[]
+        for name_i in namelist:
+            last_time_status_tup=self.namefile_statuscheck(name_i)
+            if last_time_status_tup=='ready for job':
+                readylist.append(name_i)
+        return readylist
     
     def checkmaster(self):
         return os.path.exists(self.masterfilefilename)
@@ -620,7 +622,7 @@ class run_cluster(kernelcompare.KernelCompare):
         myname_tup=namelist[i]'''
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,status)
-        namefilename=os.path.join(self.savedirectory,name+'.name')
+        namefilename=os.path.join(self.savedirectory,myname+'.name')
         for i in range(10):
             try:
                 with open(namefilename,'rb') as namefile:

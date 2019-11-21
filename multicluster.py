@@ -10,15 +10,17 @@ class mypool:
         self.i=0
         self.id=randint(0,100000000)
         self.nodecount=nodecount
+        self.workercount=nodecount
         if includemaster==1:
+            self.workercount=nodecount+1
             self.arg_list=['master']+['node']*(nodecount)
         else:
             self.arg_list = ['node'] * (nodecount)
-        self.runpool(self.arg_list,self.nodecount)
+        self.runpool(self.arg_list,self.workercount)
         self.i=0
 
-    def runpool(self,arg_list,nodecount):
-        with mp.Pool(processes=nodecount) as pool:
+    def runpool(self,arg_list,workercount):
+        with mp.Pool(processes=workercount) as pool:
             pool.map(self.runcluster,arg_list)
 
     def runcluster(self,name):
@@ -28,9 +30,9 @@ class mypool:
             try:
                 self.i+=1#increments with start/restart of nodes or master
                 if name=='master':
-                    mycluster.run_cluster(name, local_test='no')
+                    mycluster.run_cluster(name, local_test=self.local_test)
                 else:
-                    mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test='no')
+                    mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test=self.local_test)
 
             except:
                 print(f'restarting:{name}')
