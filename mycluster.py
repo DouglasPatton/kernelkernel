@@ -175,7 +175,7 @@ class run_cluster(kernelcompare.KernelCompare):
         readylist=[]
         for name_i in namelist:
             last_time_status_tup=self.namefile_statuscheck(name_i)
-            if last_time_status_tup=='ready for job':
+            if last_time_status_tup[1]=='ready for job':
                 readylist.append(name_i)
         return readylist
     
@@ -259,7 +259,7 @@ class run_cluster(kernelcompare.KernelCompare):
             self.rebuild_namefiles()#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
-            
+            print(f'readynamelist:{readynamelist}')
             
             for name in readynamelist:
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
@@ -272,12 +272,12 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(f'check_node_job_status failed for node:{name}')
                     break
 
-                #print(f"job_time:{job_time},job_status:{job_status}")
+                print(f"job_time:{job_time},job_status:{job_status}")
                 now=strftime("%Y%m%d-%H%M%S")
                 #elapsed=now-job_time
                 #late=elapsed>datetime.timedelta(seconds=30)
 
-                if job_status=="no file found":# and (not late):
+                if job_status=="no file found":
                     print(f'about to setup the job for node:{name}')
 
                     if len(ready_dict_idx)>0:
@@ -622,7 +622,7 @@ class run_cluster(kernelcompare.KernelCompare):
         myname_tup=namelist[i]'''
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,status)
-        namefilename=os.path.join(self.savedirectory,myname+'.name')
+        namefilename=os.path.join(self.masterdirectory,myname+'.name')
         for i in range(10):
             try:
                 with open(namefilename,'rb') as namefile:
