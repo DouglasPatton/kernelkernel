@@ -8,7 +8,7 @@ import traceback
 import shutil
 from numpy import log
 from random import randint
-from copy import deepcopy
+
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
 
@@ -439,8 +439,8 @@ class run_cluster(kernelcompare.KernelCompare):
 
     def setup_job_for_node(self,name,rundict):
         jobdict={}
-        jobdict['optimizedict']=rundict['optimizedict'].deepcopy()
-        jobdict['datagen_dict']=rundict['datagen_dict'].deepcopy()
+        jobdict['optimizedict']=rundict['optimizedict']
+        jobdict['datagen_dict']=rundict['datagen_dict']
         now=strftime("%Y%m%d-%H%M%S")
         jobdict['node_status']=[(now,'ready for node')]
         for _ in range(10):
