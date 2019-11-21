@@ -259,7 +259,8 @@ class run_cluster(kernelcompare.KernelCompare):
             self.rebuild_namefiles()#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
-            print(f'readynamelist:{readynamelist}')
+            if len(readynamelist)>1:
+                print(f'readynamelist:{readynamelist}')
             
             for name in readynamelist:
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']

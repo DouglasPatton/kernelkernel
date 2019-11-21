@@ -40,13 +40,10 @@ class mypool:
 
 
 if __name__=='__main__':
-    test = mypool(nodecount=1, includemaster=1,local_test='yes')
-
-    '''include_master=int(input('1 for include master, 0 for not'))
+    #test = mypool(nodecount=1, includemaster=1,local_test='yes')
+    local_test='no'
+    include_master=int(input('1 for include master, 0 for not'))
     nodecount=int(input('worker count:'))
     
-    if include_master==0:
-        test=mypool(nodecount)
-    if include_master==1:
-        test=mypool(nodecount,1)
-'''
+
+    test=mypool(nodecount=nodecount,include_master=include_master,local_test=local_test)
