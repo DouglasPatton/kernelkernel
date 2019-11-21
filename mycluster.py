@@ -267,16 +267,16 @@ class run_cluster(kernelcompare.KernelCompare):
         for j, name in enumerate(old_name_list):
             for i in range(10):
                 try:
-                    self.mergethisnode(name)
-                    try:
-                        os.remove(os.path.join(self.masterdirectory, name + '.name'))
-                    except:
-                        pass
-                    try:
-                        shutil.rmtree(os.path.join(self.savedirectory, name))
-                    except:
-                        pass
-                    break
+                    if self.mergethisnode(name):
+                        try:
+                            os.remove(os.path.join(self.masterdirectory, name + '.name'))
+                        except:
+                            pass
+                        try:
+                            shutil.rmtree(os.path.join(self.savedirectory, name))
+                        except:
+                            pass
+                        break
                 except:
                     if i == 9:
                         print(f'failed to merge node named:{name}')
@@ -385,7 +385,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     run_dict_status[job_idx]='ready for node'
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                     self.update_my_namefile(name,status='ready for job')
-                    self.mergethisnode(name)
+                    _=self.mergethisnode(name)
                 if job_status=='finished':
                     print(f'node:{name} has finished')
                     try:job_idx=assignment_tracker[name]
@@ -397,7 +397,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     del assignment_tracker[name]
                     run_dict_status[job_idx]='finished'
                     self.update_my_namefile(name,status='ready for job')
-                    self.mergethisnode(name)
+                    _=self.mergethisnode(name)
 
             sleep(30)
 
@@ -424,6 +424,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     except:
                         print(f'merge this node failed for node named:{name}')
                         print(traceback.format_exc())
+                        return False
+        return True
                 
                 
         
