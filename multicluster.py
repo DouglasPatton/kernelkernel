@@ -24,15 +24,22 @@ class mypool:
             pool.map(self.runcluster,arg_list)
 
     def runcluster(self,name):
-        if not name=='master':
-            sleep(randint(25,100)/25)#make nodes start at different times
+        if name=='master':
+            while True:
+                try:
+                    self.i+=1
+                    mycluster.run_cluster(name, local_test=self.local_test)
+                except:
+                    print(f'restarting:{name}')
+                    print(traceback.format_exc())
+        sleeptime=randint(1,100)*15.
+        print(f'sleeping for {sleeptime/60} minutes')
+        sleep(sleeptime)#make nodes start at different times
+
         while True:
             try:
                 self.i+=1#increments with start/restart of nodes or master
-                if name=='master':
-                    mycluster.run_cluster(name, local_test=self.local_test)
-                else:
-                    mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test=self.local_test)
+                mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test=self.local_test)
 
             except:
                 print(f'restarting:{name}')
