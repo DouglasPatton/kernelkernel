@@ -279,6 +279,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     break
                 except:
                     if i == 9:
+                        print(f'failed to merge node named:{name}')
                         print(traceback.format_exc())
         if len(assignment_tracker) > 0:
             assigned_to_not_current_name_idx=[]
