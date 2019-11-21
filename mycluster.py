@@ -406,7 +406,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     time_i=self.model_save_activitycheck(name_i)
                     if time_i==None:
                         old_name_list.append(name_i)
-                    if time_i<self.oldnode_threshold:
+                    elif time_i<self.oldnode_threshold:
                         current_name_list.append(name_i)
                     break
                 except:
@@ -452,7 +452,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #print(node_model_save)
         for i in range(10):
             try:
-                with open(node_model_save) as saved_model_save:
+                with open(node_model_save,'rb') as saved_model_save:
                     model_save=pickle.load(saved_model_save)
                 return model_save[-1]['when_saved']
             except:
