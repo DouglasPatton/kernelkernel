@@ -234,7 +234,78 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==9:
                     print(traceback.format_exc())
                     assert False, 'masterfile problem'
-    
+
+    def rebuild_namefiles(self, run_dict_status, assignment_tracker):
+        namelist = self.getnamelist()  # get a new copy just in case
+        namefile_tuplist = [self.namefile_statuscheck(name) for name in namelist]
+        # print(f'namefile_tuplist:{namefile_tuplist}')
+        s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
+
+        current_name_list = [name for i, name in enumerate(namelist) if s_since_update_list[i] < self.oldnode_threshold]
+        old_name_list1 = [name for i, name in enumerate(namelist) if
+                          not s_since_update_list[i] < self.oldnode_threshold]
+
+        old_name_list = []
+        for name_i in old_name_list1:
+            for j in range(10):
+                try:
+                    time_i = self.model_save_activitycheck(name_i)
+                    print(f'time_i{time_i}')
+                    if not type(time_i) is datetime.timedelta:
+                        old_name_list.append(name_i)
+                    elif time_i < self.oldnode_threshold:
+                        current_name_list.append(name_i)
+                    break
+                except:
+                    if j == 9:
+                        print('timeout', traceback.format_exc())
+                        old_name_list.append(name_i)
+
+        if len(old_name_list) > 0:
+            print(f'old_name_list:{old_name_list}')
+        for j, name in enumerate(old_name_list):
+            for i in range(10):
+                try:
+                    self.mergethisnode(name)
+                    try:
+                        os.remove(os.path.join(self.masterdirectory, name + '.name'))
+                    except:
+                        pass
+                    try:
+                        shutil.rmtree(os.path.join(self.savedirectory, name))
+                    except:
+                        pass
+                    break
+                except:
+                    if i == 9:
+                        print(traceback.format_exc())
+        if len(assignment_tracker)>0:
+            assigned_to_not_current_name_idx=[idx for name_i,idx in assignment_tracker if not any([name_j==name_i for name_j in current_name_list])]
+        else:
+            assigned_to_not_current_name_idx=[idx for name_i,idx in assignment_tracker]
+        the_not_current_names=[name_i for name_i,idx in assignment_tracker if not any([name_j==name_i for name_j in current_name_list])]
+        for idx in assigned_to_not_current_name_idx:
+            run_dict_status[idx]='ready for node'
+        for name_i in the_not_current_names:
+            try:del assignment_tracker[name_i]
+            except:pass
+        print('assignment_tracker',assignment_tracker)
+        print('current_name_list',current_name_list)
+        print('the_not_current_names',the_not_current_names)
+
+        #assigned_names = [name_i for name_i in current_name_list if name_i in assignment_tracker]
+        assigned_names_idx = [assignment_tracker[name_i] for name_i in current_name_list if
+                              name_i in assignment_tracker]
+        status_assigned_idx = [i for i, status in enumerate(run_dict_status) if status == 'assigned']
+
+        release_status_idx = [idx for idx in status_assigned_idx if not any([idx == j for j in assigned_names_idx])]
+        for idx in release_status_idx:
+            run_dict_status[idx]='ready for node'
+        return run_dict_status, assignment_tracker
+
+
+        
+
     def runmaster(self,optdict_variation_list,datagen_variation_list):
         if self.checkmaster(): 
             masterfile=self.getmaster()
@@ -255,10 +326,11 @@ class run_cluster(kernelcompare.KernelCompare):
         i=0
         while all([status=='finished' for status in run_dict_status])==False:
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
-            
-            self.rebuild_namefiles()#get rid of the old names that are inactive
+
+            run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
+
             if len(readynamelist)>1:
                 print(f'readynamelist:{readynamelist}')
             
@@ -280,7 +352,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 if job_status=="no file found":
                     print(f'about to setup the job for node:{name}')
-
+                    print('len(ready_dict_idx)',len(ready_dict_idx))
+                    if len(ready_dict_idx) == 0:
+                        print('run_dict_status',run_dict_status)
                     if len(ready_dict_idx)>0:
                         random_ready_dict_idx=ready_dict_idx[randint(0,len(ready_dict_idx))]
                         try:
@@ -322,6 +396,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.mergethisnode(name)
 
             sleep(5)
+
             
 
         #assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
@@ -330,7 +405,7 @@ class run_cluster(kernelcompare.KernelCompare):
         print('all jobs finished')
         return
     
-    
+
     
     def mergethisnode(self,name):
         nodesdir=os.path.join(self.savedirectory,name)
@@ -392,55 +467,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     namefile=[(None,None)]
         return namefile[-1]
 
-    def rebuild_namefiles(self):
-        namelist=self.getnamelist()#get a new copy just in case
-        namefile_tuplist=[self.namefile_statuscheck(name) for name in namelist]
-        #print(f'namefile_tuplist:{namefile_tuplist}')
-        s_since_update_list=[self.s_before_now(time) for time,status in namefile_tuplist]
 
-        current_name_list=[name for i,name in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
-        old_name_list1 = [name for i,name in enumerate(namelist) if not s_since_update_list[i]<self.oldnode_threshold]
-
-        old_name_list=[]
-        for name_i in old_name_list1:
-            for j in range(10):
-                try:
-                    time_i=self.model_save_activitycheck(name_i)
-                    print(f'time_i{time_i}')
-                    if not type(time_i) is datetime.timedelta:
-                        old_name_list.append(name_i)
-                    elif time_i<self.oldnode_threshold:
-                        current_name_list.append(name_i)
-                    break
-                except:
-                    if j==9:
-                        print('timeout', traceback.format_exc())
-                        old_name_list.append(name_i)
-
-        if len(old_name_list)>0:
-            print(f'old_name_list:{old_name_list}')
-        for j,name in enumerate(old_name_list):
-            for i in range(10):
-                try:
-                    self.mergethisnode(name)
-                    try:os.remove(os.path.join(self.masterdirectory,name+'.name'))
-                    except:pass
-                    try:shutil.rmtree(os.path.join(self.savedirectory,name))
-                    except:pass
-                    break
-                except:
-                    if i==9:
-                        print(traceback.format_exc())
-        
-        '''for _ in range(10):
-            try: 
-                with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
-                    pickle.dump(current_name_list,savednamelist)
-                return
-            except:
-                print(traceback.format_exc())
-                sleep(0.35)'''
-    
     def s_before_now(self,then):
         now=strftime("%Y%m%d-%H%M%S")
         now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")

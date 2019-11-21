@@ -782,3 +782,7 @@ class KernelCompare(KernelOptModelTools):
         #opt_settings_dict['partial_match']='no'
         opt_dict_override['opt_settings_dict']=opt_settings_dict
         return opt_dict_override
+
+if __name__=='__main__':
+    import kernelcompare as kc
+    kc_obj=kc.KernelCompare()
