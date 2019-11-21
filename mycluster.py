@@ -44,6 +44,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.oldnode_threshold=datetime.timedelta(minutes=60,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
+        self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
 
         print(f'self.savedirectory{self.savedirectory}')
         kernelcompare.KernelCompare.__init__(self,self.savedirectory)
@@ -108,9 +109,11 @@ class run_cluster(kernelcompare.KernelCompare):
         if myname=="master":
             self.runmaster(optdict_variation_list,datagen_variation_list)
         else:
-            nodename=self.createnamefile(myname)
-            #self.update_my_namefile(myname, status='created'):
-            self.runnode(nodename)
+            myname=self.createnamefile(myname)
+            self.nodedirectory = os.path.join(self.savedirectory, myname)
+            self.nodenamefilename=os.path.join(self.masterdirectory,myname+'.name')
+            self.nodejobfilename=os.path.join(self.nodedirectory,myname+'_job')
+            self.runnode(myname)
 
 
     def createnamefile(self,name):
@@ -172,12 +175,12 @@ class run_cluster(kernelcompare.KernelCompare):
         return [name_i for name_i in namelist if name_i[1][-1][1]=='ready for job']
     
     def checkmaster(self):
-        return os.path.exists(os.path.join(self.savedirectory,'masterfile'))
+        return os.path.exists(self.masterfilefilename)
     
     def getmaster(self):
         for i in range(10):
             try:
-                with open(os.path.join(self.masterdirectory,'masterfile'),'rb') as themasterfile:
+                with open(self.masterfilefilename,'rb') as themasterfile:
                     masterfile=pickle.load(themasterfile)
                 return masterfile
             except(FileNotFoundError):
@@ -204,7 +207,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     return
         for i in range(10): 
             try:
-                os.remove(os.path.join(self.masterdirectory,'masterfile'))
+                os.remove(self.masterfilefilename)
                 return
             except:
                 if i==9:
@@ -219,7 +222,7 @@ class run_cluster(kernelcompare.KernelCompare):
         savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
         for i in range(10):
             try:
-                with open(self.masterdirectory,'masterfile','wb') as themasterfile:
+                with open(self.masterfilefilename,'wb') as themasterfile:
                     pickle.dump(savedict,themasterfile)
                 break
             except:
@@ -258,58 +261,59 @@ class run_cluster(kernelcompare.KernelCompare):
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
+
                 try:
-                    try:
-                        job_time,job_status=self.check_node_job_status(name[0],time=1)
-                    except:
-                        print(f'check_node_job_status failed for node:{name[0]}')
-                        break
-                        
-                    #print(f"job_time:{job_time},job_status:{job_status}")
-                    now=strftime("%Y%m%d-%H%M%S")
-                    #elapsed=now-job_time
-                    #late=elapsed>datetime.timedelta(seconds=30)
-                    
-                    if job_status=="no file found":# and (not late):
-                        print(f'about to setup the job for node:{name[0]}')
+                    job_time,job_status=self.check_node_job_status(name,time=1)
+                except:
+                    print(f'check_node_job_status failed for node:{name}')
+                    break
+
+                #print(f"job_time:{job_time},job_status:{job_status}")
+                now=strftime("%Y%m%d-%H%M%S")
+                #elapsed=now-job_time
+                #late=elapsed>datetime.timedelta(seconds=30)
+
+                if job_status=="no file found":# and (not late):
+                    print(f'about to setup the job for node:{name}')
+
+                    if len(ready_dict_idx)>0:
+                        first_ready_dict_idx=ready_dict_idx[0]
+                        setup=0
                         try:
-                            if len(ready_dict_idx)>0:
-                                first_ready_dict_idx=ready_dict_idx[0]
-                                self.setup_job_for_node(name[0],list_of_run_dicts[first_ready_dict_idx])
-                                i+=1
-                                run_dict_status[first_ready_dict_idx]='assigned'
-                                assignment_tracker[name[0]]=first_ready_dict_idx
-                                print('assignment_tracker',assignment_tracker)
-                                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node'] 
+                            self.setup_job_for_node(name,list_of_run_dicts[first_ready_dict_idx])
+                            setup=1
                         except:
                             print(traceback.format_exc())
-                            print(f'setup_job_for_node named:{name[0]}, i:{i} has failed')
-                    if job_status=='failed':
-                        job_idx=assignment_tracker[name[0]]
-                        self.discard_job_for_node(name[0])
-                        print(f'deleting assignmen_tracker for key:{name[0]} with job_status:{job_status}')
-                        del assignment_tracker[name[0]]
-                        run_dict_status[job_idx]='ready for node'
-                        ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']    
-                        self.update_my_namefile(name[0],status='ready for job')
-                        self.mergethisnode(name[0])
-                    if job_status=='finished':
-                        print(f'node:{name[0]} has finished')
-                        try:job_idx=assignment_tracker[name[0]]
-                        except:
-                            print(f'assignment_tracker failed for key:{name[0]}, job_status:{job_status} ')
-                            print(f'assignment_tracker:{assignment_tracker}')
-                        self.discard_job_for_node(name[0])
-                        print(f'deleting assignment_tracker for key:{name[0]} with job_status:{job_status}')
-                        del assignment_tracker[name[0]]
-                        run_dict_status[job_idx]='finished'
-                        self.update_my_namefile(name[0],status='ready for job')
-                        self.mergethisnode(name[0])
-                except:
-                    print(traceback.format_exc())
-                    
-                    #print(Exception)
-                    #print(f'status check for_node named:{name} has failed')
+                            print(f'setup_job_for_node named:{name}, i:{i} has failed')
+                        if setup==1:
+                            i+=1
+                            run_dict_status[first_ready_dict_idx]='assigned'
+                            assignment_tracker[name]=first_ready_dict_idx
+                            print('assignment_tracker',assignment_tracker)
+                            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+
+                if job_status=='failed':
+                    job_idx=assignment_tracker[name]
+                    self.discard_job_for_node(name)
+                    print(f'deleting assignmen_tracker for key:{name} with job_status:{job_status}')
+                    del assignment_tracker[name]
+                    run_dict_status[job_idx]='ready for node'
+                    ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+                    self.update_my_namefile(name,status='ready for job')
+                    self.mergethisnode(name)
+                if job_status=='finished':
+                    print(f'node:{name} has finished')
+                    try:job_idx=assignment_tracker[name]
+                    except:
+                        print(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
+                        print(f'assignment_tracker:{assignment_tracker}')
+                    self.discard_job_for_node(name)
+                    print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                    del assignment_tracker[name]
+                    run_dict_status[job_idx]='finished'
+                    self.update_my_namefile(name,status='ready for job')
+                    self.mergethisnode(name)
+
             sleep(5)
             
 
@@ -368,15 +372,17 @@ class run_cluster(kernelcompare.KernelCompare):
         return
 
     def namefile_statuscheck(self,name):
+        nodesnamefilefilename=os.path.join(self.masterdirectory,name+'.name')
         for i in range(10):
             try:
-                with open(self.masterdirecotry,name+'.name','rb') as savednamefile:
-                    namefile=pickle.load(savednamefile)
+                with opennodesnamefilefilename,'rb') as savednamefile:
+                    lastnamefile=pickle.load(savednamefile)[-1]
             except:
+                sleep(0.25)
                 if i==9:
                     print(traceback.format_exc())
-                    namefile=[(None,None)]
-        return namefile[-1]
+                    lastnamefile=[(None,None)]
+        return lastnamefile
 
     def rebuild_namefiles(self):
         os.chdir(self.masterdirectory)
@@ -404,32 +410,29 @@ class run_cluster(kernelcompare.KernelCompare):
                         print('timeout', traceback.format_exc())
                         old_name_list.append(name_i)
 
-        if len(old_name_list)>0:print(f'old_name_list:{old_name_list}')
-        for name in old_name_list:
+        if len(old_name_list)>0:
+            print(f'old_name_list:{old_name_list}')
+        for j,name in enumerate(old_name_list):
             for i in range(10):
                 try:
                     self.mergethisnode(name)
-                except:
-                    if i==9:
-                        print(traceback.format_exc())
-
-
-        for name in old_name_list:
-            for i in range(10):
-                try:
-                    shutil.rmtree(name[0])
+                    try:os.remove(os.path.join(self.masterdirectory,name+'.name'))
+                    except:pass
+                    try:shutil.rmtree(os.path.join(self.savedirectory,name))
+                    except:pass
+                    break
                 except:
                     if i==9:
                         print(traceback.format_exc())
         
-        for _ in range(10):
+        '''for _ in range(10):
             try: 
                 with open(os.path.join(self.savedirectory,'namelist'),'wb') as savednamelist:
                     pickle.dump(current_name_list,savednamelist)
                 return
             except:
                 print(traceback.format_exc())
-                sleep(0.35)
+                sleep(0.35)'''
     
     def s_before_now(self,then):
         now=strftime("%Y%m%d-%H%M%S")
@@ -452,12 +455,9 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 if i==9:
                     print(traceback.format_exc())
-                    self.activitycheck(name,filename='final_model_save')
+                    if not filename=='final_model_save':
+                        self.activitycheck(name,filename='final_model_save')
         return None
-                
-            
-            
-                    
 
 
     '''def add_to_namelist(self,newname):
@@ -495,6 +495,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 return namelist
             except:
                 if i==19:
+                    print('getnamelist failed')
                     print(traceback.format_exc())
                 sleep(0.25)
             return []
@@ -520,16 +521,12 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(traceback.format_exc())
                         assert False, f"runnode named {myname} could not check master"
 
-        mydir=os.path.join(self.savedirectory,myname)
-        my_job_file=os.path.join(mydir,myname+'_job')
+        #mydir=os.path.join(self.savedirectory,myname)
+        #my_job_file=os.path.join(mydir,myname+'_job')
         
-
-        try:
-            os.chdir(mydir)
-        except:
-            print("mydir:{mydir} doesn't exist, so creating it")
+        mydir=self.nodedirectory
+        if not os.path.exists(mydir)
             os.mkdir(mydir)
-            os.chdir(mydir)
         self.update_my_namefile(myname,status='ready for job')
         start_time=strftime("%Y%m%d-%H%M%S")
         i_have_opt_job=0
@@ -538,36 +535,40 @@ class run_cluster(kernelcompare.KernelCompare):
         while i_have_opt_job==0:
             my_opt_job=self.check_for_opt_job(myname,start_time,mydir)
             if type(my_opt_job) is dict:
-                i_have_opt_job=1
-            sleep(5)
-
-        if i_have_opt_job==1:
-            my_optimizedict=my_opt_job['optimizedict']
-            my_datagen_dict=my_opt_job['datagen_dict']
+                break
+            else:
+                sleep(5)
 
 
-            self.update_node_job_status(myname,status='starting',mydir=mydir)
+        my_optimizedict=my_opt_job['optimizedict']
+        my_datagen_dict=my_opt_job['datagen_dict']
+
+
+        self.update_node_job_status(myname,status='starting',mydir=mydir)
+        try:
+            kernelcompare.KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
+            success=1
+        except:
+            success=0
             try:
-                kernelcompare.KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
-                success=1
+                self.update_node_job_status(myname,status='failed',mydir=mydir)
             except:
-                success=0
-                try:
-                    self.update_node_job_status(myname,status='failed',mydir=mydir)
-                except:
-                    print(traceback.format_exc())
-                    self.runnode(myname+'0')
                 print(traceback.format_exc())
-                
-            if success==1:
-                try:
-                    self.update_node_job_status(myname,status="finished",mydir=mydir)
-                except:
-                    print(f'could not update node status for {myname} to finished')
-                    print(traceback.format_exc())
-                    self.runnode(myname+'0')
-            
-        self.runnode(myname)
+                #self.runnode(myname+'0')#relying on wrapper function restarting the node
+                return
+            print(traceback.format_exc())
+
+        if success==1:
+            try:
+                self.update_node_job_status(myname,status="finished",mydir=mydir)
+            except:
+                print(f'could not update node status for {myname} to finished')
+                print(traceback.format_exc())
+                #self.runnode(myname+'0')#relying on wrapper function restarting the node
+                return
+
+        #self.runnode(myname)#relying on wrapper function restarting the node
+        return
 
 
 
@@ -595,14 +596,14 @@ class run_cluster(kernelcompare.KernelCompare):
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
-                if s_since_start>self.oldnode_threshold-datetime.timedelta(minutes=1)==0:
-                    print("s_since_start=",s_since_start,end='. ')
+                if s_since_start>self.oldnode_threshold/2==0:
+                    print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready for node')#signal that this node is still active
                 
                 
                 if s_since_start>self.oldnode_threshold:
                     print(s_since_start-self.oldnode_threshold)
-                    assert False,f'myname:{myname} timed out after finding no jobs'
+                    assert False,f'myname:{myname} timed out after finding no jobs'#relying on wrapper to restart the node
                 sleep(.25*log(10*i+1))
 
 
@@ -631,9 +632,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(traceback.format_exc())
                 sleep(.15)
 
-
         return
-        
 
 
     def check_node_job_status(self,name,time=None):
@@ -643,45 +642,44 @@ class run_cluster(kernelcompare.KernelCompare):
         if time=='yes':
             time=1
         nodes_dir=os.path.join(self.savedirectory,name)
-
-        #os.chdir(nodes_dir)
-
-
         nodes_job_filename=os.path.join(nodes_dir,name+'_job')
-        for _ in range(5):
+        for i in range(10):
             try:
                 with open(nodes_job_filename,'rb') as saved_job_file:
                     nodesjob_dict=pickle.load(saved_job_file)
                 #print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["node_status"]}')
-                os.chdir(self.savedirectory)
                 if time==0:
                     return nodesjob_dict['node_status'][-1][1]
                 if time==1:
                     #print(f"nodesjob_dict['node_status'][-1]:{nodesjob_dict['node_status'][-1]}")
                     return nodesjob_dict['node_status'][-1][0],nodesjob_dict['node_status'][-1][1]#time_status tup
             except(FileNotFoundError):
-                print(traceback.format_exc())
-                os.chdir(self.savedirectory)          
-                if time==0:
-                    return "no file found"#if the file doesn't exist, then assign the job
-                if time==1:
-                    return strftime("%Y%m%d-%H%M%S"), "no file found"
+                if i==9:
+                    print(traceback.format_exc())
+                    os.chdir(self.savedirectory)
+                    if time==0:
+                        return "no file found"#if the file doesn't exist, then assign the job
+                    if time==1:
+                        return strftime("%Y%m%d-%H%M%S"), "no file found"
             sleep(1)
                     
             
 
     def update_node_job_status(self,myname,status=None,mydir=None):
         self.update_my_namefile(myname,status)
-
+        if mydir==None:
+            mydir=os.path.join(self.savedirectory,myname)
         my_job_file=os.path.join(mydir,myname+'_job')
 
-        os.chdir(mydir)
-        for _ in range(10):
+        for i in range(10):
             try:
                 with open(my_job_file,'rb') as job_save_file:
                     job_save_dict=pickle.load(job_save_file)
                 break
-            except:pass
+            except:
+                sleep(.25)
+                if i==9:
+                    print(traceback.format_exc())
         if type(status) is str:
             now=strftime("%Y%m%d-%H%M%S")
             job_save_dict['node_status'].append((now,status))

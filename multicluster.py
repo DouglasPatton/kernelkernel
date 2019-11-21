@@ -5,36 +5,43 @@ import traceback
 import mycluster
 
 class mypool:
-    def __init__(self, workercount=2,includemaster=0):
-        self.workercount=workercount
+    def __init__(self, nodecount=2,includemaster=0,local_test='no'):
+        self.local_test=local_test
+        self.i=0
+        self.id=randint(0,100000000)
+        self.nodecount=nodecount
         if includemaster==1:
-            self.arg_list=['master']+[f'node{str(randint(0,10000))}']*(workercount-1)
+            self.arg_list=['master']+['node']*(nodecount)
         else:
-            self.arg_list = [f'node{str(randint(0,10000))}'] * (workercount)
-        self.runpool(self.arg_list,self.workercount)
+            self.arg_list = ['node'] * (nodecount)
+        self.runpool(self.arg_list,self.nodecount)
         self.i=0
 
-    def runpool(self,arg_list,workercount):
-        with mp.Pool(processes=workercount) as pool:
+    def runpool(self,arg_list,nodecount):
+        with mp.Pool(processes=nodecount) as pool:
             pool.map(self.runcluster,arg_list)
 
     def runcluster(self,name):
         if not name=='master':
-            sleep(randint(25,200)/25)#make nodes start at different times
+            sleep(randint(25,100)/25)#make nodes start at different times
         while True:
             try:
-                mycluster.run_cluster(mytype=name,local_test='no')
+                self.i+=1#increments with start/restart of nodes or master
+                if name==master:
+                    mycluster.run_cluster(name, local_test='no')
+                else:
+                    mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test='no')
 
             except:
-                print(traceback.format_exc())
                 print(f'restarting:{name}')
+                print(traceback.format_exc())
 
 
 if __name__=='__main__':
     include_master=int(input('1 for include master, 0 for not'))
-    workercount=int(input('worker count:'))
-
+    nodecount=int(input('worker count:'))
+    
     if include_master==0:
-        test=mypool(workercount)
+        test=mypool(nodecount)
     if include_master==1:
-        test=mypool(workercount-1,1)
+        test=mypool(nodecount,1)
