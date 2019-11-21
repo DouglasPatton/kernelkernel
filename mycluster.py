@@ -77,6 +77,7 @@ class run_cluster(kernelcompare.KernelCompare):
             for i in range(10):
                 try:
                     os.mkdir(masterdir)
+                    break
                 except:
                     if i==9:
                         print(traceback.format_exc())
@@ -92,6 +93,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     try:
                         os.mkdir(savedirectory)
                         os.chdir(savedirectory)
+                        break
                     except:
                         if i==9:
                             print(traceback.format_exc())
@@ -134,6 +136,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 try:
                     with open(namefilename,'wb') as savednamefile:
                         pickle.dump(time_status_tup_list,savednamefile)
+                    break
                 except:
                     if i==9:
                         print(traceback.format_exc())
@@ -198,7 +201,6 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 with open('masterfile_archive','wb') as savefile:
                     pickle.dump(masterfile,savefile)
-                    
                 break
             except:
                 if i==9:
@@ -375,8 +377,9 @@ class run_cluster(kernelcompare.KernelCompare):
         nodesnamefilefilename=os.path.join(self.masterdirectory,name+'.name')
         for i in range(10):
             try:
-                with opennodesnamefilefilename,'rb') as savednamefile:
+                with open(nodesnamefilefilename,'rb') as savednamefile:
                     lastnamefile=pickle.load(savednamefile)[-1]
+                break
             except:
                 sleep(0.25)
                 if i==9:
@@ -451,7 +454,6 @@ class run_cluster(kernelcompare.KernelCompare):
                 with open(node_model_save) as saved_model_save:
                     model_save=pickle.load(saved_model_save)
                 return model_save[-1]['when_saved']
-
             except:
                 if i==9:
                     print(traceback.format_exc())
@@ -517,7 +519,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     masterfile_exists = self.checkmaster()
                     if masterfile_exists:break
                 except:
-                    if i == 9:
+                    if i == 119:
                         print(traceback.format_exc())
                         assert False, f"runnode named {myname} could not check master"
 
@@ -525,7 +527,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #my_job_file=os.path.join(mydir,myname+'_job')
         
         mydir=self.nodedirectory
-        if not os.path.exists(mydir)
+        if not os.path.exists(mydir):
             os.mkdir(mydir)
         self.update_my_namefile(myname,status='ready for job')
         start_time=strftime("%Y%m%d-%H%M%S")

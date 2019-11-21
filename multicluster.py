@@ -5,7 +5,7 @@ import traceback
 import mycluster
 
 class mypool:
-    def __init__(self, nodecount=2,includemaster=0,local_test='no'):
+    def __init__(self, nodecount=1,includemaster=1,local_test='no'):
         self.local_test=local_test
         self.i=0
         self.id=randint(0,100000000)
@@ -27,7 +27,7 @@ class mypool:
         while True:
             try:
                 self.i+=1#increments with start/restart of nodes or master
-                if name==master:
+                if name=='master':
                     mycluster.run_cluster(name, local_test='no')
                 else:
                     mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test='no')
@@ -38,10 +38,13 @@ class mypool:
 
 
 if __name__=='__main__':
-    include_master=int(input('1 for include master, 0 for not'))
+    test = mypool(nodecount=1, includemaster=1,local_test='yes')
+
+    '''include_master=int(input('1 for include master, 0 for not'))
     nodecount=int(input('worker count:'))
     
     if include_master==0:
         test=mypool(nodecount)
     if include_master==1:
         test=mypool(nodecount,1)
+'''
