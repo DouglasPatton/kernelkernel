@@ -381,19 +381,19 @@ class run_cluster(kernelcompare.KernelCompare):
         for i in range(10):
             try:
                 with open(nodesnamefilefilename,'rb') as savednamefile:
-                    lastnamefile=pickle.load(savednamefile)[-1]
+                    namefile=pickle.load(savednamefile)
                 break
             except:
                 sleep(0.25)
                 if i==9:
                     print(traceback.format_exc())
-                    lastnamefile=[(None,None)]
-        return lastnamefile
+                    namefile=[(None,None)]
+        return namefile[-1]
 
     def rebuild_namefiles(self):
-        os.chdir(self.masterdirectory)
         namelist=self.getnamelist()#get a new copy just in case
         namefile_tuplist=[self.namefile_statuscheck(name) for name in namelist]
+        #print(f'namefile_tuplist:{namefile_tuplist}')
         s_since_update_list=[self.s_before_now(time) for time,status in namefile_tuplist]
 
         current_name_list=[name for i,name in enumerate(namelist) if s_since_update_list[i]<self.oldnode_threshold]
@@ -401,14 +401,12 @@ class run_cluster(kernelcompare.KernelCompare):
 
         old_name_list=[]
         for name_i in old_name_list1:
-
-
             for j in range(10):
                 try:
-                    itime=self.activitycheck(name_i)
-                    if itime==None:
+                    time_i=self.model_save_activitycheck(name_i)
+                    if time_i==None:
                         old_name_list.append(name_i)
-                    if itime<self.oldnode_threshold:
+                    if time_i<self.oldnode_threshold:
                         current_name_list.append(name_i)
                     break
                 except:
@@ -446,7 +444,7 @@ class run_cluster(kernelcompare.KernelCompare):
         return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
                         
     
-    def activitycheck(self,name,filename=None):
+    def model_save_activitycheck(self,name,filename=None):
         if filename==None: filename='model_save'
         nodedir=os.path.join(self.savedirectory,name)
         node_job=os.path.join(nodedir,name+'_job')
@@ -461,7 +459,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==9:
                     print(traceback.format_exc())
                     if not filename=='final_model_save':
-                        self.activitycheck(name,filename='final_model_save')
+                        self.model_save_activitycheck(name,filename='final_model_save')
         return None
 
 
@@ -597,13 +595,14 @@ class run_cluster(kernelcompare.KernelCompare):
                     i+=1
                     sleep(.25*log(10*i+1))
             except:
-                print(traceback.format_exc())
+
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
                 if s_since_start>datetime.timedelta(hours=120):#allowing 2 hours instead of using self.oldnode_threshold
                     print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready for node')#signal that this node is still active
+                    print(traceback.format_exc())
                 
                 
                 if s_since_start>self.oldnode_threshold:
