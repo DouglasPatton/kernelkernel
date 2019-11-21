@@ -320,9 +320,7 @@ class run_cluster(kernelcompare.KernelCompare):
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node']*model_run_count
         os.chdir(self.masterdirectory)
-        
-        
-        assignment_tracker={}
+
         i=0
         while all([status=='finished' for status in run_dict_status])==False:
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
