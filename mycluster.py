@@ -406,7 +406,8 @@ class run_cluster(kernelcompare.KernelCompare):
             for j in range(10):
                 try:
                     time_i=self.model_save_activitycheck(name_i)
-                    if time_i==None:
+                    print(f'time_i{time_i}')
+                    if not type(time_i) is datetime.timedelta:
                         old_name_list.append(name_i)
                     elif time_i<self.oldnode_threshold:
                         current_name_list.append(name_i)
