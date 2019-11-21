@@ -281,7 +281,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(traceback.format_exc())
         if len(assignment_tracker) > 0:
             assigned_to_not_current_name_idx=[]
-            print('assignment_tracker',assignment_tracker)
+            #ignment_tracker',assignment_tracker)
             for name_i,idx in assignment_tracker.items():
                 for name_j in current_name_list:
                     if name_i==name_j:
@@ -294,10 +294,9 @@ class run_cluster(kernelcompare.KernelCompare):
         for name_i in the_not_current_names:
             try:del assignment_tracker[name_i]
             except:pass
-        print('assignment_tracker',assignment_tracker)
+        '''print('assignment_tracker',assignment_tracker)
         print('current_name_list',current_name_list)
-        print('the_not_current_names',the_not_current_names)
-
+        print('the_not_current_names',the_not_current_names)'''
         #assigned_names = [name_i for name_i in current_name_list if name_i in assignment_tracker]
         assigned_names_idx = [assignment_tracker[name_i] for name_i in current_name_list if
                               name_i in assignment_tracker]
@@ -355,7 +354,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 if job_status=="no file found":
                     print(f'about to setup the job for node:{name}')
-                    print('len(ready_dict_idx)',len(ready_dict_idx))
+                    #print('len(ready_dict_idx)',len(ready_dict_idx))
                     if len(ready_dict_idx) == 0:
                         print('run_dict_status',run_dict_status)
                     if len(ready_dict_idx)>0:
@@ -365,7 +364,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
                             self.setup_job_for_node(name,list_of_run_dicts[random_ready_dict_idx])
                             assignment_tracker[name] = random_ready_dict_idx
-                            print('assignment_tracker', assignment_tracker)
+                            #print('assignment_tracker', assignment_tracker)
                             i+=1
                         except:
                             run_dict_status[random_ready_dict_idx] = 'ready for node'
