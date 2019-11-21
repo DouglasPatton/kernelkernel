@@ -279,8 +279,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 except:
                     if i == 9:
                         print(traceback.format_exc())
-        if len(assignment_tracker)>0:
-            assigned_to_not_current_name_idx=[idx for name_i,idx in assignment_tracker if not any([name_j==name_i for name_j in current_name_list])]
+        if len(assignment_tracker) > 0:
+            assigned_to_not_current_name_idx=[]
+            for name_i,idx in assignment_tracker:
+                for name_j in current_name_list:
+                    if name_i==name_j:
+                        assigned_to_not_current_name_idx.append(idx)
         else:
             assigned_to_not_current_name_idx=[idx for name_i,idx in assignment_tracker]
         the_not_current_names=[name_i for name_i,idx in assignment_tracker if not any([name_j==name_i for name_j in current_name_list])]
