@@ -282,18 +282,18 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(f'about to setup the job for node:{name}')
 
                     if len(ready_dict_idx)>0:
-                        first_ready_dict_idx=ready_dict_idx[0]
+                        random_ready_dict_idx=ready_dict_idx[randint(0,len(ready_dict_idx))]
                         setup=0
                         try:
-                            self.setup_job_for_node(name,list_of_run_dicts[first_ready_dict_idx])
+                            self.setup_job_for_node(name,list_of_run_dicts[random_ready_dict_idx])
                             setup=1
                         except:
                             print(traceback.format_exc())
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
                         if setup==1:
                             i+=1
-                            run_dict_status[first_ready_dict_idx]='assigned'
-                            assignment_tracker[name]=first_ready_dict_idx
+                            run_dict_status[random_ready_dict_idx]='assigned'
+                            assignment_tracker[name]=random_ready_dict_idx
                             print('assignment_tracker',assignment_tracker)
                             ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
 
