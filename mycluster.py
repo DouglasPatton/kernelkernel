@@ -8,6 +8,7 @@ import traceback
 import shutil
 from numpy import log
 from random import randint
+from copy import deepcopy
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
 
