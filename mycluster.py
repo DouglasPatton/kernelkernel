@@ -438,8 +438,8 @@ class run_cluster(kernelcompare.KernelCompare):
 
     def setup_job_for_node(self,name,rundict):
         jobdict={}
-        jobdict['optimizedict']=rundict['optimizedict']
-        jobdict['datagen_dict']=rundict['datagen_dict']
+        jobdict['optimizedict']=rundict['optimizedict'].deepcopy()
+        jobdict['datagen_dict']=rundict['datagen_dict'].deepcopy()
         now=strftime("%Y%m%d-%H%M%S")
         jobdict['node_status']=[(now,'ready for node')]
         for _ in range(10):
