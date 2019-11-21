@@ -41,7 +41,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
 
-        self.oldnode_threshold=datetime.timedelta(minutes=60,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=10,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
@@ -273,7 +273,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(f'check_node_job_status failed for node:{name}')
                     break
 
-                print(f"job_time:{job_time},job_status:{job_status}")
+                #print(f"job_time:{job_time},job_status:{job_status}")
                 now=strftime("%Y%m%d-%H%M%S")
                 #elapsed=now-job_time
                 #late=elapsed>datetime.timedelta(seconds=30)
@@ -408,7 +408,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     itime=self.activitycheck(name_i)
                     if itime==None:
                         old_name_list.append(name_i)
-                    if itime<self.oldnode_threshold*2:
+                    if itime<self.oldnode_threshold:
                         current_name_list.append(name_i)
                     break
                 except:
@@ -601,7 +601,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
-                if s_since_start>self.oldnode_threshold/2==0:
+                if s_since_start>60*120==0:#allowing 2 hours instead of using self.oldnode_threshold
                     print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready for node')#signal that this node is still active
                 
