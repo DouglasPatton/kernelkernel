@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
 
-        self.oldnode_threshold=datetime.timedelta(minutes=10,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=60,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
@@ -399,7 +399,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.update_my_namefile(name,status='ready for job')
                     self.mergethisnode(name)
 
-            sleep(5)
+            sleep(30)
 
             
 
@@ -575,7 +575,7 @@ class run_cluster(kernelcompare.KernelCompare):
             if type(my_opt_job) is dict:
                 break
             else:
-                sleep(5)
+                sleep(10)
 
 
         my_optimizedict=my_opt_job['optimizedict']
