@@ -7,7 +7,7 @@ import kernelcompare
 import traceback
 import shutil
 from numpy import log
-
+from random import randint
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
 
@@ -121,7 +121,7 @@ class run_cluster(kernelcompare.KernelCompare):
             oldname=name
             nameset=0
             while nameset==0:
-                name=oldname+randint(0,10000)
+                name=oldname+str(randint(0,9)
                 namefilename = os.path.join(self.masterdirectory, name+'.name')
                 if not os.path.exists(namefilename):
                     break
