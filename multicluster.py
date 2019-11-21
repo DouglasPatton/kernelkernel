@@ -1,13 +1,13 @@
 from time import sleep
 import multiprocessing as mp
-from random import randint
+from random import randint,seed
 import traceback
 import mycluster
 from datetime import datetime
 
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
-        random.seed(datetime.now())
+        seed(datetime.now())
         self.local_test=local_test
         self.i=0
         self.id=randint(0,100000000)
