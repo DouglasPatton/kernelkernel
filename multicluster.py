@@ -32,7 +32,7 @@ class mypool:
                 except:
                     print(f'restarting:{name}')
                     print(traceback.format_exc())
-        sleeptime=randint(1,100)*15.
+        sleeptime=randint(1,20)*15.
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
 
