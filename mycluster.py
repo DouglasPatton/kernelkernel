@@ -121,7 +121,7 @@ class run_cluster(kernelcompare.KernelCompare):
             oldname=name
             nameset=0
             while nameset==0:
-                name=oldname+str(randint(0,9)
+                name=oldname+str(randint(0,9))
                 namefilename = os.path.join(self.masterdirectory, name+'.name')
                 if not os.path.exists(namefilename):
                     break
