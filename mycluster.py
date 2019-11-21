@@ -283,19 +283,21 @@ class run_cluster(kernelcompare.KernelCompare):
 
                     if len(ready_dict_idx)>0:
                         random_ready_dict_idx=ready_dict_idx[randint(0,len(ready_dict_idx))]
-                        setup=0
                         try:
+                            run_dict_status[random_ready_dict_idx] = 'assigned'
+                            ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
                             self.setup_job_for_node(name,list_of_run_dicts[random_ready_dict_idx])
-                            setup=1
+                            assignment_tracker[name] = random_ready_dict_idx
+                            print('assignment_tracker', assignment_tracker)
+                            i+=1
                         except:
+                            run_dict_status[random_ready_dict_idx] = 'ready for node'
+                            ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
+
                             print(traceback.format_exc())
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
-                        if setup==1:
-                            i+=1
-                            run_dict_status[random_ready_dict_idx]='assigned'
-                            assignment_tracker[name]=random_ready_dict_idx
-                            print('assignment_tracker',assignment_tracker)
-                            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+
+
 
                 if job_status=='failed':
                     job_idx=assignment_tracker[name]
