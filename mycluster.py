@@ -126,19 +126,19 @@ class run_cluster(kernelcompare.KernelCompare):
                 if not os.path.exists(namefilename):
                     break
             print(f' {oldname} taken; new name is {name}')
-        else:
-            now = strftime("%Y%m%d-%H%M%S")
-            time_status_tup_list = [(now, 'created')]
-            for i in range(10):
-                try:
-                    with open(namefilename,'wb') as savednamefile:
-                        pickle.dump(time_status_tup_list,savednamefile)
-                    break
-                except:
-                    if i==9:
-                        print(traceback.format_exc())
-                        print(f'problem creating:{name}, restarting createnamefile')
-                        name=self.createnamefile(name)
+
+        now = strftime("%Y%m%d-%H%M%S")
+        time_status_tup_list = [(now, 'created')]
+        for i in range(10):
+            try:
+                with open(namefilename,'wb') as savednamefile:
+                    pickle.dump(time_status_tup_list,savednamefile)
+                break
+            except:
+                if i==9:
+                    print(traceback.format_exc())
+                    print(f'problem creating:{name}, restarting createnamefile')
+                    name=self.createnamefile(name)
         return name
 
 
@@ -659,8 +659,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     return nodesjob_dict['node_status'][-1][0],nodesjob_dict['node_status'][-1][1]#time_status tup
             except(FileNotFoundError):
                 if i==9:
-                    print(traceback.format_exc())
-                    os.chdir(self.savedirectory)
+
+                    #print(traceback.format_exc())
                     if time==0:
                         return "no file found"#if the file doesn't exist, then assign the job
                     if time==1:
