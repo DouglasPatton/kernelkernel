@@ -21,11 +21,30 @@ class mypool:
         self.runpool(self.arg_list,self.workercount)
         self.i=0
 
-    def runpool(self,arg_list,workercount):
+    def runpool0(self,arg_list,workercount):
         with mp.Pool(processes=workercount) as pool:
-            pool.map(self.runcluster,arg_list)
-
-    def runcluster(self,name):
+            pool.map(self.runworker,arg_list)
+            
+            
+    def runpool(self.arg_list,workercount)
+        process_list=[None]*workercount
+        for i in range(workercount):
+            process_list=multiprocessing.Process(target=self.runworker, (arg_list[i],))
+            processes[i].start()
+        for i in range(workercount):
+            process_list[i].join()
+    
+    
+    
+    processes = [None] * 4
+for i in range(4):
+    processes[i] = multiprocessing.Process(target=child_process.run, args=(i,))
+    processes[i].start()
+for i in range(4):
+    processes[i].join()
+    
+    
+    def runworker(self,name):
         if name=='master':
             while True:
                 try:
@@ -50,7 +69,7 @@ class mypool:
 
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_test='yes')
-    local_test='no'
+    local_test='yes'
     includemaster=int(input('1 for include master, 0 for not'))
     nodecount=int(input('node count:'))
     
