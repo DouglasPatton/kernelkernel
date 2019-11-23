@@ -26,23 +26,21 @@ class mypool:
             pool.map(self.runworker,arg_list)
             
             
-    def runpool(self.arg_list,workercount)
+    def runpool(self,arg_list,workercount):
         process_list=[None]*workercount
         for i in range(workercount):
-            process_list=multiprocessing.Process(target=self.runworker, (arg_list[i],))
-            processes[i].start()
+            process_list[i]=mp.Process(target=self.runworker,args=(arg_list[i],))
+            process_list[i].start()
         for i in range(workercount):
             process_list[i].join()
     
-    
-    
-    processes = [None] * 4
-for i in range(4):
-    processes[i] = multiprocessing.Process(target=child_process.run, args=(i,))
-    processes[i].start()
-for i in range(4):
-    processes[i].join()
-    
+        '''     processes = [None] * 4
+        for i in range(4):
+            processes[i] = multiprocessing.Process(target=child_process.run, args=(i,))
+            processes[i].start()
+        for i in range(4):
+            processes[i].join()
+        '''
     
     def runworker(self,name):
         if name=='master':
