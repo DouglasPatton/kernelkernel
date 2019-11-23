@@ -41,7 +41,7 @@ class run_cluster(kernelcompare.KernelCompare):
             optdict_variation_list=self.getoptdictvariations()
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
-
+        
         self.oldnode_threshold=datetime.timedelta(minutes=60,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
@@ -49,7 +49,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
         print(f'self.savedirectory{self.savedirectory}')
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
-        self.initialize(myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+        print(f'datagen_variation_list:{datagen_variation_list}')
+        self.initialize(
+            myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
 
 
@@ -144,35 +146,6 @@ class run_cluster(kernelcompare.KernelCompare):
                     name=self.createnamefile(name)
         return name
 
-
-
-
-    '''def namenode(self,myname):
-
-        name_regex=r'^'+re.escape(myname)
-        namelist=self.getnamelist()
-        namematch=[1 for name_tup in namelist if re.search(name_regex,name_tup[0])]
-        namecount=len(namematch)
-        if namecount>0:
-            nameset=0
-            while nameset==0:
-                mynametry=myname+f'{namecount}'
-                name_regex2=r'^'+re.escape(mynametry)
-                namelist=self.getnamelist()
-                namematch2=[1 for name_tup in namelist if name_tup[0]==mynametry]
-                if len(namematch2)>0:
-                    namecount+=1
-                if len(namematch2)==0:
-                    myname=mynametry
-                    myname=self.add_to_namelist(myname)
-                    namelist=self.getnamelist()
-                    namematch3=[1 for name_tup in namelist if name_tup[0]==myname]
-                    if len(namematch3)>1:
-                        self.namenode(myname+str(1))
-                    break
-
-        self.runnode(myname)'''
-
             
     def getreadynames(self,namelist):
         readylist=[]
@@ -198,8 +171,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==9:
                     sleep(.5)
                     assert False, "getmaster can't open masterfile"
+        return
 
-     
+    
     def archivemaster(self):
         masterfile=self.getmaster()
         for i in range(10):
@@ -222,8 +196,6 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(traceback.format_exc())
                     return
                     
-            
-                
     
     def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts):
         savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
@@ -325,6 +297,7 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+            print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node']*model_run_count
         
@@ -399,7 +372,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     del assignment_tracker[name]
                     run_dict_status[job_idx]='finished'
                     self.update_my_namefile(name,status='ready for job')
-                    _=self.mergethisnode(name)
+                    mergestatus=self.mergethisnode(name)
+                    print(f'for node name:{name}, mergestatus:{mergestatus}')
 
             sleep(10)
 
@@ -568,7 +542,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
         self.update_node_job_status(myname,status='starting',mydir=mydir)
         try:
-            kernelcompare.KernelCompare(directory=mydir).run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
+            kernelcompare.KernelCompare(directory=mydir).run_model_as_node(
+                my_optimizedict,my_datagen_dict,force_start_params=0)
+            print('----------success!!!!!!-------')
             success=1
         except:
             success=0
@@ -726,8 +702,9 @@ if __name__=="__main__":
     normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
     optdict_variation_list=[Ndiff_type_variations,max_bw_Ndiff_variations,Ndiff_start_variations,product_kern_norm_variations,normalize_Ndiffwtsum_variations]
     
-    train_n_variations=('train_n',[30,45,60])
-    ykern_grid_variations=('ykern_grid',[31,46,61])
+    #train_n_variations=('train_n',[30,45,60])
+    train_n_variations=('train_n',[10])
+    ykern_grid_variations=('ykern_grid',[11])
     ftype_variations=('ftype',['linear','quadratic'])
     param_count_variations=('param_count',[1,2])
     datagen_variation_list=[train_n_variations,ftype_variations,param_count_variations]

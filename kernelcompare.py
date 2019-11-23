@@ -27,6 +27,7 @@ class KernelOptModelTools:
 
 
         data_dict=self.build_dataset_dict(datagen_dict)
+        print(f'datagen_dict:{datagen_dict} for directory,{self.kc_savedirectory}')
         y=data_dict['train_y']
         x=data_dict['train_x']
         
@@ -56,13 +57,17 @@ class KernelOptModelTools:
         help_start=optimizedict['opt_settings_dict']['help_start']
         #print(f'help_start:{help_start}')
         partial_match=optimizedict['opt_settings_dict']['partial_match']
-        try: 
-            os.chdir('..')
-            same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
-            os.chdir(self.kc_savedirectory)
+        try: #search the parent directory first
+            condensedfilename=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
+            same_modelxy_dict_list=self.open_and_compare_optdict(
+                condensedfilename,optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+            
         except:
             try:
-                same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+                condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
+                same_modelxy_dict_list=self.open_and_compare_optdict(
+                    condensedfilename,optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+                
             except:
                 print(traceback.format_exc())
                 same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
@@ -253,17 +258,18 @@ class KernelOptModelTools:
         model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
         #print('here',model_save_filelist)
         
-        os.chdir(save_directory)
-
+        
+        condensedfilename=os.path.joing(save_directory,'condensed_model_save')
         try:
-            with open('condensed_model_save','rb') as savedfile:
+            with open(condensedfilename,'rb') as savedfile:
                 saved_condensed_list=pickle.load(savedfile)
         except: 
             if verbose==1:
                 print("couldn't open condensed_model_save in save_directory, trying self.kc_savedirectory")
-            os.chdir(self.kc_savedirectory)
+            
+            condensedfilename=os.path.joing(self.kc_savedirectory,'condensed_model_save')
             try:
-                with open('condensed_model_save','rb') as savedfile:
+                with open(condensedfilename,'rb') as savedfile:
                     saved_condensed_list=pickle.load(savedfile)
             except:
                 saved_condensed_list=[]
@@ -271,7 +277,7 @@ class KernelOptModelTools:
                     print("---------no existing files named condensed_model_save could be found. "
                         "if it is in merge_directory, it will be picked up and merged anyways--------")
         
-        os.chdir(merge_directory)
+        
 
 
         if len(model_save_filelist)==0:
@@ -285,16 +291,17 @@ class KernelOptModelTools:
         list_of_saved_lists=[]
         if len(model_save_filelist)>0:
             for file_i in model_save_filelist:
+                file_i_name=os.path.join(merge_directory,file_i)
                 for i in range(10):
-                    with open(file_i,'rb') as savedfile:
+                    with open(file_i_name,'rb') as savedfile:
                         try: 
                             saved_model_list=pickle.load(savedfile)
                             if verbose==1:
-                                print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
+                                print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
                             break
                         except:
                             if i==9:
-                                print(f'warning!saved_model_list{file_i} could not pickle.load')
+                                print(f'warning!saved_model_list{file_i_name} could not pickle.load')
                                 print(traceback.format_exc())
                         
                 if condense==1:
@@ -333,11 +340,12 @@ class KernelOptModelTools:
                         if jbest[k]==1:
                             new_model_list.append(list_j[k])
         
-        os.chdir(save_directory)
-        with open('condensed_model_save','wb') as newfile:
+        
+        condensedfilename=os.path.joing(save_directory,'condensed_model_save')
+        with open(condensedfilename,'wb') as newfile:
             #print(f'list_i:{new_model_list}')
             pickle.dump(new_model_list,newfile)
-        os.chdir(self.kc_savedirectory)
+        
                                               
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
         if saved_model_list==None:
@@ -656,8 +664,8 @@ class KernelCompare(KernelOptModelTools):
             merge_directory=self.kc_savedirectory
         else: 
             self.kc_savedirectory=directory
-            merge_directory=".."
-        os.chdir(self.kc_savedirectory)
+            merge_directory=os.path.join(self.kc_savedirectory,'..')
+        
         KernelOptModelTools.__init__(self,directory=self.kc_savedirectory)
         #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
                       #this should gather all directories from parent directory if directory is specified in object_init__()
