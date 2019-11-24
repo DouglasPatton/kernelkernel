@@ -12,7 +12,7 @@ class datagen():
         if source==None:
             self.gen_montecarlo(seed=seed,data_shape=data_shape,ftype=ftype,evar=evar,batchcount=batchcount)
             
-    def gen_montecarlo(self,seed=None,data_shape=None,ftype=None,evar=None,batchcount=None)
+    def gen_montecarlo(self,seed=None,data_shape=None,ftype=None,evar=None,batchcount=None):
         if ftype==None:
             ftype='linear'
         if data_shape==None:
@@ -32,7 +32,7 @@ class datagen():
         
             
             
-    def buildrandomdataset(self,n,p)
+    def buildrandomdataset(self,n,p):
         xtall=3
         xwide=2
         #random row vector to multiply by each random column of x to allow s.d. upto 5
@@ -58,4 +58,4 @@ class datagen():
         self.x = np.concatenate((np.ones([n,1]),self.x),axis=1)
         #print(f'self.x.shape{self.x.shape}')
         self.y=np.matmul(self.x, self.b)+self.e
-        return (y,x)
+        return (self.y,self.x)

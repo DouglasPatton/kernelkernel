@@ -643,10 +643,11 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,ydata,xdata,optimizedict,savedir=None):
+    def __init__(self,data_dict,optimizedict,savedir=None):
         if savedir==None:
               mydir=os.getcwd()
         kNdtool.__init__(self,savedir=savedir)
+        
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
