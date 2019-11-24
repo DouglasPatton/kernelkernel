@@ -584,6 +584,8 @@ class KernelOptModelTools:
         val_n=n-train_n;assert not val_n<0,f'val_n expected non-neg, but val_n:{val_n}'
         data_dict['val_x']=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
         data_dict['val_y']=self.dg_data.y[train_n:]
+        data_dict['yxbatchlist']=self.dg_data.yxtup_list          
+        
         return data_dict
     
                          

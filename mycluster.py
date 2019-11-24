@@ -297,7 +297,7 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
-            print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]}')
+            print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node']*model_run_count
         
