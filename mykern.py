@@ -467,57 +467,7 @@ class kNdtool( object ):
                 allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
-    def MY_KDEpredictMSE(self,free_params,batchdata_dict,modeldict,fixed_or_free_paramdict):
-        
-            
-        if not type(fixed_or_free_paramdict['free_params']) is list: #it would be the string "outside" otherwise
-            self.call_iter+=1#then it must be a new call during optimization
-            #if self.call_iter>1 and self.call_iter%5==0:
-            #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
-            #if self.call_iter>1:# and self.call_iter%5>0:
-            #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
-            
-        batchcount=self.datagen_dict['batchcount']
-        fixed_or_free_paramdict['free_params']=free_params
-        #print(f'free_params added to dict. free_params:{free_params}')
 
-        yhat_un_std_tup=()
-        y_err_tup=()
-        for batch_i in range(batchcount):
-            yin=batchdata_dict['yintup'][batch_i]
-            yout=batchdata_dict['youttup'][batch_i]
-            xin=batchdata_dict['xintup'][batch_i]
-            xpr=batchdata_dict['xprtup'][batch_i]
-
-            yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
-            y_err=yin-yhat_un_std
-            #yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
-            y_err_tup=y_err_tup+(y_err,)
-
-        all_y_err=[ii for i in y_err_tup for ii in i]
-
-        mse= np.mean(np.power(all_y_err,2))
-        self.mse_param_list.append((mse,deepcopy(fixed_or_free_paramdict)))
-        #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
-        self.fixed_or_free_paramdict=fixed_or_free_paramdict
-        t_format="%Y%m%d-%H%M%S"
-        self.iter_start_time_list.append(strftime(t_format))
-        
-        if self.call_iter==3:
-            
-            tdiff=np.abs(datetime.datetime.strptime(self.iter_start_time_list[-1],t_format)-datetime.datetime.strptime(self.iter_start_time_list[-2],t_format))
-            self.save_interval= int(max([15-np.round(np.log(tdiff.total_seconds()+1)**3,0),1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
-            print(f'save_interval changed to {self.save_interval}')
-            
-        
-        if self.call_iter%self.save_interval==0:
-            self.sort_then_saveit(self.mse_param_list[-self.save_interval*2:],modeldict,'model_save')
-                
-        #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        if not np.ma.count_masked(all_y_err)==0:
-            mse=np.ma.count_masked(all_y_err)*10**199
-        
-        return mse
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
@@ -661,8 +611,64 @@ class kNdtool( object ):
         """
         xpr=(xpr-self.xmean)/self.xstd
         self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xpr,modeldict,fixed_or_free_paramdict)
-        return self.prediction.yhat  
-    
+        return self.prediction.yhat
+
+    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict):
+
+        if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
+            self.call_iter += 1  # then it must be a new call during optimization
+            # if self.call_iter>1 and self.call_iter%5==0:
+            #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
+            # if self.call_iter>1:# and self.call_iter%5>0:
+            #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
+
+        batchcount = self.datagen_dict['batchcount']
+        fixed_or_free_paramdict['free_params'] = free_params
+        # print(f'free_params added to dict. free_params:{free_params}')
+
+
+        y_err_tup = ()
+        for batch_i in range(batchcount):
+            yin = batchdata_dict['yintup'][batch_i]
+            yout = batchdata_dict['youttup'][batch_i]
+            xin = batchdata_dict['xintup'][batch_i]
+            xpr = batchdata_dict['xprtup'][batch_i]
+
+            yhat_std = self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+            yhat_unstd=(yhat_std*self.ystd)+self.ymean
+            y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
+            y_err = y_batch_i - yhat_unstd #is yin standardized?
+            # yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
+            y_err_tup = y_err_tup + (y_err,)
+
+        all_y_err = [ii for i in y_err_tup for ii in i]
+
+        mse = np.mean(np.power(all_y_err, 2))
+        self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
+        # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+        self.fixed_or_free_paramdict = fixed_or_free_paramdict
+        t_format = "%Y%m%d-%H%M%S"
+        self.iter_start_time_list.append(strftime(t_format))
+
+        if self.call_iter == 3:
+            tdiff = np.abs(
+                datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                    self.iter_start_time_list[-2], t_format))
+            self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                          1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+            print(f'save_interval changed to {self.save_interval}')
+
+        if self.call_iter % self.save_interval == 0:
+            self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+
+        # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
+        if not np.ma.count_masked(all_y_err) == 0:
+            mse = np.ma.count_masked(all_y_err) * 10 ** 199
+
+        return mse
+
+
+
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
     optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
@@ -684,7 +690,7 @@ class optimize_free_params(kNdtool):
         if savedir==None:
               mydir=os.getcwd()
         kNdtool.__init__(self,savedir=savedir)
-
+        self.datagen_obj=datagen_obj
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]

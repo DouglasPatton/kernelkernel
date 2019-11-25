@@ -59,18 +59,22 @@ class KernelOptModelTools:
             condensedfilename=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
             same_modelxy_dict_list=self.open_and_compare_optdict(
                 condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
+            print(f'run_opt_complete_check found a file in {condensedfilename}')
 
         except:
             try:
                 condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
                 same_modelxy_dict_list=self.open_and_compare_optdict(
                     condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
-
+                print(f'run_opt_complete_check found a file in {condensedfilename}')
             except:
                 print(traceback.format_exc())
-                same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,help_start=help_start,partial_match=partial_match)
-            
-            
+                try:
+                    same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,help_start=help_start,partial_match=partial_match)
+                    print(f'run_opt_complete_check found a file in {condensedfilename}')
+                except:
+                    print(f'run_opt_complete_check could not find a condensed_model_save')
+                    print(traceback.format_exc())
         if len(same_modelxy_dict_list)>0:
             #print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
@@ -733,7 +737,7 @@ class KernelCompare(KernelOptModelTools):
         
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,verbose=0):
         param_count=2
-        datagen_dict={'validate_batchcount':10,'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+        datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict below
         assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
