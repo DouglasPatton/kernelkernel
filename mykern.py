@@ -15,7 +15,10 @@ class kNdtool( object ):
 
     """
 
-    def __init__(self):
+    def __init__(self,savedir=None):
+        if savedir==None:
+            savedir=os.getcwd()
+        self.savedirectory=savedir
         pass
     def sum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
@@ -489,6 +492,7 @@ class kNdtool( object ):
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
+        
         mse_list=[i[0] for i in mse_param_list]
         minmse=min(mse_list)
         fof_param_dict_list=[i[1] for i in mse_param_list]
@@ -647,9 +651,10 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,ydata,xdata,optimizedict):
-        
-        kNdtool.__init__(self)
+    def __init__(self,ydata,xdata,optimizedict,savedir=None):
+        if savedir==None:
+              mydir=os.getcwd()
+        kNdtool.__init__(self,savedir=mydir)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]

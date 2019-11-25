@@ -36,7 +36,7 @@ class KernelOptModelTools:
         
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(y,x,optimizedict)
+        mk.optimize_free_params(y,x,optimizedict,savedir=self.kc_savedirectory)
         return
         
     def run_opt_complete_check(self,optimizedict_orig,y,x,replace=None):
