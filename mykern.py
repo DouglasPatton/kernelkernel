@@ -630,6 +630,7 @@ class kNdtool( object ):
 
         y_err_tup = ()
 
+        arglistlist=[]
 
         for batch_i in range(batchcount):
             yin = batchdata_dict['yintup'][batch_i]
@@ -639,26 +640,24 @@ class kNdtool( object ):
 
             argcount=6
             arglist=[]*argcount
-            arglist[]=yin
-            arglist[]=yout
-            arglist[]=xin
-            arglist[]=xpr
-            arglist[]=modeldict
-            arglist[]=fixed_or_free_paramdict
+            arglist[0]=yin
+            arglist[2]=yout
+            arglist[3]=xin
+            arglist[4]=xpr
+            arglist[5]=modeldict
+            arglist[6]=fixed_or_free_paramdict
+            arglistlist.append(arglist)
 
-            with multiprocessing.Pool(processes=batchcount) as pool:
-                pool.map(self.MPwrapperKDEprediict,arglist)
-                pool.close()
-                pool.join()
-            yhat_std = self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        with multiprocessing.Pool(processes=batchcount) as pool:
+            yhat_unstd=pool.map(self.MPwrapperKDEprediict,arglistlist)
+            pool.close()
+            pool.join()
 
-
-
-            yhat_unstd=(yhat_std*self.ystd)+self.ymean
-            y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
-            y_err = y_batch_i - yhat_unstd #is yin standardized?
-            # yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
-            y_err_tup = y_err_tup + (y_err,)
+        print(f'after mp.pool,yat_unstd has shape:{np.shape(yhad_unstd)}')
+        y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
+        y_err = y_batch_i - yhat_unstd #is yin standardized?
+        # yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
+        y_err_tup = y_err_tup + (y_err,)
 
         all_y_err = [ii for i in y_err_tup for ii in i]
 
@@ -693,7 +692,8 @@ def MPwrapperKDEpredict(self,arglist):
     xpr=arglist[3]
     modeldict=arglist[4]
     fixed_or_free_paramdict=arglist[5]
-    self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+    yhat_std=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+    return yhad_std
 
 
 class optimize_free_params(kNdtool):
