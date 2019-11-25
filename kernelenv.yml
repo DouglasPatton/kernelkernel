@@ -5,7 +5,8 @@ dependencies:
   - bokeh
   - python
   - pandas
-  - pip
+  - ipykernel
+  - jupyter
   - pip:
     - os
     - copy

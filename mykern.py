@@ -492,7 +492,7 @@ class kNdtool( object ):
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
-        
+        fullpath_filename=os.path.join(self.savedirectory,filename)
         mse_list=[i[0] for i in mse_param_list]
         minmse=min(mse_list)
         fof_param_dict_list=[i[1] for i in mse_param_list]
@@ -512,7 +512,7 @@ class kNdtool( object ):
         try:
             for i in range(10):
                 try: 
-                    with open(filename,'rb') as modelfile:
+                    with open(fullpath_filename,'rb') as modelfile:
                         modellist=pickle.load(modelfile)
                     break
                 except:
@@ -525,11 +525,11 @@ class kNdtool( object ):
         modellist.append(savedict)
         for i in range(10):
             try:
-                with open(filename,'wb') as thefile:
+                with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                print(f'saved to {filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+                print(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
             except:
-                print(f'mykern.py could not save to {filename} after {i+1} tries')
+                print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
         return
     
     
@@ -651,10 +651,11 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,ydata,xdata,optimizedict,savedir=None):
+    def __init__(self,data_dict,optimizedict,savedir=None):
         if savedir==None:
               mydir=os.getcwd()
-        kNdtool.__init__(self,savedir=mydir)
+        kNdtool.__init__(self,savedir=savedir)
+
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]

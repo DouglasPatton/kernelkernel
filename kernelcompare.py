@@ -12,9 +12,9 @@ import traceback
 class KernelOptModelTools:
     def __init__(self,directory=None):
         if directory==None:
-            self.kc_save_directory=os.getcwd
+            self.kc_savedirectory=os.getcwd
         else:
-            self.kc_save_directory=directory
+            self.kc_savedirectory=directory
         pass
         
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
@@ -27,25 +27,24 @@ class KernelOptModelTools:
 
 
         data_dict=self.build_dataset_dict(datagen_dict)
-        y=data_dict['train_y']
-        x=data_dict['train_x']
+        print(f'datagen_dict:{datagen_dict} for directory,{self.kc_savedirectory}')
         
         if force_start_params==0:
-            optimizedict=self.run_opt_complete_check(optimizedict,y,x,replace=1)
-        
+            optimizedict=self.run_opt_complete_check(optimizedict,data_dict,replace=1)
         
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(y,x,optimizedict,savedir=self.kc_savedirectory)
+        mk.optimize_free_params(data_dict,optimizedict,savedir=self.kc_savedirectory)
         return
         
-    def run_opt_complete_check(self,optimizedict_orig,y,x,replace=None):
+    def run_opt_complete_check(self,optimizedict_orig,data_dict,replace=None):
         '''
         checks model_save and then final_model_save to see if the same modeldict has been run before (e.g.,
-        same model featuers, same starting parameters, same data).
+        same model featuers, same starting parameters, same datagen_dict).
         -by default or if replace set to 1 or 'yes', then the start parameters are replaced by the matching model from model_save 
-            and final_model_save with the lowest mse
+            and final_model_save with the lowest 'nwt mse "
         -if replace set to 0 or 'no', then the best matching model is still announced, but replacement of start parameters doens't happen
+            Only mse and parameters pulled by self.pull2dicts are compared/replaced. modeldict and datagen_dict
         '''
         optimizedict=optimizedict_orig.copy()
         if replace==None or replace=='yes':
@@ -56,23 +55,27 @@ class KernelOptModelTools:
         help_start=optimizedict['opt_settings_dict']['help_start']
         #print(f'help_start:{help_start}')
         partial_match=optimizedict['opt_settings_dict']['partial_match']
-        try: 
-            os.chdir('..')
-            same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
-            os.chdir(self.kc_save_directory)
+        try: #search the parent directory first
+            condensedfilename=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
+            same_modelxy_dict_list=self.open_and_compare_optdict(
+                condensedfilename,optimizedict,data_dict,help_start=help_start,partial_match=partial_match)
+
         except:
             try:
-                same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+                condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
+                same_modelxy_dict_list=self.open_and_compare_optdict(
+                    condensedfilename,optimizedict,data_dict,help_start=help_start,partial_match=partial_match)
+
             except:
                 print(traceback.format_exc())
-                same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
+                same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,data_dict,help_start=help_start,partial_match=partial_match)
             
             
         if len(same_modelxy_dict_list)>0:
             #print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
-            train_n=[dict_i['ydata'].shape[0] for dict_i in same_modelxy_dict_list]
+            train_n=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
             n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             
@@ -83,13 +86,13 @@ class KernelOptModelTools:
         mse_list=[dict_i['mse'] for dict_i in best_dict_list]
         if len(mse_list)>0:
             mse_list=[dict_i['mse'] for dict_i in best_dict_list]
-            train_n=[dict_i['ydata'].shape[0] for dict_i in best_dict_list]
+            train_n=[dict_i['datagen_dict']['train_n'] for dict_i in best_dict_list]
             n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
             
             #try:print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["whensaved"]}')
-            print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["when_saved"]}')
+            print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict['datagen_dict']['train_n']}was last saved{best_dict["when_saved"]}')
             #print(f'best_dict:{best_dict}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
@@ -106,7 +109,7 @@ class KernelOptModelTools:
             verbose=1
         vstring=''
         for key,val in new_opt_dict['hyper_param_dict'].items():
-            new_val=mk.kNdtool.pull_value_from_fixed_or_free(self,key,replacement_fixedfreedict,transform='no')
+            new_val=mk.kNdtool.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
             vstring+=f"for {key} old val({val})replaced with new val({new_val})"
             new_opt_dict['hyper_param_dict'][key]=new_val
         #print(f'rebuild hyper param dict vstring:{vstring}')
@@ -150,9 +153,6 @@ class KernelOptModelTools:
                 if re.search('model_save',file_i):
                     self.add_dict(os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
         return
-
-
-
 
 
     def add_dict(self,filename,newdict_tup_list,verbose=0,overwrite=0):
@@ -281,50 +281,22 @@ class KernelOptModelTools:
         return flatdict
 
 
-    '''def myflatdict(self,complexdict,keys=None):
-        thistype=type(complexdict)
-        if thistype is np.ndarray:
-            complexdict=np.array_str(complexdict)
-
-        if not (thistype is dict or thistype is list):
-            return {'val':complexdict}
-
-        if keys==None and thistype is dict:
-            keys=[key for key,val in complexdict.items()]
-        flatdict = {}
-
-        if thistype is list:
-            for key,val in enumerate(complexdict):
-                newdict=self.myflatdict(val)
-                for key2,val2 in newdict.items():
-                    flatdict[f'{key}:{key2}']=
-
-        if thistype is dict:
-            for key in keys:
-                try:val=complexdict[key]
-                except:val='no val found'
-                newdict=self.myflatdict(val)
-                for key2,val2 in newdict.items():
-                    flatdict[f'{key}:{key2}'] = val2
-
-        return flatdict'''
 
     def getmodelrunmse(self,modelrundict):
         return modelrundict['mse']
-
 
             
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
             assert os.path.exists(merge_directory),"merge_directory does not exist"
-        if merge_directory==None:
-            merge_directory=self.kc_save_directory
+        else:
+            merge_directory=self.kc_savedirectory
                 
         if not save_directory==None:
             assert os.path.exists(save_directory),"save_directory does not exist"
-        if save_directory==None:
-            save_directory=self.kc_save_directory
-
+        else:
+            save_directory=self.kc_savedirectory
+                #os.makedirs(save_directory)
         if condense==None or condense=='no':
             condense=0
         if condense=='yes':
@@ -336,17 +308,18 @@ class KernelOptModelTools:
         model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
         #print('here',model_save_filelist)
         
-        condensedfile=os.path.join(save_directory,'condensed_model_save')
 
+        condensedfilename=os.path.join(save_directory,'condensed_model_save')
         try:
-            with open(condensedfile,'rb') as savedfile:
+            with open(condensedfilename,'rb') as savedfile:
                 saved_condensed_list=pickle.load(savedfile)
         except: 
             if verbose==1:
-                print("couldn't open condensed_model_save in save_directory, trying self.kc_save_directory")
-            condensedfile=os.path.join(self.kc_save_directory,'condensed_model_save')
+                print("couldn't open condensed_model_save in save_directory, trying self.kc_savedirectory")
+
+            condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
             try:
-                with open(condensedfile,'rb') as savedfile:
+                with open(condensedfilename,'rb') as savedfile:
                     saved_condensed_list=pickle.load(savedfile)
             except:
                 saved_condensed_list=[]
@@ -368,17 +341,17 @@ class KernelOptModelTools:
         list_of_saved_lists=[]
         if len(model_save_filelist)>0:
             for file_i in model_save_filelist:
-                file_i_path=os.path.join(merge_directory,file_i)
+                file_i_name=os.path.join(merge_directory,file_i)
                 for i in range(10):
-                    with open(file_i_path,'rb') as savedfile:
+                    with open(file_i_name,'rb') as savedfile:
                         try: 
                             saved_model_list=pickle.load(savedfile)
                             if verbose==1:
-                                print(f'file_i:{file_i} has {len(file_i)} saved model(s)')
+                                print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
                             break
                         except:
                             if i==9:
-                                print(f'warning!saved_model_list{file_i} could not pickle.load')
+                                print(f'warning!saved_model_list{file_i_name} could not pickle.load')
                                 print(traceback.format_exc())
                         
                 if condense==1:
@@ -416,10 +389,10 @@ class KernelOptModelTools:
                     for k in range(jlen):
                         if jbest[k]==1:
                             new_model_list.append(list_j[k])
+        
 
-        condensedfile = os.path.join(save_directory, 'condensed_model_save')
-
-        with open(condensedfile,'wb') as newfile:
+        condensedfilename=os.path.join(save_directory,'condensed_model_save')
+        with open(condensedfilename,'wb') as newfile:
             #print(f'list_i:{new_model_list}')
             pickle.dump(new_model_list,newfile)
 
@@ -446,9 +419,9 @@ class KernelOptModelTools:
                         #if full_model_i['modeldict']==full_model_j['modeldict']:
                         if len(matchlist)>0:
                             i_mse=full_model_i['mse']
-                            i_n=full_model_i['ydata'].shape[0]#replace with ['datagen_dict']:train_n?
+                            i_n=full_model_i['datagen_dict']['train_n']
                             j_mse=full_model_j['mse']
-                            j_n=full_model_j['ydata'].shape[0]
+                            j_n=full_model_j['datagen_dict']['train_n']
                             iwt=self.do_nwt_mse(i_mse,i_n)
                             jwt=self.do_nwt_mse(j_mse,j_n)
                             if verbose>1:
@@ -475,7 +448,7 @@ class KernelOptModelTools:
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}
     
-    def open_and_compare_optdict(self,saved_filename,optimizedict,y,x,help_start=None,partial_match=None):
+    def open_and_compare_optdict(self,saved_filename,optimizedict,data_dict,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
         if help_start=='yes': 
@@ -501,17 +474,17 @@ class KernelOptModelTools:
         #print(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
         doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_dict_list]
         print(f'in saved_filename:{saved_filename}, len(doubledict_list):{len(doubledict_list)},len(saved_dict_list):{len(saved_dict_list)}')
-        optdict_match_list_select=[dict_i==this_2dicts for dict_i in doubledict_list]#list of boolean
-        optdict_match_list=[saved_dict_list[i] for i,ismatch in enumerate(optdict_match_list_select) if ismatch]
+        doubledict_match_list_select=[dict_i==this_2dicts for dict_i in doubledict_list]#list of boolean
+        doubledict_match_list=[saved_dict_list[i] for i,ismatch in enumerate(doubledict_match_list_select) if ismatch]
         
         
-        if help_start==1 and len(optdict_match_list)==0:
+        if help_start==1 and len(doubledict_match_list)==0:
             print('--------------------------------help_start is triggered---------------------------')
-            optdict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
-            #print(f'optdict_match_list2:{optdict_match_list}')
-            if len(optdict_match_list)>0:
-                return self.condense_saved_model_list(optdict_match_list,help_start=0,strict=1)
-        if len(optdict_match_list)==0 and help_start==1 and partial_match==1:
+            doubledict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
+            #print(f'doubledict_match_list2:{doubledict_match_list}')
+            if len(doubledict_match_list)>0:
+                return self.condense_saved_model_list(doubledict_match_list,help_start=0,strict=1)
+        if len(doubledict_match_list)==0 and help_start==1 and partial_match==1:
             print('--------------help_start with partial match triggered----------------')
             tryagain= self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
             if tryagain==None:
@@ -519,20 +492,23 @@ class KernelOptModelTools:
             else:
                 return tryagain
         else:
+            #same_doubledict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
+            #                      self.pull2dicts(optdict_i)==this_2dicts]
+                                # optdict['modeldict']==optimizedict['modeldict'] and\
+                                # optdict['datagen_dict']==optimizedict['datagen_dict'] ]
+            same_modeldict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
+                                 optdict_i['modeldict'] == optimizedict['modeldict']]
             #same_doubledict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
-            xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in optdict_match_list]
-            same_model_and_x_dict_list=[optdict_match_list[i] for i,is_same in enumerate(xcompare_list) if is_same]
-            ycompare_list=[np.all(dict_i['ydata']==y) for dict_i in same_model_and_x_dict_list]
-            same_modelxy_dict_list=[same_model_and_x_dict_list[i] for i,is_same in enumerate(ycompare_list) if is_same]
-            if len(same_modelxy_dict_list)==0 and partial_match==1:
-                if len(same_modelxy_dict_list)>0: 
-                    print('found matching models and matching datagen_dict but no matching x,y too')
-                    return same_modelxy_dict_list
-                else: 
-                    print('found matching models but not matching x,y')
-                    return optdict_match_list
-            print('')
-            return same_modelxy_dict_list
+            #xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in doubledict_match_list]
+            #same_model_and_x_dict_list=[doubledict_match_list[i] for i,is_same in enumerate(xcompare_list) if is_same]
+            #ycompare_list=[np.all(dict_i['ydata']==y) for dict_i in same_model_and_x_dict_list]
+            #same_modelxy_dict_list=[same_model_and_x_dict_list[i] for i,is_same in enumerate(ycompare_list) if is_same]
+            if len(doubledict_match_list)==0 and partial_match==1:
+                print('found matching models but no matching datagen_dict')
+                return same_modeldict_list
+
+
+            return same_doubledict_list
     
     def do_partial_match(self,saved_optdict_list,afullmodel,help_start,strict=None):
         if strict==None or strict=='no':
@@ -619,7 +595,7 @@ class KernelOptModelTools:
                         if verbose==1:
                             print(f":val({new_dict[key]}) replaces val({oldval})\n")
                             vstring=vstring+f":for key:{key}, val({val}) replaces val({oldval})\n"
-                            
+
                     except:
                         print(f'Warning: old_dict has keys:{[key for key,value in old_dict_copy.items()]} and new_dict has key:value::{key}:{new_dict[key]}')
         if verbose==1:
@@ -677,6 +653,8 @@ class KernelOptModelTools:
         val_n=n-train_n;assert not val_n<0,f'val_n expected non-neg, but val_n:{val_n}'
         data_dict['val_x']=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
         data_dict['val_y']=self.dg_data.y[train_n:]
+        data_dict['yxbatchlist']=self.dg_data.yxtup_list
+
         return data_dict
     
                          
@@ -753,14 +731,14 @@ class KernelOptModelTools:
 class KernelCompare(KernelOptModelTools):
     def __init__(self,directory=None):
         if directory==None:
-            self.kc_save_directory=os.getcwd()
-            merge_directory=self.kc_save_directory
+            self.kc_savedirectory=os.getcwd()
+            merge_directory=self.kc_savedirectory
         else: 
-            self.kc_save_directory=directory
-            merge_directory=".."
-        os.chdir(self.kc_save_directory)
-        KernelOptModelTools.__init__(self,directory=self.kc_save_directory)
-        #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_save_directory,condense=1,verbose=0)
+            self.kc_savedirectory=directory
+            merge_directory=os.path.join(self.kc_savedirectory,'..')
+
+        KernelOptModelTools.__init__(self,directory=self.kc_savedirectory)
+        #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
                       #this should gather all directories from parent directory if directory is specified in object_init__()
                       #or if not, everything happens in the current working directory, which is good for testing without running
                       #through mycluster.
