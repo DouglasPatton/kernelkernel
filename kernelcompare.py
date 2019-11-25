@@ -642,7 +642,8 @@ class KernelOptModelTools:
         evar=datagen_dict['evar']
         batch_n=datagen_dict['batch_n']
         batchcount=datagen_dict['batchcount']
-        return dg.datagen(source = None, seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount)
+        validate_batchcount=datagen_dict['validate_batchcount']
+        return dg.datagen(source = None, seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount, validate_batchcount=validate_batchcount)
 
 
     def build_optdict(self,opt_dict_override=None,param_count=None):
@@ -732,7 +733,7 @@ class KernelCompare(KernelOptModelTools):
         
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,verbose=0):
         param_count=2
-        datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+        datagen_dict={'validate_batchcount':10,'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict below
         assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'

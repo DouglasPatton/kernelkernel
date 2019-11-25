@@ -5,14 +5,15 @@ class datagen():
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,source=None, seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_n=None):
+    def __init__(self,source=None, seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if param_count==None:
             param_count=1
         if batch_n==None:
             batch_n=45
         if batchcount==None:
             batchcount=1
-            
+        if validate_batchcount==None:
+            validate_batchcount=batchcount
         if source==None or source=='monte':
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             
@@ -28,7 +29,7 @@ class datagen():
         if not seed==None:
             np.random.seed(seed)
         if validate_batchcount==None:
-            validate_batchcount=2*batch_n
+            validate_batchcount=batchcount
         
         p=param_count
         n=batch_n
