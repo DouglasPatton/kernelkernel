@@ -26,18 +26,18 @@ class KernelOptModelTools:
             force_start_params=1
 
 
-        data_dict=self.build_dataset_dict(datagen_dict)
+        datagen_obj=self.build_dataset_obj(datagen_dict)
         print(f'datagen_dict:{datagen_dict} for directory,{self.kc_savedirectory}')
         
         if force_start_params==0:
-            optimizedict=self.run_opt_complete_check(optimizedict,data_dict,replace=1)
+            optimizedict=self.run_opt_complete_check(optimizedict,datagen_obj,replace=1)
         
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(data_dict,optimizedict,savedir=self.kc_savedirectory)
+        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory)
         return
         
-    def run_opt_complete_check(self,optimizedict_orig,data_dict,replace=None):
+    def run_opt_complete_check(self,optimizedict_orig,datagen_obj,replace=None):
         '''
         checks model_save and then final_model_save to see if the same modeldict has been run before (e.g.,
         same model featuers, same starting parameters, same datagen_dict).
@@ -58,17 +58,17 @@ class KernelOptModelTools:
         try: #search the parent directory first
             condensedfilename=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
             same_modelxy_dict_list=self.open_and_compare_optdict(
-                condensedfilename,optimizedict,data_dict,help_start=help_start,partial_match=partial_match)
+                condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
 
         except:
             try:
                 condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
                 same_modelxy_dict_list=self.open_and_compare_optdict(
-                    condensedfilename,optimizedict,data_dict,help_start=help_start,partial_match=partial_match)
+                    condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
 
             except:
                 print(traceback.format_exc())
-                same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,data_dict,help_start=help_start,partial_match=partial_match)
+                same_modelxy_dict_list=self.open_and_compare_optdict('model_save',optimizedict,help_start=help_start,partial_match=partial_match)
             
             
         if len(same_modelxy_dict_list)>0:
@@ -448,7 +448,7 @@ class KernelOptModelTools:
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}
     
-    def open_and_compare_optdict(self,saved_filename,optimizedict,data_dict,help_start=None,partial_match=None):
+    def open_and_compare_optdict(self,saved_filename,optimizedict,help_start=None,partial_match=None):
         if help_start==None or help_start=='no': 
             help_start=0
         if help_start=='yes': 
@@ -635,29 +635,16 @@ class KernelOptModelTools:
         return hyper_paramdict1
             
         
-    def build_dataset_dict(self,datagen_dict):
-        data_dict={}
+    def build_dataset_obj(self,datagen_dict):
         param_count=datagen_dict['param_count']
-        data_dict['p']=param_count
         seed=datagen_dict['seed']
         ftype=datagen_dict['ftype']
         evar=datagen_dict['evar']
-        train_n=datagen_dict['train_n']
-        n=datagen_dict['n']
-        data_dict['train_n']=train_n
-        
-        self.dg_data=dg.datagen(data_shape=(n,param_count),seed=seed,ftype=ftype,evar=evar)
-        data_dict['train_x']=self.dg_data.x[0:train_n,1:param_count+1]#drop constant from x and interaction/quadratic terms
-        data_dict['train_y']=self.dg_data.y[0:train_n]
-        
-        val_n=n-train_n;assert not val_n<0,f'val_n expected non-neg, but val_n:{val_n}'
-        data_dict['val_x']=self.dg_data.x[train_n:,1:param_count+1]#drop constant from x and 
-        data_dict['val_y']=self.dg_data.y[train_n:]
-        data_dict['yxbatchlist']=self.dg_data.yxtup_list
+        batch_n=datagen_dict['batch_n']
+        batchcount=datagen_dict['batchcount']
+        return dg.datagen(source = None, seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount)
 
-        return data_dict
-    
-                         
+
     def build_optdict(self,opt_dict_override=None,param_count=None):
         if opt_dict_override==None:
             opt_dict_override={}
@@ -745,7 +732,7 @@ class KernelCompare(KernelOptModelTools):
         
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,verbose=0):
         param_count=2
-        datagen_dict={'train_n':60,'n':200, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
+        datagen_dict={'train_n':60,'batch_count':5, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict below
         assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'

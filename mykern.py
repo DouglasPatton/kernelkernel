@@ -428,6 +428,20 @@ class kNdtool( object ):
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
+    def standardize_yxtup(self,yxtup_list_unstd):
+        yxtup_list=deepcopy(yxtup_list_unstd)
+        all_y=[ii for i in yxtup_list for ii in i[0]]
+        all_x=[ii for i in yxtup_list for ii in i[1]]
+        self.xmean=np.mean(all_x,axis=0)
+        self.ymean=np.mean(all_y,axis=0)
+        self.xstd=np.std(all_x,axis=0)
+        self.ystd=np.std(all_y,axis=0)
+        tupcount=len(yxtup_list)#should be same as batchcount
+        for i in range(tupcount):
+            yxtup_list[i][0]=(yxtup_list_unstd[i][0]-self.ymean)/self.ystd
+            yxtup_list[i][1]=(yxtup_list_unstd[i][1]-self.xmean)/self.xstd
+        return yxtup_list
+
 
     def do_KDEsmalln(self,diffs,bw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
@@ -450,7 +464,7 @@ class kNdtool( object ):
                 allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
-    def MY_KDEpredictMSE(self,free_params,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
+    def MY_KDEpredictMSE(self,free_params,batchdata_dict,modeldict,fixed_or_free_paramdict):
         
             
         if not type(fixed_or_free_paramdict['free_params']) is list: #it would be the string "outside" otherwise
@@ -460,14 +474,26 @@ class kNdtool( object ):
             #if self.call_iter>1:# and self.call_iter%5>0:
             #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
             
-            
+        batchcount=modeldict['datagen_dict']['batch_n']
         fixed_or_free_paramdict['free_params']=free_params
         #print(f'free_params added to dict. free_params:{free_params}')
-        
-        
-        yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
-        y_err=self.ydata-yhat_un_std
-        mse= np.mean(np.power(y_err,2))
+
+        yhat_un_std_tup=()
+        y_err_tup=()
+        for batch_i in range(batchcount):
+            yin=batchdata_dict['yintup'][batch_i]
+            yout=batchdata_dict['youttup'][batch_i]
+            xin=batchdata_dict['xintup'][batch_i]
+            xpr=batchdata_dict['xprtup'][batch_i]
+
+            yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
+            y_err=self.ydata-yhat_un_std
+            #yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
+            y_err_tup=y_err_tup+(y_err,)
+
+        all_y_err=[ii for i in y_err_tup for ii in i]
+
+        mse= np.mean(np.power(all_y_err,2))
         self.mse_param_list.append((mse,deepcopy(fixed_or_free_paramdict)))
         #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
@@ -485,8 +511,8 @@ class kNdtool( object ):
             self.sort_then_saveit(self.mse_param_list[-self.save_interval*2:],modeldict,'model_save')
                 
         #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        if not np.ma.count_masked(yhat_un_std)==0:
-            mse=np.ma.count_masked(yhat_un_std)*10**199
+        if not np.ma.count_masked(all_y_err)==0:
+            mse=np.ma.count_masked(all_y_err)*10**199
         
         return mse
             
@@ -651,7 +677,7 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,data_dict,optimizedict,savedir=None):
+    def __init__(self,datagen_obj,optimizedict,savedir=None):
         if savedir==None:
               mydir=os.getcwd()
         kNdtool.__init__(self,savedir=savedir)
@@ -684,28 +710,48 @@ class optimize_free_params(kNdtool):
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
                 
         #save and transform the data
-        self.xdata=xdata;self.ydata=ydata
-        self.nin,self.p=xdata.shape
+        self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
+        self.nin=datagen_obj.batch_n
+        self.p=datagen_obj.p
         assert ydata.shape[0]==xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
-        xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
+        #xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
+        yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list)
+
         #store the standardized (by column or parameter,p) versions of x and y
         self.xdata_std=xdata_std;self.ydata_std=ydata_std
                                  
         xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
         self.xin=xdata_std;self.yin=ydata_std
         self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
-        
-        self.npr=xpr.shape[0]#probably redundant
-        self.yout=yout
+        self.npr=self.nin#since we are optimizing within our sample
+
+        #load up the data for each batch into a dictionary full of tuples
+        # with each tuple item containing data for a batch from 0 to batchcount-1
+        xintup = ()
+        yintup = ()
+        xprtup = ()
+        youttup = ()
+        for i in range(len(batchcount)):
+            xdata_std=yxtup_list_std[i][1]
+            ydata_std=yxtup_list_std[i][0]
+            xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
+            xintup=xintup+(xdata_std,)
+            yintup=yintup+(ydata_std,)
+            xprtup=xprtup+(xpri,)
+            youttup=youttup+(youti,)
+
+        batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+        #self.npr=xpr.shape[0]#probably redundant
+        #self.yout=yout
 
         #pre-build list of masks
         self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         
         #setup and run scipy minimize
-        args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
+        args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
         print(f'modeldict:{modeldict}')
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
