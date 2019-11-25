@@ -646,17 +646,17 @@ class kNdtool( object ):
             arglist.append(modeldict)
             arglist.append(fixed_or_free_paramdict)
             arglistlist.append(arglist)
-
-        with multiprocessing.Pool(processes=batchcount) as pool:
+        workercount=batchcount
+        with multiprocessing.Pool(processes=workercount) as pool:
             yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
             pool.close()
             pool.join()
 
-        print(f'after mp.pool,yat_unstd has shape:{np.shape(yhad_unstd)}')
-        y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
-        y_err = y_batch_i - yhat_unstd #is yin standardized?
-        # yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
-        y_err_tup = y_err_tup + (y_err,)
+        print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
+        for batch_i in range(batchcount)
+            y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
+            y_err = y_batch_i - yhat_unstd[batch_i,:]
+            y_err_tup = y_err_tup + (y_err,)
 
         all_y_err = [ii for i in y_err_tup for ii in i]
 
@@ -691,8 +691,8 @@ class kNdtool( object ):
         xpr=arglist[3]
         modeldict=arglist[4]
         fixed_or_free_paramdict=arglist[5]
-        yhat_std=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
-        return yhad_std
+        yhat_unstd=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        return yhat_unstd
 
 
 class optimize_free_params(kNdtool):
