@@ -8,12 +8,18 @@ class datagen():
     def __init__(self,source=None, seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if param_count==None:
             param_count=1
+        self.param_count=param_count
+        self.p = param_count
         if batch_n==None:
             batch_n=45
+        self.batch_n = batch_n
         if batchcount==None:
             batchcount=1
+        self.batchcount=batchcount
         if validate_batchcount==None:
             validate_batchcount=batchcount
+        self.validate_batchcount=validate_batchcount
+        self.source = source
         if source==None or source=='monte':
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             

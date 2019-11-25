@@ -772,7 +772,7 @@ class KernelCompare(KernelOptModelTools):
         #pull and replace first value from each variation
         for tup_i in variation_list:
             override_dict_ik=self.build_override_dict_from_str(tup_i[0],tup_i[1][0])
-            dict_ik=self.do_dict_override(initial_dict,override_dict_ik)
+            dict_ik=self.do_dict_override(dict_ik,override_dict_ik)
         dict_combo_list.append(dict_ik)#this is now the starting dictionary.
         remaining_variation_list=[(tup_i[0],tup_i[1][1:]) for tup_i in variation_list if len(tup_i[1])>1]
         for tup_i in remaining_variation_list:

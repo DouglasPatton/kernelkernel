@@ -437,9 +437,12 @@ class kNdtool( object ):
         self.xstd=np.std(all_x,axis=0)
         self.ystd=np.std(all_y,axis=0)
         tupcount=len(yxtup_list)#should be same as batchcount
+        yxtup_list=[]
         for i in range(tupcount):
-            yxtup_list[i][0]=(yxtup_list_unstd[i][0]-self.ymean)/self.ystd
-            yxtup_list[i][1]=(yxtup_list_unstd[i][1]-self.xmean)/self.xstd
+            ystd=(yxtup_list_unstd[i][0] - self.ymean) / self.ystd
+            xstd=(yxtup_list_unstd[i][1] - self.xmean) / self.xstd
+            yxtup_list.append((ystd,xstd))
+
         return yxtup_list
 
 
@@ -474,7 +477,7 @@ class kNdtool( object ):
             #if self.call_iter>1:# and self.call_iter%5>0:
             #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
             
-        batchcount=modeldict['datagen_dict']['batch_n']
+        batchcount=self.datagen_dict['batchcount']
         fixed_or_free_paramdict['free_params']=free_params
         #print(f'free_params added to dict. free_params:{free_params}')
 
@@ -487,7 +490,7 @@ class kNdtool( object ):
             xpr=batchdata_dict['xprtup'][batch_i]
 
             yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
-            y_err=self.ydata-yhat_un_std
+            y_err=yin-yhat_un_std
             #yhat_un_std_tup=yhat_un_std_tup+(yhat_un_std,)
             y_err_tup=y_err_tup+(y_err,)
 
@@ -710,21 +713,22 @@ class optimize_free_params(kNdtool):
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
                 
         #save and transform the data
-        self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
+        #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
+        self.batchcount=datagen_obj.batchcount
         self.nin=datagen_obj.batch_n
-        self.p=datagen_obj.p
-        assert ydata.shape[0]==xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
+        self.p=datagen_obj.param_count#p should work too
+        #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
         #xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
         yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list)
 
         #store the standardized (by column or parameter,p) versions of x and y
-        self.xdata_std=xdata_std;self.ydata_std=ydata_std
+        #self.xdata_std=xdata_std;self.ydata_std=ydata_std
                                  
-        xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
-        self.xin=xdata_std;self.yin=ydata_std
-        self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
+        #xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
+        #self.xin=xdata_std;self.yin=ydata_std
+        #self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
         self.npr=self.nin#since we are optimizing within our sample
 
         #load up the data for each batch into a dictionary full of tuples
@@ -733,7 +737,7 @@ class optimize_free_params(kNdtool):
         yintup = ()
         xprtup = ()
         youttup = ()
-        for i in range(len(batchcount)):
+        for i in range(self.batchcount):
             xdata_std=yxtup_list_std[i][1]
             ydata_std=yxtup_list_std[i][0]
             xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
