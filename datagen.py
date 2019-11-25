@@ -5,7 +5,7 @@ class datagen():
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,source=None, seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None):
+    def __init__(self,source=None, seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_n=None):
         if param_count==None:
             param_count=1
         if batch_n==None:
@@ -16,7 +16,7 @@ class datagen():
         if source==None or source=='monte':
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             
-    def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None):
+    def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if ftype==None:
             ftype='linear'
         if batch_n==None:
@@ -27,6 +27,8 @@ class datagen():
             batchcount=1
         if not seed==None:
             np.random.seed(seed)
+        if validate_batchcount==None:
+            validate_batchcount=2*batch_n
         
         p=param_count
         n=batch_n
@@ -39,6 +41,11 @@ class datagen():
         self.yxtup_list=yxtup_list
         self.y=yxtup_list[-1][0]
         self.x = yxtup_list[-1][1]
+        val_yxtup_list=[]
+        for i in range(validate_batchcount):
+            val_yxtup_list.append(self.buildrandomdataset(n,p,ftype,evar))
+        self.val_yxtup_list=val_yxtup_list
+
 
     def buildrandomdataset(self,n,p,ftype,evar):
         betamax = 10
