@@ -17,22 +17,26 @@ class datagen():
             ftype='linear'
         if data_shape==None:
             self.n=200;self.p=2
-            else:self.n=data_shape[0];self.p=data_shape[1]
+        else:
+            self.n=data_shape[0]
+            self.p=data_shape[1]
         if not seed==None:
             np.random.seed(seed)
         
         p=self.p
         n=self.n
-        betamax=10
-        if evar==None:evar=1
+
+        if evar==None:
+            evar=1
         yxtup_list=[]
         for i in range(batchcount):
-            yxtup_list.append(self.buildrandomdataset(n,p))
+            yxtup_list.append(self.buildrandomdataset(n,p,ftype,evar))
         self.yxtup_list=yxtup_list
         
             
             
-    def buildrandomdataset(self,n,p):
+    def buildrandomdataset(self,n,p,ftype,evar):
+        betamax = 10
         xtall=3
         xwide=2
         #random row vector to multiply by each random column of x to allow s.d. upto 5

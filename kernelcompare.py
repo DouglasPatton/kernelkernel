@@ -92,7 +92,7 @@ class KernelOptModelTools:
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
             
             #try:print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["whensaved"]}')
-            print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict['datagen_dict']['train_n']}was last saved{best_dict["when_saved"]}')
+            print(f"optimization dict with lowest mse:{best_dict['mse']}, n:{best_dict['datagen_dict']['train_n']}was last saved{best_dict['when_saved']}")
             #print(f'best_dict:{best_dict}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
