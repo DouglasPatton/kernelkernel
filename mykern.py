@@ -631,25 +631,24 @@ class kNdtool( object ):
         y_err_tup = ()
 
         arglistlist=[]
-
         for batch_i in range(batchcount):
             yin = batchdata_dict['yintup'][batch_i]
             yout = batchdata_dict['youttup'][batch_i]
             xin = batchdata_dict['xintup'][batch_i]
             xpr = batchdata_dict['xprtup'][batch_i]
 
-            argcount=6
-            arglist=[]*argcount
-            arglist[0]=yin
-            arglist[2]=yout
-            arglist[3]=xin
-            arglist[4]=xpr
-            arglist[5]=modeldict
-            arglist[6]=fixed_or_free_paramdict
+
+            arglist=[]
+            arglist.append(yin)
+            arglist.append(yout)
+            arglist.append(xin)
+            arglist.append(xpr)
+            arglist.append(modeldict)
+            arglist.append(fixed_or_free_paramdict)
             arglistlist.append(arglist)
 
         with multiprocessing.Pool(processes=batchcount) as pool:
-            yhat_unstd=pool.map(self.MPwrapperKDEprediict,arglistlist)
+            yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
             pool.close()
             pool.join()
 
