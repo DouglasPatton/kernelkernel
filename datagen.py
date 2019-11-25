@@ -13,7 +13,7 @@ class datagen():
         if batchcount==None:
             batchcount=1
             
-        if source==None:
+        if source==None or source=='monte':
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None):

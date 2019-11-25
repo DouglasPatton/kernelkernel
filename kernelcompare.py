@@ -732,7 +732,7 @@ class KernelCompare(KernelOptModelTools):
         
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,verbose=0):
         param_count=2
-        datagen_dict={'train_n':60,'batch_count':5, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1}
+        datagen_dict={'batch_n':32,'batch_count':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, source='monte'}
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict below
         assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
