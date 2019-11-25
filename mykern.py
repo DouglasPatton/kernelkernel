@@ -1,3 +1,4 @@
+import multiprocessing
 import traceback
 from copy import deepcopy
 from typing import List
@@ -628,13 +629,31 @@ class kNdtool( object ):
 
 
         y_err_tup = ()
+
+
         for batch_i in range(batchcount):
             yin = batchdata_dict['yintup'][batch_i]
             yout = batchdata_dict['youttup'][batch_i]
             xin = batchdata_dict['xintup'][batch_i]
             xpr = batchdata_dict['xprtup'][batch_i]
 
+            argcount=6
+            arglist=[]*argcount
+            arglist[]=yin
+            arglist[]=yout
+            arglist[]=xin
+            arglist[]=xpr
+            arglist[]=modeldict
+            arglist[]=fixed_or_free_paramdict
+
+            with multiprocessing.Pool(processes=batchcount) as pool:
+                pool.map(self.MPwrapperKDEprediict,arglist)
+                pool.close()
+                pool.join()
             yhat_std = self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+
+
+
             yhat_unstd=(yhat_std*self.ystd)+self.ymean
             y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
             y_err = y_batch_i - yhat_unstd #is yin standardized?
@@ -667,6 +686,14 @@ class kNdtool( object ):
 
         return mse
 
+def MPwrapperKDEpredict(self,arglist):
+    yin=arglist[0]
+    yout=arglist[1]
+    xin=arglist[2]
+    xpr=arglist[3]
+    modeldict=arglist[4]
+    fixed_or_free_paramdict=arglist[5]
+    self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
 
 
 class optimize_free_params(kNdtool):
