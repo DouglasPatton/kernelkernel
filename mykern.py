@@ -588,7 +588,7 @@ class kNdtool( object ):
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
         yhat_un_std=yhat_std*self.ystd+self.ymean
-        print(f'yhat_un_std:{yhat_un_std}')
+        #print(f'yhat_un_std:{yhat_un_std}')
         return yhat_un_std
 
 
@@ -607,7 +607,7 @@ class kNdtool( object ):
         prob_x_stack=np.broadcast_to(np.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         
         yhat= np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
-        print(f'yhat:{yhat}')
+        #print(f'yhat:{yhat}')
         return yhat
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
@@ -627,7 +627,7 @@ class kNdtool( object ):
             #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
 
         batchcount = self.datagen_dict['batchcount']
-        print(f'batchcount:{batchcount}')
+        #print(f'batchcount:{batchcount}')
         fixed_or_free_paramdict['free_params'] = free_params
         # print(f'free_params added to dict. free_params:{free_params}')
 
@@ -647,13 +647,13 @@ class kNdtool( object ):
             arglistlist.append(arglist)
 
         workercount=batchcount
-        if batchcount>1:
-            with multiprocessing.Pool(processes=workercount) as pool:
+        if batchcount>0:
+            with multiprocessing.Pool(processes=4) as pool:
                 yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 pool.close()
                 pool.join()
 
-        print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
+        #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         for batch_i in range(batchcount):
             y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
             y_err = y_batch_i - yhat_unstd[batch_i]
@@ -686,7 +686,7 @@ class kNdtool( object ):
         return mse
 
     def MPwrapperKDEpredict(self,arglist):
-        print(f'arglist inside wrapper is:::::::{arglist}')
+        #print(f'arglist inside wrapper is:::::::{arglist}')
         yin=arglist[0]
         yout=arglist[1]
         xin=arglist[2]
@@ -827,7 +827,7 @@ if __name__ == "__main__":
 
     # the default datagen_dict as of 11/25/2019
     # datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
-    batch_n_variations = ('batch_n', [32])
+    batch_n_variations = ('batch_n', [64])
     batchcount_variations = ('batchcount', [16])
     ftype_variations = ('ftype', ['linear', 'quadratic'])
     param_count_variations = ('param_count', [1, 2])
