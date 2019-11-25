@@ -692,7 +692,7 @@ class run_cluster(kernelcompare.KernelCompare):
         return
 
 if __name__=="__main__":
-    import kernelcompare as kc
+
     import mycluster
     
     Ndiff_type_variations=('modeldict:Ndiff_type',['recursive','product'])

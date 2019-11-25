@@ -508,8 +508,10 @@ class kNdtool( object ):
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
                 print(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+                break
             except:
-                print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
+                if i==9:
+                    print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
         return
     
     
@@ -530,7 +532,6 @@ class kNdtool( object ):
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             xin_scaled=xin*x_bandscale_params
-            xpr_scaled=xpr*x_bandscale_params
             xpr_scaled=xpr*x_bandscale_params
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
@@ -582,12 +583,13 @@ class kNdtool( object ):
             
         if modeldict['regression_model']=='NW':
             yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
-        self.yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+        yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
-        self.yhat_un_std=self.yhat_std*self.ystd+self.ymean
-        return self.yhat_un_std
+        yhat_un_std=yhat_std*self.ystd+self.ymean
+        print(f'yhat_un_std:{yhat_un_std}')
+        return yhat_un_std
 
 
     def my_NW_KDEreg(self,prob_yx,prob_x,yout):
@@ -605,6 +607,7 @@ class kNdtool( object ):
         prob_x_stack=np.broadcast_to(np.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         
         yhat= np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+        print(f'yhat:{yhat}')
         return yhat
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
@@ -624,6 +627,7 @@ class kNdtool( object ):
             #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
 
         batchcount = self.datagen_dict['batchcount']
+        print(f'batchcount:{batchcount}')
         fixed_or_free_paramdict['free_params'] = free_params
         # print(f'free_params added to dict. free_params:{free_params}')
 
@@ -632,30 +636,27 @@ class kNdtool( object ):
 
         arglistlist=[]
         for batch_i in range(batchcount):
-            yin = batchdata_dict['yintup'][batch_i]
-            yout = batchdata_dict['youttup'][batch_i]
-            xin = batchdata_dict['xintup'][batch_i]
-            xpr = batchdata_dict['xprtup'][batch_i]
-
-
             arglist=[]
-            arglist.append(yin)
-            arglist.append(yout)
-            arglist.append(xin)
-            arglist.append(xpr)
+            arglist.append(batchdata_dict['yintup'][batch_i])
+            arglist.append(batchdata_dict['youttup'][batch_i])
+            arglist.append(batchdata_dict['xintup'][batch_i])
+            arglist.append(batchdata_dict['xprtup'][batch_i])
+
             arglist.append(modeldict)
             arglist.append(fixed_or_free_paramdict)
             arglistlist.append(arglist)
+
         workercount=batchcount
-        with multiprocessing.Pool(processes=workercount) as pool:
-            yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
-            pool.close()
-            pool.join()
+        if batchcount>1:
+            with multiprocessing.Pool(processes=workercount) as pool:
+                yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
+                pool.close()
+                pool.join()
 
         print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
-        for batch_i in range(batchcount)
+        for batch_i in range(batchcount):
             y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
-            y_err = y_batch_i - yhat_unstd[batch_i,:]
+            y_err = y_batch_i - yhat_unstd[batch_i]
             y_err_tup = y_err_tup + (y_err,)
 
         all_y_err = [ii for i in y_err_tup for ii in i]
@@ -685,6 +686,7 @@ class kNdtool( object ):
         return mse
 
     def MPwrapperKDEpredict(self,arglist):
+        print(f'arglist inside wrapper is:::::::{arglist}')
         yin=arglist[0]
         yout=arglist[1]
         xin=arglist[2]
@@ -779,6 +781,9 @@ class optimize_free_params(kNdtool):
             youttup=youttup+(youti,)
 
         batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+        #print('=======================')
+        #print(f'batchdata_dict{batchdata_dict}')
+        #print('=======================')
         #self.npr=xpr.shape[0]#probably redundant
         #self.yout=yout
 
@@ -798,8 +803,53 @@ class optimize_free_params(kNdtool):
         self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
         print(f'lastparamdict:{lastparamdict}')
         
-        
-        
 
-if __name__=="_main__":
-    pass
+if __name__ == "__main__":
+
+    import os
+    import kernelcompare as kc
+    import traceback
+    import mykern
+
+    # from importlib import reload
+    networkdir = 'o:/public/dpatton/kernel'
+    mydir = os.getcwd()
+    test = kc.KernelCompare(directory=mydir)
+
+    Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+    max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2, 3])
+    Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
+    ykern_grid_variations = ('ykern_grid', [33])
+    # product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])#include None too?
+    # normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
+    optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations,
+                              Ndiff_start_variations]  # ,product_kern_norm_variations,normalize_Ndiffwtsum_variations]
+
+    # the default datagen_dict as of 11/25/2019
+    # datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+    batch_n_variations = ('batch_n', [32])
+    batchcount_variations = ('batchcount', [16])
+    ftype_variations = ('ftype', ['linear', 'quadratic'])
+    param_count_variations = ('param_count', [1, 2])
+    datagen_variation_list = [batch_n_variations, batchcount_variations, ftype_variations, param_count_variations]
+    testrun = test.prep_model_list(optdict_variation_list=optdict_variation_list,
+                                   datagen_variation_list=datagen_variation_list, verbose=1)
+
+    from random import shuffle
+
+    # shuffle(testrun)
+    # a_rundict=testrun[100]#this produced the Ndiff_exponent error for recursive Ndiff
+    for idx in range(len(testrun)):
+        print(f'~~~~~~~run number:{idx}`~~~~~~~')
+        a_rundict = testrun[idx]
+        print(f'a_rundict{a_rundict}')
+        optimizedict = a_rundict['optimizedict']
+        datagen_dict = a_rundict['datagen_dict']
+
+        try:
+            test.do_monte_opt(optimizedict, datagen_dict, force_start_params=0)
+            test.open_condense_resave('model_save', verbose=0)
+            test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=None, verbose=None)
+        except:
+            print('traceback for run', idx)
+            print(traceback.format_exc())
