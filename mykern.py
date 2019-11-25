@@ -684,15 +684,15 @@ class kNdtool( object ):
 
         return mse
 
-def MPwrapperKDEpredict(self,arglist):
-    yin=arglist[0]
-    yout=arglist[1]
-    xin=arglist[2]
-    xpr=arglist[3]
-    modeldict=arglist[4]
-    fixed_or_free_paramdict=arglist[5]
-    yhat_std=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
-    return yhad_std
+    def MPwrapperKDEpredict(self,arglist):
+        yin=arglist[0]
+        yout=arglist[1]
+        xin=arglist[2]
+        xpr=arglist[3]
+        modeldict=arglist[4]
+        fixed_or_free_paramdict=arglist[5]
+        yhat_std=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        return yhad_std
 
 
 class optimize_free_params(kNdtool):
