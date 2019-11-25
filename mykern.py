@@ -648,7 +648,7 @@ class kNdtool( object ):
 
         workercount=batchcount
         if batchcount>0:
-            with multiprocessing.Pool(processes=4) as pool:
+            with multiprocessing.Pool(processes=batchcount) as pool:
                 yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 pool.close()
                 pool.join()
@@ -817,9 +817,9 @@ if __name__ == "__main__":
     test = kc.KernelCompare(directory=mydir)
 
     Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-    max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2, 3])
+    max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
     Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
-    ykern_grid_variations = ('ykern_grid', [33])
+    ykern_grid_variations = ('ykern_grid', [49])
     # product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])#include None too?
     # normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
     optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations,
@@ -827,17 +827,17 @@ if __name__ == "__main__":
 
     # the default datagen_dict as of 11/25/2019
     # datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
-    batch_n_variations = ('batch_n', [64])
-    batchcount_variations = ('batchcount', [16])
+    batch_n_variations = ('batch_n', [48])
+    batchcount_variations = ('batchcount', [8])
     ftype_variations = ('ftype', ['linear', 'quadratic'])
-    param_count_variations = ('param_count', [1, 2])
+    param_count_variations = ('param_count', [1, 2, 3])
     datagen_variation_list = [batch_n_variations, batchcount_variations, ftype_variations, param_count_variations]
     testrun = test.prep_model_list(optdict_variation_list=optdict_variation_list,
                                    datagen_variation_list=datagen_variation_list, verbose=1)
 
     from random import shuffle
 
-    # shuffle(testrun)
+    shuffle(testrun)
     # a_rundict=testrun[100]#this produced the Ndiff_exponent error for recursive Ndiff
     for idx in range(len(testrun)):
         print(f'~~~~~~~run number:{idx}`~~~~~~~')
