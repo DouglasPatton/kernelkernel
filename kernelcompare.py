@@ -12,9 +12,9 @@ import traceback
 class KernelOptModelTools:
     def __init__(self,directory=None):
         if directory==None:
-            self.kc_savedirectory=os.getcwd
+            self.kc_save_directory=os.getcwd
         else:
-            self.kc_savedirectory=directory
+            self.kc_save_directory=directory
         pass
         
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
@@ -59,7 +59,7 @@ class KernelOptModelTools:
         try: 
             os.chdir('..')
             same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
-            os.chdir(self.kc_savedirectory)
+            os.chdir(self.kc_save_directory)
         except:
             try:
                 same_modelxy_dict_list=self.open_and_compare_optdict('condensed_model_save',optimizedict,y,x,help_start=help_start,partial_match=partial_match)
@@ -111,7 +111,90 @@ class KernelOptModelTools:
             new_opt_dict['hyper_param_dict'][key]=new_val
         #print(f'rebuild hyper param dict vstring:{vstring}')
         return new_opt_dict
-                  
+
+
+    def recursive_merge(self,startdirectory,overwrite=0,verbose=0):
+
+        if not os.path.exists(startdirectory):
+            startdirectory=os.path.join(os.getcwd,startdirectory)
+        if overwrite==0:
+            save_directory=os.path.join(startdirectory,'mergedfiles')
+            if not os.path.exists(save_directory):
+                os.mkdir(save_directory)
+        else:save_directory=startdirectory
+
+        dirlist=[diri[0] for diri in os.walk(startdirectory)]
+        dirlist=[startdirectory]+dirlist
+        for diri in dirlist:
+            if verbose==1:print('diri',diri)
+            self.merge_and_condense_saved_models(merge_directory=diri, save_directory=save_directory, condense=None,
+                                            verbose=verbose)
+
+    def recursive_add_dict(self,startdirectory,add_tuple_list,overwrite=0,verbose=0):
+        if not type(add_tuple_list) is list:
+            add_tuple_list=[add_tuple_list]
+        if not os.path.exists(startdirectory):
+            startdirectory=os.path.join(os.getcwd,startdirectory)
+        if overwrite==1:
+            save_directory=os.path.join(startdirectory,'add_dict_files')
+            if not os.path.exists(save_directory):
+                os.mkdir(save_directory)
+        else:
+            save_directory = startdirectory
+
+        dirlist = [dir[0] for dir in os.walk(startdirectory)]
+        dirlist = [startdirectory] + dirlist
+        for dir_i in dirlist:
+            filelist=os.listdir(dir_i)
+            for file_i in filelist:
+                if re.search('model_save',file_i):
+                    self.add_dict(os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
+        return
+
+
+
+
+
+    def add_dict(self,filename,newdict_tup_list,verbose=0,overwrite=0):
+        '''
+        newdict_tup_list should have same format as optdict and datagen_dict variations do:
+        e.g., (modeldict:ykern_grid,'no') to replace ykern_grid, nested in modeldict
+        '''
+        if overwrite == 0:
+            writefilename = filename + '-add_dict'
+        else:
+            writefilename = filename
+        if not type(newdict_tup_list) is list:
+            newdict_tup_list=[newdict_tup_list]
+
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_save_directory,filename),'rb') as modelsavefile:
+                    modelsave_list=pickle.load(modelsavefile)
+                break
+            except:
+                if j==9:
+                    print(traceback.format_exc())
+                    return
+
+        for dict_to_add in newdict_tup_list:
+            print('dict_to_add',dict_to_add)
+            for i,rundict_i in enumerate(modelsave_list):
+                override_dict_i = self.build_override_dict_from_str(dict_to_add[0], dict_to_add[1])
+                modelsave_list[i]=self.do_dict_override(rundict_i, override_dict_i, replace=0, verbose=verbose)
+
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_save_directory,writefilename),'wb') as modelsavefile:
+                    pickle.dump(modelsave_list, modelsavefile)
+                break
+            except:
+                if j==9:
+                    print(traceback.format_exc())
+                    break
+        return
+
+
     def open_condense_resave(self,filename1,verbose=None):
         if verbose==None or verbose=='no':
             verbose=0
@@ -234,14 +317,14 @@ class KernelOptModelTools:
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
             assert os.path.exists(merge_directory),"merge_directory does not exist"
-        else:
-            merge_directory=self.kc_savedirectory
+        if merge_directory==None:
+            merge_directory=self.kc_save_directory
                 
         if not save_directory==None:
             assert os.path.exists(save_directory),"save_directory does not exist"
-        else:
-            save_directory=self.kc_savedirectory
-                #os.makedirs(save_directory)
+        if save_directory==None:
+            save_directory=self.kc_save_directory
+
         if condense==None or condense=='no':
             condense=0
         if condense=='yes':
@@ -253,17 +336,17 @@ class KernelOptModelTools:
         model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
         #print('here',model_save_filelist)
         
-        os.chdir(save_directory)
+        condensedfile=os.path.join(save_directory,'condensed_model_save')
 
         try:
-            with open('condensed_model_save','rb') as savedfile:
+            with open(condensedfile,'rb') as savedfile:
                 saved_condensed_list=pickle.load(savedfile)
         except: 
             if verbose==1:
-                print("couldn't open condensed_model_save in save_directory, trying self.kc_savedirectory")
-            os.chdir(self.kc_savedirectory)
+                print("couldn't open condensed_model_save in save_directory, trying self.kc_save_directory")
+            condensedfile=os.path.join(self.kc_save_directory,'condensed_model_save')
             try:
-                with open('condensed_model_save','rb') as savedfile:
+                with open(condensedfile,'rb') as savedfile:
                     saved_condensed_list=pickle.load(savedfile)
             except:
                 saved_condensed_list=[]
@@ -271,7 +354,7 @@ class KernelOptModelTools:
                     print("---------no existing files named condensed_model_save could be found. "
                         "if it is in merge_directory, it will be picked up and merged anyways--------")
         
-        os.chdir(merge_directory)
+
 
 
         if len(model_save_filelist)==0:
@@ -285,8 +368,9 @@ class KernelOptModelTools:
         list_of_saved_lists=[]
         if len(model_save_filelist)>0:
             for file_i in model_save_filelist:
+                file_i_path=os.path.join(merge_directory,file_i)
                 for i in range(10):
-                    with open(file_i,'rb') as savedfile:
+                    with open(file_i_path,'rb') as savedfile:
                         try: 
                             saved_model_list=pickle.load(savedfile)
                             if verbose==1:
@@ -332,12 +416,13 @@ class KernelOptModelTools:
                     for k in range(jlen):
                         if jbest[k]==1:
                             new_model_list.append(list_j[k])
-        
-        os.chdir(save_directory)
-        with open('condensed_model_save','wb') as newfile:
+
+        condensedfile = os.path.join(save_directory, 'condensed_model_save')
+
+        with open(condensedfile,'wb') as newfile:
             #print(f'list_i:{new_model_list}')
             pickle.dump(new_model_list,newfile)
-        os.chdir(self.kc_savedirectory)
+
                                               
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
         if saved_model_list==None:
@@ -496,8 +581,11 @@ class KernelOptModelTools:
         return matchlist
             
                   
-    def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
+    def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,replace=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=deepcopy(old_dict)
+        if replace==None or replace=='yes':
+            replace=1
+        if replace=='no':replace=0#i.e., for adding a key:val that was missing
         if verbose==None or verbose=='no':
             verbose=0
         if verbose=='yes':
@@ -512,23 +600,36 @@ class KernelOptModelTools:
                 vstring=vstring+f":key({key})"
             if type(val) is dict:
                 if verbose==1:print(f'val is dict in {key}, recursive call')
-                old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1)
+                old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1,verbose=verbose,replace=replace)
                 vstring=vstring+vstring2
                 #print('made it back from recursive call')
             else:
-                try:
-                    old_dict_copy[key]=val
-                    if verbose==1:
-                        print(f":val({new_dict[key]}) replaces val({old_dict_copy[key]})\n")
-                        vstring=vstring+f":val({new_dict[key]}) or ({val}) replaces val({old_dict_copy[key]})\n"
-                        
-                except:
-                    print(f'Warning: old_dict has keys:{[key for key,value in old_dict_copy.items()]} and new_dict has key:value::{key}:{new_dict[key]}')
+                if replace==0 and (key in old_dict_copy):
+                    if verbose == 1:
+                        print(f":val({new_dict[key]}) does not replace val({old_dict_copy[key]}) because replace={replace}\n")
+                        vstring = vstring + f":for key:{key}, val({val}) does not replace val({old_dict_copy[key]})\n"
+                    else:pass#no replacement due to above condition
+                else:
+                    try:
+                        if key in old_dict_copy:
+                            oldval=old_dict_copy[key]
+                        else:
+                            oldval=f'{key} not in old_dict'
+                        old_dict_copy[key]=val
+                        if verbose==1:
+                            print(f":val({new_dict[key]}) replaces val({oldval})\n")
+                            vstring=vstring+f":for key:{key}, val({val}) replaces val({oldval})\n"
+                            
+                    except:
+                        print(f'Warning: old_dict has keys:{[key for key,value in old_dict_copy.items()]} and new_dict has key:value::{key}:{new_dict[key]}')
         if verbose==1:
                 print(f'vstring:{vstring} and done2')            
         if recursive==1:
             return old_dict_copy, vstring
-        else: return old_dict_copy
+
+        else:
+            #print(f'old_dict_copy{old_dict_copy}')
+            return old_dict_copy
     
     def build_hyper_param_start_values(self,modeldict):
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
@@ -652,14 +753,14 @@ class KernelOptModelTools:
 class KernelCompare(KernelOptModelTools):
     def __init__(self,directory=None):
         if directory==None:
-            self.kc_savedirectory=os.getcwd()
-            merge_directory=self.kc_savedirectory
+            self.kc_save_directory=os.getcwd()
+            merge_directory=self.kc_save_directory
         else: 
-            self.kc_savedirectory=directory
+            self.kc_save_directory=directory
             merge_directory=".."
-        os.chdir(self.kc_savedirectory)
-        KernelOptModelTools.__init__(self,directory=self.kc_savedirectory)
-        #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
+        os.chdir(self.kc_save_directory)
+        KernelOptModelTools.__init__(self,directory=self.kc_save_directory)
+        #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_save_directory,condense=1,verbose=0)
                       #this should gather all directories from parent directory if directory is specified in object_init__()
                       #or if not, everything happens in the current working directory, which is good for testing without running
                       #through mycluster.

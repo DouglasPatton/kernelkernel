@@ -1,3 +1,4 @@
+import traceback
 from copy import deepcopy
 from typing import List
 import os
@@ -494,8 +495,8 @@ class kNdtool( object ):
         bestparams=fof_param_dict_list[mse_list.index(minmse)]
         savedict={}
         savedict['mse']=minmse
-        savedict['xdata']=self.xdata #inherit data description?
-        savedict['ydata']=self.ydata
+        #savedict['xdata']=self.xdata
+        #savedict['ydata']=self.ydata
         savedict['params']=bestparams
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
@@ -505,20 +506,27 @@ class kNdtool( object ):
         except:
             pass
         try:
-            for _ in range(20):
+            for i in range(10):
                 try: 
                     with open(filename,'rb') as modelfile:
                         modellist=pickle.load(modelfile)
                     break
                 except:
                     sleep(0.1)
+                    if i==9:
+                        print(traceback.format_exc())
                 #print('---------------success----------')
         except:
             modellist=[]
         modellist.append(savedict)
-        with open(filename,'wb') as thefile:
-            pickle.dump(modellist,thefile)
-        print(f'saved to {filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+        for i in range(10):
+            try:
+                with open(filename,'wb') as thefile:
+                    pickle.dump(modellist,thefile)
+                print(f'saved to {filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+            except:
+                print(f'mykern.py could not save to {filename} after {i+1} tries')
+        return
     
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
