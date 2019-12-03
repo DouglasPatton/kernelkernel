@@ -79,8 +79,13 @@ class KernelOptModelTools:
             #print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
-            train_n=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
+            try:
+                n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
+                batchcount_list=[1]*len(n_list)
+            except:
+                n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
+                batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],bathcount_list[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
@@ -90,8 +95,13 @@ class KernelOptModelTools:
         mse_list=[dict_i['mse'] for dict_i in best_dict_list]
         if len(mse_list)>0:
             mse_list=[dict_i['mse'] for dict_i in best_dict_list]
-            train_n=[dict_i['datagen_dict']['train_n'] for dict_i in best_dict_list]
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],train_n[i]) for i in range(len(mse_list))]
+            try:
+                n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
+                batchcount_list=[1]*len(n_list)
+            except:
+                n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
+                batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
             
@@ -423,11 +433,22 @@ class KernelOptModelTools:
                         #if full_model_i['modeldict']==full_model_j['modeldict']:
                         if len(matchlist)>0:
                             i_mse=full_model_i['mse']
-                            i_n=full_model_i['datagen_dict']['train_n']
                             j_mse=full_model_j['mse']
-                            j_n=full_model_j['datagen_dict']['train_n']
-                            iwt=self.do_nwt_mse(i_mse,i_n)
-                            jwt=self.do_nwt_mse(j_mse,j_n)
+                            try:
+                                i_n=full_model_i['datagen_dict']['train_n']
+                                i_batchcount=1                               
+                            except:
+                                i_n=full_model_i['datagen_dict']['batch_n']
+                                i_batchcount=full_model_i['datagen_dict']['batchcount']
+                            try:
+                                j_n=full_model_j['datagen_dict']['train_n']
+                                j_batchcount=1                                  
+                            except:
+                                j_n=full_model_j['datagen_dict']['batch_n']
+                                j_batchcount=full_model_j['datagen_dict']['batchcount']
+                                
+                            iwt=self.do_nwt_mse(i_mse,i_n,i_batchcount)
+                            jwt=self.do_nwt_mse(j_mse,j_n,j_batchcount)
                             if verbose>1:
                                 print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
@@ -446,8 +467,8 @@ class KernelOptModelTools:
             print(f'len(final_keep_list):{len(final_keep_list)}')
         return final_keep_list
 
-    def do_nwt_mse(self,mse,n):
-        return np.log(mse+1)/(np.log(n)**3)
+    def do_nwt_mse(self,mse,n,batch_count=1):
+        return np.log(mse+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}
