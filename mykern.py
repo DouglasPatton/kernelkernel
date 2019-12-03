@@ -830,14 +830,14 @@ if __name__ == "__main__":
     batch_n_variations = ('batch_n', [48])
     batchcount_variations = ('batchcount', [8])
     ftype_variations = ('ftype', ['linear', 'quadratic'])
-    param_count_variations = ('param_count', [1, 2, 3])
+    param_count_variations = ('param_count', [1, 2])
     datagen_variation_list = [batch_n_variations, batchcount_variations, ftype_variations, param_count_variations]
     testrun = test.prep_model_list(optdict_variation_list=optdict_variation_list,
                                    datagen_variation_list=datagen_variation_list, verbose=1)
 
     from random import shuffle
 
-    shuffle(testrun)
+    #shuffle(testrun)
     # a_rundict=testrun[100]#this produced the Ndiff_exponent error for recursive Ndiff
     for idx in range(len(testrun)):
         print(f'~~~~~~~run number:{idx}`~~~~~~~')
