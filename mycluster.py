@@ -62,19 +62,23 @@ class run_cluster(kernelcompare.KernelCompare):
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self', 'own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
-        ykern_grid_variations=('ykern_grid',[9,10,11])
+        ykern_grid_variations=('modeldict:ykern_grid',[33])
         optdict_variation_list = [Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
 
     def getdatagenvariations(self):
-        train_n_variations = ('train_n', [8])
-        #train_n_variations = ('train_n', [30, 45, 60])
-        ftype_variations = ('ftype', ['linear', 'quadratic'])
-        param_count_variations = ('param_count', [1, 2])
-        datagen_variation_list = [train_n_variations, ftype_variations, param_count_variations]
-        return datagen_variation_list
+        #the default datagen_dict as of 11/25/2019
+        #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
 
+
+        batch_n_variations=('batch_n',[32])
+        batchcount_variations=('batchcount',[40])
+        ftype_variations=('ftype',['linear','quadratic'])
+        param_count_variations=('param_count',[1,2])
+        datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
+        return datagen_variation_list
+    
     def setmasterdir(self,savedirectory):
         masterdir=os.path.join(savedirectory,'master')
         if not os.path.exists(masterdir):

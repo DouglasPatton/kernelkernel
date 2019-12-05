@@ -44,21 +44,26 @@ class mypool:
     
     def runworker(self,name):
         if name=='master':
-            while True:
+            continue=True
+            while continue:
                 try:
                     self.i+=1
                     mycluster.run_cluster(name, local_test=self.local_test)
+                except KeyboardInterrupt:
+                    continue=False
                 except:
                     print(f'restarting:{name}')
                     print(traceback.format_exc())
         sleeptime=randint(1,10000)*60/10000
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
-
-        while True:
+        continue=True
+        while continue:
             try:
                 self.i+=1#increments with start/restart of nodes or master
                 mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test=self.local_test)
+            except KeyboardInterrupt:
+                continue=False
 
             except:
                 print(f'restarting:{name}')

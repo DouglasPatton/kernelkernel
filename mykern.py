@@ -450,7 +450,7 @@ class kNdtool:
     def do_KDEsmalln(self,diffs,bw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
         first 2 dimensions of onediffs must be ninXnout
-        """
+        """ 
         assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
         allkerns=self.gkernh(diffs, bw)
         second_to_last_axis=allkerns.ndim-2
@@ -460,7 +460,7 @@ class kNdtool:
             allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
-            allkerns=allkerns/allkerns.count(axis=second_to_last_axis)#1 should be the nout axis
+            allkerns=allkerns/np.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
         if allkerns.ndim>3:
             for i in range((allkerns.ndim-3),0,-1):
                 assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
@@ -489,19 +489,16 @@ class kNdtool:
             savedict['minimize_obj']=self.minimize_obj
         except:
             pass
-        try:
-            for i in range(10):
-                try: 
-                    with open(fullpath_filename,'rb') as modelfile:
-                        modellist=pickle.load(modelfile)
-                    break
-                except:
-                    sleep(0.1)
-                    if i==9:
-                        print(traceback.format_exc())
-                #print('---------------success----------')
-        except:
-            modellist=[]
+            try: 
+                with open(fullpath_filename,'rb') as modelfile:
+                    modellist=pickle.load(modelfile)
+                break
+            except:
+                sleep(0.1)
+                if i==9:
+                    print(traceback.format_exc())
+                    modellist=[]
+            #print('---------------success----------')
         modellist.append(savedict)
         for i in range(10):
             try:
