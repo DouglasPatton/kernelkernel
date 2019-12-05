@@ -471,7 +471,12 @@ class KernelOptModelTools(mk.kNdtool):
         return final_keep_list
 
     def do_nwt_mse(self,mse,n,batch_count=1):
-        return np.log(mse+1)/(np.log(n**2*batch_count)**1.5)
+        if np.isnan(mse):
+            return 10000000
+        
+        else:
+            print('type(mse)',type(mse))
+            return np.log(mse+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}
@@ -503,7 +508,7 @@ class KernelOptModelTools(mk.kNdtool):
         #print(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
         doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_dict_list]
         print(f'in saved_filename:{saved_filename}, len(doubledict_list):{len(doubledict_list)},len(saved_dict_list):{len(saved_dict_list)}')
-        doubledict_match_list_select=[dict_i==this_2dicts for dict_i in doubledict_list]#list of boolean
+        doubledict_match_list_select=[self.are_dicts_equal(dict_i,this_2dicts) for dict_i in doubledict_list]#list of boolean
         doubledict_match_list=[saved_dict_list[i] for i,ismatch in enumerate(doubledict_match_list_select) if ismatch]
         
         
@@ -527,7 +532,7 @@ class KernelOptModelTools(mk.kNdtool):
                                 # optdict['modeldict']==optimizedict['modeldict'] and\
                                 # optdict['datagen_dict']==optimizedict['datagen_dict'] ]
             same_modeldict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
-                                 optdict_i['modeldict'] == optimizedict['modeldict']]
+                                 self.are_dicts_equal(optdict_i['modeldict'],optimizedict['modeldict'])]
             #same_doubledict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
             #xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in doubledict_match_list]
             #same_model_and_x_dict_list=[doubledict_match_list[i] for i,is_same in enumerate(xcompare_list) if is_same]
@@ -544,16 +549,13 @@ class KernelOptModelTools(mk.kNdtool):
         if strict==None or strict=='no':
             strict=0
         if strict=='yes': strict=1
-        saved_optdict_list_copy=deepcopy(saved_optdict_list)
-        afullmodel_copy=deepcopy(afullmodel)
-        
-        
-        adoubledict=self.pull2dicts(afullmodel_copy)
-        saved_doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_optdict_list_copy]
-        if type(adoubledict) is list: print(adoubledict)
-        lists=[adoubledict_i for adoubledict_i in saved_doubledict_list if type(adoubledict_i) is list]
-        if len(lists)>0:print(lists)
-        same_model_datagen_compare=[adoubledict==dict_i for dict_i in saved_doubledict_list]
+                
+        adoubledict=self.pull2dicts(afullmodel)
+        saved_doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_optdict_list]
+        #if type(adoubledict) is list: print(adoubledict)
+        #lists=[adoubledict_i for adoubledict_i in saved_doubledict_list if type(adoubledict_i) is list]
+        #if len(lists)>0:print(lists)
+        same_model_datagen_compare=[self.are_dicts_equal(adoubledict,dict_i) for dict_i in saved_doubledict_list]
         
         matches=[item for i,item in enumerate(saved_optdict_list) if same_model_datagen_compare[i]]
         matchcount=len(matches)
@@ -575,13 +577,13 @@ class KernelOptModelTools(mk.kNdtool):
         #new_dict_list.append(amodeldict['hyper_param_form_dict'])
         #new_dict_list.append(amodeldict['regression_model'])
         
-        simple_doubledict_list=saved_doubledict_list#added deepcopy abovedeepcopy(saved_doubledict_list)#initialize these as copies that will be progressively simplified
+        simple_doubledict_list=deepcopy(saved_doubledict_list)#added deepcopy abovedeepcopy(saved_doubledict_list)#initialize these as copies that will be progressively simplified
         #simple_adoubledict=deepcopy(adoubledict)
         for new_dict in new_dict_list:
             #print(f'partial match trying {new_dict}')
             simple_doubledict_list=[self.do_dict_override(dict_i,new_dict) for dict_i in simple_doubledict_list]
             
-            matchlist_idx=[adoubledict==dict_i for dict_i in simple_doubledict_list]
+            matchlist_idx=[self.are_dicts_equal(adoubledict,dict_i) for dict_i in simple_doubledict_list]
             matchlist=[dict_i for i,dict_i in enumerate(saved_optdict_list) if matchlist_idx[i]]
             if len(matchlist)>0:
                 print(f'{len(matchlist)} partial matches found only after substituting {new_dict}')
@@ -589,7 +591,29 @@ class KernelOptModelTools(mk.kNdtool):
         if len(matchlist)==0:
             print(f'partial_match could not find any partial matches')
         return matchlist
+    
+    def are_dicts_equal(self,dict1,dict2):
+        for key,val1 in dict1.items():
+            if not key in dict2:
+                return False
+            val2=dict2[key]
+            type1=type(val1);type2=type(val2)
+            if not type1==type2:
+                return False
+            if type(val1) is dict:
+                if not self.are_dicts_equal(val1,val2):
+                    return False
+            if type(val1) is np.array:
+                if not np.array_equal(val1,val2):
+                    return False
+            if not val1==val2:#for tuples or lists (of numbers or other hashable) or strings
+                return False
+        for key,_ in dict2.items():
+            if not key in dict1:
+                return False
+        return True
             
+                
                   
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,replace=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=deepcopy(old_dict)
