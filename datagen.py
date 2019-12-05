@@ -11,7 +11,7 @@ class datagen():
         self.param_count=param_count
         self.p = param_count
         if batch_n==None:
-            batch_n=45
+            batch_n=32
         self.batch_n = batch_n
         if batchcount==None:
             batchcount=1
@@ -27,7 +27,7 @@ class datagen():
         if ftype==None:
             ftype='linear'
         if batch_n==None:
-            batch_n=45
+            batch_n=32
         if param_count==None:
             param_count=1
         if batchcount==None:

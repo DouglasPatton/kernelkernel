@@ -60,10 +60,12 @@ class KernelOptModelTools(mk.kNdtool):
         condensedfilename=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
         same_modelxy_dict_list1=self.open_and_compare_optdict(
             condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
+        print('here1')
         if len(same_modelxy_dict_list1)==0:
             condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
             same_modelxy_dict_list2=self.open_and_compare_optdict(
                 condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
+            print('here2')
             if len(same_modelxy_dict_list2)==0:
                 same_modelxy_dict_list3=self.open_and_compare_optdict(
                     'model_save',optimizedict,help_start=help_start,partial_match=partial_match)
@@ -508,17 +510,18 @@ class KernelOptModelTools(mk.kNdtool):
         if help_start==1 and len(doubledict_match_list)==0:
             print('--------------------------------help_start is triggered---------------------------')
             doubledict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
-            #print(f'doubledict_match_list2:{doubledict_match_list}')
+            #print('len(doubledict_match_list)',len(doubledict_match_list))
+            
             if len(doubledict_match_list)>0:
                 return self.condense_saved_model_list(doubledict_match_list,help_start=0,strict=1)
         if len(doubledict_match_list)==0 and help_start==1 and partial_match==1:
             print('--------------help_start with partial match triggered----------------')
             tryagain= self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
-            if tryagain==None:
-                return []
-            else:
+            print('here3')
+            if not tryagain==None:
                 return tryagain
         else:
+            print('here4')
             #same_doubledict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
             #                      self.pull2dicts(optdict_i)==this_2dicts]
                                 # optdict['modeldict']==optimizedict['modeldict'] and\
@@ -566,7 +569,8 @@ class KernelOptModelTools(mk.kNdtool):
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model')]
         for string_tup in string_list:
-            new_dict_list.append({string_tup[0]:{string_tup[1]:adoubledict[string_tup[0]][string_tup[1]]}})#make the list match amodeldict, so optimization settings aren't changed
+            sub_value=adoubledict[string_tup[0]][string_tup[1]]
+            new_dict_list.append({string_tup[0]:{string_tup[1]:sub_value}})#make the list match amodeldict, so optimization settings aren't changed
         #new_dict_list.append(amodeldict['xkern_grid'])
         #new_dict_list.append(amodeldict['hyper_param_form_dict'])
         #new_dict_list.append(amodeldict['regression_model'])
@@ -581,7 +585,7 @@ class KernelOptModelTools(mk.kNdtool):
             matchlist=[dict_i for i,dict_i in enumerate(saved_optdict_list) if matchlist_idx[i]]
             if len(matchlist)>0:
                 print(f'{len(matchlist)} partial matches found only after substituting {new_dict}')
-                return matchlist
+                break
         if len(matchlist)==0:
             print(f'partial_match could not find any partial matches')
         return matchlist
@@ -655,8 +659,8 @@ class KernelOptModelTools(mk.kNdtool):
 
         if modeldict['Ndiff_type']=='recursive':
             hyper_paramdict1={
-                'Ndiff_exponent':0*np.ones([Ndiff_param_count,]),
-                'x_bandscale':1*np.ones([self.p,]),#
+                'Ndiff_exponent':0.00001*np.ones([Ndiff_param_count,]),
+                'x_bandscale':1*np.ones([p,]),#
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
                 'Ndiff_depth_bw':np.array([0.5]),
@@ -783,6 +787,10 @@ class KernelCompare(KernelOptModelTools):
             initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'])
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_list:
+                #rebuild hyper_param_start_values since variations may change array length.
+                newhyper_paramdict=self.build_hyper_param_start_values(optdict_i['modeldict'])
+                optdict_i['hyper_param_dict']=newhyper_paramdict
+                
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
                 #print('model_run_dict_list:',model_run_dict_list)

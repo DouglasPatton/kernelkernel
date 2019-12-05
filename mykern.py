@@ -3,7 +3,7 @@ import traceback
 from copy import deepcopy
 from typing import List
 import os
-from time import strftime
+from time import strftime, sleep
 import datetime
 import pickle
 import numpy as np
@@ -650,6 +650,7 @@ class kNdtool:
         if batchcount>0:
             with multiprocessing.Pool(processes=batchcount) as pool:
                 yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
+                sleep(2)
                 pool.close()
                 pool.join()
 
@@ -660,8 +661,13 @@ class kNdtool:
             y_err_tup = y_err_tup + (y_err,)
 
         all_y_err = [ii for i in y_err_tup for ii in i]
-
-        mse = np.mean(np.power(all_y_err, 2))
+        #print('all_y_err',all_y_err)
+        
+        mse = np.ma.mean(np.ma.power(all_y_err, 2))
+        maskcount=np.ma.count_masked(all_y_err)
+        if maskcount>0:
+            print(f'{maskcount} masked values found in all_y_err')
+            mse = np.ma.count_masked(all_y_err) * 10 ** 199
         self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict = fixed_or_free_paramdict
@@ -680,8 +686,6 @@ class kNdtool:
             self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        if not np.ma.count_masked(all_y_err) == 0:
-            mse = np.ma.count_masked(all_y_err) * 10 ** 199
 
         return mse
 
@@ -793,7 +797,7 @@ class optimize_free_params(kNdtool):
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
-        print(f'modeldict:{modeldict}')
+        print(f'795modeldict:{modeldict}')
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
