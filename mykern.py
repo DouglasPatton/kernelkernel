@@ -11,7 +11,7 @@ import numpy as np
 from scipy.optimize import minimize
     
 
-class kNdtool( object ):
+class kNdtool:
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
@@ -827,7 +827,7 @@ if __name__ == "__main__":
 
     # the default datagen_dict as of 11/25/2019
     # datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
-    batch_n_variations = ('batch_n', [48])
+    batch_n_variations = ('batch_n', [32])
     batchcount_variations = ('batchcount', [8])
     ftype_variations = ('ftype', ['linear', 'quadratic'])
     param_count_variations = ('param_count', [1, 2])
@@ -849,7 +849,7 @@ if __name__ == "__main__":
         try:
             test.do_monte_opt(optimizedict, datagen_dict, force_start_params=0)
             test.open_condense_resave('model_save', verbose=0)
-            test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=None, verbose=None)
+            test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=1, verbose=0)
         except:
             print('traceback for run', idx)
             print(traceback.format_exc())

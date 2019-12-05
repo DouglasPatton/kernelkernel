@@ -1,3 +1,5 @@
+import multiprocessing
+import traceback
 from copy import deepcopy
 from typing import List
 import os
@@ -9,7 +11,7 @@ import numpy as np
 from scipy.optimize import minimize
     
 
-class kNdtool( object ):
+class kNdtool:
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
@@ -427,6 +429,23 @@ class kNdtool( object ):
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
+    def standardize_yxtup(self,yxtup_list_unstd):
+        yxtup_list=deepcopy(yxtup_list_unstd)
+        all_y=[ii for i in yxtup_list for ii in i[0]]
+        all_x=[ii for i in yxtup_list for ii in i[1]]
+        self.xmean=np.mean(all_x,axis=0)
+        self.ymean=np.mean(all_y,axis=0)
+        self.xstd=np.std(all_x,axis=0)
+        self.ystd=np.std(all_y,axis=0)
+        tupcount=len(yxtup_list)#should be same as batchcount
+        yxtup_list=[]
+        for i in range(tupcount):
+            ystd=(yxtup_list_unstd[i][0] - self.ymean) / self.ystd
+            xstd=(yxtup_list_unstd[i][1] - self.xmean) / self.xstd
+            yxtup_list.append((ystd,xstd))
+
+        return yxtup_list
+
 
     def do_KDEsmalln(self,diffs,bw,modeldict):
         """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
@@ -449,45 +468,7 @@ class kNdtool( object ):
                 allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
-    def MY_KDEpredictMSE(self,free_params,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
-        
-            
-        if not type(fixed_or_free_paramdict['free_params']) is list: #it would be the string "outside" otherwise
-            self.call_iter+=1#then it must be a new call during optimization
-            #if self.call_iter>1 and self.call_iter%5==0:
-            #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
-            #if self.call_iter>1:# and self.call_iter%5>0:
-            #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
-            
-            
-        fixed_or_free_paramdict['free_params']=free_params
-        #print(f'free_params added to dict. free_params:{free_params}')
-        
-        
-        yhat_un_std=self.MY_KDEpredict(yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)
-        y_err=self.ydata-yhat_un_std
-        mse= np.mean(np.power(y_err,2))
-        self.mse_param_list.append((mse,deepcopy(fixed_or_free_paramdict)))
-        #self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
-        self.fixed_or_free_paramdict=fixed_or_free_paramdict
-        t_format="%Y%m%d-%H%M%S"
-        self.iter_start_time_list.append(strftime(t_format))
-        
-        if self.call_iter==3:
-            
-            tdiff=np.abs(datetime.datetime.strptime(self.iter_start_time_list[-1],t_format)-datetime.datetime.strptime(self.iter_start_time_list[-2],t_format))
-            self.save_interval= int(max([15-np.round(np.log(tdiff.total_seconds()+1)**3,0),1]))#+1 to avoid negative and max to make sure save_interval doesn't go below 1
-            print(f'save_interval changed to {self.save_interval}')
-            
-        
-        if self.call_iter%self.save_interval==0:
-            self.sort_then_saveit(self.mse_param_list[-self.save_interval*2:],modeldict,'model_save')
-                
-        #assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        if not np.ma.count_masked(yhat_un_std)==0:
-            mse=np.ma.count_masked(yhat_un_std)*10**199
-        
-        return mse
+
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
@@ -498,8 +479,8 @@ class kNdtool( object ):
         bestparams=fof_param_dict_list[mse_list.index(minmse)]
         savedict={}
         savedict['mse']=minmse
-        savedict['xdata']=self.xdata #inherit data description?
-        savedict['ydata']=self.ydata
+        #savedict['xdata']=self.xdata
+        #savedict['ydata']=self.ydata
         savedict['params']=bestparams
         savedict['modeldict']=modeldict
         savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
@@ -509,20 +490,29 @@ class kNdtool( object ):
         except:
             pass
         try:
-            for _ in range(20):
+            for i in range(10):
                 try: 
                     with open(fullpath_filename,'rb') as modelfile:
                         modellist=pickle.load(modelfile)
                     break
                 except:
                     sleep(0.1)
+                    if i==9:
+                        print(traceback.format_exc())
                 #print('---------------success----------')
         except:
             modellist=[]
         modellist.append(savedict)
-        with open(fullpath_filename,'wb') as thefile:
-            pickle.dump(modellist,thefile)
-        print(f'saved to {filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+        for i in range(10):
+            try:
+                with open(fullpath_filename,'wb') as thefile:
+                    pickle.dump(modellist,thefile)
+                print(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+                break
+            except:
+                if i==9:
+                    print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
+        return
     
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
@@ -542,7 +532,6 @@ class kNdtool( object ):
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             xin_scaled=xin*x_bandscale_params
-            xpr_scaled=xpr*x_bandscale_params
             xpr_scaled=xpr*x_bandscale_params
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
@@ -594,12 +583,13 @@ class kNdtool( object ):
             
         if modeldict['regression_model']=='NW':
             yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
-        self.yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+        yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
-        self.yhat_un_std=self.yhat_std*self.ystd+self.ymean
-        return self.yhat_un_std
+        yhat_un_std=yhat_std*self.ystd+self.ymean
+        #print(f'yhat_un_std:{yhat_un_std}')
+        return yhat_un_std
 
 
     def my_NW_KDEreg(self,prob_yx,prob_x,yout):
@@ -617,6 +607,7 @@ class kNdtool( object ):
         prob_x_stack=np.broadcast_to(np.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         
         yhat= np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+        #print(f'yhat:{yhat}')
         return yhat
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
@@ -624,8 +615,88 @@ class kNdtool( object ):
         """
         xpr=(xpr-self.xmean)/self.xstd
         self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xpr,modeldict,fixed_or_free_paramdict)
-        return self.prediction.yhat  
-    
+        return self.prediction.yhat
+
+    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict):
+
+        if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
+            self.call_iter += 1  # then it must be a new call during optimization
+            # if self.call_iter>1 and self.call_iter%5==0:
+            #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
+            # if self.call_iter>1:# and self.call_iter%5>0:
+            #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
+
+        batchcount = self.datagen_dict['batchcount']
+        #print(f'batchcount:{batchcount}')
+        fixed_or_free_paramdict['free_params'] = free_params
+        # print(f'free_params added to dict. free_params:{free_params}')
+
+
+        y_err_tup = ()
+
+        arglistlist=[]
+        for batch_i in range(batchcount):
+            arglist=[]
+            arglist.append(batchdata_dict['yintup'][batch_i])
+            arglist.append(batchdata_dict['youttup'][batch_i])
+            arglist.append(batchdata_dict['xintup'][batch_i])
+            arglist.append(batchdata_dict['xprtup'][batch_i])
+
+            arglist.append(modeldict)
+            arglist.append(fixed_or_free_paramdict)
+            arglistlist.append(arglist)
+
+        workercount=batchcount
+        if batchcount>0:
+            with multiprocessing.Pool(processes=batchcount) as pool:
+                yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
+                pool.close()
+                pool.join()
+
+        #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
+        for batch_i in range(batchcount):
+            y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
+            y_err = y_batch_i - yhat_unstd[batch_i]
+            y_err_tup = y_err_tup + (y_err,)
+
+        all_y_err = [ii for i in y_err_tup for ii in i]
+
+        mse = np.mean(np.power(all_y_err, 2))
+        self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
+        # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+        self.fixed_or_free_paramdict = fixed_or_free_paramdict
+        t_format = "%Y%m%d-%H%M%S"
+        self.iter_start_time_list.append(strftime(t_format))
+
+        if self.call_iter == 3:
+            tdiff = np.abs(
+                datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                    self.iter_start_time_list[-2], t_format))
+            self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                          1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+            print(f'save_interval changed to {self.save_interval}')
+
+        if self.call_iter % self.save_interval == 0:
+            self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+
+        # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
+        if not np.ma.count_masked(all_y_err) == 0:
+            mse = np.ma.count_masked(all_y_err) * 10 ** 199
+
+        return mse
+
+    def MPwrapperKDEpredict(self,arglist):
+        #print(f'arglist inside wrapper is:::::::{arglist}')
+        yin=arglist[0]
+        yout=arglist[1]
+        xin=arglist[2]
+        xpr=arglist[3]
+        modeldict=arglist[4]
+        fixed_or_free_paramdict=arglist[5]
+        yhat_unstd=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        return yhat_unstd
+
+
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
     optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
@@ -643,10 +714,11 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,ydata,xdata,optimizedict,savedir=None):
+    def __init__(self,datagen_obj,optimizedict,savedir=None):
         if savedir==None:
               mydir=os.getcwd()
         kNdtool.__init__(self,savedir=savedir)
+        self.datagen_obj=datagen_obj
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
@@ -675,28 +747,52 @@ class optimize_free_params(kNdtool):
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
                 
         #save and transform the data
-        self.xdata=xdata;self.ydata=ydata
-        self.nin,self.p=xdata.shape
-        assert ydata.shape[0]==xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
+        #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
+        self.batchcount=datagen_obj.batchcount
+        self.nin=datagen_obj.batch_n
+        self.p=datagen_obj.param_count#p should work too
+        #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
-        xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
+        #xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
+        yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list)
+
         #store the standardized (by column or parameter,p) versions of x and y
-        self.xdata_std=xdata_std;self.ydata_std=ydata_std
+        #self.xdata_std=xdata_std;self.ydata_std=ydata_std
                                  
-        xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
-        self.xin=xdata_std;self.yin=ydata_std
-        self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
-        
-        self.npr=xpr.shape[0]#probably redundant
-        self.yout=yout
+        #xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
+        #self.xin=xdata_std;self.yin=ydata_std
+        #self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
+        self.npr=self.nin#since we are optimizing within our sample
+
+        #load up the data for each batch into a dictionary full of tuples
+        # with each tuple item containing data for a batch from 0 to batchcount-1
+        xintup = ()
+        yintup = ()
+        xprtup = ()
+        youttup = ()
+        for i in range(self.batchcount):
+            xdata_std=yxtup_list_std[i][1]
+            ydata_std=yxtup_list_std[i][0]
+            xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
+            xintup=xintup+(xdata_std,)
+            yintup=yintup+(ydata_std,)
+            xprtup=xprtup+(xpri,)
+            youttup=youttup+(youti,)
+
+        batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+        #print('=======================')
+        #print(f'batchdata_dict{batchdata_dict}')
+        #print('=======================')
+        #self.npr=xpr.shape[0]#probably redundant
+        #self.yout=yout
 
         #pre-build list of masks
         self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         
         #setup and run scipy minimize
-        args_tuple=(self.yin, self.yout, self.xin, self.xpr, modeldict, fixed_or_free_paramdict)
+        args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
         print(f'modeldict:{modeldict}')
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
@@ -707,8 +803,53 @@ class optimize_free_params(kNdtool):
         self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
         print(f'lastparamdict:{lastparamdict}')
         
-        
-        
 
-if __name__=="_main__":
-    pass
+if __name__ == "__main__":
+
+    import os
+    import kernelcompare as kc
+    import traceback
+    import mykern
+
+    # from importlib import reload
+    networkdir = 'o:/public/dpatton/kernel'
+    mydir = os.getcwd()
+    test = kc.KernelCompare(directory=mydir)
+
+    Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+    max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
+    Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
+    ykern_grid_variations = ('ykern_grid', [49])
+    # product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])#include None too?
+    # normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
+    optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations,
+                              Ndiff_start_variations]  # ,product_kern_norm_variations,normalize_Ndiffwtsum_variations]
+
+    # the default datagen_dict as of 11/25/2019
+    # datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+    batch_n_variations = ('batch_n', [32])
+    batchcount_variations = ('batchcount', [8])
+    ftype_variations = ('ftype', ['linear', 'quadratic'])
+    param_count_variations = ('param_count', [1, 2])
+    datagen_variation_list = [batch_n_variations, batchcount_variations, ftype_variations, param_count_variations]
+    testrun = test.prep_model_list(optdict_variation_list=optdict_variation_list,
+                                   datagen_variation_list=datagen_variation_list, verbose=1)
+
+    from random import shuffle
+
+    #shuffle(testrun)
+    # a_rundict=testrun[100]#this produced the Ndiff_exponent error for recursive Ndiff
+    for idx in range(len(testrun)):
+        print(f'~~~~~~~run number:{idx}`~~~~~~~')
+        a_rundict = testrun[idx]
+        print(f'a_rundict{a_rundict}')
+        optimizedict = a_rundict['optimizedict']
+        datagen_dict = a_rundict['datagen_dict']
+
+        try:
+            test.do_monte_opt(optimizedict, datagen_dict, force_start_params=0)
+            test.open_condense_resave('model_save', verbose=0)
+            test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=1, verbose=0)
+        except:
+            print('traceback for run', idx)
+            print(traceback.format_exc())
