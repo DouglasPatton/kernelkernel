@@ -596,6 +596,7 @@ class KernelOptModelTools(mk.kNdtool):
         for key,val1 in dict1.items():
             if not key in dict2:
                 return False
+            
             val2=dict2[key]
             type1=type(val1);type2=type(val2)
             if not type1==type2:
@@ -603,16 +604,19 @@ class KernelOptModelTools(mk.kNdtool):
             if type(val1) is dict:
                 if not self.are_dicts_equal(val1,val2):
                     return False
-            if type(val1) is np.array:
-                if not np.array_equal(val1,val2):
-                    return False
-            if type(val1) is tuple or type(val1) is list:
-                if not len(val1)==len(val2):
-                    return False
-                if not all(val1)==all(val2):
-                    return False
-            if not val1==val2:#for tuples or lists (of numbers or other hashable) or strings
-                return False
+            else:
+                if type(val1) is np.ndarray:
+                    if not np.array_equal(val1,val2):
+                        return False
+                else:
+                    try: 
+                        if not val1==val2:
+                            return False
+                    except: 
+                        print('type(val1),type(val2)',type(val1),type(val2))
+                        print(traceback.format_exc())
+                        assert False,""
+                        
         for key,_ in dict2.items():
             if not key in dict1:
                 return False
