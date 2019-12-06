@@ -62,7 +62,7 @@ class run_cluster(kernelcompare.KernelCompare):
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self', 'own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
-        ykern_grid_variations=('modeldict:ykern_grid',[33])
+        ykern_grid_variations=('modeldict:ykern_grid',[43])
         optdict_variation_list = [Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
@@ -72,10 +72,10 @@ class run_cluster(kernelcompare.KernelCompare):
         #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
 
 
-        batch_n_variations=('batch_n',[32])
-        batchcount_variations=('batchcount',[40])
+        batch_n_variations=('batch_n',[42])
+        batchcount_variations=('batchcount',[20])
         ftype_variations=('ftype',['linear','quadratic'])
-        param_count_variations=('param_count',[1,2])
+        param_count_variations=('param_count',[1,2,3,4])
         datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
         return datagen_variation_list
     
@@ -229,45 +229,48 @@ class run_cluster(kernelcompare.KernelCompare):
             for j in range(10):
                 try:
                     time_i = self.model_save_activitycheck(name_i)
-                    print(f'time_i{time_i}')
+                    
                     if not type(time_i) is datetime.timedelta:
                         old_name_list.append(name_i)
+                        print(f'rebuild_namefiles classifies time_i{time_i} as old')
                     elif time_i < self.oldnode_threshold:
                         current_name_list.append(name_i)
+                    else: 
+                        old_name_list.append(name_i)
+                        print(f'rebuild_namefiles classifies time_i{time_i} as old')
                     break
                 except:
                     if j == 9:
-                        print('timeout', traceback.format_exc())
+                        print(f'-----rebuild namefiles timeout for time_i{time_i}', traceback.format_exc())
                         old_name_list.append(name_i)
 
         if len(old_name_list) > 0:
             print(f'old_name_list:{old_name_list}')
         for j, name in enumerate(old_name_list):
-            for i in range(10):
-                try:
-                    if self.mergethisnode(name):
-                        try:
-                            os.remove(os.path.join(self.masterdirectory, name + '.name'))
-                        except:
-                            pass
-                        try:
-                            shutil.rmtree(os.path.join(self.savedirectory, name))
-                        except:
-                            pass
-                        break
-                except:
-                    if i == 9:
-                        print(f'failed to merge node named:{name}')
-                        print(traceback.format_exc())
-        if len(assignment_tracker) > 0:
-            assigned_to_not_current_name_idx=[]
-            #ignment_tracker',assignment_tracker)
-            for name_i,idx in assignment_tracker.items():
-                for name_j in current_name_list:
-                    if name_i==name_j:
-                        assigned_to_not_current_name_idx.append(idx)
-        else:
-            assigned_to_not_current_name_idx=[idx for name_i,idx in assignment_tracker.items()]
+            
+            try:
+                if self.mergethisnode(name):
+                    try:
+                        os.remove(os.path.join(self.masterdirectory, name + '.name'))
+                    except:
+                        pass
+                    try:
+                        shutil.rmtree(os.path.join(self.savedirectory, name))
+                    except:
+                        pass
+                    break
+            except:
+                print(f'failed to merge node named:{name}')
+                print(traceback.format_exc())
+        
+        assigned_to_not_current_name_idx=[]
+        #ignment_tracker',assignment_tracker)
+        for name_i,idx in assignment_tracker.items():
+            for name_j in old_name_list:
+                if name_i==name_j:
+                    assigned_to_not_current_name_idx.append(idx)
+                    break
+
         the_not_current_names=[name_i for name_i,idx in assignment_tracker.items() if not any([name_j==name_i for name_j in current_name_list])]
         for idx in assigned_to_not_current_name_idx:
             run_dict_status[idx]='ready for node'
