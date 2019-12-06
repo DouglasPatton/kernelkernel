@@ -489,6 +489,7 @@ class kNdtool:
             savedict['minimize_obj']=self.minimize_obj
         except:
             pass
+        for i in range(10):
             try: 
                 with open(fullpath_filename,'rb') as modelfile:
                     modellist=pickle.load(modelfile)
@@ -498,7 +499,7 @@ class kNdtool:
                 if i==9:
                     print(traceback.format_exc())
                     modellist=[]
-            #print('---------------success----------')
+        #print('---------------success----------')
         modellist.append(savedict)
         for i in range(10):
             try:

@@ -123,8 +123,8 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=1
         vstring=''
         for key,val in new_opt_dict['hyper_param_dict'].items():
-            print('key',key)
-            print('type(replacement_fixedfreedict):',type(replacement_fixedfreedict))
+            #print('key',key)
+            #print('type(replacement_fixedfreedict):',type(replacement_fixedfreedict))
             #new_val=mk.kNdtool.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
             new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
             vstring+=f"for {key} old val({val})replaced with new val({new_val})"
@@ -395,7 +395,7 @@ class KernelOptModelTools(mk.kNdtool):
                     for ii in range(ilen):
                         ibest=1#start optimistic
                         for jj in range(jlen):
-                            both_dicts_match=doubledict_list_i[ii]==doubledict_list_j[jj]# and datagen_dict_list_i[ii]==datagen_dict_list_j[jj]
+                            both_dicts_match=self.are_dicts_equal(doubledict_list_i[ii],doubledict_list_j[jj])# and datagen_dict_list_i[ii]==datagen_dict_list_j[jj]
                             if both_dicts_match:
                                 if list_i[ii]['mse']>list_j[jj]['mse']:
                                     ibest=0
@@ -475,7 +475,7 @@ class KernelOptModelTools(mk.kNdtool):
             return 10000000
         
         else:
-            print('type(mse)',type(mse))
+            #print('type(mse)',type(mse))
             return np.log(mse+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
@@ -605,6 +605,11 @@ class KernelOptModelTools(mk.kNdtool):
                     return False
             if type(val1) is np.array:
                 if not np.array_equal(val1,val2):
+                    return False
+            if type(val1) is tuple or type(val1) is list:
+                if not len(val1)==len(val2):
+                    return False
+                if not all(val1)==all(val2):
                     return False
             if not val1==val2:#for tuples or lists (of numbers or other hashable) or strings
                 return False
