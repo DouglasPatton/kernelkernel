@@ -182,8 +182,11 @@ class kNdtool:
     
     def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,x_bandscale_params=None):
         if kern_choice=="product":
-            return np.ma.product(x_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
-            #axis-1 b/c axes counted from zero but ndim counts from 1
+            #return np.ma.product(x_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
+            shapetup=maskeddata.shape
+            #the number of params should be equal to the length of the rightmost dimension, so broadcasting should match all the dimensions to the left according to shapetup.
+            return self.gkernh(maskeddata,np.broadcast_to(x_bandscale_params,shapetup))
+            
         if kern_choice=='rbfkern':
             return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
     
@@ -381,9 +384,11 @@ class kNdtool:
         """creates a grid with all possible combinations of m=n^p (kerngrid not nin or nout) evenly spaced values from -3 to 3.
         """
         agrid=np.linspace(-3,3,m)[:,None] #assuming variables have been standardized
-        pgrid=agrid.copy()
+        #pgrid=agrid.copy()
         for idx in range(p-1):
             pgrid=np.concatenate([np.repeat(agrid,m**(idx+1),axis=0),np.tile(pgrid,[m,1])],axis=1)
+            #outtup=()
+            #pgrid=np.broadcast_to(np.linspace(-3,3,m),)
         return pgrid
 
     def prep_out_grid(self,xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=None):
