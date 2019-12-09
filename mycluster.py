@@ -235,6 +235,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'1-rebuild_namefiles classifies time_i{time_i} as old')
                     elif time_i < self.oldnode_threshold:
                         current_name_list.append(name_i)
+                        self.update_my_namefile(name_i,status='working')
                     else: 
                         old_name_list.append(name_i)
                         print(f'2-rebuild_namefiles classifies time_i{time_i} as old')
