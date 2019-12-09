@@ -480,8 +480,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 with open(node_model_save,'rb') as saved_model_save:
                     model_save=pickle.load(saved_model_save)
                 lastsave=model_save[-1]['when_saved']
-                print(f'activitycheck for name:{name}, time:{lastsave},timetype:{type(lastsave)}')
+                
                 now=strftime("%Y%m%d-%H%M%S")
+                print(f'activitycheck for name:{name}, time:{sincelastsave},timetype:{type(sincelastsave)}')
                 sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsave,"%Y%m%d-%H%M%S")
                 return sincelastsave
             except:
