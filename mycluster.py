@@ -232,12 +232,12 @@ class run_cluster(kernelcompare.KernelCompare):
                     
                     if not type(time_i) is datetime.timedelta:
                         old_name_list.append(name_i)
-                        print(f'rebuild_namefiles classifies time_i{time_i} as old')
+                        print(f'1-rebuild_namefiles classifies time_i{time_i} as old')
                     elif time_i < self.oldnode_threshold:
                         current_name_list.append(name_i)
                     else: 
                         old_name_list.append(name_i)
-                        print(f'rebuild_namefiles classifies time_i{time_i} as old')
+                        print(f'2-rebuild_namefiles classifies time_i{time_i} as old')
                     break
                 except:
                     if j == 9:
@@ -472,13 +472,15 @@ class run_cluster(kernelcompare.KernelCompare):
         if filename==None: filename='model_save'
         nodedir=os.path.join(self.savedirectory,name)
         node_job=os.path.join(nodedir,name+'_job')
-        node_model_save=os.path.join(self.savedirectory,name,filename)
+        node_model_save=os.path.join(nodedir,filename)
         #print(node_model_save)
         for i in range(10):
             try:
                 with open(node_model_save,'rb') as saved_model_save:
                     model_save=pickle.load(saved_model_save)
-                return model_save[-1]['when_saved']
+                lastsave=model_save[-1]['when_saved']
+                print(f'activitycheck for name:{name}, time:{lastsave},timetype:{type(lastsave)}')
+                return lastsave
             except:
                 if i==9:
                     print(traceback.format_exc())
