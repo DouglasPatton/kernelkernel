@@ -480,7 +480,9 @@ class run_cluster(kernelcompare.KernelCompare):
                     model_save=pickle.load(saved_model_save)
                 lastsave=model_save[-1]['when_saved']
                 print(f'activitycheck for name:{name}, time:{lastsave},timetype:{type(lastsave)}')
-                return lastsave
+                now=strftime("%Y%m%d-%H%M%S")
+                sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsave,"%Y%m%d-%H%M%S")
+                return sincelastsave
             except:
                 if i==9:
                     print(traceback.format_exc())
