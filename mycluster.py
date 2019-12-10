@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
         
-        self.oldnode_threshold=datetime.timedelta(minutes=60,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=20,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
@@ -482,8 +482,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 lastsave=model_save[-1]['when_saved']
                 
                 now=strftime("%Y%m%d-%H%M%S")
-                print(f'activitycheck for name:{name}, time:{sincelastsave},timetype:{type(sincelastsave)}')
+                
                 sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsave,"%Y%m%d-%H%M%S")
+                print(f'activitycheck for name:{name}, time:{sincelastsave},timetype:{type(sincelastsave)}')
                 return sincelastsave
             except:
                 if i==9:

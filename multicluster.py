@@ -4,9 +4,11 @@ from random import randint,seed
 import traceback
 import mycluster
 from datetime import datetime
+#import logging
 
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
+
         seed(datetime.now())
         self.local_test=local_test
         self.i=0
