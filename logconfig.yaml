@@ -1,0 +1,23 @@
+version: 1
+formatters:
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+  file:
+    class: logging.RotatingFileHandler
+    formatter:precise
+    filename:multicluster.log
+    maxBytes: 2048
+    backupCount:2
+loggers:
+  logger:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+root:
+  level: DEBUG
+  handlers: [console, file]
