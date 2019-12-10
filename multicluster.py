@@ -62,9 +62,9 @@ class mypool:
                     rerun=False
                 except:
                     print(f'restarting:{name}')
-                    self.logger.exception()
-        sleeptime=randint(1,10000)*60/10000
-        print(f'sleeping for {sleeptime/60} minutes')
+                    self.logger.exception(f'error in {__name__}')
+        sleeptime=randint(1,10000)*10/10000
+        print(f'sleeping for {sleeptime/10} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
         while rerun:
@@ -76,12 +76,12 @@ class mypool:
 
             except:
                 print(f'restarting:{name}')
-                self.logger.exception()
+                self.logger.exception(f'error in {__name__}')
 
 
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_test='yes')
-    local_test='yes'
+    local_test=int(input('1 for local_test or 0 for network run'))
     includemaster=int(input('1 for include master, 0 for not'))
     nodecount=int(input('node count:'))
     

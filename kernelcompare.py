@@ -197,7 +197,7 @@ class KernelOptModelTools(mk.kNdtool):
                 break
             except:
                 if j==9:
-                    self.logger.exception()
+                    self.logger.exception(f'error in {__name__}')
                     return
 
         for dict_to_add in newdict_tup_list:
@@ -213,7 +213,7 @@ class KernelOptModelTools(mk.kNdtool):
                 break
             except:
                 if j==9:
-                    self.logger.exception()
+                    self.logger.exception(f'error in {__name__}')
                     break
         return
 
@@ -250,7 +250,7 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 if i==9:
                     print(f'could not open{file_loc}')
-                    self.logger.exception()
+                    self.logger.exception(f'error in {__name__}')
                     return
         if len(model_save_list)==0:
             print(f'no models in model_save_list for printing')
@@ -279,7 +279,7 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 if i==9:
                     print(f'could not write modeltablehtml to location:{output_filename}')
-                    self.logger.exception()
+                    self.logger.exception(f'error in {__name__}')
                     return
 
     def myflatdict(self, complexdict, keys=None):
@@ -375,7 +375,7 @@ class KernelOptModelTools(mk.kNdtool):
                         except:
                             if i==9:
                                 print(f'warning!saved_model_list{file_i_name} could not pickle.load')
-                                self.logger.exception()
+                                self.logger.exception(f'error in {__name__}')
                         
                 if condense==1:
                     list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
@@ -504,7 +504,7 @@ class KernelOptModelTools(mk.kNdtool):
                 #print(f'from filename:{saved_filename}, last in saved_dict_list:{saved_dict_list[-1]["modeldict"]}')
                 #print(f'optimizedict["modeldict"]:{optimizedict["modeldict"]}')
         except:
-            self.logger.exception()
+            self.logger.exception(f'error in {__name__}')
             print(f'saved_filename is {saved_filename}, but does not seem to exist')
             return []
         #saved_dict_list=[model for model in saved_model]
@@ -620,7 +620,7 @@ class KernelOptModelTools(mk.kNdtool):
                             return False
                     except: 
                         print('type(val1),type(val2)',type(val1),type(val2))
-                        self.logger.exception()
+                        self.logger.exception(f'error in {__name__}')
                         assert False,""
                         
         for key,_ in dict2.items():
@@ -782,7 +782,7 @@ class KernelOptModelTools(mk.kNdtool):
             newoptimizedict1=self.do_dict_override(newoptimizedict1,start_override_opt_dict,verbose=0)
         except:
             pass
-        #    self.logger.exception()             
+        #    self.logger.exception(f'error in {__name__}')             
         #    print('------no start value overrides encountered------')
         #print(f'newoptimizedict1{newoptimizedict1}')
         return newoptimizedict1

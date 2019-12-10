@@ -508,7 +508,7 @@ class kNdtool:
             except:
                 sleep(0.1)
                 if i==9:
-                    self.logger.exception()
+                    self.logger.exception(f'error in {__name__}')
                     modellist=[]
         #print('---------------success----------')
         modellist.append(savedict)
@@ -865,4 +865,4 @@ if __name__ == "__main__":
             test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=1, verbose=0)
         except:
             print('traceback for run', idx)
-            self.logger.exception()
+            self.logger.exception(f'error in {__name__}')
