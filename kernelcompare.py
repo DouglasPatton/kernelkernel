@@ -6,11 +6,17 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-import traceback
+import logging
+import logging.config
+import yaml
 #import datetime
 
 class KernelOptModelTools(mk.kNdtool):
     def __init__(self,directory=None):
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('kcLogger')
         
         if directory==None:
             self.kc_savedirectory=os.getcwd
@@ -191,7 +197,7 @@ class KernelOptModelTools(mk.kNdtool):
                 break
             except:
                 if j==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     return
 
         for dict_to_add in newdict_tup_list:
@@ -207,7 +213,7 @@ class KernelOptModelTools(mk.kNdtool):
                 break
             except:
                 if j==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     break
         return
 
@@ -244,7 +250,7 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 if i==9:
                     print(f'could not open{file_loc}')
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     return
         if len(model_save_list)==0:
             print(f'no models in model_save_list for printing')
@@ -273,7 +279,7 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 if i==9:
                     print(f'could not write modeltablehtml to location:{output_filename}')
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     return
 
     def myflatdict(self, complexdict, keys=None):
@@ -369,7 +375,7 @@ class KernelOptModelTools(mk.kNdtool):
                         except:
                             if i==9:
                                 print(f'warning!saved_model_list{file_i_name} could not pickle.load')
-                                print(traceback.format_exc())
+                                self.logger.exception()
                         
                 if condense==1:
                     list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
@@ -498,7 +504,7 @@ class KernelOptModelTools(mk.kNdtool):
                 #print(f'from filename:{saved_filename}, last in saved_dict_list:{saved_dict_list[-1]["modeldict"]}')
                 #print(f'optimizedict["modeldict"]:{optimizedict["modeldict"]}')
         except:
-            print(traceback.format_exc())
+            self.logger.exception()
             print(f'saved_filename is {saved_filename}, but does not seem to exist')
             return []
         #saved_dict_list=[model for model in saved_model]
@@ -614,7 +620,7 @@ class KernelOptModelTools(mk.kNdtool):
                             return False
                     except: 
                         print('type(val1),type(val2)',type(val1),type(val2))
-                        print(traceback.format_exc())
+                        self.logger.exception()
                         assert False,""
                         
         for key,_ in dict2.items():
@@ -776,7 +782,7 @@ class KernelOptModelTools(mk.kNdtool):
             newoptimizedict1=self.do_dict_override(newoptimizedict1,start_override_opt_dict,verbose=0)
         except:
             pass
-        #    print(traceback.format_exc())             
+        #    self.logger.exception()             
         #    print('------no start value overrides encountered------')
         #print(f'newoptimizedict1{newoptimizedict1}')
         return newoptimizedict1

@@ -1,23 +1,64 @@
 version: 1
+disable_existing_loggers: false
 formatters:
-
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  precise:
+    format: "%(levelname)s <PID %(process)d:%(processName)s> %(name)s.%(funcName)s(): %(message)s"
+    
 handlers:
   console:
     class: logging.StreamHandler
     level: DEBUG
-    formatter: simple
+    formatter: precise
     stream: ext://sys.stdout
-  file:
-    class: logging.RotatingFileHandler
-    formatter:precise
-    filename:multicluster.log
-    maxBytes: 2048
-    backupCount:2
+  rootHandler:
+    class: logging.handlers.RotatingFileHandler
+    formatter: precise
+    filename: logroot.log
+    maxBytes: 12048
+    backupCount: 2
+  multiClusterHandler:
+    class: logging.handlers.RotatingFileHandler
+    formatter: precise
+    filename: multicluster.log
+    maxBytes: 12048
+    backupCount: 2
+  myClusterHandler:
+    class: logging.handlers.RotatingFileHandler
+    formatter: precise
+    filename: mycluster.log
+    maxBytes: 12048
+    backupCount: 2
+  kcHandler:
+    class: logging.handlers.RotatingFileHandler
+    formatter: precise
+    filename: kernelcompare.log
+    maxBytes: 12048
+    backupCount: 2
+  mkHandler:
+    class: logging.handlers.RotatingFileHandler
+    formatter: precise
+    filename: mykernel.log
+    maxBytes: 12048
+    backupCount: 2
 loggers:
-  logger:
+  multiClusterLogger:
     level: DEBUG
-    handlers: [console, file]
+    handlers: [console, multiClusterHandler]
+    propagate: no
+  myClusterLogger:
+    level: DEBUG
+    handlers: [console, myClusterHandler]
+    propagate: no
+  kcLogger:
+    level: DEBUG
+    handlers: [console, kcHandler]
+    propagate: no
+  mkLogger:
+    level: DEBUG
+    handlers: [console, mkHandler]
     propagate: no
 root:
   level: DEBUG
-  handlers: [console, file]
+  handlers: [console, rootHandler]

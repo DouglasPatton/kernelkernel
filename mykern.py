@@ -1,5 +1,5 @@
 import multiprocessing
-import traceback
+#import traceback
 from copy import deepcopy
 from typing import List
 import os
@@ -9,7 +9,9 @@ import pickle
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
-    
+import logging
+import logging.config
+import yaml
 
 class kNdtool:
     """kNd refers to the fact that there will be kernels in kernels in these estimators
@@ -17,10 +19,14 @@ class kNdtool:
     """
 
     def __init__(self,savedir=None):
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('mkLogger')
         if savedir==None:
             savedir=os.getcwd()
         self.savedirectory=savedir
-        pass
+
     def sum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
@@ -502,7 +508,7 @@ class kNdtool:
             except:
                 sleep(0.1)
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     modellist=[]
         #print('---------------success----------')
         modellist.append(savedict)
@@ -859,4 +865,4 @@ if __name__ == "__main__":
             test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=1, verbose=0)
         except:
             print('traceback for run', idx)
-            print(traceback.format_exc())
+            self.logger.exception()

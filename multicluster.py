@@ -1,14 +1,21 @@
 from time import sleep
 import multiprocessing as mp
 from random import randint,seed
-import traceback
+import os
 import mycluster
 from datetime import datetime
-#import logging
+import logging
+import logging.config
+import yaml
+
+
 
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
-
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('multiClusterLogger')
         seed(datetime.now())
         self.local_test=local_test
         self.i=0
@@ -55,7 +62,7 @@ class mypool:
                     rerun=False
                 except:
                     print(f'restarting:{name}')
-                    print(traceback.format_exc())
+                    self.logger.exception()
         sleeptime=randint(1,10000)*60/10000
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
@@ -69,7 +76,7 @@ class mypool:
 
             except:
                 print(f'restarting:{name}')
-                print(traceback.format_exc())
+                self.logger.exception()
 
 
 if __name__=='__main__':

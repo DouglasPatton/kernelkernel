@@ -8,6 +8,9 @@ import traceback
 import shutil
 from numpy import log
 from random import randint
+import logging
+import logging.config
+import yaml
 
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
@@ -34,7 +37,10 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     def __init__(self,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test='yes'):
-        
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('myClusterLogger')
         if myname==None:
             myname='node'
         if optdict_variation_list==None:
@@ -89,7 +95,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     break
                 except:
                     if i==9:
-                        print(traceback.format_exc())
+                        self.logger.exception()
         return masterdir
         
     def setdirectory(self,local_test='yes'):
@@ -105,7 +111,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             break
                         except:
                             if i==9:
-                                print(traceback.format_exc())
+                                self.logger.exception()
 
         else: 
             assert False,f"local_test not understood. value:{local_test}"
@@ -145,7 +151,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     print(f'problem creating:{name}, restarting createnamefile')
                     name=self.createnamefile(name)
         return name
@@ -169,7 +175,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     masterfile=pickle.load(themasterfile)
                 return masterfile
             except(FileNotFoundError):
-                print(traceback.format_exc())
+                self.logger.exception()
                 return False
             except:
                 if i==9:
@@ -187,7 +193,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     print('arechivemaster has failed')
                     return
         for i in range(10): 
@@ -197,7 +203,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 if i==9:
                     print('masterfile_archive created, but removal of old file has failed')
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     return
                     
     
@@ -211,7 +217,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 sleep(.2)
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     assert False, 'masterfile problem'
 
     def rebuild_namefiles(self, run_dict_status, assignment_tracker):
@@ -262,7 +268,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     break
             except:
                 print(f'failed to merge node named:{name}')
-                print(traceback.format_exc())
+                self.logger.exception()
         
         assigned_to_not_current_name_idx=[]
         #ignment_tracker',assignment_tracker)
@@ -355,7 +361,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             run_dict_status[random_ready_dict_idx] = 'ready for node'
                             ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
 
-                            print(traceback.format_exc())
+                            self.logger.exception()
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
 
 
@@ -411,7 +417,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print('completed final merge')
                     except:
                         print(f'merge this node failed for node named:{name}')
-                        print(traceback.format_exc())
+                        self.logger.exception()
                         return False
         return True
                 
@@ -424,7 +430,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
         return
     
     
@@ -443,7 +449,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 print(f'newjob has jobdict:{jobdict}')
                 break
             except:
-                print(traceback.format_exc())
+                self.logger.exception()
                 sleep(0.35)
                 
         return
@@ -458,7 +464,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 sleep(0.25)
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     namefile=[(None,None)]
         return namefile[-1]
 
@@ -488,7 +494,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 return sincelastsave
             except:
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     if not filename=='final_model_save':
                         self.model_save_activitycheck(name,filename='final_model_save')
         return None
@@ -506,7 +512,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 if i==19:
                     print('getnamelist failed')
-                    print(traceback.format_exc())
+                    self.logger.exception()
                 sleep(0.25)
             return []
 
@@ -518,7 +524,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                     assert False,f"runnode named {myname} could not check master"
         if masterfile_exists==False:
             for i in range(120):
@@ -528,7 +534,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     if masterfile_exists:break
                 except:
                     if i == 119:
-                        print(traceback.format_exc())
+                        self.logger.exception()
                         assert False, f"runnode named {myname} could not check master"
 
         #mydir=os.path.join(self.savedirectory,myname)
@@ -565,17 +571,17 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 self.update_node_job_status(myname,status='failed',mydir=mydir)
             except:
-                print(traceback.format_exc())
+                self.logger.exception()
                 #self.runnode(myname+'0')#relying on wrapper function restarting the node
                 return
-            print(traceback.format_exc())
+            self.logger.exception()
 
         if success==1:
             try:
                 self.update_node_job_status(myname,status="finished",mydir=mydir)
             except:
                 print(f'could not update node status for {myname} to finished')
-                print(traceback.format_exc())
+                self.logger.exception()
                 #self.runnode(myname+'0')#relying on wrapper function restarting the node
                 return
 
@@ -611,7 +617,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 if s_since_start>datetime.timedelta(hours=120):#allowing 2 hours instead of using self.oldnode_threshold
                     print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready for node')#signal that this node is still active
-                    print(traceback.format_exc())
+                    self.logger.exception()
                 
                 
                 if s_since_start>self.oldnode_threshold:
@@ -642,7 +648,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
                 sleep(.15)
 
         return
@@ -669,7 +675,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except(FileNotFoundError):
                 if i==9:
 
-                    #print(traceback.format_exc())
+                    #self.logger.exception()
                     if time==0:
                         return "no file found"#if the file doesn't exist, then assign the job
                     if time==1:
@@ -692,7 +698,7 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 sleep(.25)
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception()
         if type(status) is str:
             now=strftime("%Y%m%d-%H%M%S")
             job_save_dict['node_status'].append((now,status))
