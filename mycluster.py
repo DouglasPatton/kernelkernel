@@ -70,10 +70,10 @@ class run_cluster(kernelcompare.KernelCompare):
     def getoptdictvariations(self):
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
-        Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
+        Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self', 'own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
-        ykern_grid_variations=('modeldict:ykern_grid',[43])
+        ykern_grid_variations=('modeldict:ykern_grid',[97])
         optdict_variation_list = [Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
@@ -83,8 +83,8 @@ class run_cluster(kernelcompare.KernelCompare):
         #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
 
 
-        batch_n_variations=('batch_n',[42])
-        batchcount_variations=('batchcount',[20])
+        batch_n_variations=('batch_n',[96])
+        batchcount_variations=('batchcount',[10])
         ftype_variations=('ftype',['linear','quadratic'])
         param_count_variations=('param_count',[1,2,3,4])
         datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
@@ -243,17 +243,17 @@ class run_cluster(kernelcompare.KernelCompare):
                     
                     if not type(time_i) is datetime.timedelta:
                         old_name_list.append(name_i)
-                        print(f'1-rebuild_namefiles classifies time_i{time_i} as old')
+                        print(f'1-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
                     elif time_i < self.oldnode_threshold:
                         current_name_list.append(name_i)
                         self.update_my_namefile(name_i,status='working')
                     else: 
                         old_name_list.append(name_i)
-                        print(f'2-rebuild_namefiles classifies time_i{time_i} as old')
+                        print(f'2-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
                     break
                 except:
                     if j == 9:
-                        print(f'-----rebuild namefiles timeout for time_i{time_i}', traceback.format_exc())
+                        print(f'-----rebuild namefiles timeout for name_i:{name_i} with time_i:{time_i}', traceback.format_exc())
                         old_name_list.append(name_i)
 
         if len(old_name_list) > 0:

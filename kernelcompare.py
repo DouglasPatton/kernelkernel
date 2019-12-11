@@ -153,8 +153,7 @@ class KernelOptModelTools(mk.kNdtool):
         dirlist=[startdirectory]+dirlist
         for diri in dirlist:
             if verbose==1:print('diri',diri)
-            self.merge_and_condense_saved_models(merge_directory=diri, save_directory=save_directory, condense=None,
-                                            verbose=verbose)
+            self.merge_and_condense_saved_models(merge_directory=diri, save_directory=save_directory, condense=1,verbose=verbose)
 
     def recursive_add_dict(self,startdirectory,add_tuple_list,overwrite=0,verbose=0):
         if not type(add_tuple_list) is list:
@@ -168,7 +167,7 @@ class KernelOptModelTools(mk.kNdtool):
         else:
             save_directory = startdirectory
 
-        dirlist = [dir[0] for dir in os.walk(startdirectory)]
+        dirlist = [dir_i[0] for dir_i in os.walk(startdirectory)]
         dirlist = [startdirectory] + dirlist
         for dir_i in dirlist:
             filelist=os.listdir(dir_i)
@@ -303,12 +302,14 @@ class KernelOptModelTools(mk.kNdtool):
 
         return flatdict
 
-
+    
 
     def getmodelrunmse(self,modelrundict):
         return modelrundict['mse']
+    
 
-            
+    
+    
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
             assert os.path.exists(merge_directory),"merge_directory does not exist"
@@ -354,69 +355,45 @@ class KernelOptModelTools(mk.kNdtool):
 
 
         if len(model_save_filelist)==0:
-            print('0 models found in save_directory when merging')
+            print('0 models found in save_directory:{merge_directory} when merging')
             return
                          
         #if len(model_save_filelist)==1 and saved_condensed_list==[]:
         #    print('only 1 model_save file found, and saved_condensed_list is empty, so no merge completed')
         #    return
         new_model_list=[]
-        list_of_saved_lists=[]
-        if len(model_save_filelist)>0:
-            for file_i in model_save_filelist:
-                file_i_name=os.path.join(merge_directory,file_i)
-                for i in range(10):
-                    with open(file_i_name,'rb') as savedfile:
-                        try: 
-                            saved_model_list=pickle.load(savedfile)
-                            if verbose==1:
-                                print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
-                            break
-                        except:
-                            if i==9:
-                                print(f'warning!saved_model_list{file_i_name} could not pickle.load')
-                                self.logger.exception(f'error in {__name__}')
-                        
-                if condense==1:
-                    list_of_saved_lists.append(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
-                else:
-                    list_of_saved_lists.append(saved_model_list)
-            if not saved_condensed_list==[]:
-                if condense==1:
-                    saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
-                list_of_saved_lists.append(saved_condensed_list)
-            for i,list_i in enumerate(list_of_saved_lists):#each saved_list is from a different file, and they have been put in a list
-                for list_j in list_of_saved_lists[i:]:#no plus 1, so compare list_i to itself, but not ones before it.
-                    doubledict_list_i=[self.pull2dicts(dict_i) for dict_i in list_i]
-                    doubledict_list_j=[self.pull2dicts(dict_j) for dict_j in list_j]
-                    #atagen_dict_list_i=[dict_i['datagen_dict'] for dict_i in list_i]
-                    #datagen_dict_list_j=[dict_i['datagen_dict'] for dict_i in list_j]
-                    
-                    
-        #matching_doubledict_list[dict_1==dict_2 for dict_1 in doubledict_list_i for dict_2 in doubledict_list_j]
-                    jlen=len(list_j)
-                    ilen=len(list_i)
-                    jbest=[1]*jlen
+        list_of_saved_models=[]
 
-                    for ii in range(ilen):
-                        ibest=1#start optimistic
-                        for jj in range(jlen):
-                            both_dicts_match=self.are_dicts_equal(doubledict_list_i[ii],doubledict_list_j[jj])# and datagen_dict_list_i[ii]==datagen_dict_list_j[jj]
-                            if both_dicts_match:
-                                if list_i[ii]['mse']>list_j[jj]['mse']:
-                                    ibest=0
-                                else:
-                                    jbest[jj]=0
-                        if ibest==1:#only true if dict_1[i] never lost, because it won or was unique
-                            new_model_list.append(list_i[ii])
-                    for k in range(jlen):
-                        if jbest[k]==1:
-                            new_model_list.append(list_j[k])
-        
+        for file_i in model_save_filelist:
+            file_i_name=os.path.join(merge_directory,file_i)
+            for i in range(10):
+                with open(file_i_name,'rb') as savedfile:
+                    try: 
+                        saved_model_list=pickle.load(savedfile)
+                        if verbose==1:
+                            print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
+                        break
+                    except:
+                        if i==9:
+                            print(f'warning!saved_model_list{file_i_name} could not pickle.load')
+                            self.logger.exception(f'error in {__name__}')
+                            saved_model_list=[]
+
+            if condense==1:
+                list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
+            else:
+                list_of_saved_models.extend(saved_model_list)
+        if not saved_condensed_list==[]:
+            if condense==1:
+                saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
+            list_of_saved_models.extend(saved_condensed_list)
+        if condense==1:
+            list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
+
 
         condensedfilename=os.path.join(save_directory,'condensed_model_save')
         with open(condensedfilename,'wb') as newfile:
-            #print(f'list_i:{new_model_list}')
+            print(f'writing new_model_list length:{len(new_model_list)} to newfile:{newfile}')
             pickle.dump(new_model_list,newfile)
 
                                               
