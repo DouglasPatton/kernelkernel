@@ -361,7 +361,7 @@ class KernelOptModelTools(mk.kNdtool):
         #if len(model_save_filelist)==1 and saved_condensed_list==[]:
         #    print('only 1 model_save file found, and saved_condensed_list is empty, so no merge completed')
         #    return
-        new_model_list=[]
+        
         list_of_saved_models=[]
 
         for file_i in model_save_filelist:
@@ -393,8 +393,8 @@ class KernelOptModelTools(mk.kNdtool):
 
         condensedfilename=os.path.join(save_directory,'condensed_model_save')
         with open(condensedfilename,'wb') as newfile:
-            print(f'writing new_model_list length:{len(new_model_list)} to newfile:{newfile}')
-            pickle.dump(new_model_list,newfile)
+            print(f'writing new_model_list length:{len(list_of_saved_models)} to newfile:{newfile}')
+            pickle.dump(list_of_saved_models,newfile)
 
                                               
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
