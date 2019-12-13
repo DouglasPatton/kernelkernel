@@ -1,5 +1,5 @@
 import multiprocessing
-import traceback
+#import traceback
 from copy import deepcopy
 from typing import List
 import os
@@ -9,7 +9,10 @@ import pickle
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
-    
+import logging
+import logging.config
+import yaml
+import psutil
 
 class kNdtool:
     """kNd refers to the fact that there will be kernels in kernels in these estimators
@@ -17,10 +20,15 @@ class kNdtool:
     """
 
     def __init__(self,savedir=None):
+        self.cores=int(psutil.cpu_count(logical=False)-1)
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('mkLogger')
         if savedir==None:
             savedir=os.getcwd()
         self.savedirectory=savedir
-        pass
+
     def sum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
@@ -499,10 +507,13 @@ class kNdtool:
                 with open(fullpath_filename,'rb') as modelfile:
                     modellist=pickle.load(modelfile)
                 break
+            except FileNotFoundError:
+                modellist=[]
+                break
             except:
                 sleep(0.1)
                 if i==9:
-                    print(traceback.format_exc())
+                    self.logger.exception(f'error in {__name__}')
                     modellist=[]
         #print('---------------success----------')
         modellist.append(savedict)
@@ -649,13 +660,17 @@ class kNdtool:
             arglist.append(fixed_or_free_paramdict)
             arglistlist.append(arglist)
 
-        workercount=batchcount
-        if batchcount>0:
-            with multiprocessing.Pool(processes=batchcount) as pool:
+        process_count=1#self.cores
+        if process_count>1 and batchcount>1:
+            with multiprocessing.Pool(processes=process_count) as pool:
                 yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 sleep(2)
                 pool.close()
                 pool.join()
+        else:
+            yhat_unstd=[]
+            for i in range(batchcount):
+                yhat_unstd.append(self.MPwrapperKDEpredict(arglistlist[i]))
 
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         for batch_i in range(batchcount):
@@ -859,4 +874,4 @@ if __name__ == "__main__":
             test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=1, verbose=0)
         except:
             print('traceback for run', idx)
-            print(traceback.format_exc())
+            self.logger.exception(f'error in {__name__}')

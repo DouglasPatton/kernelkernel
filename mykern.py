@@ -12,6 +12,7 @@ from scipy.optimize import minimize
 import logging
 import logging.config
 import yaml
+import psutil
 
 class kNdtool:
     """kNd refers to the fact that there will be kernels in kernels in these estimators
@@ -19,6 +20,7 @@ class kNdtool:
     """
 
     def __init__(self,savedir=None):
+        self.cores=int(psutil.cpu_count(logical=False)-1)
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
@@ -505,6 +507,9 @@ class kNdtool:
                 with open(fullpath_filename,'rb') as modelfile:
                     modellist=pickle.load(modelfile)
                 break
+            except FileNotFoundError:
+                modellist=[]
+                break
             except:
                 sleep(0.1)
                 if i==9:
@@ -655,13 +660,17 @@ class kNdtool:
             arglist.append(fixed_or_free_paramdict)
             arglistlist.append(arglist)
 
-        workercount=batchcount
-        if batchcount>0:
-            with multiprocessing.Pool(processes=batchcount) as pool:
+        process_count=1#self.cores
+        if process_count>1 and batchcount>1:
+            with multiprocessing.Pool(processes=process_count) as pool:
                 yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 sleep(2)
                 pool.close()
                 pool.join()
+        else:
+            yhat_unstd=[]
+            for i in range(batchcount):
+                yhat_unstd.append(self.MPwrapperKDEpredict(arglistlist[i]))
 
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         for batch_i in range(batchcount):
