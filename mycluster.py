@@ -53,7 +53,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
         
-        self.oldnode_threshold=datetime.timedelta(minutes=20,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=5,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
@@ -73,7 +73,7 @@ class run_cluster(kernelcompare.KernelCompare):
         Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self', 'own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n', 'across'])
-        ykern_grid_variations=('modeldict:ykern_grid',[97])
+        ykern_grid_variations=('modeldict:ykern_grid',[81])
         optdict_variation_list = [Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
@@ -83,10 +83,10 @@ class run_cluster(kernelcompare.KernelCompare):
         #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
 
 
-        batch_n_variations=('batch_n',[96])
+        batch_n_variations=('batch_n',[80])
         batchcount_variations=('batchcount',[10])
         ftype_variations=('ftype',['linear','quadratic'])
-        param_count_variations=('param_count',[1,2,3,4])
+        param_count_variations=('param_count',[1,2,4,8])
         datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
         return datagen_variation_list
     
