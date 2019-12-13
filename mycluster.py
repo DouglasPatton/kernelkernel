@@ -477,7 +477,10 @@ class run_cluster(kernelcompare.KernelCompare):
     def s_before_now(self,then):
         now=strftime("%Y%m%d-%H%M%S")
         now_s=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")
-        return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
+        if then==None:
+            return None
+        else:
+            return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
                         
     
     def model_save_activitycheck(self,name,filename=None):
