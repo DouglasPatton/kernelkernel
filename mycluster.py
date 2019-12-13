@@ -231,8 +231,8 @@ class run_cluster(kernelcompare.KernelCompare):
         # print(f'namefile_tuplist:{namefile_tuplist}')
         s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
 
-        current_name_list = [name for i, name in enumerate(namelist) if s_since_update_list[i] < self.oldnode_threshold]
-        old_name_list1 = [name for i, name in enumerate(namelist) if
+        current_name_list = [name for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold]
+        old_name_list1 = [name for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
                           not s_since_update_list[i] < self.oldnode_threshold]
 
         old_name_list = []
