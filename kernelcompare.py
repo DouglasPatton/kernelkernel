@@ -140,7 +140,8 @@ class KernelOptModelTools(mk.kNdtool):
 
 
     def recursive_merge(self,startdirectory,overwrite=0,verbose=0):
-
+        if verbose==1:
+            print(f'startdirectory:{startdirectory}')
         if not os.path.exists(startdirectory):
             startdirectory=os.path.join(os.getcwd,startdirectory)
         if overwrite==0:
