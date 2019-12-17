@@ -20,12 +20,20 @@ class kNdtool:
 
     """
 
-    def __init__(self,savedir=None):
+    def __init__(self,savedir=None,myname=None):
+        self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
         #with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
         #    configfile=yaml.safe_load(f.read())
         logging.basicConfig(level=logging.INFO)
-        handler=logging.FileHandler(f'mykernlog-{__name__}')
+        
+        handlername=f'mykern-{self.name}.log'
+        print(f'handlername:{handlername}')
+        #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
+        if not self.name==None:
+            handler=logging.FileHandler(os.path.join(savedir,'..',handlername))
+        else:
+            handler=logging.FileHandler(os.path.join(savedir,handlername))
         
         #self.logger = logging.getLogger('mkLogger')
         self.logger = logging.getLogger(__name__)
@@ -743,10 +751,11 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,datagen_obj,optimizedict,savedir=None):
+    def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
+        self.name=myname
         if savedir==None:
               mydir=os.getcwd()
-        kNdtool.__init__(self,savedir=savedir)
+        kNdtool.__init__(self,savedir=savedir,myname=myname)
         self.datagen_obj=datagen_obj
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call

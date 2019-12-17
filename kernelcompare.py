@@ -12,7 +12,8 @@ import yaml
 #import datetime
 
 class KernelOptModelTools(mk.kNdtool):
-    def __init__(self,directory=None):
+    def __init__(self,directory=None,myname=None):
+        self.name=myname
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
@@ -22,7 +23,7 @@ class KernelOptModelTools(mk.kNdtool):
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
-        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory)
+        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         optimizedict['datagen_dict']=datagen_dict
@@ -41,7 +42,7 @@ class KernelOptModelTools(mk.kNdtool):
         
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory)
+        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory,myname=self.name)
         return
         
     def run_opt_complete_check(self,optimizedict_orig,datagen_obj,replace=None):
@@ -768,7 +769,8 @@ class KernelOptModelTools(mk.kNdtool):
         
         
 class KernelCompare(KernelOptModelTools):
-    def __init__(self,directory=None):
+    def __init__(self,directory=None,myname=None):
+        self.name=myname
         if directory==None:
             self.kc_savedirectory=os.getcwd()
             merge_directory=self.kc_savedirectory
@@ -776,7 +778,7 @@ class KernelCompare(KernelOptModelTools):
             self.kc_savedirectory=directory
             merge_directory=os.path.join(self.kc_savedirectory,'..')
 
-        KernelOptModelTools.__init__(self,directory=self.kc_savedirectory)
+        KernelOptModelTools.__init__(self,directory=self.kc_savedirectory,myname=myname)
         #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
                       #this should gather all directories from parent directory if directory is specified in object_init__()
                       #or if not, everything happens in the current working directory, which is good for testing without running
