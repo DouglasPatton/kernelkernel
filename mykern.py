@@ -489,11 +489,18 @@ class kNdtool:
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
             allkerns=allkerns/np.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
-        if allkerns.ndim>3:
-            for i in range((allkerns.ndim-3),0,-1):
-                assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
-                                        "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
-                allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+        if modeldict['regression_model']=='NW-rbf':
+            if allkerns.ndim>3:
+                for i in range((allkerns.ndim-3),0,-1):
+                    assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
+                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
+                    allkerns=np.ma.sum(np.ma.exponent(allkerns,2),axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+        if modeldict['regression_model']=='NW':
+            if allkerns.ndim>3:
+                for i in range((allkerns.ndim-3),0,-1):
+                    assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
+                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
+                    allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
 
