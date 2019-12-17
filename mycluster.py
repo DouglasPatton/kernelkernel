@@ -502,7 +502,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 return sincelastsave
             except:
                 if i==9:
-                    self.logger.exception(f'error in {__name__}')
+                    self.logger.info(f'error in {__name__} could not find{filename}')
                     if not filename=='final_model_save':
                         self.model_save_activitycheck(name,filename='final_model_save')
         return None

@@ -483,8 +483,8 @@ class KernelOptModelTools(mk.kNdtool):
                 #print(f'from filename:{saved_filename}, last in saved_dict_list:{saved_dict_list[-1]["modeldict"]}')
                 #print(f'optimizedict["modeldict"]:{optimizedict["modeldict"]}')
         except:
-            self.logger.exception(f'error in {__name__}')
-            print(f'saved_filename is {saved_filename}, but does not seem to exist')
+            #self.logger.exception(f'error in {__name__}')
+            self.logger.info(f'saved_filename is {saved_filename}, but does not seem to exist')
             return []
         #saved_dict_list=[model for model in saved_model]
         
