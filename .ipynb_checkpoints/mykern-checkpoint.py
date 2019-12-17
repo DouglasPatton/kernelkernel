@@ -485,16 +485,16 @@ class kNdtool:
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
             allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
-            allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            allkerns=allkerns/np.broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
-            allkerns=allkerns/np.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
+            allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
         if modeldict['regression_model']=='NW-rbf':
             if allkerns.ndim>3:
                 for i in range((allkerns.ndim-3),0,-1):
                     assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
                                             "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
-                    allkerns=np.ma.sum(np.ma.exponent(allkerns,2),axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+                    allkerns=np.ma.power(np.ma.sum(np.ma.power(allkerns,2),axis=allkerns.ndim-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
         if modeldict['regression_model']=='NW':
             if allkerns.ndim>3:
                 for i in range((allkerns.ndim-3),0,-1):
@@ -614,10 +614,10 @@ class kNdtool:
         if True:#type(ykern_grid) is int and xkern_grid=='no':
             xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
             xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
-            xbw_stack=np.broadcast_to(np.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
+            xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
         newaxis=len(yonediffs.shape)
         yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
-        yx_bw_endstack=np.ma.concatenate((np.expand_dims(xbw_stack,newaxis),np.expand_dims(ybw,newaxis)),axis=newaxis)
+        yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
         prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
         prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
@@ -639,14 +639,14 @@ class kNdtool:
         """
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         
-        prob_yx_sum=np.broadcast_to(np.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
+        prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
         cdfnorm_prob_yx=prob_yx/prob_yx_sum
         #cdfnorm_prob_yx=prob_yx#dropped normalization
-        prob_x_sum=np.broadcast_to(np.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
+        prob_x_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
         cdfnorm_prob_x = prob_x / prob_x_sum
-        yout_stack=np.broadcast_to(np.expand_dims(yout,1),(self.nout,self.npr))
+        yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
-        prob_x_stack=np.broadcast_to(np.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
+        prob_x_stack=np.broadcast_to(np.ma.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         
         yhat= np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(f'yhat:{yhat}')
