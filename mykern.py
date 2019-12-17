@@ -36,7 +36,8 @@ class kNdtool:
             return np.ma.sum(kernstack,axis=0)
 
         if type(normalization) is int:
-            return np.ma.sum(kernstack,axis=0)/normalization
+            
+            return np.ma.sum(kernstack,axis=0)/float(normalization)
         if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
@@ -815,7 +816,7 @@ class optimize_free_params(kNdtool):
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
-        print(f'795modeldict:{modeldict}')
+        print(f'mykern modeldict:{modeldict}')
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
