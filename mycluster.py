@@ -73,7 +73,7 @@ class run_cluster(kernelcompare.KernelCompare):
         Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
-        ykern_grid_variations=('modeldict:ykern_grid',[81])
+        ykern_grid_variations=('modeldict:ykern_grid',[65])
         optdict_variation_list = [product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
@@ -83,7 +83,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
 
 
-        batch_n_variations=('batch_n',[80])
+        batch_n_variations=('batch_n',[64])
         batchcount_variations=('batchcount',[10])
         ftype_variations=('ftype',['linear','quadratic'])
         param_count_variations=('param_count',[1,2,4,8])

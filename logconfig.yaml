@@ -12,12 +12,6 @@ handlers:
     level: DEBUG
     formatter: precise
     stream: ext://sys.stdout
-  rootHandler:
-    class: logging.handlers.RotatingFileHandler
-    formatter: precise
-    filename: logroot.log
-    maxBytes: 12048
-    backupCount: 2
   multiClusterHandler:
     class: logging.handlers.RotatingFileHandler
     formatter: precise
@@ -61,4 +55,4 @@ loggers:
     propagate: no
 root:
   level: DEBUG
-  handlers: [console, rootHandler]
+  handlers: [console]

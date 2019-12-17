@@ -511,7 +511,8 @@ class kNdtool:
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
         savedict['modeldict']=modeldict
-        savedict['when_saved']=strftime("%Y%m%d-%H%M%S")
+        now=strftime("%Y%m%d-%H%M%S")
+        savedict['when_saved']=now
         savedict['datagen_dict']=self.datagen_dict
         try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
@@ -531,7 +532,12 @@ class kNdtool:
                     self.logger.exception(f'error in {__name__}')
                     modellist=[]
         #print('---------------success----------')
+        if len(modellist)>0:
+            lastsavetime=modellist[-1]['when_saved']
+            runtime=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsavetime,"%Y%m%d-%H%M%S")
+            print(f'time between saves for {self.name} is {runtime}')
         modellist.append(savedict)
+        
         for i in range(10):
             try:
                 with open(fullpath_filename,'wb') as thefile:
