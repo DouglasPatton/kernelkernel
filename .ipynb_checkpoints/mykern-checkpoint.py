@@ -10,7 +10,8 @@ import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
 import logging
-import logging.config
+
+#import logging.config
 import yaml
 import psutil
 
@@ -21,10 +22,15 @@ class kNdtool:
 
     def __init__(self,savedir=None):
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('mkLogger')
+        #with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+        #    configfile=yaml.safe_load(f.read())
+        logging.basicConfig(level=logging.INFO)
+        handler=logging.FileHandler(f'mykernlog-{__name__}')
+        
+        #self.logger = logging.getLogger('mkLogger')
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
+        
         if savedir==None:
             savedir=os.getcwd()
         self.savedirectory=savedir
@@ -36,7 +42,8 @@ class kNdtool:
             return np.ma.sum(kernstack,axis=0)
 
         if type(normalization) is int:
-            return np.ma.sum(kernstack,axis=0)/normalization
+            
+            return np.ma.sum(kernstack,axis=0)/float(normalization)
         if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=0)
@@ -815,7 +822,7 @@ class optimize_free_params(kNdtool):
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
-        print(f'795modeldict:{modeldict}')
+        print(f'mykern modeldict:{modeldict}')
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]

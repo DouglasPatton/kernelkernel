@@ -10,7 +10,8 @@ import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
 import logging
-import logging.config
+
+#import logging.config
 import yaml
 import psutil
 
@@ -21,10 +22,15 @@ class kNdtool:
 
     def __init__(self,savedir=None):
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('mkLogger')
+        #with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+        #    configfile=yaml.safe_load(f.read())
+        logging.basicConfig(level=logging.INFO)
+        handler=logging.FileHandler(f'mykernlog-{__name__}')
+        
+        #self.logger = logging.getLogger('mkLogger')
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
+        
         if savedir==None:
             savedir=os.getcwd()
         self.savedirectory=savedir

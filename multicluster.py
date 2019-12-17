@@ -51,17 +51,17 @@ class mypool:
             processes[i].join()
         '''
     
-    def runworker(self,name):
-        if name=='master':
+    def runworker(self,startname):
+        if startname=='master':
             rerun=True
             while rerun:
                 try:
                     self.i+=1
-                    mycluster.run_cluster(name, local_test=self.local_test)
+                    mycluster.run_cluster(startname, local_test=self.local_test)
                 except KeyboardInterrupt:
                     rerun=False
                 except:
-                    print(f'restarting:{name}')
+                    print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
         sleeptime=randint(1,10000)*10/10000
         print(f'sleeping for {sleeptime/60} minutes')
@@ -70,7 +70,8 @@ class mypool:
         while rerun:
             try:
                 self.i+=1#increments with start/restart of nodes or master
-                mycluster.run_cluster(name+str(self.id)+'-'+str(self.i),local_test=self.local_test)
+                name=startname+str(self.id)+'-'+str(self.i)
+                mycluster.run_cluster(name,local_test=self.local_test)
             except KeyboardInterrupt:
                 rerun=False
 
