@@ -178,10 +178,11 @@ class KernelOptModelTools(mk.kNdtool):
                     self.add_dict(os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
         return
 
-    def overwrite_savedict(self,filename,flatdict_tup,verbose=0,overwrite=0)
+    def overwrite_savedict(self,filename,flatdict_tup,verbose=0,overwrite=0,overwrite_condition=None):
         '''
         flatdict_tup might look like this: ('modeldict:max_bw_Ndiff',4)
             where the first item is a flat dict and the second items is the new value.
+        overwrite_condition is used when some values shouldn't be overwritten
         '''
         if overwrite == 0 or overwrite==None:
             writefilename = filename + '-overwrite_dict'
@@ -189,20 +190,28 @@ class KernelOptModelTools(mk.kNdtool):
             writefilename = filename
         for j in range(10):
             try:
-                with open(os.path.join(self.kc_save_directory,filename),'rb') as modelsavefile:
+                with open(os.path.join(self.kc_savedirectory,filename),'rb') as modelsavefile:
                     modelsave_list=pickle.load(modelsavefile)
                 break
             except:
                 if j==9:
                     self.logger.exception(f'error in {__name__}')
                     return
-        override_dict=self.build_override_dict_from_str(flatdict)
+        override_dict=self.build_override_dict_from_str(flatdict_tup[0],flatdict_tup[1])
         new_modelsave_list=[]
         for savedict in modelsave_list:
-            new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose)
+            if not overwrite_condition==None:
+                current_value=self.pull_nested_key(savedict,override_dict)
+                if current_value==overwrite_condition:
+                    new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
+                else:
+                    print(current_value)
+                    new_modelsave_list.append(savedict)
+            else:
+                new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
         for j in range(10):
             try:
-                with open(os.path.join(self.kc_save_directory,filename),'wb') as modelsavefile:
+                with open(os.path.join(self.kc_savedirectory,writefilename),'wb') as modelsavefile:
                     pickle.dump(new_modelsave_list,modelsavefile)
                 return
             except:
@@ -210,6 +219,27 @@ class KernelOptModelTools(mk.kNdtool):
                     self.logger.exception(f'error in {__name__}')
                     return
             
+    def pull_nested_key(self,maindict,nesteddict,recursive=0):
+        if recursive==0:
+            vstring=''
+        if type(recursive) is str:
+            vstring=recursive
+            
+        for key,val in nesteddict.items():
+            if not key in maindict:
+                keylist=[key for key,val in maindict.items()]
+                vstring+=f'key:{key} not in list of keys:{keylist}'
+                print(vstring)
+                return None
+            val2=maindict[key]
+            if type(val2) is dict:
+                if not type(val) is dict:
+                    vstring+=f'for key:{key} maindict[key] is a dict but type(val):{type(val)}'
+                    print(vstring)
+                    return None
+                return self.pull_nested_key(val2,val,recursive=vstring)
+            else:
+                return val2
             
             
 
@@ -227,7 +257,7 @@ class KernelOptModelTools(mk.kNdtool):
 
         for j in range(10):
             try:
-                with open(os.path.join(self.kc_save_directory,filename),'rb') as modelsavefile:
+                with open(os.path.join(self.kc_savedirectory,filename),'rb') as modelsavefile:
                     modelsave_list=pickle.load(modelsavefile)
                 break
             except:
@@ -243,7 +273,7 @@ class KernelOptModelTools(mk.kNdtool):
 
         for j in range(10):
             try:
-                with open(os.path.join(self.kc_save_directory,writefilename),'wb') as modelsavefile:
+                with open(os.path.join(self.kc_savedirectory,writefilename),'wb') as modelsavefile:
                     pickle.dump(modelsave_list, modelsavefile)
                 break
             except:
