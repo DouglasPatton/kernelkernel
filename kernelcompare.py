@@ -134,6 +134,7 @@ class KernelOptModelTools(mk.kNdtool):
                 new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
                 vstring+=f"for {key} old val({val})replaced with new val({new_val})"
                 new_opt_dict['hyper_param_dict'][key]=new_val
+        if verbose==1:print(vstring)
         return new_opt_dict
 
 
