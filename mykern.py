@@ -222,7 +222,6 @@ class kNdtool:
         
 
     
-    
     def Ndiff_datastacker(self,Ndiffs,onediffs_shape,depth):
         """
         """
