@@ -222,7 +222,6 @@ class kNdtool:
         
 
     
-    
     def Ndiff_datastacker(self,Ndiffs,onediffs_shape,depth):
         """
         """
@@ -563,7 +562,13 @@ class kNdtool:
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
         columns of x.
         """
-
+        
+        try:
+            lossfn=modeldict['loss_function']
+        except KeyError:
+            lossfn='mse'
+        iscrossmse=lossfn[0:8]=='crossmse'
+        
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         #pull x_bandscale parameters from the appropriate location and appropriate vector
         x_bandscale_params=self.pull_value_from_fixed_or_free('x_bandscale',fixed_or_free_paramdict)
@@ -623,20 +628,35 @@ class kNdtool:
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
             #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
             
+            
         if modeldict['regression_model'][0:2]=='NW':
-            yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
+            yhat_raw,cross_errors = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
+            
+            
+            
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
         yhat_un_std=yhat_std*self.ystd+self.ymean
+        
         #print(f'yhat_un_std:{yhat_un_std}')
-        return yhat_un_std
+        if lossfn=='mse':
+            return yhat_un_std
+        if iscrossmse:
+            return yhat_un_std,cross_errors*self.ystd
+        
 
 
     def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
+        try:
+            lossfn=modeldict['loss_function']
+        except KeyError:
+            lossfn='mse'
+        iscrossmse=lossfn[0:8]=='crossmse'
+            
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         
         #prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
@@ -650,11 +670,22 @@ class kNdtool:
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=np.broadcast_to(np.ma.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
         if modeldict['regression_model']=='NW-rbf2':
-            yhat=np.ma.sum(yout_stack*np.ma.power(np.ma.power(cdfnorm_prob_yx,2)-np.ma.power(prob_x_stack,2),0.5),axis=yout_axis)
+            wt_stack=np.ma.power(np.ma.power(cdfnorm_prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
+            yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)
         else:
-            yhat=np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+            wt_stack=cdfnorm_prob_yx/prob_x_stack
+            yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(f'yhat:{yhat}')
-        return yhat
+        
+        if not iscrossmse:
+            return yhat
+        if iscrossmse:
+            if len(lossfn)>8:
+                cross_exp=lossfn[8:]
+            else: cross_exp=1
+            cross_errors=yhat_raw[None,:]-yout_scaled[:,None]
+            wt_cross_errors=wt_stack**cross_exp*cross_errors
+            return (yhat,wt_cross_errors)
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
         """
@@ -677,7 +708,13 @@ class kNdtool:
         fixed_or_free_paramdict['free_params'] = free_params
         # print(f'free_params added to dict. free_params:{free_params}')
 
-
+        try:
+            lossfn=modeldict['loss_function']
+        except KeyError:
+            lossfn='mse'
+        iscrossmse=lossfn[0:8]=='crossmse'
+        
+        
         y_err_tup = ()
 
         arglistlist=[]
@@ -703,7 +740,8 @@ class kNdtool:
             yhat_unstd=[]
             for i in range(batchcount):
                 yhat_unstd.append(self.MPwrapperKDEpredict(arglistlist[i]))
-
+        if iscrossmse:
+            yhat_unstd,crosserrors=zip(*yhat_unstd)
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         for batch_i in range(batchcount):
             y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
@@ -712,7 +750,8 @@ class kNdtool:
 
         all_y_err = [ii for i in y_err_tup for ii in i]
         #print('all_y_err',all_y_err)
-        
+        if iscrossmse:
+            all_y_err.extend(list(np.flatten(crosserrors)))
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
         if maskcount>0:
@@ -747,8 +786,8 @@ class kNdtool:
         xpr=arglist[3]
         modeldict=arglist[4]
         fixed_or_free_paramdict=arglist[5]
-        yhat_unstd=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
-        return yhat_unstd
+        return self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        
 
 
 class optimize_free_params(kNdtool):
