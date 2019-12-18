@@ -71,10 +71,10 @@ class run_cluster(kernelcompare.KernelCompare):
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self','none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
         ykern_grid_variations=('modeldict:ykern_grid',[81])
-        regression_model_variations=('modeldict:regression_model',['NW-rbf'])
+        regression_model_variations=('modeldict:regression_model',['NW-rbf2','NW-rbf'])
         optdict_variation_list = [regression_model_variations, product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
