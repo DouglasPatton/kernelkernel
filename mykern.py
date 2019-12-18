@@ -489,7 +489,7 @@ class kNdtool:
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
             allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
-        if modeldict['regression_model']=='NW-rbf':
+        if modeldict['regression_model']=='NW-rbf' or modeldict['regression_model']=='NW-rbf2':
             if allkerns.ndim>3:
                 for i in range((allkerns.ndim-3),0,-1):
                     assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
@@ -624,7 +624,7 @@ class kNdtool:
             #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
             
         if modeldict['regression_model'][0:2]=='NW':
-            yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled)
+            yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
@@ -634,7 +634,7 @@ class kNdtool:
         return yhat_un_std
 
 
-    def my_NW_KDEreg(self,prob_yx,prob_x,yout):
+    def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
@@ -647,8 +647,10 @@ class kNdtool:
         yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=np.broadcast_to(np.ma.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
-        
-        yhat= np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+        if modeldict['regression_model']=='NW-rbf2':
+            yhat=np.ma.sum(yout_stack*np.ma.power(np.ma.power(cdfnorm_prob_yx,2)-np.ma.power(prob_x_stack,2),0.5),axis=yout_axis)
+        else:
+            yhat=np.ma.sum(yout_stack*cdfnorm_prob_yx/prob_x_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(f'yhat:{yhat}')
         return yhat
     
