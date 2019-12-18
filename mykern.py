@@ -622,6 +622,7 @@ class kNdtool:
             #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
             #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
             
+            
         if modeldict['regression_model'][0:2]=='NW':
             yhat_raw = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.

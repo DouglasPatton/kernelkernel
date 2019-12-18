@@ -130,13 +130,10 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=1
         vstring=''
         for key,val in new_opt_dict['hyper_param_dict'].items():
-            #print('key',key)
-            #print('type(replacement_fixedfreedict):',type(replacement_fixedfreedict))
-            #new_val=mk.kNdtool.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
-            new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
-            vstring+=f"for {key} old val({val})replaced with new val({new_val})"
-            new_opt_dict['hyper_param_dict'][key]=new_val
-        #print(f'rebuild hyper param dict vstring:{vstring}')
+            if not old_opt_dict['modeldict']['hyper_param_form_dict'][key]=='fixed':
+                new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
+                vstring+=f"for {key} old val({val})replaced with new val({new_val})"
+                new_opt_dict['hyper_param_dict'][key]=new_val
         return new_opt_dict
 
 
@@ -736,7 +733,7 @@ class KernelOptModelTools(mk.kNdtool):
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
                 'Ndiff_depth_bw':.5*np.ones([Ndiff_param_count,]),
-                'y_bandscale':1.5*np.ones([1,])
+                'y_bandscale':1.0*np.ones([1,])
                     }
 
         if modeldict['Ndiff_type']=='recursive':
@@ -746,7 +743,7 @@ class KernelOptModelTools(mk.kNdtool):
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
                 'Ndiff_depth_bw':np.array([0.5]),
-                'y_bandscale':0.2*np.ones([1,])
+                'y_bandscale':1.0*np.ones([1,])
                 }
         return hyper_paramdict1
             
@@ -788,7 +785,7 @@ class KernelOptModelTools(mk.kNdtool):
                 'Ndiff_depth_bw':'non-neg',
                 'outer_x_bw':'non-neg',
                 'outer_y_bw':'non-neg',
-                'y_bandscale':'non-neg'
+                'y_bandscale':'fixed'
                 }
             }
         #hyper_paramdict1=self.build_hyper_param_start_values(modeldict1)
