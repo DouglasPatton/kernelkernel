@@ -639,11 +639,13 @@ class kNdtool:
         """
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         
-        prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
-        cdfnorm_prob_yx=prob_yx/prob_yx_sum
-        #cdfnorm_prob_yx=prob_yx#dropped normalization
-        prob_x_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
-        cdfnorm_prob_x = prob_x / prob_x_sum
+        #prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
+        #cdfnorm_prob_yx=prob_yx/prob_yx_sum
+        cdfnorm_prob_yx=prob_yx#dropped normalization
+        #prob_x_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
+        #cdfnorm_prob_x = prob_x / prob_x_sum
+        cdfnorm_prob_x = prob_x#dropped normalization
+        
         yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=np.broadcast_to(np.ma.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
