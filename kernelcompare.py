@@ -178,6 +178,40 @@ class KernelOptModelTools(mk.kNdtool):
                     self.add_dict(os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
         return
 
+    def overwrite_savedict(self,filename,flatdict_tup,verbose=0,overwrite=0)
+        '''
+        flatdict_tup might look like this: ('modeldict:max_bw_Ndiff',4)
+            where the first item is a flat dict and the second items is the new value.
+        '''
+        if overwrite == 0 or overwrite==None:
+            writefilename = filename + '-overwrite_dict'
+        else:
+            writefilename = filename
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_save_directory,filename),'rb') as modelsavefile:
+                    modelsave_list=pickle.load(modelsavefile)
+                break
+            except:
+                if j==9:
+                    self.logger.exception(f'error in {__name__}')
+                    return
+        override_dict=self.build_override_dict_from_str(flatdict)
+        new_modelsave_list=[]
+        for savedict in modelsave_list:
+            new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose)
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_save_directory,filename),'wb') as modelsavefile:
+                    pickle.dump(new_modelsave_list,modelsavefile)
+                return
+            except:
+                if j==9:
+                    self.logger.exception(f'error in {__name__}')
+                    return
+            
+            
+            
 
     def add_dict(self,filename,newdict_tup_list,verbose=0,overwrite=0):
         '''
@@ -779,11 +813,8 @@ class KernelCompare(KernelOptModelTools):
             merge_directory=os.path.join(self.kc_savedirectory,'..')
 
         KernelOptModelTools.__init__(self,directory=self.kc_savedirectory,myname=myname)
-        #self.merge_and_condense_saved_models(merge_directory=merge_directory,save_directory=self.kc_savedirectory,condense=1,verbose=0)
-                      #this should gather all directories from parent directory if directory is specified in object_init__()
-                      #or if not, everything happens in the current working directory, which is good for testing without running
-                      #through mycluster.
-        
+
+
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,verbose=0):
         param_count=2
         datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
