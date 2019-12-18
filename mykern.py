@@ -654,6 +654,7 @@ class kNdtool:
         try:
             lossfn=modeldict['loss_function']
         except KeyError:
+            print(f'loss_function not found in modeldict')
             lossfn='mse'
         iscrossmse=lossfn[0:8]=='crossmse'
             
@@ -661,19 +662,28 @@ class kNdtool:
         
         #prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
         #cdfnorm_prob_yx=prob_yx/prob_yx_sum
-        cdfnorm_prob_yx=prob_yx#dropped normalization
+        #cdfnorm_prob_yx=prob_yx#dropped normalization
         #prob_x_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
         #cdfnorm_prob_x = prob_x / prob_x_sum
-        cdfnorm_prob_x = prob_x#dropped normalization
+        #cdfnorm_prob_x = prob_x#dropped normalization
         
         yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
-        prob_x_stack=np.broadcast_to(np.ma.expand_dims(cdfnorm_prob_x,yout_axis),prob_x_stack_tup)
+        prob_x_stack=np.broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+        try:
+            NWnorm=modeldict['NWnorm']
+        except KeyError:
+            NWnorm='none'
+        
         if modeldict['regression_model']=='NW-rbf2':
-            wt_stack=np.ma.power(np.ma.power(cdfnorm_prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
+            wt_stack=np.ma.power(np.ma.power(prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
+            if NWnorm=='across':
+                wt_stack=wt_stack/np.sum(wt_stack,axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)
         else:
-            wt_stack=cdfnorm_prob_yx/prob_x_stack
+            if NWnorm=='across':
+                wt_stack=wt_stack/np.sum(wt_stack,axis=1)
+            wt_stack=prob_yx/prob_x_stack
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(f'yhat:{yhat}')
         
@@ -681,9 +691,9 @@ class kNdtool:
             return yhat
         if iscrossmse:
             if len(lossfn)>8:
-                cross_exp=lossfn[8:]
-            else: cross_exp=1
-            cross_errors=yhat_raw[None,:]-yout_scaled[:,None]
+                cross_exp=float(lossfn[8:])
+            else: cross_exp=1.0
+            cross_errors=yhat[None,:]-yout[:,None]
             wt_cross_errors=wt_stack**cross_exp*cross_errors
             return (yhat,wt_cross_errors)
     
@@ -711,6 +721,7 @@ class kNdtool:
         try:
             lossfn=modeldict['loss_function']
         except KeyError:
+            print(f'loss_function not found in modeldict')
             lossfn='mse'
         iscrossmse=lossfn[0:8]=='crossmse'
         
@@ -749,9 +760,10 @@ class kNdtool:
             y_err_tup = y_err_tup + (y_err,)
 
         all_y_err = [ii for i in y_err_tup for ii in i]
+        
         #print('all_y_err',all_y_err)
         if iscrossmse:
-            all_y_err.extend(list(np.flatten(crosserrors)))
+            all_y_err.extend(list(np.ravel(crosserrors)))
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
         if maskcount>0:
