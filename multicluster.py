@@ -39,6 +39,7 @@ class mypool:
     def runpool(self,arg_list,workercount):
         process_list=[None]*workercount
         for i in range(workercount):
+            self.i+=1
             process_list[i]=mp.Process(target=self.runworker,args=(arg_list[i],))
             process_list[i].start()
         for i in range(workercount):
@@ -53,18 +54,19 @@ class mypool:
         '''
     
     def runworker(self,startname):
+        
         if startname=='master':
             rerun=True
             while rerun:
                 try:
-                    self.i+=1
                     mycluster.run_cluster(startname, local_test=self.local_test)
                 except KeyboardInterrupt:
                     rerun=False
                 except:
+                    self.i+=1
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
-        sleeptime=log(5*float(self.i)+10)
+        sleeptime=10*log(25*float(self.i))
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
