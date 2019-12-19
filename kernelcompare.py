@@ -616,7 +616,7 @@ class KernelOptModelTools(mk.kNdtool):
         print('-----partial match is looking for a partial match------')
         new_dict_list=[]
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
-        string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),('modeldict','loss_function')]
+        string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form')]
         for string_tup in string_list:
             sub_value=adoubledict[string_tup[0]][string_tup[1]]
             new_dict_list.append({string_tup[0]:{string_tup[1]:sub_value}})#make the list match amodeldict, so optimization settings aren't changed
