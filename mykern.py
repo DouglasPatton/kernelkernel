@@ -700,8 +700,9 @@ class kNdtool:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
             else: cross_exp=1.0
-            cross_errors=yhat[None,:]-yout[:,None]
-            wt_cross_errors=wt_stack**cross_exp*cross_errors
+            cross_errors=yhat[None,:]-yout[:,None]#this makes dim0=nout,dim1=nin
+            crosswt_stack=float(wt_stack.shape[1])*wt_stack/np.expand_dims(np.sum(wt_stack,axis=1),axis=1)
+            wt_cross_errors=crosswt_stack**cross_exp*cross_errors
             return (yhat,wt_cross_errors)
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
