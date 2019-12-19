@@ -417,43 +417,41 @@ class kNdtool:
         '''#for small data, pre-create the 'grid'/out data
         no big data version for now
         '''
-        # if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
-        #    self.data_is_small='yes'
         ykerngrid_form=modeldict['ykerngrid_form']
-        
-            
         if xpr==None:
             xpr=xdata_std
             self.predict_self_without_self='yes'
         if not np.allclose(xpr,xdata_std):
             self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
-            #yout=np.broadcast_to(np.linspace(-3,3,ykerngrid),(xdata_std.shape[0],ykerngrid))
-            yout=self.generate_grid((ykerngrid_form,ykerngrid)#will broadcast later
+            yout=self.generate_grid(ykerngrid_form,ykerngrid)#will broadcast later
             self.nout=ykerngrid
-            #xpr=np.(np.tile(y_out,xdata_std.shape[0],axis=0))
-            
         if type(xkerngrid) is int:#this maybe doesn't work yet
+            self.logger.warning("xkerngrid is not fully developed")
             self.nout=ykerngrid
             xpr=self.MY_KDE_gridprep_smalln(kerngrid,self.p)
             assert xpr.shape[1]==self.p,'xpr has wrong number of columns'
             assert xpr.shape[0]==kerngrid**self.p,'xpr has wrong number of rows'
-
             yxpr=self.MY_KDE_gridprep_smalln(kerngrid,self.p+1)
             assert yxpr.shape[1]==self.p+1,'yxpr has wrong number of columns'
             assert yxpr.shape[0]==kerngrid**(self.p+1),'yxpr has {} rows not {}'.format(yxpr.shape[0],kerngrid**(self.p+1))
-            
         if xkerngrid=='no'and ykerngrid=='no':
-            
             self.nout=self.nin
             yout=ydata_std
-
         return xpr,yout
     
     def generate_grid(self,form,count):
         if form[0]=='even':
             gridrange=form[1]
-            return np.linspace(-gridrange,gridgrange,count)
+            return np.linspace(-gridrange,gridrange,count)
+        if form[0]=='exp':
+            assert count%2==1,f'ykerngrid(={count}) must be odd for ykerngrid_form:exp'
+            gridrange=form[1]
+            log_gridrange=np.log(gridrange+1)
+            log_grid=np.linspace(0,log_gridrange,(count+2)//2)
+            halfgrid=np.exp(log_grid[1:])-1
+            return np.concatenate((-halfgrid[::-1],np.array([0]),halfgrid),axis=0)
+            
     
     def standardize_yx(self,xdata,ydata):
         self.xmean=np.mean(xdata,axis=0)
