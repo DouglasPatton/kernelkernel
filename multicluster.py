@@ -66,7 +66,7 @@ class mypool:
                     self.i+=1
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
-        sleeptime=10*log(25*float(self.i))
+        sleeptime=3*log(25*float(self.i))
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
