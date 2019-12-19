@@ -419,6 +419,9 @@ class kNdtool:
         '''
         # if self.n<10**5 and not (type(kerngrid)==int and kerngrid**self.p>10**8):
         #    self.data_is_small='yes'
+        ykerngrid_form=modeldict['ykerngrid_form']
+        
+            
         if xpr==None:
             xpr=xdata_std
             self.predict_self_without_self='yes'
@@ -426,7 +429,7 @@ class kNdtool:
             self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
             #yout=np.broadcast_to(np.linspace(-3,3,ykerngrid),(xdata_std.shape[0],ykerngrid))
-            yout=np.linspace(-3,3,ykerngrid)#will broadcast later
+            yout=self.generate_grid((ykerngrid_form,ykerngrid)#will broadcast later
             self.nout=ykerngrid
             #xpr=np.(np.tile(y_out,xdata_std.shape[0],axis=0))
             
@@ -446,7 +449,12 @@ class kNdtool:
             yout=ydata_std
 
         return xpr,yout
-
+    
+    def generate_grid(self,form,count):
+        if form[0]=='even':
+            gridrange=form[1]
+            return np.linspace(-gridrange,gridgrange,count)
+    
     def standardize_yx(self,xdata,ydata):
         self.xmean=np.mean(xdata,axis=0)
         self.ymean=np.mean(ydata,axis=0)
