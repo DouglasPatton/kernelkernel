@@ -600,7 +600,7 @@ class kNdtool:
         if modeldict['Ndiff_bw_kern']=='product':
             onediffs=makediffmat_itoj(xin,xpr)#scale now? if so, move if...='rbfkern' down 
             #predict
-            yhat=MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)
+            yhat=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
 
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
@@ -630,8 +630,9 @@ class kNdtool:
             
             
         if modeldict['regression_model'][0:2]=='NW':
-            yhat_raw,cross_errors = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
-            
+            KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
+            yhat_raw=KDEregtup[0]
+            cross_errors=KDEregtup[1]
             
             
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
@@ -678,17 +679,17 @@ class kNdtool:
         if modeldict['regression_model']=='NW-rbf2':
             wt_stack=np.ma.power(np.ma.power(prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
             if NWnorm=='across':
-                wt_stack=wt_stack/np.sum(wt_stack,axis=1)
+                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)
         else:
-            if NWnorm=='across':
-                wt_stack=wt_stack/np.sum(wt_stack,axis=1)
             wt_stack=prob_yx/prob_x_stack
+            if NWnorm=='across':
+                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
         #print(f'yhat:{yhat}')
         
         if not iscrossmse:
-            return yhat
+            return (yhat,None)
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])

@@ -1,0 +1,19 @@
+ERROR <PID 8380:Process-1> multiClusterLogger.runworker(): error in __main__
+Traceback (most recent call last):
+  File "/home/douglas/gits/kernelkernel/mycluster.py", line 611, in check_for_opt_job
+FileNotFoundError: [Errno 2] No such file or directory: '/home/douglas/gits/kernelkernel/cluster_test/master32956710-3/master32956710-3_job'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "multicluster.py", line 74, in runworker
+    mycluster.run_cluster(name,local_test=self.local_test)
+  File "/home/douglas/gits/kernelkernel/mycluster.py", line 65, in __init__
+    myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+  File "/home/douglas/gits/kernelkernel/mycluster.py", line 136, in initialize
+    self.nodenamefilename=os.path.join(self.masterdirectory,myname+'.name')
+  File "/home/douglas/gits/kernelkernel/mycluster.py", line 561, in runnode
+    print(f'{myname} ischecking for jobs')
+  File "/home/douglas/gits/kernelkernel/mycluster.py", line 634, in check_for_opt_job
+    if s_since_start>self.oldnode_threshold:
+AssertionError: myname:master32956710-3 timed out after finding no jobs

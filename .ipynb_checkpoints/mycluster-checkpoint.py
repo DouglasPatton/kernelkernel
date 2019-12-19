@@ -68,14 +68,16 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
     def getoptdictvariations(self):
+        NWnorm_variations=('modeldict:NWnorm',['across','none'])
+        loss_function_variations=('modeldict:loss_function',['crossmse1','crossmse2'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self','none'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
-        ykern_grid_variations=('modeldict:ykern_grid',[81])
+        ykern_grid_variations=('modeldict:ykern_grid',[65])
         regression_model_variations=('modeldict:regression_model',['NW-rbf2','NW-rbf'])
-        optdict_variation_list = [regression_model_variations, product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
+        optdict_variation_list = [NWnorm_variations,loss_function_variations,regression_model_variations, product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
 
@@ -84,7 +86,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
 
 
-        batch_n_variations=('batch_n',[80])
+        batch_n_variations=('batch_n',[64])
         batchcount_variations=('batchcount',[10])
         ftype_variations=('ftype',['linear','quadratic'])
         param_count_variations=('param_count',[2,4])
@@ -395,7 +397,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     mergestatus=self.mergethisnode(name)
                     print(f'for node name:{name}, mergestatus:{mergestatus}')
 
-            sleep(10)
+            sleep(log(float(2*i+10)))
 
             
 
