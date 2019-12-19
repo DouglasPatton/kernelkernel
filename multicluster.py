@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import logging.config
 import yaml
+from numpy import log
 
 
 
@@ -28,7 +29,7 @@ class mypool:
         else:
             self.arg_list = ['node'] * (nodecount)
         self.runpool(self.arg_list,self.workercount)
-        self.i=0
+        
 
     def runpool0(self,arg_list,workercount):
         with mp.Pool(processes=workercount) as pool:
@@ -63,7 +64,7 @@ class mypool:
                 except:
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
-        sleeptime=randint(1,10000)*10/10000
+        sleeptime=randint(log(5*float(self.i)+10))
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
