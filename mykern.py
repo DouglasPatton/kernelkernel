@@ -667,7 +667,7 @@ class kNdtool:
         lossfn=modeldict['loss_function']
         iscrossmse=lossfn[0:8]=='crossmse'
                       
-        for i in range(prob_x.shape[-1])
+        for i in range(prob_x.shape[-1]):
             xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1)
             yhat_i=LogisticRegression().fit(xin_const,yin,prob_x[...,i]).predict(xin)
             yhat_std.extend(yhat_i[i])
