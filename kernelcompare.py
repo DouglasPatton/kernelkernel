@@ -196,14 +196,19 @@ class KernelOptModelTools(mk.kNdtool):
                     self.logger.exception(f'error in {__name__}')
                     return
         override_dict=self.build_override_dict_from_str(flatdict_tup[0],flatdict_tup[1])
+        if not type(overwrite_condition) is tuple:
+            condition_dict=override_dict
+        else: 
+            condition_dict=self.build_override_dict_from_str(overwrite_condition[0],overwrite_condition[1])
+            overwrite_condition=overwrite_condition[1]
         new_modelsave_list=[]
         for savedict in modelsave_list:
             if not overwrite_condition==None:
-                current_value=self.pull_nested_key(savedict,override_dict)
+                current_value=self.pull_nested_key(savedict,condition_dict)
                 if current_value==overwrite_condition:
                     new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
                 else:
-                    print(current_value)
+                    print(current_value,'not overriden b/c does not match condition:',overwrite_condition)
                     new_modelsave_list.append(savedict)
             else:
                 new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
