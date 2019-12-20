@@ -420,7 +420,7 @@ class kNdtool:
         '''
         if modeldict['regression_model']=='logistic':
             if type(ykerngrid) is int:
-                print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression)
+                print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
                 ykerngrid='no'
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr==None:
