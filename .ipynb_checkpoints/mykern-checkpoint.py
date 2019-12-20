@@ -9,6 +9,7 @@ import pickle
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
+from sklearn.linear_model import LogisticRegression
 import logging
 
 #import logging.config
@@ -417,6 +418,10 @@ class kNdtool:
         '''#for small data, pre-create the 'grid'/out data
         no big data version for now
         '''
+        if modeldict['regression_model']=='logistic':
+            if type(ykerngrid) is int:
+                print(f'overriding modeldict:ykerngrid:{ykerngrid} to {'no'} b/c logisitic regression)
+            ykerngrid='no'
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr==None:
             xpr=xdata_std
@@ -608,7 +613,7 @@ class kNdtool:
             #predict
             yhat=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
-
+        
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
 
@@ -617,31 +622,36 @@ class kNdtool:
 
                 
         xbw=xbw*hx#need to make this flexible to blocks of x
-        ybw=ybw*hy
-        xonediffs=diffdict['onediffs']
-        yonediffs=diffdict['ydiffdict']['onediffs']
-        assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
-        ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
-        if True:#type(ykern_grid) is int and xkern_grid=='no':
-            xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
-            xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
-            xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
-        newaxis=len(yonediffs.shape)
-        yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
-        yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
-        prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
-        prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
-            #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
-            #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
+        if modeldict['regression_model']=='logistic':
+            xonediffs=diffdict['onediffs']
+            prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
             
+            yhat_tup=self.kernel_logistic(prob_x,xin,yin)
+            yhat_std=yhat_tup[0]
+            cross_errors=yhat_tup[1]
             
         if modeldict['regression_model'][0:2]=='NW':
+            ybw=ybw*hy
+            xonediffs=diffdict['onediffs']
+            yonediffs=diffdict['ydiffdict']['onediffs']
+            assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
+            ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
+            if True:#type(ykern_grid) is int and xkern_grid=='no':
+                xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
+                xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
+                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
+            newaxis=len(yonediffs.shape)
+            yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
+            yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
+            prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
+            prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
+                #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
+                #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
+        
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
             yhat_raw=KDEregtup[0]
             cross_errors=KDEregtup[1]
-            
-            
-        yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+            yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
         #here is the simple MSE objective function. however, I think I need to use
         #the more sophisticated MISE or mean integrated squared error,
         #either way need to replace with cost function function
@@ -653,16 +663,33 @@ class kNdtool:
         if iscrossmse:
             return yhat_un_std,cross_errors*self.ystd
         
-
+    def kernel_logistic(self,prob_x,xin,yin):
+        lossfn=modeldict['loss_function']
+        iscrossmse=lossfn[0:8]=='crossmse'
+                      
+        for i in range(prob_x.shape[-1])
+            xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1)
+            yhat_i=LogisticRegression().fit(xin_const,yin,prob_x[...,i]).predict(xin)
+            yhat_std.extend(yhat_i[i])
+            cross_errors.extend(yhat_i)#list with ii on dim0
+        cross_errors=np.masked_array(cross_errors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
+        yhat=np.array(yhat_std)                             
+        if not iscrossmse:
+            return (yhat,None)
+        if iscrossmse:
+            if len(lossfn)>8:
+                cross_exp=float(lossfn[8:])
+                wt_stack=prob_x**cross_exp
+            
+            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+            crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
+            wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
+            return (yhat,wt_cross_errors)
 
     def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        try:
-            lossfn=modeldict['loss_function']
-        except KeyError:
-            print(f'loss_function not found in modeldict')
-            lossfn='mse'
+        lossfn=modeldict['loss_function']
         iscrossmse=lossfn[0:8]=='crossmse'
             
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
@@ -677,11 +704,8 @@ class kNdtool:
         yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=np.broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
-        try:
-            NWnorm=modeldict['NWnorm']
-        except KeyError:
-            NWnorm='none'
-        
+        NWnorm=modeldict['NWnorm']
+                
         if modeldict['regression_model']=='NW-rbf2':
             wt_stack=np.ma.power(np.ma.power(prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
             if NWnorm=='across':
@@ -699,9 +723,11 @@ class kNdtool:
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
-            else: cross_exp=1.0
-            cross_errors=yhat[None,:]-yout[:,None]
-            wt_cross_errors=wt_stack**cross_exp*cross_errors
+                wt_stack=wt_stack**cross_exp
+            
+            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+            crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
+            wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
             return (yhat,wt_cross_errors)
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
@@ -715,10 +741,6 @@ class kNdtool:
 
         if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
             self.call_iter += 1  # then it must be a new call during optimization
-            # if self.call_iter>1 and self.call_iter%5==0:
-            #    print(f'iter:{self.call_iter},mse:{self.mse_param_list[-1]}')
-            # if self.call_iter>1:# and self.call_iter%5>0:
-            #    print(f'iter:{self.call_iter} mse:{self.mse_param_list[-1][0]}',end=',')
 
         batchcount = self.datagen_dict['batchcount']
         #print(f'batchcount:{batchcount}')
@@ -731,8 +753,7 @@ class kNdtool:
             print(f'loss_function not found in modeldict')
             lossfn='mse'
         iscrossmse=lossfn[0:8]=='crossmse'
-        
-        
+
         y_err_tup = ()
 
         arglistlist=[]
