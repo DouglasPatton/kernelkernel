@@ -173,9 +173,41 @@ class KernelOptModelTools(mk.kNdtool):
             filelist=os.listdir(dir_i)
             for file_i in filelist:
                 if re.search('model_save',file_i):
-                    self.add_dict(os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
+                    self.add_dict(
+                        os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
         return
-
+    
+    
+    def deletefromsavedict(self,filename,flatdictstring,overwrite=0,verbose=0):
+        if overwrite == 0 or overwrite==None:
+            writefilename = filename + '-overwrite_dict'
+        else:
+            writefilename = filename
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_savedirectory,filename),'rb') as modelsavefile:
+                    modelsave_list=pickle.load(modelsavefile)
+                break
+            except:
+                if j==9:
+                    self.logger.exception(f'error in {__name__}')
+                    return
+                
+        delete_dict=self.build_override_dict_from_str(flatdictstring,None)
+        new_modelsave_list=[]
+        for savedict in modelsave_list:
+            new_modelsave_list.extend(self.do_dict_override(savedict,delete_dict,deletekey=1,verbose=verbose))
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_savedirectory,writefilename),'wb') as modelsavefile:
+                    pickle.dump(new_modelsave_list,modelsavefile)
+                return
+            except:
+                if j==9:
+                    self.logger.exception(f'error in {__name__}')
+                    return
+        
+        
     def overwrite_savedict(self,filename,flatdict_tup,verbose=0,overwrite=0,overwrite_condition=None):
         '''
         flatdict_tup might look like this: ('modeldict:max_bw_Ndiff',4)
@@ -676,7 +708,7 @@ class KernelOptModelTools(mk.kNdtool):
             
                 
                   
-    def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,replace=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
+    def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,replace=None,deletekey=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=deepcopy(old_dict)
         if replace==None or replace=='yes':
             replace=1
@@ -685,6 +717,8 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=0
         if verbose=='yes':
             verbose=1
+        if delete=='yes':delete=1
+        if delete==None:delete=='no'
         vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
@@ -698,25 +732,35 @@ class KernelOptModelTools(mk.kNdtool):
                 old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1,verbose=verbose,replace=replace)
                 vstring=vstring+vstring2
                 #print('made it back from recursive call')
-            else:
-                if replace==0 and (key in old_dict_copy):
-                    if verbose == 1:
-                        print(f":val({new_dict[key]}) does not replace val({old_dict_copy[key]}) because replace={replace}\n")
-                        vstring = vstring + f":for key:{key}, val({val}) does not replace val({old_dict_copy[key]})\n"
-                    else:pass#no replacement due to above condition
+            elif type(val) is None and deletekey==1:
+                try: 
+                    old_dict_copy.pop(key)
+                    if verbose==1:
+                          vstring = vstring + f"deleted:{key}:{val}"
+                except KeyError:
+                    if verbose==1:
+                          vstring = vstring + f"delete could not find key:{key}"
+                        
+            
+            elif replace==0 and (key in old_dict_copy):
+                if verbose == 1:
+                    print(f":val({new_dict[key]}) does not replace val({old_dict_copy[key]}) because replace={replace}\n")
+                    vstring = vstring + f":for key:{key}, val({val}) does not replace val({old_dict_copy[key]})\n"
                 else:
-                    try:
-                        if key in old_dict_copy:
-                            oldval=old_dict_copy[key]
-                        else:
-                            oldval=f'{key} not in old_dict'
-                        old_dict_copy[key]=val
-                        if verbose==1:
-                            print(f":val({new_dict[key]}) replaces val({oldval})\n")
-                            vstring=vstring+f":for key:{key}, val({val}) replaces val({oldval})\n"
+                    pass#no replacement due to above condition
+            else:
+                try:
+                    if key in old_dict_copy:
+                        oldval=old_dict_copy[key]
+                    else:
+                        oldval=f'{key} not in old_dict'
+                    old_dict_copy[key]=val
+                    if verbose==1:
+                        print(f":val({new_dict[key]}) replaces val({oldval})\n")
+                        vstring=vstring+f":for key:{key}, val({val}) replaces val({oldval})\n"
 
-                    except:
-                        print(f'Warning: old_dict has keys:{[key for key,value in old_dict_copy.items()]} and new_dict has key:value::{key}:{new_dict[key]}')
+                except:
+                    print(f'Warning: old_dict has keys:{[key for key,value in old_dict_copy.items()]} and new_dict has key:value::{key}:{new_dict[key]}')
         if verbose==1:
                 print(f'vstring:{vstring} and done2')            
         if recursive==1:
@@ -807,7 +851,7 @@ class KernelOptModelTools(mk.kNdtool):
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
-            'mse_threshold':2,
+            #'mse_threshold':2,
             'help_start':1,
             'partial_match':1
             }
@@ -966,7 +1010,7 @@ class KernelCompare(KernelOptModelTools):
         options['fatol']=0.9
         options['xatol']=.1
         opt_settings_dict['options']=options
-        opt_settings_dict['mse_threshold']=32.0
+        #opt_settings_dict['mse_threshold']=32.0
         #opt_settings_dict['help_start']='no'
         #opt_settings_dict['partial_match']='no'
         opt_dict_override['opt_settings_dict']=opt_settings_dict
