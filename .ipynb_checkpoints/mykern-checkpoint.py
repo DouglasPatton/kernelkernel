@@ -467,8 +467,8 @@ class kNdtool:
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
-    def standardize_yxtup(self,yxtup_list_unstd,val_yxtup_list_unstd=None):
-        yxtup_list=deepcopy(yxtup_list_unstd)
+    def standardize_yxtup(self,yxtup_list,val_yxtup_list=None):
+        #yxtup_list=deepcopy(yxtup_list_unstd)
         all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         self.xmean=np.mean(all_x,axis=0)
@@ -476,19 +476,21 @@ class kNdtool:
         self.xstd=np.std(all_x,axis=0)
         self.ystd=np.std(all_y,axis=0)
         tupcount=len(yxtup_list)#should be same as batchcount
-        yxtup_list=[]
+        yxtup_list_std=[]
         for i in range(tupcount):
-            ystd=(yxtup_list_unstd[i][0] - self.ymean) / self.ystd
-            xstd=(yxtup_list_unstd[i][1] - self.xmean) / self.xstd
-            yxtup_list.append((ystd,xstd))
-        if not val_yxtup_list_unstd==None:
-            val_yxtup_list=[]
-            for i in range(tupcount):
-                val_ystd=(val_yxtup_list_unstd[i][0] - self.ymean) / self.ystd
-                val_xstd=(val_yxtup_list_unstd[i][1] - self.xmean) / self.xstd
-                val_yxtup_list.append((val_ystd,val_xstd))
-        else: val_yxtup_list=None
-        return yxtup_list,val_yxtup_list
+            ystd=(yxtup_list[i][0] - self.ymean) / self.ystd
+            xstd=(yxtup_list[i][1] - self.xmean) / self.xstd
+            yxtup_list_std.append((ystd,xstd))
+        if not val_yxtup_list==None:
+            val_yxtup_list_std=[]
+            val_tupcount=len(val_yxtup_list)
+            for i in range(val_tupcount):
+                val_ystd=(val_yxtup_list[i][0] - self.ymean) / self.ystd
+                val_xstd=(val_yxtup_list[i][1] - self.xmean) / self.xstd
+                val_yxtup_list_std.append((val_ystd,val_xstd))
+        else: 
+            val_yxtup_list_std=None
+        return yxtup_list_std,val_yxtup_list_std
 
 
     def do_KDEsmalln(self,diffs,bw,modeldict):
