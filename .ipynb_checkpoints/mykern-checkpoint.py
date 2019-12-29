@@ -573,7 +573,7 @@ class kNdtool:
                 if i==9:
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
         return
-    
+    def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict))
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
@@ -745,8 +745,12 @@ class kNdtool:
         self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xpr,modeldict,fixed_or_free_paramdict)
         return self.prediction.yhat
 
-    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict):
-
+    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None):
+        #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
+        if predict==None or predict=='no':
+            predict=0
+        if predict=='yes':
+            predict=1
         if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
             self.call_iter += 1  # then it must be a new call during optimization
 
@@ -805,22 +809,23 @@ class kNdtool:
         if maskcount>0:
             print(f'{maskcount} masked values found in all_y_err')
             mse = np.ma.count_masked(all_y_err) * 10 ** 199
-        self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
-        # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
-        self.fixed_or_free_paramdict = fixed_or_free_paramdict
-        t_format = "%Y%m%d-%H%M%S"
-        self.iter_start_time_list.append(strftime(t_format))
+        if predict==0:
+            self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
+            # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+            self.fixed_or_free_paramdict = fixed_or_free_paramdict
+            t_format = "%Y%m%d-%H%M%S"
+            self.iter_start_time_list.append(strftime(t_format))
 
-        if self.call_iter == 3:
-            tdiff = np.abs(
-                datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
-                    self.iter_start_time_list[-2], t_format))
-            self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-                                          1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-            print(f'save_interval changed to {self.save_interval}')
+            if self.call_iter == 3:
+                tdiff = np.abs(
+                    datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                        self.iter_start_time_list[-2], t_format))
+                self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+                print(f'save_interval changed to {self.save_interval}')
 
-        if self.call_iter % self.save_interval == 0:
-            self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+            if self.call_iter % self.save_interval == 0:
+                self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
@@ -835,8 +840,11 @@ class kNdtool:
         modeldict=arglist[4]
         fixed_or_free_paramdict=arglist[5]
         return self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+    
+    def prep_KDEreg(self,datagen_obj,optimizedict,savedir=None,myname=None):
         
-
+        
+        return free_params,args_tuple,method
 
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
@@ -865,6 +873,8 @@ class optimize_free_params(kNdtool):
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
         self.save_interval=1
+        
+        
         self.datagen_dict=optimizedict['datagen_dict']
         
         #Extract from optimizedict
@@ -935,6 +945,8 @@ class optimize_free_params(kNdtool):
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
         print(f'mykern modeldict:{modeldict}')
+        
+        free_params,args_tuple,method=self.prep_KDEreg(datagen_obj,optimizedict,savedir=None,myname=None)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
