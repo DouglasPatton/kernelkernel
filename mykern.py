@@ -573,7 +573,9 @@ class kNdtool:
                 if i==9:
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
         return
-    def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict))
+    
+    #def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)):
+        
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
@@ -742,7 +744,9 @@ class kNdtool:
         """
         """
         xpr=(xpr-self.xmean)/self.xstd
-        self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xpr,modeldict,fixed_or_free_paramdict)
+        
+        self.prediction=MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None)
+        
         return self.prediction.yhat
 
     def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None):
@@ -754,7 +758,8 @@ class kNdtool:
         if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
             self.call_iter += 1  # then it must be a new call during optimization
 
-        batchcount = self.datagen_dict['batchcount']
+        #batchcount = self.datagen_dict['batchcount']
+        bathcount = len(batchdata_dict['yintup'])
         #print(f'batchcount:{batchcount}')
         fixed_or_free_paramdict['free_params'] = free_params
         # print(f'free_params added to dict. free_params:{free_params}')
@@ -841,53 +846,11 @@ class kNdtool:
         fixed_or_free_paramdict=arglist[5]
         return self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
     
-    def prep_KDEreg(self,datagen_obj,optimizedict,savedir=None,myname=None):
+    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict):
         
-        
-        return free_params,args_tuple,method
+        #free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
 
-class optimize_free_params(kNdtool):
-    """"This is the method for iteratively running kernelkernel to optimize hyper parameters
-    optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
-    and a model dict that describes which model to run including how hyper-parameters enter (quite flexible)
-    speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
-    list of centered data points. see mykern_core for an example and explanation of dictionaries.
-    Flexibility is also a goal. max_bw_Ndiff is the deepest the model goes.
-    ------------------
-    attributes created
-    self.n,self.p
-    self.xdata,self.ydata contain the original data
-    self.xdata_std, self.xmean,self.xstd
-    self.ydata_std,self.ymean,self.ystd
-    self.Ndiff_list_of_masks - a list of progressively higher dimension (len=nin)
-        masks to broadcast(views) Ndiff to.
-    """
-
-    def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
-        self.name=myname
-        if savedir==None:
-              mydir=os.getcwd()
-        kNdtool.__init__(self,savedir=savedir,myname=myname)
         self.datagen_obj=datagen_obj
-        self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
-        self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
-        self.iter_start_time_list=[]
-        self.save_interval=1
-        
-        
-        self.datagen_dict=optimizedict['datagen_dict']
-        
-        #Extract from optimizedict
-        modeldict=optimizedict['modeldict'] 
-        opt_settings_dict=optimizedict['opt_settings_dict']
-        param_valdict=optimizedict['hyper_param_dict']
-        method=opt_settings_dict['method']
-        opt_method_options=opt_settings_dict['options']
-        '''mse_threshold=opt_settings_dict['mse_threshold']
-        inherited_mse=optimizedict['mse']
-        if inherited_mse<mse_threshold:
-            print(f'optimization halted because inherited mse:{inherited_mse}<mse_threshold:{mse_threshold}')
-            return'''
         
         model_param_formdict=modeldict['hyper_param_form_dict']
         xkerngrid=modeldict['xkern_grid']
@@ -946,7 +909,51 @@ class optimize_free_params(kNdtool):
         args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
         print(f'mykern modeldict:{modeldict}')
         
-        free_params,args_tuple,method=self.prep_KDEreg(datagen_obj,optimizedict,savedir=None,myname=None)
+        return free_params,args_tuple
+
+class optimize_free_params(kNdtool):
+    """"This is the method for iteratively running kernelkernel to optimize hyper parameters
+    optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
+    and a model dict that describes which model to run including how hyper-parameters enter (quite flexible)
+    speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
+    list of centered data points. see mykern_core for an example and explanation of dictionaries.
+    Flexibility is also a goal. max_bw_Ndiff is the deepest the model goes.
+    ------------------
+    attributes created
+    self.n,self.p
+    self.xdata,self.ydata contain the original data
+    self.xdata_std, self.xmean,self.xstd
+    self.ydata_std,self.ymean,self.ystd
+    self.Ndiff_list_of_masks - a list of progressively higher dimension (len=nin)
+        masks to broadcast(views) Ndiff to.
+    """
+
+    def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
+        self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
+        self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
+        self.iter_start_time_list=[]
+        self.save_interval=1
+        self.datagen_dict=optimizedict['datagen_dict']
+        self.name=myname
+        opt_settings_dict=optimizedict['opt_settings_dict']
+        method=opt_settings_dict['method']
+        opt_method_options=opt_settings_dict['options']
+        '''mse_threshold=opt_settings_dict['mse_threshold']
+        inherited_mse=optimizedict['mse']
+        if inherited_mse<mse_threshold:
+            print(f'optimization halted because inherited mse:{inherited_mse}<mse_threshold:{mse_threshold}')
+            return'''
+        
+        #Extract from optimizedict
+        modeldict=optimizedict['modeldict'] 
+        
+        param_valdict=optimizedict['hyper_param_dict']
+
+        
+        if savedir==None:
+            savedir=os.getcwd()
+        kNdtool.__init__(self,savedir=savedir,myname=myname)
+        free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
