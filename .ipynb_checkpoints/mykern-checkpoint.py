@@ -420,8 +420,8 @@ class kNdtool:
         '''
         if modeldict['regression_model']=='logistic':
             if type(ykerngrid) is int:
-                print(f'overriding modeldict:ykerngrid:{ykerngrid} to {'no'} b/c logisitic regression)
-            ykerngrid='no'
+                print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
+                ykerngrid='no'
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr==None:
             xpr=xdata_std
@@ -467,7 +467,7 @@ class kNdtool:
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
-    def standardize_yxtup(self,yxtup_list_unstd):
+    def standardize_yxtup(self,yxtup_list_unstd,val_yxtup_list_unstd=None):
         yxtup_list=deepcopy(yxtup_list_unstd)
         all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
@@ -481,8 +481,14 @@ class kNdtool:
             ystd=(yxtup_list_unstd[i][0] - self.ymean) / self.ystd
             xstd=(yxtup_list_unstd[i][1] - self.xmean) / self.xstd
             yxtup_list.append((ystd,xstd))
-
-        return yxtup_list
+        if not val_yxtup_list_unstd==None:
+            val_yxtup_list=[]
+            for i in range(tupcount):
+                val_ystd=(val_yxtup_list_unstd[i][0] - self.ymean) / self.ystd
+                val_xstd=(val_yxtup_list_unstd[i][1] - self.xmean) / self.xstd
+                val_yxtup_list.append((val_ystd,val_xstd))
+        else: val_yxtup_list=None
+        return yxtup_list,val_yxtup_list
 
 
     def do_KDEsmalln(self,diffs,bw,modeldict):
@@ -667,8 +673,8 @@ class kNdtool:
         lossfn=modeldict['loss_function']
         iscrossmse=lossfn[0:8]=='crossmse'
                       
-        for i in range(prob_x.shape[-1])
-            xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1)
+        for i in range(prob_x.shape[-1]):
+            xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1))
             yhat_i=LogisticRegression().fit(xin_const,yin,prob_x[...,i]).predict(xin)
             yhat_std.extend(yhat_i[i])
             cross_errors.extend(yhat_i)#list with ii on dim0
@@ -858,11 +864,11 @@ class optimize_free_params(kNdtool):
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
-        #Extract from outer optimizedict
+        
+        #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']
         param_valdict=optimizedict['hyper_param_dict']
-        
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
         '''mse_threshold=opt_settings_dict['mse_threshold']
@@ -888,9 +894,8 @@ class optimize_free_params(kNdtool):
         #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
-        #xdata_std,ydata_std=self.standardize_yx(xdata,ydata)
-        yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list)
-
+        yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
+        
         #store the standardized (by column or parameter,p) versions of x and y
         #self.xdata_std=xdata_std;self.ydata_std=ydata_std
                                  
