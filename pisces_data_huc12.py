@@ -49,16 +49,25 @@ class DataTool():
         self.specieslist=shortlist
         self.speciesoccurencelist=occurencelist
 
-    def buildCOMIDfishlist(self,):
+    def buildCOMIDlist(self,):
         longlist=[obs['COMID'] for obs in self.fishsurveydata]
-        shortlist=[]
-        for fish in longlist:
-            if not fish in shortlist:
-                shortlist.append(fish)
-                print(f'new fish:{fish}')
+        shortlist=[];occurencelist=[]
+        for idx,comid in enumerate(longlist):
+            found=0
+            for shortidx,comid_i in enumerate(shortlist):
+                if comid_i==comid:
+                    occurencelist[shortidx].append(idx)
+                    print(f'old comid:{comid}')
+                    found=1
+                    break
+            if found==0:
+                shortlist.append(comid)
+                occurencelist.append([idx])
+                print(f'new comid:{comid}')
             #else:print(f'old fish:{fish}')
         
-        self.specieslist=shortlist    
+        self.comidlist=shortlist    
+        self.comidoccurenclist=occurencelist
     
         
     
@@ -67,5 +76,6 @@ class DataTool():
 if __name__=='__main__':
     test=DataTool()
     test.getfishdata()
-    test.buildspecieslist()
+    #test.buildspecieslist()
+    test.buildCOMIDlist()
     
