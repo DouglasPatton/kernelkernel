@@ -72,6 +72,7 @@ class DataTool():
             if found==0:
                 shortidx=len(shortlist)#-1 not needed since not yet appended
                 shortlist.append(fish)
+                specieshuclistidx.append([])
                 occurencelist.append([idx])
                 speciescomidlist.append([comidlist[idx]])
                 specieshuclist.append([huclist[idx]])
@@ -82,11 +83,11 @@ class DataTool():
             if not type(huc) is str:
                 huc=str(huc)
             if len(huc)==7:
-                huc=0+huc
+                huc='0'+huc
             assert len(huc)==8,print(f'expecting 8 characters: huc8_i:{huc}')
             
             
-            for hucshortidx,huc_i in shorthuclist:
+            for hucshortidx,huc_i in enumerate(shorthuclist):
                 if huc==huc_i:
                     huccomidlist[hucshortidx].append(comidlist[idx])
                     specieshuclistidx[shortidx].append(huc)
