@@ -34,7 +34,7 @@ class DataTool():
 
         
     def buildspecieslist(self,):
-        specieslistpath=os.path.join(self.savedirectory,'specieslist')
+        specieslistpath=os.path.join(self.savedir,'specieslist')
         if os.path.exists(specieslistpath):
             try:
                 with open(specieslistpath,'rb') as f:
@@ -86,11 +86,11 @@ class DataTool():
             
             
             for hucshortidx,huc_i in shorthuclist:
-                if huc==huc_i
-                huccomidlist[hucshortidx].append(comidlist[idx])
-                specieshuclistidx[shortidx].append(huc)
-                hucfound==1
-                break
+                if huc==huc_i:
+                    huccomidlist[hucshortidx].append(comidlist[idx])
+                    specieshuclistidx[shortidx].append(huc)
+                    hucfound==1
+                    break
             if hucfound==0:
                 shorthuclist.append(huc)
                 huccomidlist.append([comidlist[idx]])
@@ -113,7 +113,7 @@ class DataTool():
             
     
     def buildCOMIDlist(self,):
-        comidlistpath=os.path.join(self.savedirectory,'comidlist')
+        comidlistpath=os.path.join(self.savedir,'comidlist')
         if os.path.exists(comidlistpath):
             with open(comidlistpath,'rb') as f:
                 comidtup=pickle.load(f)
@@ -149,7 +149,7 @@ class DataTool():
         self.comidoccurenclist=occurencelist
     
     def buildCOMIDsiteinfo(self,):
-        filepath=os.path.join(self.savedirectory,'sidedatacomid_dict')
+        filepath=os.path.join(self.savedir,'sidedatacomid_dict')
         if os.path.exists(filepath):
             try:
                 with open(filepath,'rb') as f:
@@ -180,7 +180,7 @@ class DataTool():
  
     def buildspecieshuc8list():
         try: self.fishhucs
-        except self.getfishhucs()
+        except: self.getfishhucs()
         specieshuc8list=[]*len(self.specieslist)
         lastid=None
         for item,i in enumerate(self.fishhucs):
