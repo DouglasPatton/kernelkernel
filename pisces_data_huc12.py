@@ -1,5 +1,6 @@
 import os
 import csv
+import traceback
 
 class DataTool():
     def __init__(self,):
@@ -35,21 +36,26 @@ class DataTool():
     def buildspecieslist(self,):
         specieslistpath=os.path.join(self.savedirectory,'specieslist')
         if os.path.exists(specieslistpath):
-            with open(specieslistpath,'rb') as f:
-                speciestup=pickle.load(f)
-            self.specieslist=speciestup[0]
-            self.speciesoccurencelist=speciestup[1]
-            self.speciescomidlist=speciestup[2]
-            self.specieshuclist=specieshuclist[3]
-            self.shorthuclist=specieshuclist[4]
-            self.huccomidlist=specieshuclist[5]
-            return
-        
+            try:
+                with open(specieslistpath,'rb') as f:
+                    speciestup=pickle.load(f)
+                self.specieslist=speciestup[0]
+                self.speciesoccurencelist=speciestup[1]
+                self.speciescomidlist=speciestup[2]
+                self.specieshuclist=speciestup[3]
+                self.huclist=speciestup[4]
+                self.huccomidlist=speciestup[5]
+                self.specieshuclistidx=speciestup[6]
+                return
+            except:
+                print(f'buildspecieslist found {specieslistpath} but there was an error loading variables')
+                print(traceback.format_exc())
+                
         try:self.fishsurveydata
         except: self.getfishdata()
         (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['COMID']) for obs in self.fishsurveydata])
         shortlist=[];occurencelist=[];speciescomidlist=[];specieshuclist=[]
-        shorthuclist=[];huccomidlist=[]
+        shorthuclist=[];huccomidlist=[];specieshuclistidx=[]
         print('building specieslist')
         for idx,fish in enumerate(longlist):
             if idx%(length//33)==0:
@@ -63,18 +69,26 @@ class DataTool():
                     found=1
                     break
             if found==0:
+                shortidx=len(shortlist)#-1 not needed since not yet appended
                 shortlist.append(fish)
                 occurencelist.append([idx])
                 speciescomidlist.append([comidlist[idx]])
                 specieshuclist.append([huclist[idx]])
                 #print(f'new fish:{fish}')
+            
             hucfound=0
             huc=huclist[idx]; 
+            if not type(huc) is str:
+                huc=str(huc)
+            if len(huc)==7:
+                huc=0+huc
+            assert len(huc)==8,print(f'expecting 8 characters: huc8_i:{huc}')
             
-            for shortidx,huc_i in shorthuclist:
+            
+            for hucshortidx,huc_i in shorthuclist:
                 if huc==huc_i
-                huccomidlist[shortidx].append(comidlist[idx])
-                
+                huccomidlist[hucshortidx].append(comidlist[idx])
+                specieshuclistidx[shortidx].append(huc)
                 hucfound==1
                 break
             if hucfound==0:
@@ -83,15 +97,18 @@ class DataTool():
         print(f'buildspecieslist found {len(shortlist)} unique strings')
         
         with open(specieslistpath,'wb') as f:
-            pickle.dump((shortlist,occurencelist,speciescomidlist,specieshuclist,shorthuclist,huccomidlist),f)
+            pickle.dump((shortlist,occurencelist,speciescomidlist,specieshuclist,shorthuclist,huccomidlist,specieshuclistidx),f)
         
         self.specieslist=shortlist
         self.speciesoccurencelist=occurencelist
         self.speciescomidlist=speciescomidlist
         self.specieshuclist=specieshuclist
-        self.shorthuclist=shorthuclist
+        self.huclist=shorthuclist
         self.huccomidlist=huccomidlist
+        self.specieshuclistidx=specieshuclistidx
             
+    
+
             
             
     
@@ -132,17 +149,33 @@ class DataTool():
         self.comidoccurenclist=occurencelist
     
     def buildCOMIDsiteinfo(self,):
+        filepath=os.path.join(self.savedirectory,'sidedatacomid_dict')
+        if os.path.exists(filepath):
+            try:
+                with open(filepath,'rb') as f:
+                    self.sitedatacomid_dict=pickled.load(f)
+                return
+            except:
+                print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+           
         try: self.sitedata
         except:self.getsitedata()
         try:self.comidlist
         except:self.buildCOMIDlist()
+            
+        self.sitedata_k=len(self.sitedata[0])
+        self.sitevarkeylist=[key for key,_ in self.sitedata[0]]
 
-        self.sidedataidx=[]
+        self.sitedataidx=[]
+        self.sitedatacomid_dict={}
         for i,comid_i in enumerate(self.comidlist):
-            for j,site in enumerate(self.sitedata):
-                comid_j=site['COMID']
+            for j,sitedict in enumerate(self.sitedata):
+                comid_j=sitedict['COMID']
                 if comid_i==comid_j:
                     self.sitedataidx.append(j)
+                    self.sitedatacomid_dict[comid_j]=sitedict
+        with open(filepath,'wb') as f:
+            pickle.dump(self.sitedatacomid_dict,f)
         return
  
     def buildspecieshuc8list():
@@ -166,6 +199,25 @@ class DataTool():
             specieshuc8list[specieslist_idx].append(huc8_i)
             lastspec_i=spec_i    
         self.specieshuc8list=specieshuc8list
+        
+    def buildspecieshuccomidlist(self,):
+        speciescount=len(self.specieslist)
+        species01list=[]*speciescount
+        specieshuc_allcomid=[]*speciescount
+        for i,spec in enumerate(self.specieslist):
+            foundincomidlist=self.speciescomidlist[i]
+            hucidxlist=self.specieshuclistidx[i]
+            for hucidx in hucidxlist:
+                allhuccomids=self.huccomidlist[hucidx]
+                specieshuc_allcomid[i].extend(allhuccomids)
+                for comid in allhuccomids:
+                    if comid in foundincomidlist:
+                        species01list[i].extend(1)
+                    else:
+                        species01list[i].extend(0)
+                
+        self.specieshuc_allcomid=specieshuc_allcomid
+        self.species01list=species01list
 
     def buildspeciesdatadict01(self,):
         thisdir=self.savedir
@@ -178,10 +230,27 @@ class DataTool():
         except:self.buildCOMIDlist()
         try: self.sitedata
         except:self.getsitedata()
+        try:self.sitedatacomid_dict
+        except: self.buildCOMIDsiteinfo()
+        try: self.species01list
+        except: self.buildspecieshuccomidlist()
+        
+        
         for i,spec_i in enumerate(self.specieslist):
-            huc8list=self.specieshuc8list[i]
-            idx_list=self.speciesoccurencelist[i]
-            foundlist=self.fishsurveydata[idx_list]
+            species_dir=os.path.join(datadir,spec_i+'.data')
+            if not os.path.exists(species_dir):
+                species_n=len(self.specieshuc_allcomid)
+                varcount=1+self.sitedata_k
+                speciesdata=np.empty(species_n,varcount)
+                speciesdata[:,0]=np.array(self.species01list).reshape(species_n,1)
+                for j,comid in enumerate(self.specieshuc_allcomid[i]):
+                    sitevars=[self.sitedatacomid_dict[comid][key] for key in self.sitevarkeylist]
+                    speciesdata[j,1:]=np.array(sitevars).reshape(1,self.sidedata_k)
+            else: print(f'{species_dir} already exists')
+            species_dir=os.path.join(datadir,spec_i+'.data')
+            with open(species_dir,'wb') as f:
+                pickle.dump(speciesdata,f)
+        return
             
         
         
@@ -192,6 +261,6 @@ if __name__=='__main__':
     #test.getfishdata()
     #test.buildspecieslist()
     #test.buildCOMIDlist()
-    test.buildCOMIDsiteinfo()
+    #test.buildCOMIDsiteinfo()
     test.buildspeciesdatadict01()
     
