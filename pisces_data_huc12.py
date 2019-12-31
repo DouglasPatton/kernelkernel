@@ -53,10 +53,11 @@ class DataTool():
                 
         try:self.fishsurveydata
         except: self.getfishdata()
-        (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['COMID']) for obs in self.fishsurveydata])
+        (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
         shortlist=[];occurencelist=[];speciescomidlist=[];specieshuclist=[]
         shorthuclist=[];huccomidlist=[];specieshuclistidx=[]
         print('building specieslist')
+        length=len(longlist)
         for idx,fish in enumerate(longlist):
             if idx%(length//33)==0:
                 print(str(round(100*idx/length))+'%')
