@@ -2,6 +2,7 @@ import os
 import csv
 import traceback
 import numpy as np
+import pickle
 
 class DataTool():
     def __init__(self,):
@@ -25,7 +26,7 @@ class DataTool():
         self.fishsurveydata=self.getdatafile('surveydata.csv')
 
     def gethucdata(self,):
-        self.hucdata=self.gatdatafile('HUC12_PU_COMIDs_CONUS.csv')
+        self.hucdata=self.getdatafile('HUC12_PU_COMIDs_CONUS.csv')
 
     def getsitedata(self,):
         self.sitedata=self.getdatafile('siteinfo.csv')
@@ -167,18 +168,46 @@ class DataTool():
         except:self.getsitedata()
         try:self.comidlist
         except:self.buildCOMIDlist()
-            
+        
+        comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
-        self.sitevarkeylist=[key for key,_ in self.sitedata[0]]
+        self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
 
         self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
+        huc12findfaillist=[0]*comidcount
+        comidsiteinfofindfaillist=[0]*comidcount
+        self.huc12findfail=[]
+        self.comidsiteinfofindfail=[]
         for i,comid_i in enumerate(self.comidlist):
+            hucdatadict=self.findcomidhuc12reach(comid_i)
+            if hucdatadict==None: 
+                huc12findfaillist[i]=1
+            foundi=0
             for j,sitedict in enumerate(self.sitedata):
                 comid_j=sitedict['COMID']
                 if comid_i==comid_j:
+                    foundi=1
                     self.comidsitedataidx.append(j)
+                    if type(hucdatadict) is dict:
+                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
                     self.sitedatacomid_dict[comid_j]=sitedict
+                    break
+            if foundi==0:
+                comidsiteinfofindfaillist[i]=1
+                
+        if sum(comidsiteinfofindfaillist)>0:
+            for i in range(comidcount):
+                if comidsiteinfofindfaillist[i]==1:
+                    print(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
+                    self.comidsiteinfofindfail.append(self.comidlist[i])
+                
+        if sum(huc12findfaillist)>0:
+            for i in range(comidcount):
+                if huc12findfaillist[i]==1:
+                    print(f'huc12find failed for comid:{self.comidlist[i]}')
+                    self.huc12findfail.append([self.comidlist[i]])
+        
         with open(filepath,'wb') as f:
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx),f)
         return
@@ -223,19 +252,33 @@ class DataTool():
                 
         self.specieshuc_allcomid=specieshuc_allcomid
         self.species01list=species01list
-        
-    def buildcomidhuc12reach(self,):
-        try:self.comidlist
-        except:self.buildCOMIDlist()
-        try: self.hucdata
+    
+    def mergelistofdicts(self,listofdicts):
+        mergedict={}
+        for i,dict_i in enumerate(listofdicts):
+            for key,val in dict_i.items():
+                try:
+                    mergedict[key]=val
+                except KeyError:
+                    newkey=key+f'_{i}'
+                    print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
+                    mergedict[newkey]=val
+        return
+                    
+    
+    def findcomidhuc12reach(self,comid):
+        try:self.hucdata
         except:self.gethucdata()
+        itemcount=len(self.hucdata)
+        comid_digits=''.join(filter(str.isdigit,comid))
+        for i,item in enumerate(self.hucdata):
+            hucfilecomid=item['COMID']
+            if hucfilecomid==comid_digits:
+                #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
+                return item
             
-        for item in self.comidlist:
-            pass   
-        
-        for item in self.hucdata:
-            
-            item['COMID']
+        print(f'no match for {comid} as {comid_digits}')
+        return None
 
     def buildspeciesdata01_file(self,):
         thisdir=self.savedir
@@ -255,8 +298,8 @@ class DataTool():
         
         
         for i,spec_i in enumerate(self.specieslist):
-            species_dir=os.path.join(datadir,spec_i+'.data')
-            if not os.path.exists(species_dir):
+            species_filename=os.path.join(datadir,spec_i+'.data')
+            if not os.path.exists(species_filename):
                 species_n=len(self.specieshuc_allcomid)
                 varcount=1+self.sitedata_k
                 speciesdata=np.empty(species_n,varcount)
@@ -264,10 +307,12 @@ class DataTool():
                 for j,comid in enumerate(self.specieshuc_allcomid[i]):
                     sitevars=[self.sitedatacomid_dict[comid][key] for key in self.sitevarkeylist]
                     speciesdata[j,1:]=np.array(sitevars).reshape(1,self.sidedata_k)
-            else: print(f'{species_dir} already exists')
-            species_dir=os.path.join(datadir,spec_i+'.data')
-            with open(species_dir,'wb') as f:
-                pickle.dump(speciesdata,f)
+                with open(species_filename,'wb') as f:
+                    pickle.dump(speciesdata,f)
+            else: print(f'{species_filename} already exists')
+
+            
+
         return
             
         
@@ -278,7 +323,7 @@ if __name__=='__main__':
     test=DataTool()
     #test.getfishdata()
     #test.buildspecieslist()
-    test.buildCOMIDlist()
-    #test.buildCOMIDsiteinfo()
-    test.buildspeciesdata01_file()
+    #test.buildCOMIDlist()
+    test.buildCOMIDsiteinfo()
+    #test.buildspeciesdata01_file()
     
