@@ -1,6 +1,7 @@
 import os
 import csv
 import traceback
+import numpy as np
 
 class DataTool():
     def __init__(self,):
@@ -155,7 +156,9 @@ class DataTool():
         if os.path.exists(filepath):
             try:
                 with open(filepath,'rb') as f:
-                    self.sitedatacomid_dict=pickled.load(f)
+                    savefile=pickled.load(f)
+                self.sitedatacomid_dict=savefile[0]
+                self.comidsitedataidx=savefile[1]
                 return
             except:
                 print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
@@ -168,16 +171,16 @@ class DataTool():
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0]]
 
-        self.sitedataidx=[]
+        self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         for i,comid_i in enumerate(self.comidlist):
             for j,sitedict in enumerate(self.sitedata):
                 comid_j=sitedict['COMID']
                 if comid_i==comid_j:
-                    self.sitedataidx.append(j)
+                    self.comidsitedataidx.append(j)
                     self.sitedatacomid_dict[comid_j]=sitedict
         with open(filepath,'wb') as f:
-            pickle.dump(self.sitedatacomid_dict,f)
+            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx),f)
         return
  
     def buildspecieshuc8list():
@@ -220,8 +223,21 @@ class DataTool():
                 
         self.specieshuc_allcomid=specieshuc_allcomid
         self.species01list=species01list
+        
+    def buildcomidhuc12reach(self,):
+        try:self.comidlist
+        except:self.buildCOMIDlist()
+        try: self.hucdata
+        except:self.gethucdata()
+            
+        for item in self.comidlist:
+            pass   
+        
+        for item in self.hucdata:
+            
+            item['COMID']
 
-    def buildspeciesdatadict01(self,):
+    def buildspeciesdata01_file(self,):
         thisdir=self.savedir
         datadir=os.path.join(thisdir,'speciesdata01')
         if not os.path.exists(datadir):
@@ -232,9 +248,9 @@ class DataTool():
         except:self.buildCOMIDlist()
         try: self.sitedata
         except:self.getsitedata()
-        try:self.sitedatacomid_dict
+        try:self.sitedatacomid_dict,self.comidsitedataidx
         except: self.buildCOMIDsiteinfo()
-        try: self.species01list
+        try: self.species01list,self.specieshuc_allcomid
         except: self.buildspecieshuccomidlist()
         
         
@@ -262,7 +278,7 @@ if __name__=='__main__':
     test=DataTool()
     #test.getfishdata()
     #test.buildspecieslist()
-    #test.buildCOMIDlist()
+    test.buildCOMIDlist()
     #test.buildCOMIDsiteinfo()
-    test.buildspeciesdatadict01()
+    test.buildspeciesdata01_file()
     
