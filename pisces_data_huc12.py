@@ -179,7 +179,11 @@ class DataTool():
         comidsiteinfofindfaillist=[0]*comidcount
         self.huc12findfail=[]
         self.comidsiteinfofindfail=[]
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
         for i,comid_i in enumerate(self.comidlist):
+            if i in printselection:
+                progress=int(100.0*float(i)/float(comidcount))
+                print(progress,'%',end=' ')
             hucdatadict=self.findcomidhuc12reach(comid_i)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
@@ -271,13 +275,14 @@ class DataTool():
         except:self.gethucdata()
         itemcount=len(self.hucdata)
         comid_digits=''.join(filter(str.isdigit,comid))
+        
         for i,item in enumerate(self.hucdata):
             hucfilecomid=item['COMID']
             if hucfilecomid==comid_digits:
                 #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
                 return item
             
-        print(f'no match for {comid} as {comid_digits}')
+        print(f'failed:{comid} as {comid_digits}',end=',')
         return None
 
     def buildspeciesdata01_file(self,):
