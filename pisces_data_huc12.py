@@ -3,6 +3,9 @@ import csv
 import traceback
 import numpy as np
 import pickle
+import sqlite3
+import geopandas as gpd
+
 
 class DataTool():
     def __init__(self,):
@@ -10,6 +13,34 @@ class DataTool():
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
         #self.filenamelist=['HUC12_PU_COMIDs_CONUS.csv','siteinfo.csv','surveydata.csv']
+    
+    def getsqlfile(self,filename):
+        con=sqlite3.connect(os.path.join(os.getcwd(),'fishfiles','catchments.sqlite'))
+        
+    def getNHDplus(self,):
+        savefilename=os.path.join(os.getcwd(),'NHDplus.data')
+        if os.path.exists(savefilename):
+            try: 
+                with open(savefilename, 'rb') as f:
+                    self.NHDplus=pickle.load(f)
+                return
+            except: 
+                print("could not open NHDplus.data, rebuilding")
+        filename=os.path.join(os.getcwd(),'fishfiles','huc12_pu_comids_conus.dbf')
+        #dbf = gpd.GeoDataFrame.from_file(filename)
+        dbf=gpd.read_file(filename)
+        self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
+        self.dbf=dbf
+        #self.NHDplus=[dbf[var].tolist() for var in varlist]
+        self.NHDplus=dbf[self.NHDvarlist]
+        
+        try:
+            with open(savefilename,'wb') as f:
+                pickle.dump(self.NHDplus,savefilename)
+        except:
+            print('problem saving NHDplus:')
+            print(traceback.format_exc())
+        
         
         
     def getdatafile(self,filename):
@@ -26,7 +57,7 @@ class DataTool():
         self.fishsurveydata=self.getdatafile('surveydata.csv')
 
     def gethucdata(self,):
-        self.hucdata=self.getdatafile('HUC12_PU_COMIDs_CONUS.csv')
+        self.getNHDplus
 
     def getsitedata(self,):
         self.sitedata=self.getdatafile('siteinfo.csv')
@@ -176,17 +207,20 @@ class DataTool():
         self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
+        huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         self.huc12findfail=[]
         self.comidsiteinfofindfail=[]
         printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
         for i,comid_i in enumerate(self.comidlist):
-            if i in printselection:
-                progress=int(100.0*float(i)/float(comidcount))
-                print(progress,'%',end=' ')
+            if i in printselection and i>0:
+                progress=np.round(100.0*i/comidcount,1)
+                failrate=np.round(100.0*huc12failcount/i,1)
+                print(progress,'%',',fail-rate:',failrate,'%',end=' ')
             hucdatadict=self.findcomidhuc12reach(comid_i)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
+                huc12failcount+=1
             foundi=0
             for j,sitedict in enumerate(self.sitedata):
                 comid_j=sitedict['COMID']
@@ -271,16 +305,18 @@ class DataTool():
                     
     
     def findcomidhuc12reach(self,comid):
-        try:self.hucdata
-        except:self.gethucdata()
-        itemcount=len(self.hucdata)
+        try:self.NHDplus
+        except:self.getNHDplus()
+        itemcount=len(self.NHDplus)
         comid_digits=''.join(filter(str.isdigit,comid))
-        
-        for i,item in enumerate(self.hucdata):
-            hucfilecomid=item['COMID']
-            if hucfilecomid==comid_digits:
+        datadict={}
+        for i,NHDpluscomid in enumerate(self.NHDplus['COMID']):
+            
+            if NHDpluscomid==comid_digits:
                 #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
-                return item
+                for key in self.NHDvarlist:
+                    datadict[key]=self.NHDplus[key][i]
+                return datadict
             
         print(f'failed:{comid} as {comid_digits}',end=',')
         return None
