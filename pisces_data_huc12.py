@@ -197,14 +197,17 @@ class DataTool():
         self.comidoccurenclist=occurencelist
     
     def buildCOMIDsiteinfo(self,):
-        filepath=os.path.join(self.savedir,'sidedatacomid_dict')
+        filepath=os.path.join(self.savedir,'sitedatacomid_dict')
         if os.path.exists(filepath):
             try:
                 with open(filepath,'rb') as f:
                     savefile=pickled.load(f)
                 self.sitedatacomid_dict=savefile[0]
                 self.comidsitedataidx=savefile[1]
+                self.comidsiteinfofindfaillist=savefile[2]
+                self.huc12findfaillist=savefile[3]
                 print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
+                return
             except:
                 print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
         else:
@@ -217,7 +220,7 @@ class DataTool():
         comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
-        processcount=7
+        processcount=6
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
@@ -248,7 +251,9 @@ class DataTool():
             self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
         
         
-        
+        with open(filepath,'wb') as f:
+            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
+            
         self.comidsiteinfofindfail=[];self.huc12findfail=[]
         if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
@@ -256,16 +261,16 @@ class DataTool():
                     print(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
                     self.comidsiteinfofindfail.append(self.comidlist[i])
                 
-        if sum(huc12findfaillist)>0:
+        if sum(self.huc12findfaillist)>0:
             for i in range(comidcount):
                 if huc12findfaillist[i]==1:
-                    #print(f'huc12find failed for comid:{self.comidlist[i]}')
+                    print(f'huc12find failed for comid:{self.comidlist[i]}')
                     self.huc12findfail.append([self.comidlist[i]])
-        with open(filepath,'wb') as f:
-            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx),f)
+
         return
  
     def mpsearchcomidhuc12(self,comidlist):
+        mypid=os.getpid()
         comidcount=len(comidlist)
         comidsitedataidx=[]
         sitedatacomid_dict={}
@@ -273,12 +278,12 @@ class DataTool():
         huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,1001)]
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
         for i,comid_i in enumerate(comidlist):
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
                 failrate=np.round(100.0*huc12failcount/i,5)
-                print('progress:',progress,'%',',failrate:',failrate,'%',end=' ')
+                print(f"{mypid}'s progress:{progress}%, failrate:{failrate}",end='. ')
             hucdatadict=self.findcomidhuc12reach(comid_i)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
@@ -295,6 +300,7 @@ class DataTool():
                     sitedatacomid_dict[comid_j]=sitedict
                     break
             if foundi==0:
+                comidsitedataidx.append(None)
                 comidsiteinfofindfaillist[i]=1
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
                 
@@ -400,7 +406,10 @@ class DataTool():
                     speciesdata[j,1:]=np.array(sitevars).reshape(1,self.sidedata_k)
                 with open(species_filename,'wb') as f:
                     pickle.dump(speciesdata,f)
-            else: print(f'{species_filename} already exists')
+                with open(species_varname,'wb')as f:
+                    pickle.dump(self.sitevarkeylist)
+            else:
+                print(f'{species_filename} already exists')
 
             
 
