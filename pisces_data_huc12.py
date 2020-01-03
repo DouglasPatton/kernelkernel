@@ -228,8 +228,8 @@ class DataTool():
         for i,comid_i in enumerate(self.comidlist):
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
-                failrate=np.round(100.0*huc12failcount/i,1)
-                print(progress,'%',',fail-rate:',failrate,'%',end=' ')
+                failrate=np.round(100.0*huc12failcount/i,5)
+                print('progress:',progress,'%',',failrate:',failrate,'%',end=' ')
             hucdatadict=self.findcomidhuc12reach(comid_i)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
