@@ -22,6 +22,10 @@ class datagen():
         self.source = source
         if source==None or source=='monte':
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
+        if type(source) is str and source.lower()=='pisces'
+            self.gen_piscesdata(seed=seed,batch_n=batch_n)
+            
+    def gen_piscesdata(self,seed=0,batch_n=None):
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if ftype==None:
