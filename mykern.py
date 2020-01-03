@@ -662,9 +662,7 @@ class kNdtool:
             yhat_raw=KDEregtup[0]
             cross_errors=KDEregtup[1]
             yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
-        #here is the simple MSE objective function. however, I think I need to use
-        #the more sophisticated MISE or mean integrated squared error,
-        #either way need to replace with cost function function
+
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
@@ -755,7 +753,7 @@ class kNdtool:
             predict=0
         if predict=='yes':
             predict=1
-        if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
+        if  fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
 
         #batchcount = self.datagen_dict['batchcount']
@@ -860,6 +858,8 @@ class kNdtool:
         #build dictionary for parameters
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
+        if predict==1:
+            self.fixed_or_free_paramdict['free_params']='predict'
                 
         #save and transform the data
         #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
@@ -878,7 +878,28 @@ class kNdtool:
         #self.xin=xdata_std;self.yin=ydata_std
         #self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
         self.npr=self.nin#since we are optimizing within our sample
+        
+        batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
+        val_batchdata_dict=self.buildbatchdatadict(yxtup_list,xkerngrid,ykerngrid,modeldict)
+        #print('=======================')
+        #print(f'batchdata_dict{batchdata_dict}')
+        #print('=======================')
+        #self.npr=xpr.shape[0]#probably redundant
+        #self.yout=yout
 
+        #pre-build list of masks
+        self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+        self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+        
+        #setup and run scipy minimize
+        args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
+        val_args_tuple=(val_batchdata_dict, modeldict, self.fixed_or_free_paramdict)
+        print(f'mykern modeldict:{modeldict}')
+        
+        return free_params,args_tuple,val_args_tuple
+    
+    
+    def buildbatchdatadict(self,yxtup_list,xkerngrid,ykerngrid,modeldict)
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
         xintup = ()
@@ -895,22 +916,8 @@ class kNdtool:
             youttup=youttup+(youti,)
 
         batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
-        #print('=======================')
-        #print(f'batchdata_dict{batchdata_dict}')
-        #print('=======================')
-        #self.npr=xpr.shape[0]#probably redundant
-        #self.yout=yout
-
-        #pre-build list of masks
-        self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-        self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-        
-        #setup and run scipy minimize
-        args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
-        print(f'mykern modeldict:{modeldict}')
-        
-        return free_params,args_tuple
-
+        return batchdata_dict
+    
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
     optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
@@ -953,7 +960,7 @@ class optimize_free_params(kNdtool):
         if savedir==None:
             savedir=os.getcwd()
         kNdtool.__init__(self,savedir=savedir,myname=myname)
-        free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
+        free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
