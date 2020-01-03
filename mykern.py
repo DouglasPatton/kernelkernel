@@ -757,7 +757,7 @@ class kNdtool:
             self.call_iter += 1  # then it must be a new call during optimization
 
         #batchcount = self.datagen_dict['batchcount']
-        bathcount = len(batchdata_dict['yintup'])
+        batchcount = len(batchdata_dict['yintup'])
         #print(f'batchcount:{batchcount}')
         fixed_or_free_paramdict['free_params'] = free_params
         # print(f'free_params added to dict. free_params:{free_params}')
