@@ -3,7 +3,7 @@ import csv
 import traceback
 import numpy as np
 import pickle
-import sqlite3
+#import sqlite3
 import geopandas as gpd
 
 
@@ -14,29 +14,36 @@ class DataTool():
             os.mkdir(self.savedir)
         #self.filenamelist=['HUC12_PU_COMIDs_CONUS.csv','siteinfo.csv','surveydata.csv']
     
-    def getsqlfile(self,filename):
-        con=sqlite3.connect(os.path.join(os.getcwd(),'fishfiles','catchments.sqlite'))
+    #def getsqlfile(self,filename):
+    #    con=sqlite3.connect(os.path.join(os.getcwd(),'fishfiles','catchments.sqlite'))
         
     def getNHDplus(self,):
-        savefilename=os.path.join(os.getcwd(),'NHDplus.data')
+        self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
+        savefilename=os.path.join(self.savedir,'NHDplus.data')
         if os.path.exists(savefilename):
             try: 
                 with open(savefilename, 'rb') as f:
                     self.NHDplus=pickle.load(f)
+                print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
                 return
             except: 
-                print("could not open NHDplus.data, rebuilding")
+                print(f"{savefilename} exists but could not open, rebuilding")
+        
         filename=os.path.join(os.getcwd(),'fishfiles','huc12_pu_comids_conus.dbf')
+        
         #dbf = gpd.GeoDataFrame.from_file(filename)
+        print(f'starting read of {filename}')
         dbf=gpd.read_file(filename)
-        self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
-        self.dbf=dbf
+        print(f'opening {filename} with length:{len(dbf)} and type:{type(dbf)}')
+        print('finished read of NHDplus')
+        
+        #self.dbf=dbf
         #self.NHDplus=[dbf[var].tolist() for var in varlist]
         self.NHDplus=dbf[self.NHDvarlist]
         
         try:
             with open(savefilename,'wb') as f:
-                pickle.dump(self.NHDplus,savefilename)
+                pickle.dump(self.NHDplus,f)
         except:
             print('problem saving NHDplus:')
             print(traceback.format_exc())
@@ -79,11 +86,11 @@ class DataTool():
                 self.huclist=speciestup[4]
                 self.huccomidlist=speciestup[5]
                 self.specieshuclistidx=speciestup[6]
+                print(f'opening {specieslistpath} with length:{len(speciestup)} and type:{type(speciestup)}')
                 return
             except:
                 print(f'buildspecieslist found {specieslistpath} but there was an error loading variables')
                 print(traceback.format_exc())
-                
         try:self.fishsurveydata
         except: self.getfishdata()
         (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
@@ -150,11 +157,16 @@ class DataTool():
     def buildCOMIDlist(self,):
         comidlistpath=os.path.join(self.savedir,'comidlist')
         if os.path.exists(comidlistpath):
-            with open(comidlistpath,'rb') as f:
-                comidtup=pickle.load(f)
-            self.comidlist=comidtup[0]
-            self.comidcurrurencelist=comidtup[1]
-            return
+            try:
+                with open(comidlistpath,'rb') as f:
+                    comidtup=pickle.load(f)
+                self.comidlist=comidtup[0]
+                self.comidcurrurencelist=comidtup[1]
+                print(f'opening {comidlistpath} with length:{len(comidtup)} and has first item length: {len(self.comidlist)} and type:{type(self.comidlist)}')
+                return
+            except:
+                print(f'error when opening {comidlistpath}')
+            
         try: self.fishsurveydata
         except: self.getfishdata()
         print('building comidlist')
@@ -191,10 +203,11 @@ class DataTool():
                     savefile=pickled.load(f)
                 self.sitedatacomid_dict=savefile[0]
                 self.comidsitedataidx=savefile[1]
-                return
+                print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
             except:
                 print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
-           
+        else:
+            print(f'{filepath} does not exist, building COMID site info')   
         try: self.sitedata
         except:self.getsitedata()
         try:self.comidlist
@@ -243,7 +256,7 @@ class DataTool():
         if sum(huc12findfaillist)>0:
             for i in range(comidcount):
                 if huc12findfaillist[i]==1:
-                    print(f'huc12find failed for comid:{self.comidlist[i]}')
+                    #print(f'huc12find failed for comid:{self.comidlist[i]}')
                     self.huc12findfail.append([self.comidlist[i]])
         
         with open(filepath,'wb') as f:
@@ -312,13 +325,13 @@ class DataTool():
         datadict={}
         for i,NHDpluscomid in enumerate(self.NHDplus['COMID']):
             
-            if NHDpluscomid==comid_digits:
+            if str(NHDpluscomid)==comid_digits:
                 #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
                 for key in self.NHDvarlist:
                     datadict[key]=self.NHDplus[key][i]
                 return datadict
             
-        print(f'failed:{comid} as {comid_digits}',end=',')
+        print(f'{comid_digits}',end=',')
         return None
 
     def buildspeciesdata01_file(self,):
