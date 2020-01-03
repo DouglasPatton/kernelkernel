@@ -395,22 +395,24 @@ class DataTool():
         
         
         for i,spec_i in enumerate(self.specieslist):
-            species_filename=os.path.join(datadir,spec_i+'.data')
-            if not os.path.exists(species_filename):
-                species_n=len(self.specieshuc_allcomid)
-                varcount=1+self.sitedata_k
-                speciesdata=np.empty(species_n,varcount)
-                speciesdata[:,0]=np.array(self.species01list).reshape(species_n,1)
-                for j,comid in enumerate(self.specieshuc_allcomid[i]):
-                    sitevars=[self.sitedatacomid_dict[comid][key] for key in self.sitevarkeylist]
-                    speciesdata[j,1:]=np.array(sitevars).reshape(1,self.sidedata_k)
-                with open(species_filename,'wb') as f:
-                    pickle.dump(speciesdata,f)
-                with open(species_varname,'wb')as f:
-                    pickle.dump(self.sitevarkeylist)
-            else:
-                print(f'{species_filename} already exists')
-
+            try:
+                species_filename=os.path.join(datadir,spec_i+'.data')
+                if not os.path.exists(species_filename):
+                    species_n=len(self.specieshuc_allcomid)
+                    varcount=1+self.sitedata_k
+                    speciesdata=np.empty(species_n,varcount)
+                    speciesdata[:,0]=np.array(self.species01list).reshape(species_n,1)
+                    for j,comid in enumerate(self.specieshuc_allcomid[i]):
+                        sitevars=[self.sitedatacomid_dict[comid][key] for key in self.sitevarkeylist]
+                        speciesdata[j,1:]=np.array(sitevars).reshape(1,self.sidedata_k)
+                    with open(species_filename,'wb') as f:
+                        pickle.dump(speciesdata,f)
+                    with open(species_varname,'wb')as f:
+                        pickle.dump(self.sitevarkeylist)
+                else:
+                    print(f'{species_filename} already exists')
+            except:
+                print(traceback.format_exc())
             
 
         return
@@ -425,5 +427,5 @@ if __name__=='__main__':
     #test.buildspecieslist()
     #test.buildCOMIDlist()
     test.buildCOMIDsiteinfo()
-    #test.buildspeciesdata01_file()
+    test.buildspeciesdata01_file()
     
