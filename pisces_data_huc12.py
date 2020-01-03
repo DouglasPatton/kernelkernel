@@ -216,37 +216,37 @@ class DataTool():
         comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
-
-        self.comidsitedataidx=[]
+        processcount=4
+        '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
         huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         self.huc12findfail=[]
         self.comidsiteinfofindfail=[]
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
-        for i,comid_i in enumerate(self.comidlist):
-            if i in printselection and i>0:
-                progress=np.round(100.0*i/comidcount,1)
-                failrate=np.round(100.0*huc12failcount/i,5)
-                print('progress:',progress,'%',',failrate:',failrate,'%',end=' ')
-            hucdatadict=self.findcomidhuc12reach(comid_i)
-            if hucdatadict==None: 
-                huc12findfaillist[i]=1
-                huc12failcount+=1
-            foundi=0
-            for j,sitedict in enumerate(self.sitedata):
-                comid_j=sitedict['COMID']
-                if comid_i==comid_j:
-                    foundi=1
-                    self.comidsitedataidx.append(j)
-                    if type(hucdatadict) is dict:
-                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
-                    self.sitedatacomid_dict[comid_j]=sitedict
-                    break
-            if foundi==0:
-                comidsiteinfofindfaillist[i]=1
-                
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]'''
+        com_idx=[int(i) for i in np.linspace(0,comidcount,processcount+1)]#+1 to include the end
+        comidlistlist=[]*processcount
+        for i in range(processcount):
+            comidlistlist[i]=comidlist[com_idx[i]:com_idx[i+1]]
+        print('pool starting')
+        with multiprocessing.Pool(processes=processcount) as pool:
+            outlist=pool.map(self.searchcomidhuc12,comidlistlist)
+            sleep(2)
+            pool.close()
+            pool.join()
+        print('pool complete')
+        comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
+        comidsitedataidx=[i for result in comidsitedataidx for i in result]
+        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        
+        
+        
+        
+        
+        
+        
+        
         if sum(comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
                 if comidsiteinfofindfaillist[i]==1:
@@ -258,11 +258,45 @@ class DataTool():
                 if huc12findfaillist[i]==1:
                     #print(f'huc12find failed for comid:{self.comidlist[i]}')
                     self.huc12findfail.append([self.comidlist[i]])
-        
         with open(filepath,'wb') as f:
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx),f)
         return
  
+    def searchcomidhuc12(self,comidlist):
+        comidcount=len(comidlist)
+        comidsitedataidx=[]
+        sitedatacomid_dict={}
+        huc12findfaillist=[0]*comidcount
+        huc12failcount=0
+        comidsiteinfofindfaillist=[0]*comidcount
+        
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
+        for i,comid_i in enumerate(comidlist):
+            if i in printselection and i>0:
+                progress=np.round(100.0*i/comidcount,1)
+                failrate=np.round(100.0*huc12failcount/i,5)
+                print('progress:',progress,'%',',failrate:',failrate,'%',end=' ')
+            hucdatadict=self.findcomidhuc12reach(comid_i)
+            if hucdatadict==None: 
+                huc12findfaillist[i]=1
+                huc12failcount+=1
+            foundi=0
+            
+            for j,sitedict in enumerate(self.sitedata):
+                comid_j=sitedict['COMID']
+                if comid_i==comid_j:
+                    foundi=1
+                    comidsitedataidx.append(j)
+                    if type(hucdatadict) is dict:
+                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
+                    sitedatacomid_dict[comid_j]=sitedict
+                    break
+            if foundi==0:
+                comidsiteinfofindfaillist[i]=1
+        return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
+                
+        
+
     def buildspecieshuc8list():
         try: self.fishhucs
         except: self.getfishhucs()
