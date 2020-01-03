@@ -3,7 +3,8 @@ import csv
 import traceback
 import numpy as np
 import pickle
-#import sqlite3
+from time import sleep
+import multiprocessing as mp
 import geopandas as gpd
 
 
@@ -216,7 +217,7 @@ class DataTool():
         comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
-        processcount=4
+        processcount=7
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
@@ -226,28 +227,30 @@ class DataTool():
         self.comidsiteinfofindfail=[]
         printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]'''
         com_idx=[int(i) for i in np.linspace(0,comidcount,processcount+1)]#+1 to include the end
-        comidlistlist=[]*processcount
+        print(com_idx)
+        comidlistlist=[]
         for i in range(processcount):
-            comidlistlist[i]=comidlist[com_idx[i]:com_idx[i+1]]
+            comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
         print('pool starting')
-        with multiprocessing.Pool(processes=processcount) as pool:
-            outlist=pool.map(self.searchcomidhuc12,comidlistlist)
+        with mp.Pool(processes=processcount) as pool:
+            outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
             sleep(2)
             pool.close()
             pool.join()
         print('pool complete')
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
-        comidsitedataidx=[i for result in comidsitedataidx for i in result]
-        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
+        self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
+        self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        
+        self.comidsitedataidx=[]
+        for i in range(processcount):
+            self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
         
         
         
-        
-        
-        
-        
-        
-        if sum(comidsiteinfofindfaillist)>0:
+        self.comidsiteinfofindfail=[];self.huc12findfail=[]
+        if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
                 if comidsiteinfofindfaillist[i]==1:
                     print(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
@@ -262,7 +265,7 @@ class DataTool():
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx),f)
         return
  
-    def searchcomidhuc12(self,comidlist):
+    def mpsearchcomidhuc12(self,comidlist):
         comidcount=len(comidlist)
         comidsitedataidx=[]
         sitedatacomid_dict={}
@@ -270,7 +273,7 @@ class DataTool():
         huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,1001)]
         for i,comid_i in enumerate(comidlist):
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
