@@ -219,7 +219,7 @@ class DataTool():
         
         comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
-        self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
+        #self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         processcount=6
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
@@ -245,6 +245,7 @@ class DataTool():
         self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
         self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
         self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        self.sitevarkeylist=[key for key in self.sitedatacomid_dict]
         
         self.comidsitedataidx=[]
         for i in range(processcount):
@@ -296,8 +297,11 @@ class DataTool():
                     foundi=1
                     comidsitedataidx.append(j)
                     if type(hucdatadict) is dict:
-                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
-                    sitedatacomid_dict[comid_j]=sitedict
+                        fullsitedict=self.mergelistofdicts([sitedict,hucdatadict])
+                    else: 
+                        if not hucdatadict==None:
+                            print(f'{comid_i} hucdatadict is type:{type:hucdatadict} for i:{i},j:{j}')
+                    sitedatacomid_dict[comid_j]=fullsitedict
                     break
             if foundi==0:
                 comidsitedataidx.append(None)
