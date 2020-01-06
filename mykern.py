@@ -794,11 +794,18 @@ class kNdtool:
             yhat_unstd=[]
             for i in range(batchcount):
                 yhat_unstd.append(self.MPwrapperKDEpredict(arglistlist[i]))
-        if iscrossmse:
-            yhat_unstd,crosserrors=zip(*yhat_unstd)
+        #if iscrossmse:
+        yhat_unstd,crosserrors=zip(*yhat_unstd)
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
+        
+        if modeldict['loss_function']=='batch_crossval':
+            ybatch=[]
+            for i in range(batchcount):
+                ybatch.append([y for j,yxtup in enumerate(self.datagen_obj.yxtup_list) if not j==i for y in yxtup[0]])
+        else:
+            ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
         for batch_i in range(batchcount):
-            y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
+            y_batch_i=ybatch[i]
             y_err = y_batch_i - yhat_unstd[batch_i]
             y_err_tup = y_err_tup + (y_err,)
 
@@ -844,7 +851,9 @@ class kNdtool:
         fixed_or_free_paramdict=arglist[5]
         return self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
     
-    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict):
+    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,predict=None):
+        if predict==None:
+            predict=0
         
         #free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
 
@@ -859,7 +868,7 @@ class kNdtool:
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
         self.fixed_or_free_paramdict=fixed_or_free_paramdict
         if predict==1:
-            self.fixed_or_free_paramdict['free_params']='predict'
+            self.fixed_or_free_paramdict['free_params']='predict'#instead of 'outside'
                 
         #save and transform the data
         #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
@@ -877,10 +886,14 @@ class kNdtool:
         #xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
         #self.xin=xdata_std;self.yin=ydata_std
         #self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
-        self.npr=self.nin#since we are optimizing within our sample
+        if predict==0:
+            self.npr=self.nin#since we are optimizing within our sample
+        if predict==1:
+            do stuff
         
         batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         val_batchdata_dict=self.buildbatchdatadict(yxtup_list,xkerngrid,ykerngrid,modeldict)
+        self.npr=len(batchdata_dict['xprtup'][0])
         #print('=======================')
         #print(f'batchdata_dict{batchdata_dict}')
         #print('=======================')
@@ -899,17 +912,24 @@ class kNdtool:
         return free_params,args_tuple,val_args_tuple
     
     
-    def buildbatchdatadict(self,yxtup_list,xkerngrid,ykerngrid,modeldict)
+    def buildbatchdatadict(self,yxtup_list,xkerngrid,ykerngrid,modeldict):
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
+        batchcount=len(yxtup_list)
         xintup = ()
         yintup = ()
         xprtup = ()
         youttup = ()
-        for i in range(self.batchcount):
-            xdata_std=yxtup_list_std[i][1]
-            ydata_std=yxtup_list_std[i][0]
-            xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
+        if modeldict['loss_function']=='batch_crossval':
+            xpri=[]
+            for i in range(batchcount):
+                xpri.append([xvars for j,yxvartup in enumerate(yxtup_list) if not j==i for xvars in yxvartup[1]])
+        else:
+            xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
+        for i in range(batchcount):
+            xdata_std=yxtup_list[i][1]
+            ydata_std=yxtup_list[i][0]
+            xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
             xintup=xintup+(xdata_std,)
             yintup=yintup+(ydata_std,)
             xprtup=xprtup+(xpri,)
