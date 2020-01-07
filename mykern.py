@@ -310,7 +310,7 @@ class kNdtool:
                     list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
             lastmask=list_of_masks[-1]#copy the last item to lastmask
         if not self.predict_self_without_self=='yes':
-            masklist[0]=np.ma.make_mask(np.zeros([nin,npr]))
+            list_of_masks[0]=np.ma.make_mask(np.zeros([nin,npr]))
         return list_of_masks
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
