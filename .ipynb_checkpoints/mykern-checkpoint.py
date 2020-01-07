@@ -600,14 +600,16 @@ class kNdtool:
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             xin_scaled=xin*x_bandscale_params
+            print('xin_scaled.shape',xin_scaled.shape)
             xpr_scaled=xpr*x_bandscale_params
+            print('xpr_scaled.shape',xpr_scaled.shape)
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
             Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
-            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
+            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'onediffs_scaled_l2norm has shape:{onediffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
             diffdict['onediffs']=onediffs_scaled_l2norm
@@ -798,11 +800,7 @@ class kNdtool:
         yhat_unstd,crosserrors=zip(*yhat_unstd)
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         
-        if modeldict['loss_function']=='batch_crossval':
-            ybatch=[]
-            for i in range(batchcount):
-                ybatch.append([y for j,yxtup in enumerate(self.datagen_obj.yxtup_list) if not j==i for y in yxtup[0]])
-                np.concatenate(ybatch)
+
                 
         if modeldict['loss_function']=='batch_crossval':
             ybatch=[]
@@ -893,6 +891,7 @@ class kNdtool:
         yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
         
         batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
+        
         val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dict['xprtup'][0])
         print('self.npr',self.npr)
@@ -930,6 +929,7 @@ class kNdtool:
                     if not j==i:
                         xpricross_j.append(yxvartup[1])
                 xpri.append(np.concatenate(xpricross_j,axis=0))
+                
             
         else:
             xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
@@ -941,6 +941,7 @@ class kNdtool:
             yintup=yintup+(ydata_std,)
             xprtup=xprtup+(xpri,)
             youttup=youttup+(youti,)
+            #print('xprtup[0].shape:',xprtup[0].shape)
 
         batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
         return batchdata_dict
