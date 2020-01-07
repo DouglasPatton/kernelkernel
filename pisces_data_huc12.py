@@ -259,11 +259,13 @@ class DataTool():
             sleep(2)
             pool.close()
             pool.join()
+        self.outlist=outlist
         endtime=time()
-        print('pool complete at ',endtime,'. time elapsed: ',endtime-startime)
+        print('pool complete at ',endtime,'. time elapsed: ',endtime-starttime)
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
         self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
         self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
+        
         self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
         
         self.comidsitedataidx=[]
@@ -316,8 +318,11 @@ class DataTool():
                     foundi=1
                     comidsitedataidx.append(j)
                     if type(hucdatadict) is dict:
-                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
-                    sitedatacomid_dict[comid_j]=sitedict
+                        sitedict_nocomid=sitedict.copy()
+                        #del sitedict_nocomid['COMID']
+                        sitedict=self.mergelistofdicts([sitedict_nocomid,hucdatadict])
+                        if i==0:print('i==0',sitedict)
+                    sitedatacomid_dict[''.join([char for char in comid_j if char.isdigit()])]=sitedict
                     break
             if foundi==0:
                 comidsitedataidx.append(None)
@@ -371,11 +376,12 @@ class DataTool():
         mergedict={}
         for i,dict_i in enumerate(listofdicts):
             for key,val in dict_i.items():
+                
                 if not key in mergedict:
                     mergedict[key]=val
                 else:
                     newkey=key+f'_{i}'
-                    print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
+                    #print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
                     mergedict[newkey]=val
         return mergedict
                     
