@@ -310,7 +310,7 @@ class kNdtool:
                     list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
             lastmask=list_of_masks[-1]#copy the last item to lastmask
         if not self.predict_self_without_self=='yes':
-            masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
+            masklist[0]=np.ma.make_mask(np.zeros([nin,npr]))
         return list_of_masks
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
@@ -423,7 +423,7 @@ class kNdtool:
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
                 ykerngrid='no'
         ykerngrid_form=modeldict['ykerngrid_form']
-        if type(xpr)==NoneType:
+        if xpr is None:
             xpr=xdata_std
             self.predict_self_without_self='yes'
         if not np.allclose(xpr,xdata_std):
@@ -802,6 +802,18 @@ class kNdtool:
             ybatch=[]
             for i in range(batchcount):
                 ybatch.append([y for j,yxtup in enumerate(self.datagen_obj.yxtup_list) if not j==i for y in yxtup[0]])
+                np.concatenate(ybatch)
+                
+        if modeldict['loss_function']=='batch_crossval':
+            ybatch=[]
+            for i in range(batchcount):
+                ycross_j=[]
+                for j,yxvartup in enumerate(yxtup_list):
+                    if not j==i:
+                        ycross_j.append(yxvartup[1])
+                ybatch.append(np.concatenate(ycross_j,axis=0))
+                
+                
         else:
             ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
         for batch_i in range(batchcount):
@@ -881,8 +893,9 @@ class kNdtool:
         yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
         
         batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
-        val_batchdata_dict=self.buildbatchdatadict(yxtup_list,xkerngrid,ykerngrid,modeldict)
+        val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dict['xprtup'][0])
+        print('self.npr',self.npr)
         #print('=======================')
         #print(f'batchdata_dict{batchdata_dict}')
         #print('=======================')
@@ -912,7 +925,12 @@ class kNdtool:
         if modeldict['loss_function']=='batch_crossval':
             xpri=[]
             for i in range(batchcount):
-                xpri.append([xvars for j,yxvartup in enumerate(yxtup_list) if not j==i for xvars in yxvartup[1]])
+                xpricross_j=[]
+                for j,yxvartup in enumerate(yxtup_list):
+                    if not j==i:
+                        xpricross_j.append(yxvartup[1])
+                xpri.append(np.concatenate(xpricross_j,axis=0))
+            
         else:
             xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
         for i in range(batchcount):
