@@ -3,7 +3,7 @@ import csv
 import traceback
 import numpy as np
 import pickle
-from time import sleep
+from time import sleep,strftime,time
 import multiprocessing as mp
 import geopandas as gpd
 
@@ -17,7 +17,9 @@ class DataTool():
     
     #def getsqlfile(self,filename):
     #    con=sqlite3.connect(os.path.join(os.getcwd(),'fishfiles','catchments.sqlite'))
+    
         
+    
     def getNHDplus(self,):
         self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
         savefilename=os.path.join(self.savedir,'NHDplus.data')
@@ -26,6 +28,7 @@ class DataTool():
                 with open(savefilename, 'rb') as f:
                     self.NHDplus=pickle.load(f)
                 print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
+                print(self.NHDplus)
                 return
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
@@ -35,12 +38,18 @@ class DataTool():
         #dbf = gpd.GeoDataFrame.from_file(filename)
         print(f'starting read of {filename}')
         dbf=gpd.read_file(filename)
-        print(f'opening {filename} with length:{len(dbf)} and type:{type(dbf)}')
         print('finished read of NHDplus')
+        print(f'opened {filename} with length:{len(dbf)} and type:{type(dbf)}')
+        print(dbf)
+        
         
         #self.dbf=dbf
         #self.NHDplus=[dbf[var].tolist() for var in varlist]
+        
         self.NHDplus=dbf[self.NHDvarlist]
+        strvarlist=self.NHDvarlist[:-1]
+        for strvar in strvarlist:
+            self.NHDplus[strvar]=self.NHDplus[strvar].astype('str')
         
         try:
             with open(savefilename,'wb') as f:
@@ -58,20 +67,24 @@ class DataTool():
             with open(datadir, 'r') as f:
                 datadict=[row for row in csv.DictReader(f)]
         print(f'opening {filename} with length:{len(datadict)} and type:{type(datadict)}')
+        
         keylist=[key for row in datadict for key,val in row.items()]
         return datadict
 
     def getfishdata(self,):
         self.fishsurveydata=self.getdatafile('surveydata.csv')
+        print(self.fishsurveydata[0:5])
 
     def gethucdata(self,):
-        self.getNHDplus
+        self.getNHDplus()
 
     def getsitedata(self,):
         self.sitedata=self.getdatafile('siteinfo.csv')
+        print(self.sitedata[0:5])
         
     def getfishhucs(self,):
         self.fishhucs=self.getdatafile('fishhucs.csv')
+        print(self.fishhucs[0:5])
 
         
     def buildspecieslist(self,):
@@ -82,7 +95,7 @@ class DataTool():
                     speciestup=pickle.load(f)
                 self.specieslist=speciestup[0]
                 self.speciesoccurencelist=speciestup[1]
-                self.speciescomidlist=speciestup[2]
+                self.speciescomidlist=speciestup[2] 
                 self.specieshuclist=speciestup[3]
                 self.huclist=speciestup[4]
                 self.huccomidlist=speciestup[5]
@@ -197,11 +210,15 @@ class DataTool():
         self.comidoccurenclist=occurencelist
     
     def buildCOMIDsiteinfo(self,):
+        
         filepath=os.path.join(self.savedir,'sitedatacomid_dict')
         if os.path.exists(filepath):
             try:
                 with open(filepath,'rb') as f:
-                    savefile=pickled.load(f)
+                    savefile=pickle.load(f)
+                print(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
+                print(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
+                
                 self.sitedatacomid_dict=savefile[0]
                 self.comidsitedataidx=savefile[1]
                 self.comidsiteinfofindfaillist=savefile[2]
@@ -210,6 +227,7 @@ class DataTool():
                 return
             except:
                 print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+                print(traceback.format_exc())
         else:
             print(f'{filepath} does not exist, building COMID site info')   
         try: self.sitedata
@@ -234,13 +252,15 @@ class DataTool():
         comidlistlist=[]
         for i in range(processcount):
             comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-        print('pool starting')
+        starttime=time()
+        print('pool starting at',starttime)
         with mp.Pool(processes=processcount) as pool:
             outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
             sleep(2)
             pool.close()
             pool.join()
-        print('pool complete')
+        endtime=time()
+        print('pool complete at ',endtime,'. time elapsed: ',endtime-startime)
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
         self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
         self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
@@ -257,13 +277,13 @@ class DataTool():
         self.comidsiteinfofindfail=[];self.huc12findfail=[]
         if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
-                if comidsiteinfofindfaillist[i]==1:
+                if self.comidsiteinfofindfaillist[i]==1:
                     print(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
                     self.comidsiteinfofindfail.append(self.comidlist[i])
                 
         if sum(self.huc12findfaillist)>0:
             for i in range(comidcount):
-                if huc12findfaillist[i]==1:
+                if self.huc12findfaillist[i]==1:
                     print(f'huc12find failed for comid:{self.comidlist[i]}')
                     self.huc12findfail.append([self.comidlist[i]])
 
@@ -351,13 +371,13 @@ class DataTool():
         mergedict={}
         for i,dict_i in enumerate(listofdicts):
             for key,val in dict_i.items():
-                try:
+                if not key in mergedict:
                     mergedict[key]=val
-                except KeyError:
+                else:
                     newkey=key+f'_{i}'
                     print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
                     mergedict[newkey]=val
-        return
+        return mergedict
                     
     
     def findcomidhuc12reach(self,comid):
@@ -368,7 +388,7 @@ class DataTool():
         datadict={}
         for i,NHDpluscomid in enumerate(self.NHDplus['COMID']):
             
-            if str(NHDpluscomid)==comid_digits:
+            if NHDpluscomid==comid_digits:
                 #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
                 for key in self.NHDvarlist:
                     datadict[key]=self.NHDplus[key][i]
