@@ -423,7 +423,7 @@ class kNdtool:
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
                 ykerngrid='no'
         ykerngrid_form=modeldict['ykerngrid_form']
-        if xpr==None:
+        if type(xpr)==NoneType:
             xpr=xdata_std
             self.predict_self_without_self='yes'
         if not np.allclose(xpr,xdata_std):
@@ -879,17 +879,6 @@ class kNdtool:
 
         #standardize x and y and save their means and std to self
         yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
-        
-        #store the standardized (by column or parameter,p) versions of x and y
-        #self.xdata_std=xdata_std;self.ydata_std=ydata_std
-                                 
-        #xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
-        #self.xin=xdata_std;self.yin=ydata_std
-        #self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
-        if predict==0:
-            self.npr=self.nin#since we are optimizing within our sample
-        if predict==1:
-            do stuff
         
         batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         val_batchdata_dict=self.buildbatchdatadict(yxtup_list,xkerngrid,ykerngrid,modeldict)
