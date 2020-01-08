@@ -635,7 +635,13 @@ class kNdtool:
             #not developed yet
         
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
+        xbwmaskcount=np.ma.count_masked(xbw)
+        print('xbwmaskcount',xbwmaskcount)
+        print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        ybwmaskcount=np.ma.count_masked(ybw)
+        print('ybwmaskcount',ybwmaskcount)
+        print('np.ma.getmask(ybw)',np.ma.getmask(ybw))
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
@@ -816,9 +822,8 @@ class kNdtool:
             all_y_err=np.ma.concatenate([all_y_err,np.ravel(crosserrors)],axis=0)
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
-        if maskcount>0:
-            print(f'{maskcount} masked values found in all_y_err')
-            mse = np.ma.count_masked(all_y_err) * 10000*maskcount
+        assert maskcount==0,print(f'{maskcount} masked values found in all_y_err')
+            #mse = np.ma.count_masked(all_y_err) * 10000*maskcount
         self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict = fixed_or_free_paramdict

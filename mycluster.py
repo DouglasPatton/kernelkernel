@@ -75,7 +75,7 @@ class run_cluster(kernelcompare.KernelCompare):
         loss_function_variations=('modeldict:loss_function',['mse','crossmse1','crossmse2'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
-        Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
+        Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
         ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])

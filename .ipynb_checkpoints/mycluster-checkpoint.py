@@ -55,7 +55,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
         
-        self.oldnode_threshold=datetime.timedelta(minutes=15,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=35,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
@@ -75,11 +75,11 @@ class run_cluster(kernelcompare.KernelCompare):
         loss_function_variations=('modeldict:loss_function',['mse','crossmse1','crossmse2'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
-        Ndiff_start_variations = ('modeldict:Ndiff_start', [2])
+        Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
-        ykern_grid_variations=('modeldict:ykern_grid',[self.n+1])
-        regression_model_variations=('modeldict:regression_model',['NW-rbf2','NW-rbf'])
+        ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])
+        regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
         optdict_variation_list = [ykerngrid_form_variations,NWnorm_variations,loss_function_variations,regression_model_variations, product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
 
         return optdict_variation_list
@@ -711,8 +711,10 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 sleep(.25)
+                
                 if i==9:
                     self.logger.exception(f'error in {__name__}')
+                    job_save_dict={}
         if type(status) is str:
             now=strftime("%Y%m%d-%H%M%S")
             job_save_dict['node_status'].append((now,status))
