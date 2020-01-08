@@ -37,6 +37,7 @@ class DataTool():
                     self.NHDplus=pickle.load(f)
                 print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
                 print(self.NHDplus)
+                self.NHDpluscomidlist=self.NHDplus.loc[:,('COMID')]
                 return
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
@@ -58,7 +59,7 @@ class DataTool():
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
             self.NHDplus.loc[:,(strvar)]=self.NHDplus[strvar].to_numpy().astype('str')
-        
+        self.NHDpluscomidlist=self.NHDplus.loc(:,('COMID'))
         print(self.NHDplus)
         
         try:
@@ -251,6 +252,7 @@ class DataTool():
         comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
+        self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         processcount=5
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
@@ -320,14 +322,14 @@ class DataTool():
                 progress=np.round(100.0*i/comidcount,1)
                 failrate=np.round(100.0*huc12failcount/i,5)
                 print(f"{mypid}'s progress:{progress}%, failrate:{failrate}",end='. ')
-            hucdatadict=self.findcomidhuc12reach(comid_i)
+            hucdatadict=self.findcomidhuc12reach(comid_i,self.NHDpluscomidlist)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
                 huc12failcount+=1
             foundi=0
             
             for j,sitedict in enumerate(self.sitedata):
-                comid_j=''.join(char for char in sitedict['COMID'] if char.isdigit())
+                comid_j=self.sitedata_comid_digits[j]
                 if comid_i==comid_j:
                     foundi=1
                     comidsitedataidx.append(j)
@@ -340,9 +342,9 @@ class DataTool():
                     sitedatacomid_dict[comid_digits]=sitedict
                     break
             if foundi==0:
-                comid_digits=''.join([char for char in comid_i if char.isdigit()])
-                sitedatacomid_dict[comid_digits]='Not Found'
-                comidsitedataidx.append(None)
+                
+                sitedatacomid_dict[comid_i]='Not Found'
+                comidsitedataidx.append('Not Found')
                 comidsiteinfofindfaillist[i]=1
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
                 
@@ -403,22 +405,28 @@ class DataTool():
         return mergedict
                     
     
-    def findcomidhuc12reach(self,comid):
+    def findcomidhuc12reach(self,comid,NHDcomidlist):
         try:self.NHDplus
         except:self.getNHDplus()
         itemcount=len(self.NHDplus)
-        comid_digits=''.join(filter(str.isdigit,comid))
+        #comid_digits=comid#''.join(filter(str.isdigit,comid))
         datadict={}
-        for i,NHDpluscomid in enumerate(self.NHDplus['COMID']):
-            
-            if NHDpluscomid==comid_digits:
+        try:
+            i=NHDcomidlist.index(comid)
+            for key in self.NHDvarlist:
+                datadict[key]=self.NHDplus.loc[i,key]
+            return datadict    
+        
+        '''for i,NHDpluscomid in enumerate(NHDcomidlist):   
+            if NHDpluscomid==comid:
                 #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
                 for key in self.NHDvarlist:
                     datadict[key]=self.NHDplus[key][i]
                 return datadict
-            
-        print(f'{comid_digits}',end=',')
-        return None
+        '''    
+        except:
+            print(f'{comid} huc12find failed.',end=',')
+            return None
 
     def buildspeciesdata01_file(self,):
         thisdir=self.savedir
