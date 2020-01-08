@@ -244,23 +244,27 @@ class kNdtool:
         #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
         
         if not self.predict_self_without_self=='yes':
-            ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
+            ninmask=np.broadcast_to(np.eye(nin))[:,:,None],(nin,nin,npr)
         if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
-            ninmask3=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
-            ninmask2=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))
-            ninmask1=np.broadcast_to(np.ma.make_mask(np.eye(nin))[None,:,:],(nin,nin,nin))
+            ninmask3=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
+            ninmask2=np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin))
+            ninmask1=np.broadcast_to(np.eye(nin)[None,:,:],(nin,nin,nin))
+            ninmask1=np.ma.make_mask(ninmask1)
+            ninmask2=np.ma.make_mask(ninmask2)
+            ninmask3=np.ma.make_mask(ninmask3)
             ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
         if self.predict_self_without_self=='yes' and nin==npr and type(ykerngrid) is int:
-            ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,None,:],(nin,nin,nin))#nin not used to calculate npr
+            ninmask=np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin))#nin not used to calculate npr
+            ninmask=np.ma.make_mask(ninmask)
         list_of_masks=[ninmask]
         if max_bw_Ndiff>0:
             if ykerngrid=='no':
-                firstdiffmask=np.ma.mask_or(np.broadcast_to(np.expand_dims(ninmask,0),(nin,nin,nin,npr)),np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nin,npr)))
-                firstdiffmask=np.ma.mask_or(np.broadcast_to(np.expand_dims(ninmask,1),(nin,nin,nin,npr)),firstdiffmask)
+                firstdiffmask=np.ma.mask_or(np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,0),(nin,nin,nin,npr))),np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nin,npr))))
+                firstdiffmask=np.ma.mask_or(np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,1),(nin,nin,nin,npr))),firstdiffmask)
                 #when 0 dim of ninmask is expanded, masked if i=j for all k.
                 #when 2 dim of nin mask is expanded, masked if k=j for all i, and when 1 dim of nin mask is expanded, masked if k=i for all j. all are for all ii
             if type(ykerngrid) is int:
-                firstdiffmask=np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr))
+                firstdiffmask=np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr)))
                 #if yout is a grid and nout not equal to nin, 
             list_of_masks.append(firstdiffmask)# this line is indexed (k,j,i,ii)
                 
@@ -269,16 +273,16 @@ class kNdtool:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1] #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
+                list_of_masks.append(np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,0),masktup)))
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
                     iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
+                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
                 if ykerngrid=='no':
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=ii+3),masktup))#this should mask \
+                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=ii+3),masktup)))#this should mask \
                     #the yout values from the rest since yout==yin        
         if type(ykerngrid) is int:
-            list_of_masks[0]=np.zeros([nin,nout,npr])#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
+            list_of_masks[0]=np.ma.make_mask(np.zeros([nin,nout,npr]))#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
         #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
         return list_of_masks
         
@@ -295,22 +299,27 @@ class kNdtool:
         ninmask=np.ma.make_mask(np.eye(nin))
         list_of_masks=[ninmask]
         if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
-            list_of_masks.append(np.broadcast_to(ninmask[:,:,None],(nin,nin,npr)))
+            list_of_masks.append(np.ma.make_mask(np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
         if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
-                ninmask3=np.ma.make_mask(np.broadcast_to(ninmask[:,:,None],(nin,nin,nin)))
-                ninmask2=np.ma.make_mask(np.broadcast_to(ninmask[:,None,:],(nin,nin,nin)))
-                ninmask1=np.ma.make_mask(np.broadcast_to(ninmask[None,:,:],(nin,nin,nin)))
+
+                ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
+                ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
+                ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
+                ninmask1=np.ma.make_mask(ninmask1)
+                ninmask2=np.ma.make_mask(ninmask2)
+                ninmask3=np.ma.make_mask(ninmask3)
+
                 list_of_masks.append(np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3)))
                         
         if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1] #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
+                list_of_masks.append(np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,0),masktup)))
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
                     iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup))
+                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
             lastmask=list_of_masks[-1]#copy the last item to lastmask
         if not self.predict_self_without_self=='yes':
             list_of_masks[0]=np.ma.make_mask(np.zeros([nin,npr]))
@@ -512,7 +521,8 @@ class kNdtool:
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
             allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
-            allkerns=allkerns/np.broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            allkerns=allkerns/self.ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
             allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
@@ -530,7 +540,11 @@ class kNdtool:
                     allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
-
+    def ma_broadcast_to(self, maskedarray,tup):
+            initial_mask=np.ma.getmask(maskedarray)
+            broadcasted_mask=np.broadcast_to(initial_mask,tup)
+            broadcasted_array=np.broadcast_to(maskedarray,tup)
+            return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
@@ -636,7 +650,13 @@ class kNdtool:
             #not developed yet
         
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
+        xbwmaskcount=np.ma.count_masked(xbw)
+        print('xbwmaskcount',xbwmaskcount)
+        print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        ybwmaskcount=np.ma.count_masked(ybw)
+        print('ybwmaskcount',ybwmaskcount)
+        print('np.ma.getmask(ybw)',np.ma.getmask(ybw))
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
@@ -720,9 +740,9 @@ class kNdtool:
         #cdfnorm_prob_x = prob_x / prob_x_sum
         #cdfnorm_prob_x = prob_x#dropped normalization
         
-        yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+        yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
-        prob_x_stack=np.broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+        prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
                 
         if modeldict['regression_model']=='NW-rbf2':
@@ -735,6 +755,8 @@ class kNdtool:
             if NWnorm=='across':
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+            yhatmaskscount=np.ma.count_masked(yhat)
+            if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
         
         if not iscrossmse:
@@ -836,17 +858,18 @@ class kNdtool:
             y_err = y_batch_i - yhat_unstd[batch_i]
             y_err_tup = y_err_tup + (y_err,)
 
-        #all_y_err = [ii for i in y_err_tup for ii in i]
-        all_y_err=np.ma.concatenate(y_err_tup,axis=0)
+
+        all_y_err = np.ma.concatenate(y_err_tup,axis=0)
+
         
         #print('all_y_err',all_y_err)
         if iscrossmse:
             all_y_err=np.ma.concatenate([all_y_err,np.ravel(crosserrors)],axis=0)
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
-        if maskcount>0:
-            print(f'{maskcount} masked values found in all_y_err')
-            mse = np.ma.count_masked(all_y_err) * 10 ** 199
+
+        assert maskcount==0,print(f'{maskcount} masked values found in all_y_err')
+        
         if predict==0:
             self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
             # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
@@ -864,6 +887,7 @@ class kNdtool:
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 

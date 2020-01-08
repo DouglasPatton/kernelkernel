@@ -555,8 +555,8 @@ class KernelOptModelTools(mk.kNdtool):
         return final_keep_list
 
     def do_nwt_mse(self,mse,n,batch_count=1):
-        if np.isnan(mse):
-            return 10000000
+        if not type(mse) is float:
+            return 10**301
         
         else:
             #print('type(mse)',type(mse))
@@ -717,8 +717,10 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=0
         if verbose=='yes':
             verbose=1
-        if deletekey==None:deletekey=='no'
+
         if deletekey=='yes':deletekey=1
+        if deletekey==None:deletekey=='no'
+
         vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
@@ -823,6 +825,7 @@ class KernelOptModelTools(mk.kNdtool):
             'Ndiff_start':Ndiff_start,
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
+            'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':61,
             'outer_kern':'gaussian',
