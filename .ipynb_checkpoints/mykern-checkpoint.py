@@ -510,7 +510,8 @@ class kNdtool:
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
             allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
-            allkerns=allkerns/np.broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            allkerns=allkerns/ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
             allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
@@ -528,7 +529,11 @@ class kNdtool:
                     allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
-
+    def ma_broadcast_to(self, maskedarray,tup):
+            initial_mask=np.ma.getmask(maskedarray)
+            broadcasted_mask=np.broadcast_to(initial_mask,tup)
+            broadcasted_array=np.broadcast_to(maskedarray,tup)
+            return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename):
         
@@ -716,9 +721,9 @@ class kNdtool:
         #cdfnorm_prob_x = prob_x / prob_x_sum
         #cdfnorm_prob_x = prob_x#dropped normalization
         
-        yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+        yout_stack=ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
-        prob_x_stack=np.broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+        prob_x_stack=ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
                 
         if modeldict['regression_model']=='NW-rbf2':
