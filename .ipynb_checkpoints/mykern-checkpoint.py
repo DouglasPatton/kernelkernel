@@ -425,7 +425,7 @@ class kNdtool:
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
-            print('1st xpr.shape',xpr.shape)
+            #print('1st xpr.shape',xpr.shape)
             
             self.predict_self_without_self='yes'
         if not np.allclose(xpr,xdata_std):
@@ -445,8 +445,8 @@ class kNdtool:
         if xkerngrid=='no'and ykerngrid=='no':
             self.nout=self.nin
             yout=ydata_std
-        print('2nd xpr.shape',xpr.shape)
-        print('xdata_std.shape',xdata_std.shape)
+        #print('2nd xpr.shape',xpr.shape)
+        #print('xdata_std.shape',xdata_std.shape)
         return xpr,yout
     
     def generate_grid(self,form,count):
@@ -604,9 +604,9 @@ class kNdtool:
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             xin_scaled=xin*x_bandscale_params
-            print('xin_scaled.shape',xin_scaled.shape)
+            #print('xin_scaled.shape',xin_scaled.shape)
             xpr_scaled=xpr*x_bandscale_params
-            print('xpr_scaled.shape',xpr_scaled.shape)
+            #print('xpr_scaled.shape',xpr_scaled.shape)
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
@@ -673,9 +673,9 @@ class kNdtool:
         
         #print(f'yhat_un_std:{yhat_un_std}')
         if lossfn=='mse':
-            return yhat_un_std
+            return (yhat_un_std,None)
         if iscrossmse:
-            return yhat_un_std,cross_errors*self.ystd
+            return (yhat_un_std,cross_errors*self.ystd)
         
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -759,7 +759,7 @@ class kNdtool:
             predict=0
         if predict=='yes':
             predict=1
-        if  fixed_or_free_paramdict['free_params'] =='outside':  
+        if  type(fixed_or_free_paramdict['free_params']) is str and fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
 
         #batchcount = self.datagen_dict['batchcount']
@@ -801,6 +801,7 @@ class kNdtool:
             for i in range(batchcount):
                 yhat_unstd.append(self.MPwrapperKDEpredict(arglistlist[i]))
         #if iscrossmse:
+        print('len(yhat_unstd)',len(yhat_unstd))
         yhat_unstd,crosserrors=zip(*yhat_unstd)
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         
