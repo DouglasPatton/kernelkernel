@@ -810,7 +810,7 @@ class kNdtool:
         print('len(yhat_unstd_tup)',len(yhat_unstd_tup))
         yhat_unstd=[];crosserrors=[]
         for batch in yhat_unstd_tup:
-            print('batch',batch)
+            print('yhat unstd batch',batch)
             yhat_unstd.append(batch[0])
             crosserrors.append(batch[1])
             
