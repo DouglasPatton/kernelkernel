@@ -425,6 +425,8 @@ class kNdtool:
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
+            print('1st xpr.shape',xpr.shape)
+            
             self.predict_self_without_self='yes'
         if not np.allclose(xpr,xdata_std):
             self.predict_self_without_self='n/a'
@@ -443,6 +445,8 @@ class kNdtool:
         if xkerngrid=='no'and ykerngrid=='no':
             self.nout=self.nin
             yout=ydata_std
+        print('2nd xpr.shape',xpr.shape)
+        print('xdata_std.shape',xdata_std.shape)
         return xpr,yout
     
     def generate_grid(self,form,count):
@@ -889,9 +893,9 @@ class kNdtool:
 
         #standardize x and y and save their means and std to self
         yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
-        
+        #print('buildbatcdatadict')
         batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
-        
+        #print('for validation buildbatcdatadict')
         val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dict['xprtup'][0])
         print('self.npr',self.npr)
@@ -917,6 +921,8 @@ class kNdtool:
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
         batchcount=len(yxtup_list)
+        print('from buildbatchdatadict: batchcount: ',batchcount)
+        print('self.batchcount: ',self.batchcount)
         xintup = ()
         yintup = ()
         xprtup = ()
@@ -928,18 +934,23 @@ class kNdtool:
                 for j,yxvartup in enumerate(yxtup_list):
                     if not j==i:
                         xpricross_j.append(yxvartup[1])
-                xpri.append(np.concatenate(xpricross_j,axis=0))
+                    xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
+                    #print('xpri_crossval_array.shape',xpri_crossval_array.shape)
+                xpri.append(xpri_crossval_array)
                 
             
         else:
             xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
         for i in range(batchcount):
             xdata_std=yxtup_list[i][1]
+            #print('xdata_std.shape: ',xdata_std.shape)
             ydata_std=yxtup_list[i][0]
-            xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
+            #print('xprii[i]',xpri[i])
+            xpr_out_i,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
+            #print('xpr_out_i.shape',xpr_out_i.shape)
             xintup=xintup+(xdata_std,)
             yintup=yintup+(ydata_std,)
-            xprtup=xprtup+(xpri,)
+            xprtup=xprtup+(xpr_out_i,)
             youttup=youttup+(youti,)
             #print('xprtup[0].shape:',xprtup[0].shape)
 
