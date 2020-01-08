@@ -59,7 +59,7 @@ class DataTool():
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
             self.NHDplus.loc[:,(strvar)]=self.NHDplus[strvar].to_numpy().astype('str')
-        self.NHDpluscomidlist=self.NHDplus.loc(:,('COMID'))
+        self.NHDpluscomidlist=self.NHDplus.loc[:,('COMID')]
         print(self.NHDplus)
         
         try:
@@ -128,15 +128,13 @@ class DataTool():
         for idx,fish in enumerate(longlist):
             if idx%(length//33)==0:
                 print(str(round(100*idx/length))+'%')
-            found=0
-            for shortidx,fish_i in enumerate(shortlist):
-                if fish==fish_i:
-                    occurencelist[shortidx].append(idx)
-                    speciescomidlist[shortidx].append(comidlist[idx])
-                    specieshuclist[shortidx].append(huclist[idx])
-                    found=1
-                    break
-            if found==0:
+            
+            try:
+                shortidx=shortlist.index(fish)
+                occurencelist[shortidx].append(idx)
+                speciescomidlist[shortidx].append(comidlist[idx])
+                specieshuclist[shortidx].append(huclist[idx])
+            except:
                 shortidx=len(shortlist)#-1 not needed since not yet appended
                 shortlist.append(fish)
                 specieshuclistidx.append([])
@@ -153,16 +151,14 @@ class DataTool():
                 huc='0'+huc
             assert len(huc)==8,print(f'expecting 8 characters: huc8_i:{huc}')
             
-            
-            for hucshortidx,huc_i in enumerate(shorthuclist):
-                if huc==huc_i:
-                    huccomidlist[hucshortidx].append(comidlist[idx])
-                    specieshuclistidx[shortidx].append(huc)
-                    hucfound==1
-                    break
-            if hucfound==0:
+            try:
+                hucshortidx=shorthuclist.index(huc)
+                huccomidlist[hucshortidx].append(comidlist[idx])
+                specieshuclistidx[shortidx].append(huc)
+            except:
                 shorthuclist.append(huc)
                 huccomidlist.append([comidlist[idx]])
+                specieshuclistidx[shortidx].append(huc)
         print(f'buildspecieslist found {len(shortlist)} unique strings')
         
         with open(specieslistpath,'wb') as f:
@@ -205,14 +201,11 @@ class DataTool():
         for idx,comid in enumerate(longlist):
             if idx%(length//33)==0:
                 print(str(round(100*idx/length))+'%')
-            found=0
-            for shortidx,comid_i in enumerate(shortlist):
-                if comid_i==comid:
-                    occurencelist[shortidx].append(idx)
-                    #print(f'old comid:{comid}')
-                    found=1
-                    break
-            if found==0:
+            try:
+                shortidx=shortlist.index(comid_i)
+                occurencelist[shortidx].append(idx)
+                #print(f'old comid:{comid}')
+            except:
                 comid_digits=''.join([char for char in comid if char.isdigit()])
                 shortlist.append(comid_digits)
                 occurencelist.append([idx])
@@ -316,7 +309,7 @@ class DataTool():
         huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
         for i,comid_i in enumerate(comidlist):
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
@@ -326,23 +319,16 @@ class DataTool():
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
                 huc12failcount+=1
-            foundi=0
             
-            for j,sitedict in enumerate(self.sitedata):
-                comid_j=self.sitedata_comid_digits[j]
-                if comid_i==comid_j:
-                    foundi=1
-                    comidsitedataidx.append(j)
-                    if type(hucdatadict) is dict:
-                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
-                        
-                        if i in printselection:print('i==',i,sitedict)
-                        
-                    comid_digits=comid_j#''.join([char for char in comid_j if char.isdigit()])
-                    sitedatacomid_dict[comid_digits]=sitedict
-                    break
-            if foundi==0:
-                
+            try:
+                j=self.sitedata_comid_digits.index(comid_i)
+                sitedict=self.sitedata[j]
+                comidsitedataidx.append(j)
+                if type(hucdatadict) is dict:
+                    sitedict=self.mergelistofdicts([sitedict,hucdatadict])
+                if i in printselection:print('i==',i,sitedict)
+                sitedatacomid_dict[comid_i]=sitedict
+            except:                
                 sitedatacomid_dict[comid_i]='Not Found'
                 comidsitedataidx.append('Not Found')
                 comidsiteinfofindfaillist[i]=1
@@ -416,18 +402,18 @@ class DataTool():
             for key in self.NHDvarlist:
                 datadict[key]=self.NHDplus.loc[i,key]
             return datadict    
-        
-        '''for i,NHDpluscomid in enumerate(NHDcomidlist):   
+        except:
+            print(f'{comid} huc12find failed.',end=',')
+            return None
+        '''
+        for i,NHDpluscomid in enumerate(NHDcomidlist):   
             if NHDpluscomid==comid:
                 #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
                 for key in self.NHDvarlist:
                     datadict[key]=self.NHDplus[key][i]
                 return datadict
         '''    
-        except:
-            print(f'{comid} huc12find failed.',end=',')
-            return None
-
+        
     def buildspeciesdata01_file(self,):
         thisdir=self.savedir
         datadir=os.path.join(thisdir,'speciesdata01')
