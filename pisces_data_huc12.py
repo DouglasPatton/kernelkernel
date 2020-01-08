@@ -13,12 +13,20 @@ class DataTool():
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
-        #self.filenamelist=['HUC12_PU_COMIDs_CONUS.csv','siteinfo.csv','surveydata.csv']
-    
-    #def getsqlfile(self,filename):
-    #    con=sqlite3.connect(os.path.join(os.getcwd(),'fishfiles','catchments.sqlite'))
-    
-        
+
+            
+    def viewNHDplus_picklefile(self,):
+        savefilename=os.path.join(self.savedir,'NHDplus.data')
+        if os.path.exists(savefilename):
+            try: 
+                with open(savefilename, 'rb') as f:
+                    self.NHDplus=pickle.load(f)
+                print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
+                print(self.NHDplus)
+                return
+            except:
+                print(traceback.format_exc())
+                print('viewNHDplus_picklefile could not open saved NHDplus.data')
     
     def getNHDplus(self,):
         self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
@@ -49,7 +57,9 @@ class DataTool():
         self.NHDplus=dbf[self.NHDvarlist]
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
-            self.NHDplus[strvar]=self.NHDplus[strvar].astype('str')
+            self.NHDplus.loc[:,(strvar)]=self.NHDplus[strvar].to_numpy().astype('str')
+        
+        print(self.NHDplus)
         
         try:
             with open(savefilename,'wb') as f:
@@ -77,6 +87,7 @@ class DataTool():
 
     def gethucdata(self,):
         self.getNHDplus()
+        self.viewNHDplus_picklefile()
 
     def getsitedata(self,):
         self.sitedata=self.getdatafile('siteinfo.csv')
@@ -108,6 +119,7 @@ class DataTool():
         try:self.fishsurveydata
         except: self.getfishdata()
         (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
+        comidlist=[''.join([char for char in comidi if char.isdigit()]) for comidi in comidlist]
         shortlist=[];occurencelist=[];speciescomidlist=[];specieshuclist=[]
         shorthuclist=[];huccomidlist=[];specieshuclistidx=[]
         print('building specieslist')
@@ -200,7 +212,8 @@ class DataTool():
                     found=1
                     break
             if found==0:
-                shortlist.append(comid)
+                comid_digits=''.join([char for char in comid if char.isdigit()])
+                shortlist.append(comid_digits)
                 occurencelist.append([idx])
         print(f'buildCOMIDlist found {len(shortlist)}')
         with open(comidlistpath,'wb') as f:
@@ -238,7 +251,7 @@ class DataTool():
         comidcount=len(self.comidlist)
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
-        processcount=6
+        processcount=5
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
@@ -270,6 +283,7 @@ class DataTool():
         
         self.comidsitedataidx=[]
         for i in range(processcount):
+            print('len(comidsitedataidx[i])',len(comidsitedataidx[i]))
             self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
         
         
@@ -313,18 +327,21 @@ class DataTool():
             foundi=0
             
             for j,sitedict in enumerate(self.sitedata):
-                comid_j=sitedict['COMID']
+                comid_j=''.join(char for char in sitedict['COMID'] if char.isdigit())
                 if comid_i==comid_j:
                     foundi=1
                     comidsitedataidx.append(j)
                     if type(hucdatadict) is dict:
-                        sitedict_nocomid=sitedict.copy()
-                        #del sitedict_nocomid['COMID']
-                        sitedict=self.mergelistofdicts([sitedict_nocomid,hucdatadict])
-                        if i==0:print('i==0',sitedict)
-                    sitedatacomid_dict[''.join([char for char in comid_j if char.isdigit()])]=sitedict
+                        sitedict=self.mergelistofdicts([sitedict,hucdatadict])
+                        
+                        if i in printselection:print('i==',i,sitedict)
+                        
+                    comid_digits=comid_j#''.join([char for char in comid_j if char.isdigit()])
+                    sitedatacomid_dict[comid_digits]=sitedict
                     break
             if foundi==0:
+                comid_digits=''.join([char for char in comid_i if char.isdigit()])
+                sitedatacomid_dict[comid_digits]='Not Found'
                 comidsitedataidx.append(None)
                 comidsiteinfofindfaillist[i]=1
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
