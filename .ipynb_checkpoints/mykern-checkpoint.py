@@ -251,7 +251,7 @@ class kNdtool:
             ninmask3=np.ma.make_mask(ninmask3)
             ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
         if self.predict_self_without_self=='yes' and nin==npr and type(ykerngrid) is int:
-            ninmask=np.broadcast_to((np.eye(nin)[:,None,:],(nin,nin,nin))#nin not used to calculate npr
+            ninmask=np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin))#nin not used to calculate npr
             ninmask=np.ma.make_mask(ninmask)
         list_of_masks=[ninmask]
         if max_bw_Ndiff>0:
@@ -510,7 +510,7 @@ class kNdtool:
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
             allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
-            allkerns=allkerns/ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            allkerns=allkerns/self.ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
             
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
@@ -721,9 +721,9 @@ class kNdtool:
         #cdfnorm_prob_x = prob_x / prob_x_sum
         #cdfnorm_prob_x = prob_x#dropped normalization
         
-        yout_stack=ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+        yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
-        prob_x_stack=ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+        prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
                 
         if modeldict['regression_model']=='NW-rbf2':
@@ -736,6 +736,8 @@ class kNdtool:
             if NWnorm=='across':
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+            yhatmaskscount=np.ma.count_masked(yhat)
+            if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
         
         if not iscrossmse:
@@ -816,7 +818,7 @@ class kNdtool:
         maskcount=np.ma.count_masked(all_y_err)
         if maskcount>0:
             print(f'{maskcount} masked values found in all_y_err')
-            mse = np.ma.count_masked(all_y_err) * 10 ** 199
+            mse = np.ma.count_masked(all_y_err) * 10000*maskcount
         self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
         self.fixed_or_free_paramdict = fixed_or_free_paramdict

@@ -555,8 +555,8 @@ class KernelOptModelTools(mk.kNdtool):
         return final_keep_list
 
     def do_nwt_mse(self,mse,n,batch_count=1):
-        if np.isnan(mse):
-            return 10000000
+        if not type(mse) is float:
+            return 10**301
         
         else:
             #print('type(mse)',type(mse))
