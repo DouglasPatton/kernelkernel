@@ -717,8 +717,8 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=0
         if verbose=='yes':
             verbose=1
-        if delete=='yes':delete=1
-        if delete==None:delete=='no'
+        if deletekey=='yes':deletekey=1
+        if deletekey==None:deletekey=='no'
         vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
@@ -823,6 +823,7 @@ class KernelOptModelTools(mk.kNdtool):
             'Ndiff_start':Ndiff_start,
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
+            'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':61,
             'outer_kern':'gaussian',
