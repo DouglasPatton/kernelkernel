@@ -935,7 +935,7 @@ class kNdtool:
                 for j,yxvartup in enumerate(yxtup_list):
                     if not j==i:
                         xpricross_j.append(yxvartup[1])
-                    xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
+                xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
                     #print('xpri_crossval_array.shape',xpri_crossval_array.shape)
                 xpri.append(xpri_crossval_array)
                 
