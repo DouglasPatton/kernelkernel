@@ -6,6 +6,7 @@ import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
 import geopandas as gpd
+#import pandas as pd
 
 
 class DataTool():
@@ -37,7 +38,9 @@ class DataTool():
                     self.NHDplus=pickle.load(f)
                 print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
                 print(self.NHDplus)
-                self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy().astype('str'))
+
+                self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
+
                 return
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
@@ -49,7 +52,7 @@ class DataTool():
         dbf=gpd.read_file(filename)
         print('finished read of NHDplus')
         print(f'opened {filename} with length:{len(dbf)} and type:{type(dbf)}')
-        print(dbf)
+        #print(dbf.head())
         
         
         #self.dbf=dbf
@@ -58,8 +61,9 @@ class DataTool():
         self.NHDplus=dbf[self.NHDvarlist]
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
-            self.NHDplus.loc[:,(strvar)]=self.NHDplus[strvar].to_numpy().astype('str')
-        self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy().astype('str'))
+            self.NHDplus.loc[:,strvar]=self.NHDplus.loc[:,(strvar)].to_numpy().astype('str').copy()
+        self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
+
         print(self.NHDplus)
         
         try:
@@ -127,7 +131,7 @@ class DataTool():
         length=len(longlist)
         for idx,fish in enumerate(longlist):
             if idx%(length//33)==0:
-                print(str(round(100*idx/length))+'%')
+                print(str(round(100*idx/length))+'%',sep=',')
             
             try:
                 shortidx=shortlist.index(fish)
@@ -164,13 +168,16 @@ class DataTool():
         with open(specieslistpath,'wb') as f:
             pickle.dump((shortlist,occurencelist,speciescomidlist,specieshuclist,shorthuclist,huccomidlist,specieshuclistidx),f)
         
-        self.specieslist=shortlist
-        self.speciesoccurencelist=occurencelist
-        self.speciescomidlist=speciescomidlist
-        self.specieshuclist=specieshuclist
-        self.huclist=shorthuclist
-        self.huccomidlist=huccomidlist
+        self.specieslist=shortlist#a list of unique species
+        #next lists have an item for each species in self.specieslist
+        self.speciesoccurencelist=occurencelist#for each species, a list of indices from the original long list of species
+        self.speciescomidlist=speciescomidlist#for each species, a list of comids where the species was observed
+        self.specieshuclist=specieshuclist#for each species, a list of huc8s where the species was observed 
         self.specieshuclistidx=specieshuclistidx
+        #next 2 lists are not for each species
+        self.huclist=shorthuclist#self.huclist is a list of unique huc8's
+        self.huccomidlist=huccomidlist#or each huc in self.huclist, a list of comids in that huc that were found in the survey
+        
             
     
 
@@ -200,7 +207,7 @@ class DataTool():
         i=0
         for idx,comid in enumerate(longlist):
             if idx%(length//33)==0:
-                print(str(round(100*idx/length))+'%')
+                print(str(round(100*idx/length))+'%',sep=',')
             try:
                 shortidx=shortlist.index(comid_i)
                 occurencelist[shortidx].append(idx)
@@ -246,7 +253,9 @@ class DataTool():
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
+
         processcount=4
+
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
@@ -319,7 +328,7 @@ class DataTool():
                 progress=np.round(100.0*i/comidcount,1)
                 failrate=np.round(100.0*huc12failcount/i,5)
                 print(f"{mypid}'s progress:{progress}%, failrate:{failrate}",end='. ')
-            hucdatadict=self.findcomidhuc12reach(comid_i,self.NHDpluscomidlist)
+            hucdatadict=self.findcomidhuc12reach(comid_i)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
                 huc12failcount+=1
@@ -371,7 +380,7 @@ class DataTool():
             foundincomidlist=self.speciescomidlist[i]
             hucidxlist=self.specieshuclistidx[i]
             for hucidx in hucidxlist:
-                allhuccomids=self.huccomidlist[hucidx]
+                allhuccomids=self.huccomidlist[]
                 specieshuc_allcomid[i].extend(allhuccomids)
                 for comid in allhuccomids:
                     if comid in foundincomidlist:
@@ -396,14 +405,14 @@ class DataTool():
         return mergedict
                     
     
-    def findcomidhuc12reach(self,comid,NHDcomidlist):
-        try:self.NHDplus
+    def findcomidhuc12reach(self,comid):
+        try:self.NHDplus,self.NHDpluscomidlist
         except:self.getNHDplus()
         itemcount=len(self.NHDplus)
         #comid_digits=comid#''.join(filter(str.isdigit,comid))
         datadict={}
         try:
-            i=NHDcomidlist.index(comid)
+            i=self.NHDcomidlist.index(comid)
             for key in self.NHDvarlist:
                 datadict[key]=self.NHDplus.loc[i,key]
             return datadict    
@@ -465,9 +474,12 @@ class DataTool():
     
 if __name__=='__main__':
     test=DataTool()
-    #test.getfishdata()
-    #test.buildspecieslist()
-    #test.buildCOMIDlist()
+    test.getfishdata()
+    test.buildspecieslist()
+    test.buildCOMIDlist()
+
+    test.getNHDplus()
     test.buildCOMIDsiteinfo()
+    test.buildspecieshuccomidlist()
     test.buildspeciesdata01_file()
     
