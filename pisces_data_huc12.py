@@ -205,14 +205,14 @@ class DataTool():
             #print('i=',i,sep=',')
             if i%(speciescount//2)==0:
                 print('')
-                print(f'{round(100*i/speciescount,1)}%',sep=',')
+                print(f'{round(100*i/speciescount,1)}%',end=',')
             foundincomidlist=self.speciescomidlist[i]
             hucidxlist=self.specieshuclist_survey_idx[i]
             species_huc_count=len(hucidxlist)
-            print('huc_count:',species_huc_count,sep=',')
+            print('huc_count:',species_huc_count,sep=',',end='. ')
             for j,hucidx in enumerate(hucidxlist):
                 if j%(species_huc_count//10)==0:
-                    print(f'{round(100*j/species_huc_count,1)}%',sep=',')
+                    print(f'{round(100*j/species_huc_count,1)}%',end=',')
                 allhuccomids=self.huccomidlist_survey[hucidx]
                 specieshuc_allcomid[i].extend(allhuccomids)
                 for comid in allhuccomids:
