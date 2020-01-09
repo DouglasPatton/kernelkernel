@@ -113,9 +113,10 @@ class DataTool():
                 self.speciesoccurencelist=speciestup[1]
                 self.speciescomidlist=speciestup[2] 
                 self.specieshuclist=speciestup[3]
-                self.huclist=speciestup[4]
-                self.huccomidlist=speciestup[5]
-                self.specieshuclistidx=speciestup[6]
+                self.huclist_survey=speciestup[4]
+                self.huccomidlist_survey=speciestup[5]
+                self.specieshuclist_survey_idx=speciestup[6]
+                
                 print(f'opening {specieslistpath} with length:{len(speciestup)} and type:{type(speciestup)}')
                 return
             except:
@@ -126,7 +127,7 @@ class DataTool():
         (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
         comidlist=[''.join([char for char in comidi if char.isdigit()]) for comidi in comidlist]
         shortlist=[];occurencelist=[];speciescomidlist=[];specieshuclist=[]
-        shorthuclist=[];huccomidlist=[];specieshuclistidx=[]
+        shorthuclist=[];huccomidlist=[];specieshuclist=[];specieshuclist_survey_idx=[]
         print('building specieslist')
         length=len(longlist)
         for idx,fish in enumerate(longlist):
@@ -139,9 +140,10 @@ class DataTool():
                 speciescomidlist[shortidx].append(comidlist[idx])
                 specieshuclist[shortidx].append(huclist[idx])
             except:
-                shortidx=len(shortlist)#-1 not needed since not yet appended
+                shortidx=len(shortlist)#-1 not needed since not yet appended to end of shortlist
                 shortlist.append(fish)
-                specieshuclistidx.append([])
+                specieshuclist.append([])
+                specieshuclist_survey_idx.append([])
                 occurencelist.append([idx])
                 speciescomidlist.append([comidlist[idx]])
                 specieshuclist.append([huclist[idx]])
@@ -158,28 +160,50 @@ class DataTool():
             try:
                 hucshortidx=shorthuclist.index(huc)
                 huccomidlist[hucshortidx].append(comidlist[idx])
-                specieshuclistidx[shortidx].append(huc)
+                specieshuclist[shortidx].append(huc)
+                specieshuclist_survey_idx[shortidx].append(hucshortidx)
             except:
+                hucshortidx=len(shorthuclist)#this will be its address after appending
                 shorthuclist.append(huc)
                 huccomidlist.append([comidlist[idx]])
-                specieshuclistidx[shortidx].append(huc)
+                specieshuclist[shortidx].append(huc)
+                specieshuclist_survey_idx[shortidx].append(hucshortidx)
         print(f'buildspecieslist found {len(shortlist)} unique strings')
         
         with open(specieslistpath,'wb') as f:
-            pickle.dump((shortlist,occurencelist,speciescomidlist,specieshuclist,shorthuclist,huccomidlist,specieshuclistidx),f)
+            pickle.dump((shortlist,occurencelist,speciescomidlist,specieshuclist,shorthuclist,huccomidlist,specieshuclist_survey_idx),f)
         
         self.specieslist=shortlist#a list of unique species
         #next lists have an item for each species in self.specieslist
         self.speciesoccurencelist=occurencelist#for each species, a list of indices from the original long list of species
         self.speciescomidlist=speciescomidlist#for each species, a list of comids where the species was observed
         self.specieshuclist=specieshuclist#for each species, a list of huc8s where the species was observed 
-        self.specieshuclistidx=specieshuclistidx
-        #next 2 lists are not for each species
-        self.huclist=shorthuclist#self.huclist is a list of unique huc8's
-        self.huccomidlist=huccomidlist#or each huc in self.huclist, a list of comids in that huc that were found in the survey
         
+        
+        #next 2 lists are not for each species
+        self.huclist_survey=shorthuclist#self.huclist_survey is a list of unique huc8's
+        self.huccomidlist_survey=huccomidlist#or each huc in self.huclist_survey, a list of comids in that huc that were found in the survey
+        
+        self.specieshuclist_survey_idx=specieshuclist_survey_idx#for each species, a list of idx for self.huclist_survey indicating hucs that species appeared in
             
-    
+    def buildspecieshuccomidlist(self,):
+        speciescount=len(self.specieslist)
+        species01list=[[] for _ in range(speciescount)]
+        specieshuc_allcomid=[[] for _ in range(speciescount)]
+        for i,spec in enumerate(self.specieslist):
+            foundincomidlist=self.speciescomidlist[i]
+            hucidxlist=self.specieshuclist_survey_idx[i]
+            for hucidx in hucidxlist:
+                allhuccomids=self.huccomidlist_survey[hucidx]
+                specieshuc_allcomid[i].extend(allhuccomids)
+                for comid in allhuccomids:
+                    if comid in foundincomidlist:
+                        species01list[i].append(1)
+                    else:
+                        species01list[i].append(0)
+                
+        self.specieshuc_allcomid=specieshuc_allcomid
+        self.species01list=species01list
 
             
             
@@ -254,7 +278,7 @@ class DataTool():
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
 
-        processcount=4
+        processcount=6
 
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
@@ -372,24 +396,7 @@ class DataTool():
             lastspec_i=spec_i    
         self.specieshuc8list=specieshuc8list
         
-    def buildspecieshuccomidlist(self,):
-        speciescount=len(self.specieslist)
-        species01list=[]*speciescount
-        specieshuc_allcomid=[]*speciescount
-        for i,spec in enumerate(self.specieslist):
-            foundincomidlist=self.speciescomidlist[i]
-            hucidxlist=self.specieshuclistidx[i]
-            for hucidx in hucidxlist:
-                allhuccomids=self.huccomidlist[]
-                specieshuc_allcomid[i].extend(allhuccomids)
-                for comid in allhuccomids:
-                    if comid in foundincomidlist:
-                        species01list[i].extend(1)
-                    else:
-                        species01list[i].extend(0)
-                
-        self.specieshuc_allcomid=specieshuc_allcomid
-        self.species01list=species01list
+    
     
     def mergelistofdicts(self,listofdicts):
         mergedict={}
