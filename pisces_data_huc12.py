@@ -135,15 +135,14 @@ class DataTool():
         print('building specieslist')
         length=len(longlist)
         for idx,fish in enumerate(longlist):
-            if idx%(length//33)==0:
-                print(str(round(100*idx/length))+'%',sep=',')
-            
+            if idx%(length//100)==0:
+                print(str(round(100*idx/length))+'%',sep=',',end=',')
+            found=0
             try:
                 shortidx=shortlist.index(fish)
-                occurencelist[shortidx].append(idx)
-                speciescomidlist[shortidx].append(comidlist[idx])
-                specieshuclist[shortidx].append(huclist[idx])
-            except:
+                found=1
+                
+            except ValueError:
                 shortidx=len(shortlist)#-1 not needed since not yet appended to end of shortlist
                 shortlist.append(fish)
                 specieshuclist.append([])
@@ -152,26 +151,39 @@ class DataTool():
                 speciescomidlist.append([comidlist[idx]])
                 specieshuclist.append([huclist[idx]])
                 #print(f'new fish:{fish}')
-            
+            if found==1:
+                occurencelist[shortidx].append(idx)
+                speciescomidlist[shortidx].append(comidlist[idx])
+                specieshuclist[shortidx].append(huclist[idx])
+                
             hucfound=0
             huc=huclist[idx]; 
             if not type(huc) is str:
                 huc=str(huc)
             if len(huc)==7:
+                #print(f'expecting 8 characters: huc8_i:{huc}, prepending a zero')
                 huc='0'+huc
             assert len(huc)==8,print(f'expecting 8 characters: huc8_i:{huc}')
-            
+            found=0
             try:
                 hucshortidx=shorthuclist.index(huc)
-                huccomidlist[hucshortidx].append(comidlist[idx])
-                specieshuclist[shortidx].append(huc)
-                specieshuclist_survey_idx[shortidx].append(hucshortidx)
+                found=1    
             except:
                 hucshortidx=len(shorthuclist)#this will be its address after appending
                 shorthuclist.append(huc)
                 huccomidlist.append([comidlist[idx]])
                 specieshuclist[shortidx].append(huc)
                 specieshuclist_survey_idx[shortidx].append(hucshortidx)
+            if found==1:
+                
+                comid_i=comidlist[idx]
+                try: huccomidlist[hucshortidx].index(comid_i)
+                except ValueError: huccomidlist[hucshortidx].append(comid_i)
+                try: specieshuclist[shortidx].index(huc)
+                except ValueError: specieshuclist[shortidx].append(huc)
+                try: specieshuclist_survey_idx[shortidx].index(hucshortidx)
+                except ValueError: specieshuclist_survey_idx[shortidx].append(hucshortidx)
+                
         print(f'buildspecieslist found {len(shortlist)} unique strings')
         
         with open(specieslistpath,'wb') as f:
@@ -217,14 +229,17 @@ class DataTool():
         for idx,comid in enumerate(longlist):
             if idx%(length//33)==0:
                 print(str(round(100*idx/length))+'%',sep=',')
+            found=0
             try:
                 shortidx=shortlist.index(comid_i)
-                occurencelist[shortidx].append(idx)
+                found=1
                 #print(f'old comid:{comid}')
             except:
                 comid_digits=''.join([char for char in comid if char.isdigit()])
                 shortlist.append(comid_digits)
                 occurencelist.append([idx])
+            if found==1:
+                occurencelist[shortidx].append(idx)
         print(f'buildCOMIDlist found {len(shortlist)}')
         with open(comidlistpath,'wb') as f:
             pickle.dump((shortlist,occurencelist),f)
@@ -248,7 +263,7 @@ class DataTool():
                 self.comidsiteinfofindfaillist=savefile[2]
                 self.huc12findfaillist=savefile[3]
                 print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
-                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]]]
+                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
                 return
             except:
                 print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
@@ -298,7 +313,7 @@ class DataTool():
         
         with open(filepath,'wb') as f:
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
-        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]]]    
+        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
         self.comidsiteinfofindfail=[];self.huc12findfail=[]
         if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
@@ -323,7 +338,7 @@ class DataTool():
         huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,201)]
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
         for i,comid_i in enumerate(comidlist):
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
@@ -333,20 +348,21 @@ class DataTool():
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
                 huc12failcount+=1
-            
+            found=0
             try:
                 j=self.sitedata_comid_digits.index(comid_i)
-                sitedict=self.sitedata[j]
-                comidsitedataidx.append(j)
-                if type(hucdatadict) is dict:
-                    sitedict=self.mergelistofdicts([sitedict,hucdatadict])
-                
-                sitedatacomid_dict[comid_i]=sitedict
+                found=1
             except:                
                 sitedatacomid_dict[comid_i]='Not Found'
                 comidsitedataidx.append('Not Found')
                 comidsiteinfofindfaillist[i]=1
-            if i in printselection:print('i==',i,sitedict)
+            if found==1:
+                sitedict=self.sitedata[j]
+                comidsitedataidx.append(j)
+                if type(hucdatadict) is dict:
+                    sitedict=self.mergelistofdicts([sitedict,hucdatadict])
+                sitedatacomid_dict[comid_i]=sitedict
+            #if i in printselection:print('i==',i,comid_i)
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
                 
         
@@ -452,13 +468,14 @@ class DataTool():
                 if j%(species_huc_count//10)==0:
                     print(f'{round(100*j/species_huc_count,1)}%',end=',')
                 allhuccomids=self.huccomidlist_survey[hucidx]
-                specieshuc_allcomid[i].extend(allhuccomids)
+                specieshuc_allcomid[i].append(allhuccomids)
+                print('len(specieshuc_allcomid)',len(specieshuc_allcomid))
                 for comid in allhuccomids:
                     if comid in foundincomidlist:
                         species01list[i].append(1)
                     else:
                         species01list[i].append(0)
-        
+        print('len(species01list)',len(species01list))
         print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
         print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
         if full_list==1:    
@@ -468,7 +485,7 @@ class DataTool():
                 pickle.dump((specieshuc_allcomid,species01list),f) 
             return
         if full_list==0:
-            return (specieshuc_allcomid,species01list)
+            return specieshuc_allcomid,species01list
     
     
     def buildspeciesdata01_file(self,):
