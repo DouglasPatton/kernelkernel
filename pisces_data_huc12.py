@@ -135,7 +135,7 @@ class DataTool():
         print('building specieslist')
         length=len(longlist)
         for idx,fish in enumerate(longlist):
-            if idx%(length//100)==0:
+            if idx%(length//10)==0:
                 print(str(round(100*idx/length))+'%',sep=',',end=',')
             found=0
             try:
@@ -462,14 +462,14 @@ class DataTool():
             foundincomidlist=self.speciescomidlist[idx]
             hucidxlist=self.specieshuclist_survey_idx[idx]
             species_huc_count=len(hucidxlist)
-            print('huc_count:',species_huc_count,sep=',',end='. ')
+            #print('huc_count:',species_huc_count,sep=',')
             
             for j,hucidx in enumerate(hucidxlist):
                 if j%(species_huc_count//10)==0:
                     print(f'{round(100*j/species_huc_count,1)}%',end=',')
                 allhuccomids=self.huccomidlist_survey[hucidx]
-                specieshuc_allcomid[i].append(allhuccomids)
-                print('len(specieshuc_allcomid)',len(specieshuc_allcomid))
+                specieshuc_allcomid[i].extend(allhuccomids)
+                #print('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
                 for comid in allhuccomids:
                     if comid in foundincomidlist:
                         species01list[i].append(1)
@@ -541,13 +541,15 @@ class DataTool():
                         specieshuc_allcomid=self.specieshuc_allcomid[idx]
                         species01list=self.species01list[idx]
                     except AttributeError:
-                        specieshuc_allcomid,species01list=self.buildspecieshuccomidlist(species_idx_list=[idx])
+                        specieshuc_allcomid_list,species01list_list=self.buildspecieshuccomidlist(species_idx_list=[idx])
+                        specieshuc_allcomid=specieshuc_allcomid_list[0]
+                        species01list=species01list_list[0]
                     species_n=len(specieshuc_allcomid)
                     varcount=len(self.sitedatakeylist)
-                    speciesdata=np.empty((species_n,varcount+1))#+1 for dep var
-                    speciesdata[:,0]=np.array(species01list).reshape(species_n,1)
-                    for j,comid in enumerate(specieshuc_allcomid[i]):
-                        sitevars=[val for _,val in self.sitedatacomid_dict[comid]]
+                    speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
+                    speciesdata[:,0]=np.array(species01list).reshape(species_n)
+                    for j,comid in enumerate(specieshuc_allcomid):
+                        sitevars=[val for _,val in self.sitedatacomid_dict[comid].items()]
                         speciesdata[j,1:]=np.array(sitevars).reshape(1,varcount)
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)
