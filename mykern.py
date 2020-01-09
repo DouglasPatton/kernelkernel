@@ -650,13 +650,13 @@ class kNdtool:
             #not developed yet
         
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
-        xbwmaskcount=np.ma.count_masked(xbw)
-        print('xbwmaskcount',xbwmaskcount)
-        print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
+        #xbwmaskcount=np.ma.count_masked(xbw)
+        #print('xbwmaskcount',xbwmaskcount)
+        #print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
-        ybwmaskcount=np.ma.count_masked(ybw)
-        print('ybwmaskcount',ybwmaskcount)
-        print('np.ma.getmask(ybw)',np.ma.getmask(ybw))
+        #ybwmaskcount=np.ma.count_masked(ybw)
+        #print('ybwmaskcount',ybwmaskcount)
+        #print('np.ma.getmask(ybw)',np.ma.getmask(ybw))
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
