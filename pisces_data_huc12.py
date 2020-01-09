@@ -38,7 +38,9 @@ class DataTool():
                     self.NHDplus=pickle.load(f)
                 print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
                 print(self.NHDplus)
+
                 self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
+
                 return
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
@@ -61,6 +63,7 @@ class DataTool():
         for strvar in strvarlist:
             self.NHDplus.loc[:,strvar]=self.NHDplus.loc[:,(strvar)].to_numpy().astype('str').copy()
         self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
+
         print(self.NHDplus)
         
         try:
@@ -250,7 +253,9 @@ class DataTool():
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
-        processcount=6
+
+        processcount=4
+
         '''self.comidsitedataidx=[]
         self.sitedatacomid_dict={}
         huc12findfaillist=[0]*comidcount
@@ -259,32 +264,36 @@ class DataTool():
         self.huc12findfail=[]
         self.comidsiteinfofindfail=[]
         printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]'''
-        com_idx=[int(i) for i in np.linspace(0,comidcount,processcount+1)]#+1 to include the end
-        print(com_idx)
-        comidlistlist=[]
-        for i in range(processcount):
-            comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-        starttime=time()
-        print('pool starting at',starttime)
-        with mp.Pool(processes=processcount) as pool:
-            outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
-            sleep(2)
-            pool.close()
-            pool.join()
-        self.outlist=outlist
-        endtime=time()
-        print('pool complete at ',endtime,'. time elapsed: ',endtime-starttime)
-        comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
-        self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
-        self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
-        
-        self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
-        
-        self.comidsitedataidx=[]
-        for i in range(processcount):
-            print('len(comidsitedataidx[i])',len(comidsitedataidx[i]))
-            self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
-        
+        if processcount>1:
+            com_idx=[int(i) for i in np.linspace(0,comidcount,processcount+1)]#+1 to include the end
+            print(com_idx)
+            comidlistlist=[]
+            for i in range(processcount):
+                comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
+            starttime=time()
+            print('pool starting at',starttime)
+            with mp.Pool(processes=processcount) as pool:
+                outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
+                sleep(2)
+                pool.close()
+                pool.join()
+            self.outlist=outlist
+            endtime=time()
+            print('pool complete at ',endtime,'. time elapsed: ',endtime-starttime)
+            comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
+            self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
+            self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
+
+            self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+
+            self.comidsitedataidx=[]
+            for i in range(processcount):
+                print('len(comidsitedataidx[i])',len(comidsitedataidx[i]))
+                self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
+        else:
+            outlist=self.mpsearchcomidhuc12(self.comidlist)
+            self.outlist=outlist
+            self.comidsitedataidx,self.sitedatacomid_dict,self.comidsiteinfofindfaillist,self.huc12findfaillist=outlist
         
         with open(filepath,'wb') as f:
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
@@ -313,7 +322,7 @@ class DataTool():
         huc12failcount=0
         comidsiteinfofindfaillist=[0]*comidcount
         
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,201)]
         for i,comid_i in enumerate(comidlist):
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
@@ -330,12 +339,13 @@ class DataTool():
                 comidsitedataidx.append(j)
                 if type(hucdatadict) is dict:
                     sitedict=self.mergelistofdicts([sitedict,hucdatadict])
-                if i in printselection:print('i==',i,sitedict)
+                
                 sitedatacomid_dict[comid_i]=sitedict
             except:                
                 sitedatacomid_dict[comid_i]='Not Found'
                 comidsitedataidx.append('Not Found')
                 comidsiteinfofindfaillist[i]=1
+            if i in printselection:print('i==',i,sitedict)
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
                 
         
@@ -439,7 +449,7 @@ class DataTool():
             try:
                 species_filename=os.path.join(datadir,spec_i+'.data')
                 if not os.path.exists(species_filename):
-                    species_n=len(self.specieshuc_allcomid)
+                    species_n=len(self.specieshuc_allcomid[i])
                     varcount=1+self.sitedata_k
                     speciesdata=np.empty(species_n,varcount)
                     speciesdata[:,0]=np.array(self.species01list).reshape(species_n,1)
