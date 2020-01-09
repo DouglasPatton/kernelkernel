@@ -187,13 +187,32 @@ class DataTool():
         self.specieshuclist_survey_idx=specieshuclist_survey_idx#for each species, a list of idx for self.huclist_survey indicating hucs that species appeared in
             
     def buildspecieshuccomidlist(self,):
+        filepath=os.path.join(self.savedir,'specieshuccomid')
+        if os.path.exists(filepath):
+            try:
+                with open(filepath,'rb') as f:
+                    specieshuccomidtup=pickle.load(f)
+                self.specieshuc_allcomid=specieshuccomidtup[0]
+                self.species01list=specieshuccomidtup[1]
+                print(f'opening {filepath} with length:{len(specieshuccomidtup)} and has first item length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
+                return
+            except:
+                print(f'error when opening {filepath}, rerunning buildspecieshuccomidlist')
         speciescount=len(self.specieslist)
         species01list=[[] for _ in range(speciescount)]
         specieshuc_allcomid=[[] for _ in range(speciescount)]
         for i,spec in enumerate(self.specieslist):
+            #print('i=',i,sep=',')
+            if i%(speciescount//2)==0:
+                print('')
+                print(f'{round(100*i/speciescount,1)}%',sep=',')
             foundincomidlist=self.speciescomidlist[i]
             hucidxlist=self.specieshuclist_survey_idx[i]
-            for hucidx in hucidxlist:
+            species_huc_count=len(hucidxlist)
+            print('huc_count:',species_huc_count,sep=',')
+            for j,hucidx in enumerate(hucidxlist):
+                if j%(species_huc_count//10)==0:
+                    print(f'{round(100*j/species_huc_count,1)}%',sep=',')
                 allhuccomids=self.huccomidlist_survey[hucidx]
                 specieshuc_allcomid[i].extend(allhuccomids)
                 for comid in allhuccomids:
@@ -201,11 +220,17 @@ class DataTool():
                         species01list[i].append(1)
                     else:
                         species01list[i].append(0)
+            
+                            
+    
                 
         self.specieshuc_allcomid=specieshuc_allcomid
         self.species01list=species01list
-
-            
+        print(f'specieshuc_allcomid length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
+        print(f'species01list length: {len(self.species01list)} and type:{type(self.species01list)}')
+        with open(filepath,'wb') as f:
+            pickle.dump((specieshuc_allcomid,species01list),f)    
+        return
             
     
     def buildCOMIDlist(self,):
