@@ -244,7 +244,7 @@ class kNdtool:
         #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
         
         if not self.predict_self_without_self=='yes':
-            ninmask=np.broadcast_to(np.eye(nin))[:,:,None],(nin,nin,npr)
+            ninmask=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
         if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
             ninmask3=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
             ninmask2=np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin))
@@ -650,19 +650,26 @@ class kNdtool:
             #not developed yet
         
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
-        xbwmaskcount=np.ma.count_masked(xbw)
+        ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        #print('xbw',xbw)
+        #print('ybw',ybw)
+        
+        
+        '''xbwmaskcount=np.ma.count_masked(xbw)
         print('xbwmaskcount',xbwmaskcount)
         print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
-        ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        
         ybwmaskcount=np.ma.count_masked(ybw)
         print('ybwmaskcount',ybwmaskcount)
-        print('np.ma.getmask(ybw)',np.ma.getmask(ybw))
+        print('np.ma.getmask(ybw)',np.ma.getmask(ybw))'''
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
 
                 
-        xbw=xbw*hx#need to make this flexible to blocks of x
+        xbw=xbw*hx
+        
+        
         if modeldict['regression_model']=='logistic':
             xonediffs=diffdict['onediffs']
             prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
@@ -684,11 +691,14 @@ class kNdtool:
             newaxis=len(yonediffs.shape)
             yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
+            #print('type(xonediffs)',type(xonediffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
+            
             prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
             prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
                 #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
                 #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
-        
+            #print('type(prob_x)',type(prob_x),'type(prob_yx)',type(prob_x))
+            #print(prob_x,prob_yx)
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
             yhat_raw=KDEregtup[0]
             crosserrors=KDEregtup[1]
@@ -697,10 +707,13 @@ class kNdtool:
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
-        if lossfn=='mse':
+        if not iscrossmse:#lossfn=='mse'
             return (yhat_un_std,None)
         if iscrossmse:
-            return (yhat_un_std,crosserrors*self.ystd)
+            #print('yhat_un_std',yhat_un_std)
+            crosserrors_unstd=crosserrors*self.ystd
+            #print('crosserrors_unstd',crosserrors_unstd)    
+            return (yhat_un_std,crosserrors_unstd)
         
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -827,12 +840,16 @@ class kNdtool:
         else:
             yhat_unstd_tup=[]
             for i in range(batchcount):
-                yhat_unstd_tup.append(self.MPwrapperKDEpredict(arglistlist[i]))
+                yhat_unst_i=self.MPwrapperKDEpredict(arglistlist[i])
+                #print('type(yhat_unst_i)',type(yhat_unst_i))
+                #try: print(yhat_unst_i.shape)
+                e#xcept:pass
+                yhat_unstd_tup.append(yhat_unst_i)
         #if iscrossmse:
-        print('len(yhat_unstd_tup)',len(yhat_unstd_tup))
+        #print('len(yhat_unstd_tup)',len(yhat_unstd_tup))
         yhat_unstd=[];crosserrors=[]
         for batch in yhat_unstd_tup:
-            print('yhat unstd batch',batch)
+            #print('yhat unstd batch',batch)
             yhat_unstd.append(batch[0])
             crosserrors.append(batch[1])
             
@@ -901,7 +918,11 @@ class kNdtool:
         xpr=arglist[3]
         modeldict=arglist[4]
         fixed_or_free_paramdict=arglist[5]
-        return self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        KDEpredict_tup=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        #print('type(KDEpredict_tup)',type(KDEpredict_tup))
+        #try:print(KDEpredict_tup[0].shape)
+        #except:pass
+        return KDEpredict_tup
     
     def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,predict=None):
         if predict==None:
@@ -959,8 +980,8 @@ class kNdtool:
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
         batchcount=len(yxtup_list)
-        print('from buildbatchdatadict: batchcount: ',batchcount)
-        print('self.batchcount: ',self.batchcount)
+        #print('from buildbatchdatadict: batchcount: ',batchcount)
+        #print('self.batchcount: ',self.batchcount)
         xintup = ()
         yintup = ()
         xprtup = ()
@@ -993,6 +1014,7 @@ class kNdtool:
             #print('xprtup[0].shape:',xprtup[0].shape)
 
         batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+        #print([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
         return batchdata_dict
     
 class optimize_free_params(kNdtool):
