@@ -14,6 +14,7 @@ class DataTool():
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
+        self.processcount=6
 
             
     def viewNHDplus_picklefile(self,):
@@ -96,6 +97,9 @@ class DataTool():
 
     def getsitedata(self,):
         self.sitedata=self.getdatafile('siteinfo.csv')
+        self.sitedata_k=len(self.sitedata[0])
+        self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
+        self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         print(self.sitedata[0:5])
         
     def getfishhucs(self,):
@@ -186,51 +190,7 @@ class DataTool():
         
         self.specieshuclist_survey_idx=specieshuclist_survey_idx#for each species, a list of idx for self.huclist_survey indicating hucs that species appeared in
             
-    def buildspecieshuccomidlist(self,):
-        filepath=os.path.join(self.savedir,'specieshuccomid')
-        if os.path.exists(filepath):
-            try:
-                with open(filepath,'rb') as f:
-                    specieshuccomidtup=pickle.load(f)
-                self.specieshuc_allcomid=specieshuccomidtup[0]
-                self.species01list=specieshuccomidtup[1]
-                print(f'opening {filepath} with length:{len(specieshuccomidtup)} and has first item length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
-                return
-            except:
-                print(f'error when opening {filepath}, rerunning buildspecieshuccomidlist')
-        speciescount=len(self.specieslist)
-        species01list=[[] for _ in range(speciescount)]
-        specieshuc_allcomid=[[] for _ in range(speciescount)]
-        for i,spec in enumerate(self.specieslist):
-            #print('i=',i,sep=',')
-            if i%(speciescount//2)==0:
-                print('')
-                print(f'{round(100*i/speciescount,1)}%',end=',')
-            foundincomidlist=self.speciescomidlist[i]
-            hucidxlist=self.specieshuclist_survey_idx[i]
-            species_huc_count=len(hucidxlist)
-            print('huc_count:',species_huc_count,sep=',',end='. ')
-            for j,hucidx in enumerate(hucidxlist):
-                if j%(species_huc_count//10)==0:
-                    print(f'{round(100*j/species_huc_count,1)}%',end=',')
-                allhuccomids=self.huccomidlist_survey[hucidx]
-                specieshuc_allcomid[i].extend(allhuccomids)
-                for comid in allhuccomids:
-                    if comid in foundincomidlist:
-                        species01list[i].append(1)
-                    else:
-                        species01list[i].append(0)
-            
-                            
-    
-                
-        self.specieshuc_allcomid=specieshuc_allcomid
-        self.species01list=species01list
-        print(f'specieshuc_allcomid length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
-        print(f'species01list length: {len(self.species01list)} and type:{type(self.species01list)}')
-        with open(filepath,'wb') as f:
-            pickle.dump((specieshuc_allcomid,species01list),f)    
-        return
+
             
     
     def buildCOMIDlist(self,):
@@ -273,7 +233,8 @@ class DataTool():
         self.comidoccurenclist=occurencelist
     
     def buildCOMIDsiteinfo(self,):
-        
+        try:self.comidlist
+        except:self.buildCOMIDlist()
         filepath=os.path.join(self.savedir,'sitedatacomid_dict')
         if os.path.exists(filepath):
             try:
@@ -287,6 +248,7 @@ class DataTool():
                 self.comidsiteinfofindfaillist=savefile[2]
                 self.huc12findfaillist=savefile[3]
                 print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
+                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]]]
                 return
             except:
                 print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
@@ -295,33 +257,23 @@ class DataTool():
             print(f'{filepath} does not exist, building COMID site info')   
         try: self.sitedata
         except:self.getsitedata()
-        try:self.comidlist
-        except:self.buildCOMIDlist()
+
         
         comidcount=len(self.comidlist)
-        self.sitedata_k=len(self.sitedata[0])
-        self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
-        self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
+        
 
-        processcount=6
-
-        '''self.comidsitedataidx=[]
-        self.sitedatacomid_dict={}
-        huc12findfaillist=[0]*comidcount
-        huc12failcount=0
-        comidsiteinfofindfaillist=[0]*comidcount
-        self.huc12findfail=[]
-        self.comidsiteinfofindfail=[]
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,101)]'''
-        if processcount>1:
-            com_idx=[int(i) for i in np.linspace(0,comidcount,processcount+1)]#+1 to include the end
+        
+        #print('self.comidlist[0]',self.comidlist[0],type(self.comidlist[0]))
+        if self.processcount>1:
+            com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
             print(com_idx)
             comidlistlist=[]
-            for i in range(processcount):
+            
+            for i in range(self.processcount):
                 comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
             starttime=time()
             print('pool starting at',starttime)
-            with mp.Pool(processes=processcount) as pool:
+            with mp.Pool(processes=self.processcount) as pool:
                 outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
                 sleep(2)
                 pool.close()
@@ -336,7 +288,7 @@ class DataTool():
             self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
 
             self.comidsitedataidx=[]
-            for i in range(processcount):
+            for i in range(self.processcount):
                 print('len(comidsitedataidx[i])',len(comidsitedataidx[i]))
                 self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
         else:
@@ -346,7 +298,7 @@ class DataTool():
         
         with open(filepath,'wb') as f:
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
-            
+        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]]]    
         self.comidsiteinfofindfail=[];self.huc12findfail=[]
         if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
@@ -398,6 +350,30 @@ class DataTool():
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
                 
         
+    def findcomidhuc12reach(self,comid):
+        try:self.NHDplus,self.NHDpluscomidlist
+        except:self.getNHDplus()
+        #print('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
+        itemcount=len(self.NHDplus)
+        #comid_digits=comid#''.join(filter(str.isdigit,comid))
+        datadict={}
+        try:
+            i=self.NHDpluscomidlist.index(comid)
+            
+        except:
+            print(f'{comid} huc12find failed.',end=',')
+            return None
+        for key in self.NHDvarlist:
+            datadict[key]=self.NHDplus.loc[i,key]
+        return datadict    
+        '''
+        for i,NHDpluscomid in enumerate(NHDcomidlist):   
+            if NHDpluscomid==comid:
+                #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
+                for key in self.NHDvarlist:
+                    datadict[key]=self.NHDplus[key][i]
+                return datadict
+        '''         
 
     def buildspecieshuc8list():
         try: self.fishhucs
@@ -436,30 +412,65 @@ class DataTool():
                     mergedict[newkey]=val
         return mergedict
                     
-    
-    def findcomidhuc12reach(self,comid):
-        try:self.NHDplus,self.NHDpluscomidlist
-        except:self.getNHDplus()
-        itemcount=len(self.NHDplus)
-        #comid_digits=comid#''.join(filter(str.isdigit,comid))
-        datadict={}
-        try:
-            i=self.NHDcomidlist.index(comid)
-            for key in self.NHDvarlist:
-                datadict[key]=self.NHDplus.loc[i,key]
-            return datadict    
-        except:
-            print(f'{comid} huc12find failed.',end=',')
-            return None
-        '''
-        for i,NHDpluscomid in enumerate(NHDcomidlist):   
-            if NHDpluscomid==comid:
-                #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
-                for key in self.NHDvarlist:
-                    datadict[key]=self.NHDplus[key][i]
-                return datadict
-        '''    
         
+    def buildspecieshuccomidlist(self,species_idx_list=None):
+        if species_idx_list is None:
+            
+            full_list=1
+            species_searchcount=len(self.specieslist)
+            species_idx_list=[i for i in range(species_searchcount)]
+            filepath=os.path.join(self.savedir,'specieshuccomid')
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath,'rb') as f:
+                        specieshuccomidtup=pickle.load(f)
+                    self.specieshuc_allcomid=specieshuccomidtup[0]
+                    self.species01list=specieshuccomidtup[1]
+                    print(f'opening {filepath} with length:{len(specieshuccomidtup)} and has first item length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
+                    return
+                except:
+                    print(f'error when opening {filepath}, rerunning buildspecieshuccomidlist')
+        else: 
+            full_list=0
+            species_searchcount=len(species_idx_list)
+        species01list=[[] for _ in range(species_searchcount)]
+        specieshuc_allcomid=[[] for _ in range(species_searchcount)]
+        
+        for i,idx in enumerate(species_idx_list):
+            #print('i=',i,sep=',')
+            print('i',i,'species_searchcount',species_searchcount)
+            if species_searchcount>1:
+                if i%(species_searchcount//2)==0:
+                    print('')
+                    print(f'{round(100*i/species_searchcount,1)}%',end=',')
+            foundincomidlist=self.speciescomidlist[idx]
+            hucidxlist=self.specieshuclist_survey_idx[idx]
+            species_huc_count=len(hucidxlist)
+            print('huc_count:',species_huc_count,sep=',',end='. ')
+            
+            for j,hucidx in enumerate(hucidxlist):
+                if j%(species_huc_count//10)==0:
+                    print(f'{round(100*j/species_huc_count,1)}%',end=',')
+                allhuccomids=self.huccomidlist_survey[hucidx]
+                specieshuc_allcomid[i].extend(allhuccomids)
+                for comid in allhuccomids:
+                    if comid in foundincomidlist:
+                        species01list[i].append(1)
+                    else:
+                        species01list[i].append(0)
+        
+        print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
+        print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
+        if full_list==1:    
+            self.specieshuc_allcomid=specieshuc_allcomid
+            self.species01list=species01list    
+            with open(filepath,'wb') as f:
+                pickle.dump((specieshuc_allcomid,species01list),f) 
+            return
+        if full_list==0:
+            return (specieshuc_allcomid,species01list)
+    
+    
     def buildspeciesdata01_file(self,):
         thisdir=self.savedir
         datadir=os.path.join(thisdir,'speciesdata01')
@@ -473,32 +484,67 @@ class DataTool():
         except:self.getsitedata()
         try:self.sitedatacomid_dict,self.comidsitedataidx
         except: self.buildCOMIDsiteinfo()
-        try: self.species01list,self.specieshuc_allcomid
-        except: self.buildspecieshuccomidlist()
+        #try: self.species01list,self.specieshuc_allcomid
+        #except: self.buildspecieshuccomidlist()
+        with open(os.path.join(datadir,'sitedatakeylist'),'wb')as f:
+            pickle.dump(self.sitedatakeylist,f)
+        speciescount=len(self.specieslist)
         
+        split_idx=[int(i) for i in np.linspace(0,speciescount,self.processcount+1)]#+1 to include the end
+        speciesidxlist=[i for i in range(speciescount)]
+        speciesidxlistlist=[]
+        for i in range(self.processcount):
+            speciesidxlistlist.append(speciesidxlist[split_idx[i]:split_idx[i+1]])
+        starttime=time()
+        print('pool starting at',starttime)
+        with mp.Pool(processes=self.processcount) as pool:
+            outlist=pool.map(self.mp_buildspeciesdata01_file,speciesidxlistlist)
+            sleep(2)
+            pool.close()
+            pool.join()
+        self.outlist2=outlist
+        endtime=time()
+        print('pool complete at ',endtime,'. time elapsed: ',endtime-starttime)
+        if self.processcount>1:
+            fail_record=zip(*outlist)
+            fail_record=[record for recordlist in fail_record for record in recordlist]
+        else:
+            fail_record=outlist
+        self.buildspeciesdata01_file_fail_record
         
-        for i,spec_i in enumerate(self.specieslist):
+    def mp_buildspeciesdata01_file(self,speciesidx_list):
+        datadir=os.path.join(self.savedir,'speciesdata01')
+        fail_record=[]
+        for i,idx in enumerate(speciesidx_list):
+            spec_i=self.specieslist[idx]
             try:
                 species_filename=os.path.join(datadir,spec_i+'.data')
                 if not os.path.exists(species_filename):
-                    species_n=len(self.specieshuc_allcomid[i])
-                    varcount=1+self.sitedata_k
-                    speciesdata=np.empty(species_n,varcount)
-                    speciesdata[:,0]=np.array(self.species01list).reshape(species_n,1)
-                    for j,comid in enumerate(self.specieshuc_allcomid[i]):
-                        sitevars=[self.sitedatacomid_dict[comid][key] for key in self.sitevarkeylist]
-                        speciesdata[j,1:]=np.array(sitevars).reshape(1,self.sidedata_k)
+                    try: 
+                        specieshuc_allcomid=self.specieshuc_allcomid[idx]
+                        species01list=self.species01list[idx]
+                    except AttributeError:
+                        specieshuc_allcomid,species01list=self.buildspecieshuccomidlist(species_idx_list=[idx])
+                    species_n=len(specieshuc_allcomid)
+                    varcount=len(self.sitedatakeylist)
+                    speciesdata=np.empty((species_n,varcount+1))#+1 for dep var
+                    speciesdata[:,0]=np.array(species01list).reshape(species_n,1)
+                    for j,comid in enumerate(specieshuc_allcomid[i]):
+                        sitevars=[val for _,val in self.sitedatacomid_dict[comid]]
+                        speciesdata[j,1:]=np.array(sitevars).reshape(1,varcount)
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)
-                    with open(species_varname,'wb')as f:
-                        pickle.dump(self.sitevarkeylist)
+                        
+                    
+
                 else:
                     print(f'{species_filename} already exists')
+                fail_record.append(0)
             except:
+                print(f'problem came up for species number {i},{spec_i}')
                 print(traceback.format_exc())
-            
-
-        return
+                fail_record.append(1)
+        return fail_record
             
         
         
