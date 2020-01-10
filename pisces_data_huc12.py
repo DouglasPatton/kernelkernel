@@ -1,16 +1,18 @@
 import os
 import csv
-import traceback
+#import traceback
 import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
 import geopandas as gpd
+import logging
 #import pandas as pd
 
 
 class DataTool():
     def __init__(self,):
+        logging.basicConfig(level=logging.INFO)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
@@ -27,8 +29,8 @@ class DataTool():
                 print(self.NHDplus)
                 return
             except:
-                print(traceback.format_exc())
-                print('viewNHDplus_picklefile could not open saved NHDplus.data')
+                self.logger.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
+                
     
     def getNHDplus(self,):
         self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
@@ -71,8 +73,7 @@ class DataTool():
             with open(savefilename,'wb') as f:
                 pickle.dump(self.NHDplus,f)
         except:
-            print('problem saving NHDplus:')
-            print(traceback.format_exc())
+            self.logger.exception('problem saving NHDplus:')
         
         
         
@@ -124,8 +125,8 @@ class DataTool():
                 print(f'opening {specieslistpath} with length:{len(speciestup)} and type:{type(speciestup)}')
                 return
             except:
-                print(f'buildspecieslist found {specieslistpath} but there was an error loading variables')
-                print(traceback.format_exc())
+                self.logger.exception(f'buildspecieslist found {specieslistpath} but there was an error loading variables')
+                
         try:self.fishsurveydata
         except: self.getfishdata()
         (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
@@ -311,8 +312,8 @@ class DataTool():
                 self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
                 return
             except:
-                print(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
-                print(traceback.format_exc())
+                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+                
         else:
             print(f'{filepath} does not exist, building COMID site info')   
         try: self.sitedata
@@ -534,6 +535,11 @@ class DataTool():
         
     def mp_buildspeciesdata01_file(self,speciesidx_list):
         datadir=os.path.join(self.savedir,'speciesdata01')
+        logdir=os.path.join(datadir,'log')
+        handlername=f'pidatahuc12{os.getpid()}.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
         fail_record=[]
         for i,idx in enumerate(speciesidx_list):
             spec_i=self.specieslist[idx]
@@ -560,14 +566,16 @@ class DataTool():
                         sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
                         try: speciesdata[j,1:]=np.array(sitevars)
                         except: 
-                            print('j:',j,'& varcountlist[j]:',varcountlist[j],end='.')
-                            #p#rint(traceback.format_exc())
-                            keylistj=[key for key,val in self.sitedatacomid_dict[comidj].items()]
+                            self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
+                            keylistj=[key for key in self.sitedatacomid_dict[comidj]]
+                            missingkeys=[]
                             for k,key in enumerate(keylist):
-                                if key in keylistj and not val=='':#added second part of condition to handle missing bmmi values
-                                    speciesdata[j,1+k]=val
-                                else:
+                                try:#added try: to handle missing bmmi values even if key exists
+                                    speciesdata[j,1+k]=self.sitedatacomid_dict[comidj][key]
+                                except:
+                                    missingkeys.append(key)
                                     speciesdata[j,1+k]='999999'
+                            self.logger.info(f'missing keys from exception are: {missingkeys}')
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)  
                     print(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
@@ -575,9 +583,9 @@ class DataTool():
                     print(f'{species_filename} already exists')
                 fail_record.append(0)
             except:
-                print(f'problem came up for species number {i},{spec_i}')
-                print(traceback.format_exc())
-                fail_record.append(spec_i)
+                self.logger.exception(f'problem came up for species number {i},{spec_i}')
+                try: fail_record.append((spec_i,missingkeys))
+                except: fail_record.append((spec_i,'none'))
         return fail_record
             
         
