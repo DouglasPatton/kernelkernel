@@ -53,7 +53,7 @@ class DataTool():
         dbf=gpd.read_file(filename)
         print('finished read of NHDplus')
         print(f'opened {filename} with length:{len(dbf)} and type:{type(dbf)}')
-        #print(dbf.head())
+        #p#rint(dbf.head())
         
         
         #self.dbf=dbf
@@ -150,7 +150,7 @@ class DataTool():
                 occurencelist.append([idx])
                 speciescomidlist.append([comidlist[idx]])
                 specieshuclist.append([huclist[idx]])
-                #print(f'new fish:{fish}')
+                #p#rint(f'new fish:{fish}')
             if found==1:
                 occurencelist[shortidx].append(idx)
                 speciescomidlist[shortidx].append(comidlist[idx])
@@ -161,7 +161,7 @@ class DataTool():
             if not type(huc) is str:
                 huc=str(huc)
             if len(huc)==7:
-                #print(f'expecting 8 characters: huc8_i:{huc}, prepending a zero')
+                #p#rint(f'expecting 8 characters: huc8_i:{huc}, prepending a zero')
                 huc='0'+huc
             assert len(huc)==8,print(f'expecting 8 characters: huc8_i:{huc}')
             found=0
@@ -233,7 +233,7 @@ class DataTool():
             try:
                 shortidx=shortlist.index(comid_i)
                 found=1
-                #print(f'old comid:{comid}')
+                #p#rint(f'old comid:{comid}')
             except:
                 comid_digits=''.join([char for char in comid if char.isdigit()])
                 shortlist.append(comid_digits)
@@ -282,7 +282,7 @@ class DataTool():
                     mergedict[key]=val
                 else:
                     newkey=key+f'_{i}'
-                    #print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
+                    #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
                     mergedict[newkey]=val
         return mergedict
 
@@ -409,7 +409,7 @@ class DataTool():
     def findcomidhuc12reach(self,comid):
         try:self.NHDplus,self.NHDpluscomidlist
         except:self.getNHDplus()
-        #print('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
+        #p#rint('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
         itemcount=len(self.NHDplus)
         #comid_digits=comid#''.join(filter(str.isdigit,comid))
         datadict={}
@@ -452,31 +452,35 @@ class DataTool():
         specieshuc_allcomid=[[] for _ in range(species_searchcount)]
         
         for i,idx in enumerate(species_idx_list):
-            #print('i=',i,sep=',')
-            #print('i',i,'species_searchcount',species_searchcount)
-            if species_searchcount>1:
+            
+            #p#rint('i=',i,sep=',')
+            #p#rint('i',i,'species_searchcount',species_searchcount)
+            try:
                 if i%(species_searchcount//2)==0:
                     print('')
                     print(f'{round(100*i/species_searchcount,1)}%',end=',')
+            except:pass
             foundincomidlist=self.speciescomidlist[idx]
             hucidxlist=self.specieshuclist_survey_idx[idx]
             species_huc_count=len(hucidxlist)
-            #print('huc_count:',species_huc_count,sep=',')
+            #p#rint('huc_count:',species_huc_count,sep=',')
             
             for j,hucidx in enumerate(hucidxlist):
-                '''if j%(species_huc_count//10)==0:
-                    print(f'{round(100*j/species_huc_count,1)}%',end=',')'''
+                try:
+                    if j%(species_huc_count//10)==0:
+                        print(f'{round(100*j/species_huc_count,1)}%',end=',')
+                except:pass
                 allhuccomids=self.huccomidlist_survey[hucidx]
                 specieshuc_allcomid[i].extend(allhuccomids)
-                #print('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
+                #p#rint('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
                 for comid in allhuccomids:
                     if comid in foundincomidlist:
                         species01list[i].append(1)
                     else:
                         species01list[i].append(0)
-        print('len(species01list)',len(species01list))
-        print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
-        print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
+        #print('len(species01list)',len(species01list))
+        #print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
+        #print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
         if full_list==1:    
             self.specieshuc_allcomid=specieshuc_allcomid
             self.species01list=species01list    
@@ -549,7 +553,7 @@ class DataTool():
                     varcount=max(varcountlist)
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
                     keylist=[key for key in self.sitedatacomid_dict[maxvarcountcomid].items()]
-                    #print('varcount',varcount)
+                    #p#rint('varcount',varcount)
                     speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
                     speciesdata[:,0]=np.array(species01list)
                     for j,comidj in enumerate(specieshuc_allcomid):
@@ -557,22 +561,23 @@ class DataTool():
                         try: speciesdata[j,1:]=np.array(sitevars)
                         except: 
                             print('j:',j,'& varcountlist[j]:',varcountlist[j],end='.')
-                            #print(traceback.format_exc())
-                            keylistj=[key for key in self.sitedatacomid_dict[comidj].items()]
+                            #p#rint(traceback.format_exc())
+                            keylistj=[key for key,val in self.sitedatacomid_dict[comidj].items()]
                             for k,key in enumerate(keylist):
-                                if key in keylistj:
-                                    speciesdata[j,1+k]=self.sitedatacomid_dict[comidj][key]
+                                if key in keylistj and not val=='':#added second part of condition to handle missing bmmi values
+                                    speciesdata[j,1+k]=val
                                 else:
                                     speciesdata[j,1+k]='999999'
                     with open(species_filename,'wb') as f:
-                        pickle.dump(speciesdata,f)      
+                        pickle.dump(speciesdata,f)  
+            print(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
                 else:
                     print(f'{species_filename} already exists')
                 fail_record.append(0)
             except:
                 print(f'problem came up for species number {i},{spec_i}')
                 print(traceback.format_exc())
-                fail_record.append(1)
+                fail_record.append(spec_i)
         return fail_record
             
         
