@@ -842,7 +842,7 @@ class kNdtool:
                 yhat_unst_i=self.MPwrapperKDEpredict(arglistlist[i])
                 #print('type(yhat_unst_i)',type(yhat_unst_i))
                 #try: print(yhat_unst_i.shape)
-                e#xcept:pass
+                #except:pass
                 yhat_unstd_tup.append(yhat_unst_i)
         #if iscrossmse:
         #print('len(yhat_unstd_tup)',len(yhat_unstd_tup))
@@ -861,7 +861,7 @@ class kNdtool:
             ybatch=[]
             for i in range(batchcount):
                 ycross_j=[]
-                for j,yxvartup in enumerate(yxtup_list):
+                for j,yxvartup in enumerate(self.datagen_obj.yxtup_list):
                     if not j==i:
                         ycross_j.append(yxvartup[0])
                 ybatch.append(np.concatenate(ycross_j,axis=0))
