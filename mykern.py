@@ -686,9 +686,9 @@ class kNdtool:
         
         #print(f'yhat_un_std:{yhat_un_std}')
         if lossfn=='mse':
-            return yhat_un_std
+            return (yhat_un_std,'no_cross_errors')
         if iscrossmse:
-            return yhat_un_std,cross_errors*self.ystd
+            return (yhat_un_std,cross_errors*self.ystd)
         
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -702,7 +702,7 @@ class kNdtool:
         cross_errors=np.masked_array(cross_errors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
         yhat=np.array(yhat_std)                             
         if not iscrossmse:
-            return (yhat,None)
+            return (yhat,'no_cross_errors')
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
@@ -800,16 +800,17 @@ class kNdtool:
         process_count=1#self.cores
         if process_count>1 and batchcount>1:
             with multiprocessing.Pool(processes=process_count) as pool:
-                yhat_unstd=pool.map(self.MPwrapperKDEpredict,arglistlist)
+                yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 sleep(2)
                 pool.close()
                 pool.join()
         else:
-            yhat_unstd=[]
+            yhat_unstd_outtup_list=[]
             for i in range(batchcount):
-                yhat_unstd.append(self.MPwrapperKDEpredict(arglistlist[i]))
-        if iscrossmse:
-            yhat_unstd,crosserrors=zip(*yhat_unstd)
+                yhat_unstd_outtup_list.append(self.MPwrapperKDEpredict(arglistlist[i]))
+        
+        yhat_unstd,crosserrors=zip(*yhat_unstd_outtup_list)
+        
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         for batch_i in range(batchcount):
             y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
