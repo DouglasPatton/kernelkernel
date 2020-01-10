@@ -454,7 +454,7 @@ class DataTool():
         
         for i,idx in enumerate(species_idx_list):
             #print('i=',i,sep=',')
-            print('i',i,'species_searchcount',species_searchcount)
+            #print('i',i,'species_searchcount',species_searchcount)
             if species_searchcount>1:
                 if i%(species_searchcount//2)==0:
                     print('')
@@ -465,8 +465,8 @@ class DataTool():
             #print('huc_count:',species_huc_count,sep=',')
             
             for j,hucidx in enumerate(hucidxlist):
-                if j%(species_huc_count//10)==0:
-                    print(f'{round(100*j/species_huc_count,1)}%',end=',')
+                '''if j%(species_huc_count//10)==0:
+                    print(f'{round(100*j/species_huc_count,1)}%',end=',')'''
                 allhuccomids=self.huccomidlist_survey[hucidx]
                 specieshuc_allcomid[i].extend(allhuccomids)
                 #print('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
@@ -538,6 +538,7 @@ class DataTool():
                 species_filename=os.path.join(datadir,spec_i+'.data')
                 if not os.path.exists(species_filename):
                     try: 
+                        self.specieshuc_allcomid
                         specieshuc_allcomid=self.specieshuc_allcomid[idx]
                         species01list=self.species01list[idx]
                     except AttributeError:
@@ -545,12 +546,27 @@ class DataTool():
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
                     species_n=len(specieshuc_allcomid)
-                    varcount=len(self.sitedatakeylist)
+                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid]
+                    varcount=max(varcountlist)
+                    maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
+                    keylist=[key for key in self.sitedatacomid_dict[maxvarcountcomid].items()]
+                    #print('varcount',varcount)
                     speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
-                    speciesdata[:,0]=np.array(species01list).reshape(species_n)
-                    for j,comid in enumerate(specieshuc_allcomid):
-                        sitevars=[val for _,val in self.sitedatacomid_dict[comid].items()]
-                        speciesdata[j,1:]=np.array(sitevars).reshape(1,varcount)
+                    speciesdata[:,0]=np.array(species01list)
+                    for j,comidj in enumerate(specieshuc_allcomid):
+                        sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
+                        try: speciesdata[j,1:]=np.array(sitevars)
+                        except: 
+                            print('j:',j,'& varcountlist[j]:',varcountlist[j],end='.')
+                            #print(traceback.format_exc())
+                            keylistj=[key for key in self.sitedatacomid_dict[comidj].items()]
+                            for k,key in enumerate(keylist):
+                                if key in keylistj:
+                                    speciesdata[j,1+k]=self.sitedatacomid_dict[comidj][key]
+                                else:
+                                    speciesdata[j,1+k]='999999'
+                                
+                                
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)
                         
