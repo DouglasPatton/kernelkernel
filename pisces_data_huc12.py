@@ -530,7 +530,7 @@ class DataTool():
             fail_record=[record for recordlist in fail_record for record in recordlist]
         else:
             fail_record=outlist
-        self.buildspeciesdata01_file_fail_record
+        self.buildspeciesdata01_file_fail_record=outlist
         
     def mp_buildspeciesdata01_file(self,speciesidx_list):
         datadir=os.path.join(self.savedir,'speciesdata01')
@@ -570,7 +570,7 @@ class DataTool():
                                     speciesdata[j,1+k]='999999'
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)  
-            print(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
+                    print(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
                 else:
                     print(f'{species_filename} already exists')
                 fail_record.append(0)
