@@ -536,6 +536,7 @@ class DataTool():
     def mp_buildspeciesdata01_file(self,speciesidx_list):
         datadir=os.path.join(self.savedir,'speciesdata01')
         logdir=os.path.join(datadir,'log')
+        if not os.path.exists: os.mkdir(logdir)
         handlername=f'pidatahuc12{os.getpid()}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
