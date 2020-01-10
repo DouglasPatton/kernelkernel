@@ -651,7 +651,6 @@ class kNdtool:
         
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
-
         #print('xbw',xbw)
         #print('ybw',ybw)
         
