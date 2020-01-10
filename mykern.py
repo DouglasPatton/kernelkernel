@@ -685,7 +685,7 @@ class kNdtool:
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
-        if lossfn=='mse':
+        if not iscrossmse:
             return (yhat_un_std,'no_cross_errors')
         if iscrossmse:
             return (yhat_un_std,cross_errors*self.ystd)
@@ -747,8 +747,9 @@ class kNdtool:
             if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
         
+        #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
         if not iscrossmse:
-            return (yhat,None)
+            return (yhat,'no_cross_errors')
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
@@ -807,8 +808,10 @@ class kNdtool:
         else:
             yhat_unstd_outtup_list=[]
             for i in range(batchcount):
-                yhat_unstd_outtup_list.append(self.MPwrapperKDEpredict(arglistlist[i]))
-        
+                result_tup=self.MPwrapperKDEpredict(arglistlist[i])
+                #self.logger.info(f'result_tup: {result_tup}')
+                yhat_unstd_outtup_list.append(result_tup)
+        #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
         yhat_unstd,crosserrors=zip(*yhat_unstd_outtup_list)
         
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
@@ -887,7 +890,7 @@ class optimize_free_params(kNdtool):
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
-        
+        self.logger.info(f'optimizedict for {myname}:{optimizedict}')
         #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
         opt_settings_dict=optimizedict['opt_settings_dict']
