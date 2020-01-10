@@ -247,6 +247,51 @@ class DataTool():
         self.comidlist=shortlist  
         self.comidoccurenclist=occurencelist
     
+    
+
+    def buildspecieshuc8list():
+        try: self.fishhucs
+        except: self.getfishhucs()
+        specieshuc8list=[]*len(self.specieslist)
+        lastid=None
+        for item,i in enumerate(self.fishhucs):
+            spec_i=item['Scientific_name']
+            #d_i=item['ID']
+            huc8_i=item['HUC']
+            if not type(huc8_i) is str:
+                huc8_i=str(huc8_i)
+            if len(huc8_i)==7:
+                huc8_i=0+huc8_i
+            assert len(huc8_i)==8,print(f'expecting 8 characters: huc8_i:{huc8_i}')
+            if not spec_i==lastspec_i:
+                for j,spec_j in enumerate(self.specieslist):
+                    if spec_i==spec_j:
+                        specieslist_idx=j
+            specieshuc8list[specieslist_idx].append(huc8_i)
+            lastspec_i=spec_i    
+        self.specieshuc8list=specieshuc8list
+        
+    
+    
+    def mergelistofdicts(self,listofdicts):
+        mergedict={}
+        for i,dict_i in enumerate(listofdicts):
+            for key,val in dict_i.items():
+                
+                if not key in mergedict:
+                    mergedict[key]=val
+                else:
+                    newkey=key+f'_{i}'
+                    #print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
+                    mergedict[newkey]=val
+        return mergedict
+
+####################################################################
+####################################################################
+##################the next 3 methods run together###################
+####################################################################
+####################################################################
+        
     def buildCOMIDsiteinfo(self,):
         try:self.comidlist
         except:self.buildCOMIDlist()
@@ -272,13 +317,8 @@ class DataTool():
             print(f'{filepath} does not exist, building COMID site info')   
         try: self.sitedata
         except:self.getsitedata()
-
-        
+            
         comidcount=len(self.comidlist)
-        
-
-        
-        #print('self.comidlist[0]',self.comidlist[0],type(self.comidlist[0]))
         if self.processcount>1:
             com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
             print(com_idx)
@@ -382,52 +422,12 @@ class DataTool():
         for key in self.NHDvarlist:
             datadict[key]=self.NHDplus.loc[i,key]
         return datadict    
-        '''
-        for i,NHDpluscomid in enumerate(NHDcomidlist):   
-            if NHDpluscomid==comid:
-                #print(f'findcomidhuc12reach matched {comid} as {comid_digits}')
-                for key in self.NHDvarlist:
-                    datadict[key]=self.NHDplus[key][i]
-                return datadict
-        '''         
 
-    def buildspecieshuc8list():
-        try: self.fishhucs
-        except: self.getfishhucs()
-        specieshuc8list=[]*len(self.specieslist)
-        lastid=None
-        for item,i in enumerate(self.fishhucs):
-            spec_i=item['Scientific_name']
-            #d_i=item['ID']
-            huc8_i=item['HUC']
-            if not type(huc8_i) is str:
-                huc8_i=str(huc8_i)
-            if len(huc8_i)==7:
-                huc8_i=0+huc8_i
-            assert len(huc8_i)==8,print(f'expecting 8 characters: huc8_i:{huc8_i}')
-            if not spec_i==lastspec_i:
-                for j,spec_j in enumerate(self.specieslist):
-                    if spec_i==spec_j:
-                        specieslist_idx=j
-            specieshuc8list[specieslist_idx].append(huc8_i)
-            lastspec_i=spec_i    
-        self.specieshuc8list=specieshuc8list
-        
-    
-    
-    def mergelistofdicts(self,listofdicts):
-        mergedict={}
-        for i,dict_i in enumerate(listofdicts):
-            for key,val in dict_i.items():
-                
-                if not key in mergedict:
-                    mergedict[key]=val
-                else:
-                    newkey=key+f'_{i}'
-                    #print(f'for dict_{i} oldkey:{key},newkey:{newkey}')
-                    mergedict[newkey]=val
-        return mergedict
-                    
+####################################################################
+####################################################################
+##################the next 3 methods run together###################
+####################################################################
+####################################################################
         
     def buildspecieshuccomidlist(self,species_idx_list=None):
         if species_idx_list is None:
@@ -444,8 +444,7 @@ class DataTool():
                     self.species01list=specieshuccomidtup[1]
                     print(f'opening {filepath} with length:{len(specieshuccomidtup)} and has first item length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
                     return
-                except:
-                    print(f'error when opening {filepath}, rerunning buildspecieshuccomidlist')
+                except: print(f'error when opening {filepath}, rerunning buildspecieshuccomidlist')
         else: 
             full_list=0
             species_searchcount=len(species_idx_list)
@@ -486,7 +485,7 @@ class DataTool():
             return
         if full_list==0:
             return specieshuc_allcomid,species01list
-    
+
     
     def buildspeciesdata01_file(self,):
         thisdir=self.savedir
@@ -565,13 +564,8 @@ class DataTool():
                                     speciesdata[j,1+k]=self.sitedatacomid_dict[comidj][key]
                                 else:
                                     speciesdata[j,1+k]='999999'
-                                
-                                
                     with open(species_filename,'wb') as f:
-                        pickle.dump(speciesdata,f)
-                        
-                    
-
+                        pickle.dump(speciesdata,f)      
                 else:
                     print(f'{species_filename} already exists')
                 fail_record.append(0)
