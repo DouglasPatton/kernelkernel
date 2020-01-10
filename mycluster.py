@@ -55,7 +55,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations()
         
-        self.oldnode_threshold=datetime.timedelta(minutes=35,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=360,seconds=1)
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
