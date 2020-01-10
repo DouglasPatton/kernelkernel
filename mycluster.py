@@ -46,7 +46,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if local_test=='no' or local_test=='No':
             local_test=0
 
-        self.n=80 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
+        self.n=32 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
                     
         if myname==None:
             myname='node'
@@ -72,9 +72,9 @@ class run_cluster(kernelcompare.KernelCompare):
     def getoptdictvariations(self):
         ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
         NWnorm_variations=('modeldict:NWnorm',['across'])
-        loss_function_variations=('modeldict:loss_function',['mse','crossmse1','crossmse2'])
+        loss_function_variations=('modeldict:loss_function',['mse','batch_crossval','crossmse2'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
+        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [3])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
