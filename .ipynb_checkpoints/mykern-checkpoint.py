@@ -34,7 +34,7 @@ class kNdtool:
         if not self.name==None:
             handler=logging.FileHandler(os.path.join(savedir,'..',handlername))
         else:
-            handler=logging.FileHandler(os.path.join(savedir,handlername))
+            handler=logging.FileHandler(os.path.join(os.getcwd(),handlername))
         
         #self.logger = logging.getLogger('mkLogger')
         self.logger = logging.getLogger(__name__)

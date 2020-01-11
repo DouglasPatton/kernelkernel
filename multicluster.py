@@ -63,10 +63,10 @@ class mypool:
                 except KeyboardInterrupt:
                     rerun=False
                 except:
-                    self.i+=1
+                    self.i+=500
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
-        sleeptime=3*log(25*float(self.i))
+        sleeptime=(.2*log(float(os.getpid())))**8
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
