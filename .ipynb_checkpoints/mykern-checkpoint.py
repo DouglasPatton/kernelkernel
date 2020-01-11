@@ -44,7 +44,7 @@ class kNdtool:
             savedir=os.getcwd()
         self.savedirectory=savedir
 
-    def sum_then_normalize_bw(self,kernstack,normalization):
+    def Ndiffsum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
         if normalization=='none' or normalization==None:
@@ -58,68 +58,18 @@ class kNdtool:
             this_depth_sum=np.ma.sum(kernstack,axis=0)
             return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)#dividing by sum across the sums at "this_depth"
 
-    def recursive_BWmaker(self, max_bw_Ndiff, Ndiff_list_of_masks, fixed_or_free_paramdict, diffdict, modeldict, x_or_y):
-        """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
-        or nin X npr if x_or_y=='x'
-        """
-        Ndiff_exponent_params = self.pull_value_from_fixed_or_free('Ndiff_exponent', fixed_or_free_paramdict)
-        Ndiff_depth_bw_params = self.pull_value_from_fixed_or_free('Ndiff_depth_bw', fixed_or_free_paramdict)
-        max_bw_Ndiff = modeldict['max_bw_Ndiff']
-        Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
-        normalization = modeldict['normalize_Ndiffwtsum']
-        ykern_grid = modeldict['ykern_grid']
-
-        x_bandscale_params = self.pull_value_from_fixed_or_free('x_bandscale', fixed_or_free_paramdict)
-        Ndiffs = diffdict['Ndiffs']
-        onediffs = diffdict['onediffs']
-
-        if Ndiff_bw_kern == 'rbfkern':  # parameter column already collapsed
         
-            lower_depth_bw=Ndiff_depth_bw_params[1]#there should only be two for recursive Ndiff
-
-            for depth in range(max_bw_Ndiff-1, 0, -1):  # depth starts with the last mask first #this loop will be memory
-                # intensive since I am creating the lower_depth_bw. perhaps there is a better way to complete this
-                # nested summation with broadcasting tools in numpy
-                if normalization == 'own_n':
-                    normalize = self.nin - depth - 1
-                else:
-                    normalize = normalization
-                this_depth_bw = np.ma.power(
-                    self.sum_then_normalize_bw(
-                        self.do_bw_kern(
-                            Ndiff_bw_kern, np.ma.array(
-                                self.Ndiff_datastacker(Ndiffs, noediffs.shape,depth+1),
-                                mask=self.Ndiff_list_of_masks[depth]
-                                ),
-                            lower_depth_bw #this is the recursive part
-                            ),
-                        normalize
-                        )
-                    ,Ndiff_exponent_params[depth]
-                    )
-
-                if depth > 1:
-                    lower_depth_bw=this_depth_bw
-            last_depth_bw=Ndiff_depth_bw_params[0]*np.ma.power(this_depth_bw,Ndiff_exponent_params[0])
-            assert last_depth_bw.shape==(self.nin, self.nout), 'final bw is not ninXnout with rbfkernel'
-            return last_depth_bw
-        if Ndiff_bw_kern == 'product':  # onediffs parameter column not yet collapsed
-            n_depth_masked_sum_kern = self.do_bw_kern(Ndiff_bw_kern, n_depth_masked_sum, Ndiff_depth_bw_params[depth],
-                x_bandscale_params)
-            return "n/a"
-        pass    
-    
     def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-                    self.sum_then_normalize_bw(
-                        self.do_bw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize),Ndiff_exp                   )
+                    self.Ndiffsum_then_normalize_bw(
+                        self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize),Ndiff_exp                   )
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-            self.sum_then_normalize_bw(
-                self.do_bw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize),Ndiff_exp)
+            self.Ndiffsum_then_normalize_bw(
+                self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize),Ndiff_exp)
     
-    def BWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
+    def NdiffBWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
         """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
         ? or nin X npr if x_or_y=='x' ?
         """
@@ -200,11 +150,11 @@ class kNdtool:
             return this_depth_bw
                 
         if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
-            n_depth_masked_sum_kern=self.do_bw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
+            n_depth_masked_sum_kern=self.do_Ndiffbw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
 
 
     
-    def do_bw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,x_bandscale_params=None):
+    def do_Ndiffbw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,x_bandscale_params=None):
         if kern_choice=="product":
             #return np.ma.product(x_bandscale_params,np.ma.exp(-np.ma.power(maskeddata,2)),axis=maskeddata.ndim-1)/Ndiff_depth_bw_param
             shapetup=maskeddata.shape
@@ -649,8 +599,9 @@ class kNdtool:
             yhat=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
         
-        xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
-        ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        xbw = self.NdiffBWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
+        ybw = self.NdiffBWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+
         #print('xbw',xbw)
         #print('ybw',ybw)
         
@@ -706,6 +657,7 @@ class kNdtool:
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
+<<<<<<< HEAD
         if not iscrossmse:#lossfn=='mse'
             return (yhat_un_std,None)
         if iscrossmse:
@@ -713,6 +665,12 @@ class kNdtool:
             crosserrors_unstd=crosserrors*self.ystd
             #print('crosserrors_unstd',crosserrors_unstd)    
             return (yhat_un_std,crosserrors_unstd)
+=======
+        if not iscrossmse:
+            return (yhat_un_std,'no_cross_errors')
+        if iscrossmse:
+            return (yhat_un_std,cross_errors*self.ystd)
+>>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
         
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -726,7 +684,7 @@ class kNdtool:
         crosserrors=np.masked_array(crosserrors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
         yhat=np.array(yhat_std)                             
         if not iscrossmse:
-            return (yhat,None)
+            return (yhat,'no_cross_errors')
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
@@ -771,8 +729,9 @@ class kNdtool:
             if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
         
+        #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
         if not iscrossmse:
-            return (yhat,None)
+            return (yhat,'no_cross_errors')
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
@@ -832,11 +791,16 @@ class kNdtool:
         process_count=1#self.cores
         if process_count>1 and batchcount>1:
             with multiprocessing.Pool(processes=process_count) as pool:
+<<<<<<< HEAD
                 yhat_unstd_tup=pool.map(self.MPwrapperKDEpredict,arglistlist)
+=======
+                yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
+>>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
                 sleep(2)
                 pool.close()
                 pool.join()
         else:
+<<<<<<< HEAD
             yhat_unstd_tup=[]
             for i in range(batchcount):
                 yhat_unst_i=self.MPwrapperKDEpredict(arglistlist[i])
@@ -853,6 +817,16 @@ class kNdtool:
             crosserrors.append(batch[1])
             
         #yhat_unstd,crosserrors=zip(*yhat_unstd)
+=======
+            yhat_unstd_outtup_list=[]
+            for i in range(batchcount):
+                result_tup=self.MPwrapperKDEpredict(arglistlist[i])
+                #self.logger.info(f'result_tup: {result_tup}')
+                yhat_unstd_outtup_list.append(result_tup)
+        #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
+        yhat_unstd,crosserrors=zip(*yhat_unstd_outtup_list)
+        
+>>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         
 
@@ -1039,7 +1013,13 @@ class optimize_free_params(kNdtool):
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
+<<<<<<< HEAD
         self.name=myname
+=======
+        self.logger.info(f'optimizedict for {myname}:{optimizedict}')
+        #Extract from optimizedict
+        modeldict=optimizedict['modeldict'] 
+>>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
