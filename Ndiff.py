@@ -57,7 +57,7 @@ class Ndiff:
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
         Ndiff_start=modeldict['Ndiff_start']      
-        Ndiffs=diffdict['Ndiffs']
+        Onediffs=diffdict['Onediffs']
         onediffs=diffdict['onediffs']
         ykern_grid = modeldict['ykern_grid']
         Ndiff_type=modeldict['Ndiff_type']
@@ -86,9 +86,9 @@ class Ndiff:
                 if Ndiff_type=='product':this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
                 if Ndiff_type=='recursive':this_depth_bw_param=None
                 this_depth_exponent=Ndiff_exponent_params[param_idx]
-                this_depth_data=self.Ndiff_datastacker(Ndiffs,onediffs.shape,depth)
+                this_depth_data=self.Ndiff_datastacker(Onediffs,onediffs.shape,depth)
                 this_depth_mask = masklist[depth]
-                if depth % 2 == 0:  # every other set of Ndiffs is transposed
+                if depth % 2 == 0:  # every other set of Onediffs is transposed
                     #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
                     dimcount=this_depth_data.ndim
                     transposelist=[i for i in range(dimcount)]
@@ -152,19 +152,19 @@ class Ndiff:
         
 
     
-    def Ndiff_datastacker(self,Ndiffs,onediffs_shape,depth):
+    def Ndiff_datastacker(self,Onediffs,onediffs_shape,depth):
         """
         """
-        '''print('Ndiffs.shape',Ndiffs.shape)
+        '''print('Onediffs.shape',Onediffs.shape)
         print('onediffs_shape',onediffs_shape)
         print('depth',depth)'''
         if len(onediffs_shape)==3:#this should only happen if we're working on y
-            ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
-            if depth==0:return Ndiffs
-            return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
+            ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Onediffs starts as ninXninXnpr
+            if depth==0:return Onediffs
+            return np.broadcast_to(np.expand_dims(Onediffs,2),ytup)
         if len(onediffs_shape)==2:#this should only happen if we're working on x
             Ndiff_shape_out_tup=(self.nin,)*depth+onediffs_shape
-            return np.broadcast_to(np.expand_dims(Ndiffs,2),Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
+            return np.broadcast_to(np.expand_dims(Onediffs,2),Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
     
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         #print('nout:',nout)
@@ -255,4 +255,47 @@ class Ndiff:
         return list_of_masks
     
 
+    
+    
+    
+    
+    
+    
+    def Ndiffdo_KDEsmalln(self,diffs,bw,modeldict):
+        """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
+        first 2 dimensions of onediffs must be ninXnout
+        """ 
+        assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
+        allkerns=self.gkernh(diffs, bw)
+        second_to_last_axis=allkerns.ndim-2
+        normalization=modeldict['product_kern_norm']
+        if normalization =='self':
+            allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
+            allkerns=allkerns/self.ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            
+            # collapse just nin dim or both lhs dims?
+        if normalization =="own_n":
+            allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
+        if modeldict['regression_model']=='NW-rbf' or modeldict['regression_model']=='NW-rbf2':
+            if allkerns.ndim>3:
+                for i in range((allkerns.ndim-3),0,-1):
+                    assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
+                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
+                    allkerns=np.ma.power(np.ma.sum(np.ma.power(allkerns,2),axis=allkerns.ndim-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
+        if modeldict['regression_model']=='NW':
+            if allkerns.ndim>3:
+                for i in range((allkerns.ndim-3),0,-1):
+                    assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
+                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
+                    allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+        return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
+
+    
+    
+    
+    
+    
+    
+    
+    
     

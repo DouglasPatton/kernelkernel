@@ -22,27 +22,19 @@ class kNdtool:
     """
 
     def __init__(self,savedir=None,myname=None):
+        if savedir==None: savedir=os.getcwd()
+        self.savedirectory=savedir
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        #with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-        #    configfile=yaml.safe_load(f.read())
         logging.basicConfig(level=logging.INFO)
-        
-        handlername=f'mykern-{self.name}.log'
-        print(f'handlername:{handlername}')
-        #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
-        if not self.name==None:
-            handler=logging.FileHandler(os.path.join(savedir,'..',handlername))
-        else:
-            handler=logging.FileHandler(os.path.join(os.getcwd(),handlername))
-        
-        #self.logger = logging.getLogger('mkLogger')
+        logdir=os.path.join(self.savedir,'log')
+        if not os.path.exists: os.mkdir(logdir)
+        handlername=f'kNdtool.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
         
-        if savedir==None:
-            savedir=os.getcwd()
-        self.savedirectory=savedir
+
 
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
@@ -231,34 +223,6 @@ class kNdtool:
         return yxtup_list_std,val_yxtup_list_std
 
 
-    def do_KDEsmalln(self,diffs,bw,modeldict):
-        """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
-        first 2 dimensions of onediffs must be ninXnout
-        """ 
-        assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
-        allkerns=self.gkernh(diffs, bw)
-        second_to_last_axis=allkerns.ndim-2
-        normalization=modeldict['product_kern_norm']
-        if normalization =='self':
-            allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
-            allkerns=allkerns/self.ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
-            
-            # collapse just nin dim or both lhs dims?
-        if normalization =="own_n":
-            allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
-        if modeldict['regression_model']=='NW-rbf' or modeldict['regression_model']=='NW-rbf2':
-            if allkerns.ndim>3:
-                for i in range((allkerns.ndim-3),0,-1):
-                    assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
-                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
-                    allkerns=np.ma.power(np.ma.sum(np.ma.power(allkerns,2),axis=allkerns.ndim-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
-        if modeldict['regression_model']=='NW':
-            if allkerns.ndim>3:
-                for i in range((allkerns.ndim-3),0,-1):
-                    assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
-                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
-                    allkerns=np.ma.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
-        return np.ma.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         
     def ma_broadcast_to(self, maskedarray,tup):
             initial_mask=np.ma.getmask(maskedarray)
@@ -349,17 +313,17 @@ class kNdtool:
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
-            y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
+            y_Onediffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
-            Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
+            Onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
             assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'onediffs_scaled_l2norm has shape:{onediffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
             diffdict['onediffs']=onediffs_scaled_l2norm
-            diffdict['Ndiffs']=Ndiffs_scaled_l2norm
+            diffdict['Onediffs']=Onediffs_scaled_l2norm
             ydiffdict={}
             ydiffdict['onediffs']=np.broadcast_to(y_onediffs[:,:,None],y_onediffs.shape+(self.npr,))
-            ydiffdict['Ndiffs']=np.broadcast_to(y_Ndiffs[:,:,None],y_Ndiffs.shape+(self.npr,))
+            ydiffdict['Onediffs']=np.broadcast_to(y_Onediffs[:,:,None],y_Onediffs.shape+(self.npr,))
             diffdict['ydiffdict']=ydiffdict
 
 
@@ -392,7 +356,7 @@ class kNdtool:
         
         if modeldict['regression_model']=='logistic':
             xonediffs=diffdict['onediffs']
-            prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
+            prob_x = self.Ndiffdo_KDEsmalln(xonediffs, xbw, modeldict)
             
             yhat_tup=self.kernel_logistic(prob_x,xin,yin)
             yhat_std=yhat_tup[0]
@@ -413,8 +377,8 @@ class kNdtool:
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
             #print('type(xonediffs)',type(xonediffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             
-            prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
-            prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
+            prob_x = self.Ndiffdo_KDEsmalln(xonediffs, xbw, modeldict)
+            prob_yx = self.Ndiffdo_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#Ndiffdo_KDEsmalln implements product \\
                 #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
                 #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
             #print('type(prob_x)',type(prob_x),'type(prob_yx)',type(prob_x))
