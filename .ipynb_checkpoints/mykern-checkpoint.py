@@ -312,23 +312,23 @@ class kNdtool:
             #print('xpr_scaled.shape',xpr_scaled.shape)
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
-            y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
+            y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_Onediffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
-            onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
+            outdiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
             Onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
-            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'onediffs_scaled_l2norm has shape:{onediffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
+            assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
-            diffdict['onediffs']=onediffs_scaled_l2norm
+            diffdict['outdiffs']=outdiffs_scaled_l2norm
             diffdict['Onediffs']=Onediffs_scaled_l2norm
             ydiffdict={}
-            ydiffdict['onediffs']=np.broadcast_to(y_onediffs[:,:,None],y_onediffs.shape+(self.npr,))
+            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None],y_outdiffs.shape+(self.npr,))
             ydiffdict['Onediffs']=np.broadcast_to(y_Onediffs[:,:,None],y_Onediffs.shape+(self.npr,))
             diffdict['ydiffdict']=ydiffdict
 
 
         if modeldict['Ndiff_bw_kern']=='product':
-            onediffs=makediffmat_itoj(xin,xpr)#scale now? if so, move if...='rbfkern' down 
+            outdiffs=makediffmat_itoj(xin,xpr)#scale now? if so, move if...='rbfkern' down 
             #predict
             yhat=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
@@ -355,8 +355,8 @@ class kNdtool:
         
         
         if modeldict['regression_model']=='logistic':
-            xonediffs=diffdict['onediffs']
-            prob_x = self.Ndiffdo_KDEsmalln(xonediffs, xbw, modeldict)
+            xoutdiffs=diffdict['outdiffs']
+            prob_x = self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
             
             yhat_tup=self.kernel_logistic(prob_x,xin,yin)
             yhat_std=yhat_tup[0]
@@ -364,22 +364,22 @@ class kNdtool:
             
         if modeldict['regression_model'][0:2]=='NW':
             ybw=ybw*hy
-            xonediffs=diffdict['onediffs']
-            yonediffs=diffdict['ydiffdict']['onediffs']
-            assert xonediffs.ndim==2, "xonediffs have ndim={} not 2".format(xonediffs.ndim)
+            xoutdiffs=diffdict['outdiffs']
+            youtdiffs=diffdict['ydiffdict']['outdiffs']
+            assert xoutdiffs.ndim==2, "xoutdiffs have ndim={} not 2".format(xoutdiffs.ndim)
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
-                xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
-                xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
-                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
-            newaxis=len(yonediffs.shape)
-            yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
+                xonedifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
+                xoutdiffs_stack=np.broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
+                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xoutdiffs.shape)-1),xonedifftup)
+            newaxis=len(youtdiffs.shape)
+            yx_outdiffs_endstack=np.ma.concatenate((np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
-            #print('type(xonediffs)',type(xonediffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
+            #print('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             
-            prob_x = self.Ndiffdo_KDEsmalln(xonediffs, xbw, modeldict)
-            prob_yx = self.Ndiffdo_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#Ndiffdo_KDEsmalln implements product \\
-                #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
+            prob_x = self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
+            prob_yx = self.Ndiffdo_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#Ndiffdo_KDEsmalln implements product \\
+                #kernel across axis=2, the 3rd dimension after the 2 diensions of outdiffs. endstack refers to the fact \\
                 #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
             #print('type(prob_x)',type(prob_x),'type(prob_yx)',type(prob_x))
             #print(prob_x,prob_yx)

@@ -23,7 +23,7 @@ class Ndiff:
         
         
 
-    def Ndiffsum_then_normalize_bw(self,kernstack,normalization):
+    def Onediffsum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
         if normalization=='none' or normalization==None:
@@ -40,12 +40,12 @@ class Ndiff:
         
     def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-                    self.Ndiffsum_then_normalize_bw(
+                    self.Onediffsum_then_normalize_bw(
                         self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize),Ndiff_exp                   )
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-            self.Ndiffsum_then_normalize_bw(
+            self.Onediffsum_then_normalize_bw(
                 self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize),Ndiff_exp)
     
     def NdiffBWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
@@ -58,7 +58,7 @@ class Ndiff:
         normalization = modeldict['normalize_Ndiffwtsum']
         Ndiff_start=modeldict['Ndiff_start']      
         Onediffs=diffdict['Onediffs']
-        onediffs=diffdict['onediffs']
+        outdiffs=diffdict['outdiffs']
         ykern_grid = modeldict['ykern_grid']
         Ndiff_type=modeldict['Ndiff_type']
         if x_or_y=='y':
@@ -86,7 +86,7 @@ class Ndiff:
                 if Ndiff_type=='product':this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
                 if Ndiff_type=='recursive':this_depth_bw_param=None
                 this_depth_exponent=Ndiff_exponent_params[param_idx]
-                this_depth_data=self.Ndiff_datastacker(Onediffs,onediffs.shape,depth)
+                this_depth_data=self.Ndiff_datastacker(Onediffs,outdiffs.shape,depth)
                 this_depth_mask = masklist[depth]
                 if depth % 2 == 0:  # every other set of Onediffs is transposed
                     #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
@@ -128,7 +128,7 @@ class Ndiff:
             '''
             return this_depth_bw
                 
-        if Ndiff_bw_kern=='product': #onediffs parameter column not yet collapsed
+        if Ndiff_bw_kern=='product': #outdiffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_Ndiffbw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
 
 
@@ -152,18 +152,18 @@ class Ndiff:
         
 
     
-    def Ndiff_datastacker(self,Onediffs,onediffs_shape,depth):
+    def Ndiff_datastacker(self,Onediffs,outdiffs_shape,depth):
         """
         """
         '''print('Onediffs.shape',Onediffs.shape)
-        print('onediffs_shape',onediffs_shape)
+        print('outdiffs_shape',outdiffs_shape)
         print('depth',depth)'''
-        if len(onediffs_shape)==3:#this should only happen if we're working on y
-            ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Onediffs starts as ninXninXnpr
+        if len(outdiffs_shape)==3:#this should only happen if we're working on y
+            ytup=(self.nin,)*depth+outdiffs_shape#depth-1 b/c Onediffs starts as ninXninXnpr
             if depth==0:return Onediffs
             return np.broadcast_to(np.expand_dims(Onediffs,2),ytup)
-        if len(onediffs_shape)==2:#this should only happen if we're working on x
-            Ndiff_shape_out_tup=(self.nin,)*depth+onediffs_shape
+        if len(outdiffs_shape)==2:#this should only happen if we're working on x
+            Ndiff_shape_out_tup=(self.nin,)*depth+outdiffs_shape
             return np.broadcast_to(np.expand_dims(Onediffs,2),Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
     
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
@@ -262,8 +262,8 @@ class Ndiff:
     
     
     def Ndiffdo_KDEsmalln(self,diffs,bw,modeldict):
-        """estimate the density items in onediffs. collapse via products if dimensionality is greater than 2
-        first 2 dimensions of onediffs must be ninXnout
+        """estimate the density items in outdiffs. collapse via products if dimensionality is greater than 2
+        first 2 dimensions of outdiffs must be ninXnout
         """ 
         assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
         allkerns=self.gkernh(diffs, bw)
