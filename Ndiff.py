@@ -9,7 +9,7 @@ class Ndiff:
         
         logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists: os.mkdir(logdir)
+        if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'Ndiff.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
@@ -19,11 +19,8 @@ class Ndiff:
         self.cores=int(psutil.cpu_count(logical=False)-1)
 
         
-        
-        
-        
 
-    def Onediffsum_then_normalize_bw(self,kernstack,normalization):
+    def indiffsum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
         if normalization=='none' or normalization==None:
@@ -40,12 +37,12 @@ class Ndiff:
         
     def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-                    self.Onediffsum_then_normalize_bw(
+                    self.indiffsum_then_normalize_bw(
                         self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize),Ndiff_exp                   )
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-            self.Onediffsum_then_normalize_bw(
+            self.indiffsum_then_normalize_bw(
                 self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize),Ndiff_exp)
     
     def NdiffBWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
@@ -57,7 +54,7 @@ class Ndiff:
         Ndiff_bw_kern = modeldict['Ndiff_bw_kern']
         normalization = modeldict['normalize_Ndiffwtsum']
         Ndiff_start=modeldict['Ndiff_start']      
-        Onediffs=diffdict['Onediffs']
+        indiffs=diffdict['indiffs']
         outdiffs=diffdict['outdiffs']
         ykern_grid = modeldict['ykern_grid']
         Ndiff_type=modeldict['Ndiff_type']
@@ -86,9 +83,9 @@ class Ndiff:
                 if Ndiff_type=='product':this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
                 if Ndiff_type=='recursive':this_depth_bw_param=None
                 this_depth_exponent=Ndiff_exponent_params[param_idx]
-                this_depth_data=self.Ndiff_datastacker(Onediffs,outdiffs.shape,depth)
+                this_depth_data=self.Ndiff_datastacker(indiffs,outdiffs.shape,depth)
                 this_depth_mask = masklist[depth]
-                if depth % 2 == 0:  # every other set of Onediffs is transposed
+                if depth % 2 == 0:  # every other set of indiffs is transposed
                     #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
                     dimcount=this_depth_data.ndim
                     transposelist=[i for i in range(dimcount)]
@@ -152,19 +149,19 @@ class Ndiff:
         
 
     
-    def Ndiff_datastacker(self,Onediffs,outdiffs_shape,depth):
+    def Ndiff_datastacker(self,indiffs,outdiffs_shape,depth):
         """
         """
-        '''print('Onediffs.shape',Onediffs.shape)
+        '''print('indiffs.shape',indiffs.shape)
         print('outdiffs_shape',outdiffs_shape)
         print('depth',depth)'''
         if len(outdiffs_shape)==3:#this should only happen if we're working on y
-            ytup=(self.nin,)*depth+outdiffs_shape#depth-1 b/c Onediffs starts as ninXninXnpr
-            if depth==0:return Onediffs
-            return np.broadcast_to(np.expand_dims(Onediffs,2),ytup)
+            ytup=(self.nin,)*depth+outdiffs_shape#depth-1 b/c indiffs starts as ninXninXnpr
+            if depth==0:return indiffs
+            return np.broadcast_to(np.expand_dims(indiffs,2),ytup)
         if len(outdiffs_shape)==2:#this should only happen if we're working on x
             Ndiff_shape_out_tup=(self.nin,)*depth+outdiffs_shape
-            return np.broadcast_to(np.expand_dims(Onediffs,2),Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
+            return np.broadcast_to(np.expand_dims(indiffs,2),Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
     
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         #print('nout:',nout)

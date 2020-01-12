@@ -6,8 +6,7 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-import logging
-import logging.config
+import logging, logging.config
 import yaml
 #import datetime
 
@@ -355,7 +354,7 @@ class KernelOptModelTools(mk.kNdtool):
         if len(model_save_list)==0:
             print(f'no models in model_save_list for printing')
             return
-        model_save_list.sort(key=self.getmodelrunmse)  #sorts by mse
+        model_save_list.sort(key=lambda savedicti: savedicti['mse'])  #sorts by mse
 
         output_loc=os.path.join(directory,'output')
         if not os.path.exists(output_loc):
@@ -382,6 +381,9 @@ class KernelOptModelTools(mk.kNdtool):
                     self.logger.exception(f'error in {__name__}')
                     return
 
+    '''def getmodelrunmse(self,modelrundict):
+        return modelrundict['mse']'''
+                
     def myflatdict(self, complexdict, keys=None):
         thistype = type(complexdict)
         if not thistype is dict:
@@ -405,8 +407,7 @@ class KernelOptModelTools(mk.kNdtool):
 
     
 
-    def getmodelrunmse(self,modelrundict):
-        return modelrundict['mse']
+
     
 
     
@@ -815,7 +816,6 @@ class KernelOptModelTools(mk.kNdtool):
         if opt_dict_override==None:
             opt_dict_override={}
         max_bw_Ndiff=2
-        
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
@@ -907,9 +907,6 @@ class KernelCompare(KernelOptModelTools):
         assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
         assert type(optdict_variation_list[0])==tuple,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a tuple'
                          
-        #initial_opt_dict=self.build_optdict(param_count=datagen_dict['param_count'])
-        #if optdict_variation_list==None:
-        #    optdict_list=[initial_opt_dict]
         
         model_run_dict_list=[]
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)
