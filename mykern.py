@@ -313,17 +313,17 @@ class kNdtool:
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
-            y_Onediffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
+            y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             outdiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
-            Onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
+            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
             diffdict['outdiffs']=outdiffs_scaled_l2norm
-            diffdict['Onediffs']=Onediffs_scaled_l2norm
+            diffdict['indiffs']=indiffs_scaled_l2norm
             ydiffdict={}
             ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None],y_outdiffs.shape+(self.npr,))
-            ydiffdict['Onediffs']=np.broadcast_to(y_Onediffs[:,:,None],y_Onediffs.shape+(self.npr,))
+            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None],y_indiffs.shape+(self.npr,))
             diffdict['ydiffdict']=ydiffdict
 
 
