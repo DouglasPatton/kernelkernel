@@ -290,7 +290,13 @@ class kNdtool:
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
         columns of x.
         """
+        if max_bw_Ndiff in modeldict:
+            self.Ndiff=1
+            import Ndiff
+        else:
+            self.Ndiff=0
         
+            
         try:
             lossfn=modeldict['loss_function']
         except KeyError:
@@ -356,7 +362,7 @@ class kNdtool:
         
         if modeldict['regression_model']=='logistic':
             xoutdiffs=diffdict['outdiffs']
-            prob_x = self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
+            prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
             
             yhat_tup=self.kernel_logistic(prob_x,xin,yin)
             yhat_std=yhat_tup[0]
@@ -377,12 +383,9 @@ class kNdtool:
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
             #print('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             
-            prob_x = self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
-            prob_yx = self.Ndiffdo_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#Ndiffdo_KDEsmalln implements product \\
-                #kernel across axis=2, the 3rd dimension after the 2 diensions of outdiffs. endstack refers to the fact \\
-                #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
-            #print('type(prob_x)',type(prob_x),'type(prob_yx)',type(prob_x))
-            #print(prob_x,prob_yx)
+            prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
+            prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
+            
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
             yhat_raw=KDEregtup[0]
             crosserrors=KDEregtup[1]
@@ -397,7 +400,13 @@ class kNdtool:
         if iscrossmse:
             return (yhat_un_std,cross_errors*self.ystd)
 
+    
+    def do_KDEsmalln(self,diffs,bw,modeldict):
+        if self.Ndiff:
+            return Ndiff.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
         
+        prob_x = self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
+    
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
         iscrossmse=lossfn[0:8]=='crossmse'
@@ -643,8 +652,9 @@ class kNdtool:
         #self.yout=yout
 
         #pre-build list of masks
-        self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-        self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+        if max_bw_Ndiff in modeldict:
+            self.Ndiff_list_of_masks_y=Ndiff.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+            self.Ndiff_list_of_masks_x=Ndiff.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
@@ -715,6 +725,7 @@ class optimize_free_params(kNdtool):
     """
 
     def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
+        kNdtool.__init__(self,savedir=savedir,myname=myname)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
@@ -741,7 +752,7 @@ class optimize_free_params(kNdtool):
         
         if savedir==None:
             savedir=os.getcwd()
-        kNdtool.__init__(self,savedir=savedir,myname=myname)
+        
         free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
