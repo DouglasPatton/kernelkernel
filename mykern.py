@@ -1030,6 +1030,7 @@ class optimize_free_params(kNdtool):
     """
 
     def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
+        kNdtool.__init__(self,savedir=savedir,myname=myname)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
@@ -1059,7 +1060,7 @@ class optimize_free_params(kNdtool):
         
         if savedir==None:
             savedir=os.getcwd()
-        kNdtool.__init__(self,savedir=savedir,myname=myname)
+        
         free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
