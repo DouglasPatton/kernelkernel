@@ -74,7 +74,7 @@ class run_cluster(kernelcompare.KernelCompare):
         NWnorm_variations=('modeldict:NWnorm',['across'])
         loss_function_variations=('modeldict:loss_function',['mse','batch_crossval','crossmse2'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [3])
+        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
@@ -322,6 +322,7 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+            list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
             print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node']*model_run_count

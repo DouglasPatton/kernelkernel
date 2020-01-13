@@ -8,6 +8,8 @@ import logging
 import logging.config
 import yaml
 from numpy import log
+import psutil
+
 
 
 
@@ -17,6 +19,11 @@ class mypool:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('multiClusterLogger')
+
+       
+        p = psutil.Process()
+        p.nice(4)
+
         seed(datetime.now())
         self.local_test=local_test
         self.i=0
@@ -63,10 +70,10 @@ class mypool:
                 except KeyboardInterrupt:
                     rerun=False
                 except:
-                    self.i+=500
+                    #self.i+=500
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
-        sleeptime=(.2*log(float(os.getpid())))**8
+        sleeptime=(.1*log(float(os.getpid())))**8
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
