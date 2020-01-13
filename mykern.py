@@ -226,13 +226,16 @@ class kNdtool:
     def Ndiff_datastacker(self,Ndiffs,onediffs_shape,depth):
         """
         """
+        '''print('Ndiffs.shape',Ndiffs.shape)
+        print('onediffs_shape',onediffs_shape)
+        print('depth',depth)'''
         if len(onediffs_shape)==3:#this should only happen if we're working on y
             ytup=(self.nin,)*depth+onediffs_shape#depth-1 b/c Ndiffs starts as ninXninXnpr
             if depth==0:return Ndiffs
             return np.broadcast_to(np.expand_dims(Ndiffs,2),ytup)
         if len(onediffs_shape)==2:#this should only happen if we're working on x
             Ndiff_shape_out_tup=(self.nin,)*depth+onediffs_shape
-            return np.broadcast_to(Ndiffs,Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
+            return np.broadcast_to(np.expand_dims(Ndiffs,2),Ndiff_shape_out_tup)#no dim exp b/c only adding to lhs of dim tuple
     
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         #print('nout:',nout)
@@ -241,7 +244,7 @@ class kNdtool:
         #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
         
         if not self.predict_self_without_self=='yes':
-            ninmask=np.broadcast_to(np.eye(nin))[:,:,None],(nin,nin,npr)
+            ninmask=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
         if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
             ninmask3=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
             ninmask2=np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin))
@@ -298,12 +301,14 @@ class kNdtool:
         if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
             list_of_masks.append(np.ma.make_mask(np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
         if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
+
                 ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
                 ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
                 ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
                 ninmask1=np.ma.make_mask(ninmask1)
                 ninmask2=np.ma.make_mask(ninmask2)
                 ninmask3=np.ma.make_mask(ninmask3)
+
                 list_of_masks.append(np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3)))
                         
         if max_bw_Ndiff>1:
@@ -317,7 +322,7 @@ class kNdtool:
                     list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
             lastmask=list_of_masks[-1]#copy the last item to lastmask
         if not self.predict_self_without_self=='yes':
-            masklist[0]=np.ma.make_mask(np.zeros(nin,npr))
+            list_of_masks[0]=np.ma.make_mask(np.zeros([nin,npr]))
         return list_of_masks
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
@@ -430,10 +435,14 @@ class kNdtool:
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
                 ykerngrid='no'
         ykerngrid_form=modeldict['ykerngrid_form']
-        if xpr==None:
+        if xpr is None:
             xpr=xdata_std
+            #print('1st xpr.shape',xpr.shape)
+            
             self.predict_self_without_self='yes'
-        if not np.allclose(xpr,xdata_std):
+        elif not xpr.shape==xdata_std.shape: 
+            self.predict_self_without_self='n/a'
+        elif not np.allclose(xpr,xdata_std):
             self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
             yout=self.generate_grid(ykerngrid_form,ykerngrid)#will broadcast later
@@ -450,6 +459,8 @@ class kNdtool:
         if xkerngrid=='no'and ykerngrid=='no':
             self.nout=self.nin
             yout=ydata_std
+        #print('2nd xpr.shape',xpr.shape)
+        #print('xdata_std.shape',xdata_std.shape)
         return xpr,yout
     
     def generate_grid(self,form,count):
@@ -586,6 +597,8 @@ class kNdtool:
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
         return
     
+    #def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)):
+        
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
@@ -610,14 +623,16 @@ class kNdtool:
 
         if modeldict['Ndiff_bw_kern']=='rbfkern':
             xin_scaled=xin*x_bandscale_params
+            #print('xin_scaled.shape',xin_scaled.shape)
             xpr_scaled=xpr*x_bandscale_params
+            #print('xpr_scaled.shape',xpr_scaled.shape)
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_onediffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_Ndiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             onediffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
             Ndiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
-            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),'onediffs_scaled_l2norm does not have shape=(nin,nout)'
+            assert onediffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'onediffs_scaled_l2norm has shape:{onediffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
             diffdict['onediffs']=onediffs_scaled_l2norm
@@ -636,26 +651,32 @@ class kNdtool:
         
         xbw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
         ybw = self.BWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+
+        #print('xbw',xbw)
+        #print('ybw',ybw)
+        
+        
         '''xbwmaskcount=np.ma.count_masked(xbw)
         print('xbwmaskcount',xbwmaskcount)
-        print('np.ma.getmask(xbw)',np.ma.getmask(xbw))'''
+        print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
         
-        '''ybwmaskcount=np.ma.count_masked(ybw)
+        ybwmaskcount=np.ma.count_masked(ybw)
         print('ybwmaskcount',ybwmaskcount)
         print('np.ma.getmask(ybw)',np.ma.getmask(ybw))'''
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
-
                 
-        xbw=xbw*hx#need to make this flexible to blocks of x
+        xbw=xbw*hx
+        
+        
         if modeldict['regression_model']=='logistic':
             xonediffs=diffdict['onediffs']
             prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
             
             yhat_tup=self.kernel_logistic(prob_x,xin,yin)
             yhat_std=yhat_tup[0]
-            cross_errors=yhat_tup[1]
+            crosserrors=yhat_tup[1]
             
         if modeldict['regression_model'][0:2]=='NW':
             ybw=ybw*hy
@@ -670,25 +691,28 @@ class kNdtool:
             newaxis=len(yonediffs.shape)
             yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
+            #print('type(xonediffs)',type(xonediffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
+            
             prob_x = self.do_KDEsmalln(xonediffs, xbw, modeldict)
             prob_yx = self.do_KDEsmalln(yx_onediffs_endstack, yx_bw_endstack,modeldict)#do_KDEsmalln implements product \\
                 #kernel across axis=2, the 3rd dimension after the 2 diensions of onediffs. endstack refers to the fact \\
                 #that y and x data are stacked in dimension 2 and do_kdesmall_n collapses them via the product of their kernels.
-        
+            #print('type(prob_x)',type(prob_x),'type(prob_yx)',type(prob_x))
+            #print(prob_x,prob_yx)
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
             yhat_raw=KDEregtup[0]
-            cross_errors=KDEregtup[1]
+            crosserrors=KDEregtup[1]
             yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
-        #here is the simple MSE objective function. however, I think I need to use
-        #the more sophisticated MISE or mean integrated squared error,
-        #either way need to replace with cost function function
+
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
+
         if not iscrossmse:
             return (yhat_un_std,'no_cross_errors')
         if iscrossmse:
             return (yhat_un_std,cross_errors*self.ystd)
+
         
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -698,8 +722,8 @@ class kNdtool:
             xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1))
             yhat_i=LogisticRegression().fit(xin_const,yin,prob_x[...,i]).predict(xin)
             yhat_std.extend(yhat_i[i])
-            cross_errors.extend(yhat_i)#list with ii on dim0
-        cross_errors=np.masked_array(cross_errors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
+            crosserrors.extend(yhat_i)#list with ii on dim0
+        crosserrors=np.masked_array(crosserrors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
         yhat=np.array(yhat_std)                             
         if not iscrossmse:
             return (yhat,'no_cross_errors')
@@ -708,10 +732,10 @@ class kNdtool:
                 cross_exp=float(lossfn[8:])
                 wt_stack=prob_x**cross_exp
             
-            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+            crosserrors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
             crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
-            wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            return (yhat,wt_cross_errors)
+            wt_crosserrors=np.ma.sum(crosswt_stack*crosserrors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
+            return (yhat,wt_crosserrors)
 
     def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
@@ -755,24 +779,31 @@ class kNdtool:
                 cross_exp=float(lossfn[8:])
                 wt_stack=wt_stack**cross_exp
             
-            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+            crosserrors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
             crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
-            wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            return (yhat,wt_cross_errors)
+            wt_crosserrors=np.ma.sum(crosswt_stack*crosserrors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
+            return (yhat,wt_crosserrors)
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
         """
         """
         xpr=(xpr-self.xmean)/self.xstd
-        self.prediction=self.MY_KDEpredictMSE(fixed_or_free_paramdict['free_params'],self.yin,self.yout,self.xin,xpr,modeldict,fixed_or_free_paramdict)
+        
+        self.prediction=MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None)
+        
         return self.prediction.yhat
 
-    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict):
-
-        if not type(fixed_or_free_paramdict['free_params']) is list:  # it would be the string "outside" otherwise
+    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None):
+        #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
+        if predict==None or predict=='no':
+            predict=0
+        if predict=='yes':
+            predict=1
+        if  type(fixed_or_free_paramdict['free_params']) is str and fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
 
-        batchcount = self.datagen_dict['batchcount']
+        #batchcount = self.datagen_dict['batchcount']
+        batchcount = len(batchdata_dict['yintup'])
         #print(f'batchcount:{batchcount}')
         fixed_or_free_paramdict['free_params'] = free_params
         # print(f'free_params added to dict. free_params:{free_params}')
@@ -788,6 +819,7 @@ class kNdtool:
 
         arglistlist=[]
         for batch_i in range(batchcount):
+            
             arglist=[]
             arglist.append(batchdata_dict['yintup'][batch_i])
             arglist.append(batchdata_dict['youttup'][batch_i])
@@ -801,6 +833,8 @@ class kNdtool:
         process_count=1#self.cores
         if process_count>1 and batchcount>1:
             with multiprocessing.Pool(processes=process_count) as pool:
+
+
                 yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 sleep(2)
                 pool.close()
@@ -814,37 +848,58 @@ class kNdtool:
         #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
         yhat_unstd,crosserrors=zip(*yhat_unstd_outtup_list)
         
+
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
+        
+
+                
+        if modeldict['loss_function']=='batch_crossval':
+            ybatch=[]
+            for i in range(batchcount):
+                ycross_j=[]
+                for j,yxvartup in enumerate(self.datagen_obj.yxtup_list):
+                    if not j==i:
+                        ycross_j.append(yxvartup[0])
+                ybatch.append(np.concatenate(ycross_j,axis=0))
+                
+                
+        else:
+            ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
         for batch_i in range(batchcount):
-            y_batch_i=self.datagen_obj.yxtup_list[batch_i][0]#the original y data is a list of tupples
+            y_batch_i=ybatch[i]
             y_err = y_batch_i - yhat_unstd[batch_i]
             y_err_tup = y_err_tup + (y_err,)
 
+
         all_y_err = np.ma.concatenate(y_err_tup,axis=0)
+
         
         #print('all_y_err',all_y_err)
         if iscrossmse:
             all_y_err=np.ma.concatenate([all_y_err,np.ravel(crosserrors)],axis=0)
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
+
         assert maskcount==0,print(f'{maskcount} masked values found in all_y_err')
-            #mse = np.ma.count_masked(all_y_err) * 10000*maskcount
-        self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
-        # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
-        self.fixed_or_free_paramdict = fixed_or_free_paramdict
-        t_format = "%Y%m%d-%H%M%S"
-        self.iter_start_time_list.append(strftime(t_format))
+        
+        if predict==0:
+            self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
+            # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+            self.fixed_or_free_paramdict = fixed_or_free_paramdict
+            t_format = "%Y%m%d-%H%M%S"
+            self.iter_start_time_list.append(strftime(t_format))
 
-        if self.call_iter == 3:
-            tdiff = np.abs(
-                datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
-                    self.iter_start_time_list[-2], t_format))
-            self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-                                          1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-            print(f'save_interval changed to {self.save_interval}')
+            if self.call_iter == 3:
+                tdiff = np.abs(
+                    datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                        self.iter_start_time_list[-2], t_format))
+                self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+                print(f'save_interval changed to {self.save_interval}')
 
-        if self.call_iter % self.save_interval == 0:
-            self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+            if self.call_iter % self.save_interval == 0:
+                self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
@@ -858,10 +913,105 @@ class kNdtool:
         xpr=arglist[3]
         modeldict=arglist[4]
         fixed_or_free_paramdict=arglist[5]
-        return self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        KDEpredict_tup=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+        #print('type(KDEpredict_tup)',type(KDEpredict_tup))
+        #try:print(KDEpredict_tup[0].shape)
+        #except:pass
+        return KDEpredict_tup
+    
+    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,predict=None):
+        if predict==None:
+            predict=0
         
+        #free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
 
+        self.datagen_obj=datagen_obj
+        
+        model_param_formdict=modeldict['hyper_param_form_dict']
+        xkerngrid=modeldict['xkern_grid']
+        ykerngrid=modeldict['ykern_grid']
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        
+        #build dictionary for parameters
+        free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
+        self.fixed_or_free_paramdict=fixed_or_free_paramdict
+        if predict==1:
+            self.fixed_or_free_paramdict['free_params']='predict'#instead of 'outside'
+                
+        #save and transform the data
+        #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
+        self.batchcount=datagen_obj.batchcount
+        self.nin=datagen_obj.batch_n
+        self.p=datagen_obj.param_count#p should work too
+        #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
+        #standardize x and y and save their means and std to self
+        yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
+        #print('buildbatcdatadict')
+        batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
+        #print('for validation buildbatcdatadict')
+        val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
+        self.npr=len(batchdata_dict['xprtup'][0])
+        print('self.npr',self.npr)
+        #print('=======================')
+        #print(f'batchdata_dict{batchdata_dict}')
+        #print('=======================')
+        #self.npr=xpr.shape[0]#probably redundant
+        #self.yout=yout
+
+        #pre-build list of masks
+        self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+        self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+        
+        #setup and run scipy minimize
+        args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
+        val_args_tuple=(val_batchdata_dict, modeldict, self.fixed_or_free_paramdict)
+        print(f'mykern modeldict:{modeldict}')
+        
+        return free_params,args_tuple,val_args_tuple
+    
+    
+    def buildbatchdatadict(self,yxtup_list,xkerngrid,ykerngrid,modeldict):
+        #load up the data for each batch into a dictionary full of tuples
+        # with each tuple item containing data for a batch from 0 to batchcount-1
+        batchcount=len(yxtup_list)
+        #print('from buildbatchdatadict: batchcount: ',batchcount)
+        #print('self.batchcount: ',self.batchcount)
+        xintup = ()
+        yintup = ()
+        xprtup = ()
+        youttup = ()
+        if modeldict['loss_function']=='batch_crossval':
+            xpri=[]
+            for i in range(batchcount):
+                xpricross_j=[]
+                for j,yxvartup in enumerate(yxtup_list):
+                    if not j==i:
+                        xpricross_j.append(yxvartup[1])
+                xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
+                    #print('xpri_crossval_array.shape',xpri_crossval_array.shape)
+                xpri.append(xpri_crossval_array)
+                
+            
+        else:
+            xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
+        for i in range(batchcount):
+            xdata_std=yxtup_list[i][1]
+            #print('xdata_std.shape: ',xdata_std.shape)
+            ydata_std=yxtup_list[i][0]
+            #print('xprii[i]',xpri[i])
+            xpr_out_i,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
+            #print('xpr_out_i.shape',xpr_out_i.shape)
+            xintup=xintup+(xdata_std,)
+            yintup=yintup+(ydata_std,)
+            xprtup=xprtup+(xpr_out_i,)
+            youttup=youttup+(youti,)
+            #print('xprtup[0].shape:',xprtup[0].shape)
+
+        batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+        #print([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
+        return batchdata_dict
+    
 class optimize_free_params(kNdtool):
     """"This is the method for iteratively running kernelkernel to optimize hyper parameters
     optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
@@ -880,21 +1030,19 @@ class optimize_free_params(kNdtool):
     """
 
     def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
-        self.name=myname
-        if savedir==None:
-              mydir=os.getcwd()
-        kNdtool.__init__(self,savedir=savedir,myname=myname)
-        self.datagen_obj=datagen_obj
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
+
+        self.name=myname
+
         self.logger.info(f'optimizedict for {myname}:{optimizedict}')
         #Extract from optimizedict
-        modeldict=optimizedict['modeldict'] 
+
+
         opt_settings_dict=optimizedict['opt_settings_dict']
-        param_valdict=optimizedict['hyper_param_dict']
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
         '''mse_threshold=opt_settings_dict['mse_threshold']
@@ -903,62 +1051,16 @@ class optimize_free_params(kNdtool):
             print(f'optimization halted because inherited mse:{inherited_mse}<mse_threshold:{mse_threshold}')
             return'''
         
-        model_param_formdict=modeldict['hyper_param_form_dict']
-        xkerngrid=modeldict['xkern_grid']
-        ykerngrid=modeldict['ykern_grid']
-        max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        #Extract from optimizedict
+        modeldict=optimizedict['modeldict'] 
         
-        #build dictionary for parameters
-        free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
-        self.fixed_or_free_paramdict=fixed_or_free_paramdict
-                
-        #save and transform the data
-        #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
-        self.batchcount=datagen_obj.batchcount
-        self.nin=datagen_obj.batch_n
-        self.p=datagen_obj.param_count#p should work too
-        #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
+        param_valdict=optimizedict['hyper_param_dict']
 
-        #standardize x and y and save their means and std to self
-        yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
         
-        #store the standardized (by column or parameter,p) versions of x and y
-        #self.xdata_std=xdata_std;self.ydata_std=ydata_std
-                                 
-        #xpr,yout=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
-        #self.xin=xdata_std;self.yin=ydata_std
-        #self.xpr=self.xin.copy()#xpr is x values used for prediction, which is the original data since we are optimizing.
-        self.npr=self.nin#since we are optimizing within our sample
-
-        #load up the data for each batch into a dictionary full of tuples
-        # with each tuple item containing data for a batch from 0 to batchcount-1
-        xintup = ()
-        yintup = ()
-        xprtup = ()
-        youttup = ()
-        for i in range(self.batchcount):
-            xdata_std=yxtup_list_std[i][1]
-            ydata_std=yxtup_list_std[i][0]
-            xpri,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict)
-            xintup=xintup+(xdata_std,)
-            yintup=yintup+(ydata_std,)
-            xprtup=xprtup+(xpri,)
-            youttup=youttup+(youti,)
-
-        batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
-        #print('=======================')
-        #print(f'batchdata_dict{batchdata_dict}')
-        #print('=======================')
-        #self.npr=xpr.shape[0]#probably redundant
-        #self.yout=yout
-
-        #pre-build list of masks
-        self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-        self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-        
-        #setup and run scipy minimize
-        args_tuple=(batchdata_dict, modeldict, fixed_or_free_paramdict)
-        print(f'mykern modeldict:{modeldict}')
+        if savedir==None:
+            savedir=os.getcwd()
+        kNdtool.__init__(self,savedir=savedir,myname=myname)
+        free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
