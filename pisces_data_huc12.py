@@ -12,11 +12,12 @@ import logging
 
 class DataTool():
     def __init__(self,):
-        logging.basicConfig(level=logging.INFO)
+        #logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.DEBUG)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
-        self.processcount=6
+        self.processcount=4
 
             
     def viewNHDplus_picklefile(self,):
@@ -520,12 +521,19 @@ class DataTool():
         print('pool starting at',starttime)
         with mp.Pool(processes=self.processcount) as pool:
             outlist=pool.map(self.mp_buildspeciesdata01_file,speciesidxlistlist)
-            sleep(2)
+            sleep(5)
+            i=0
+            while len(outlist)<self.processcount:
+                print(f'len(outlist):{len(outlist)}, i:{i}')
+                sleep(2)
+                
+                
             pool.close()
             pool.join()
         self.outlist2=outlist
         endtime=time()
-        print('pool complete at ',endtime,'. time elapsed: ',endtime-starttime)
+        print(f'pool complete at {endtime}. time elapsed: {endtime-starttime}, len(outlist)={len(outlist)}')
+        print(f'the length of each list in outlist:{[len(item) for item in outlist]}.')
         if self.processcount>1:
             fail_record=zip(*outlist)
             fail_record=[record for recordlist in fail_record for record in recordlist]
@@ -536,12 +544,12 @@ class DataTool():
     def mp_buildspeciesdata01_file(self,speciesidx_list):
         datadir=os.path.join(self.savedir,'speciesdata01')
         logdir=os.path.join(datadir,'log')
-        if not os.path.exists: os.mkdir(logdir)
+        if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'pidatahuc12{os.getpid()}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
-        fail_record=[]
+        fail_record=[];recordfailcount=0
         for i,idx in enumerate(speciesidx_list):
             spec_i=self.specieslist[idx]
             try:
@@ -559,7 +567,7 @@ class DataTool():
                     varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid]
                     varcount=max(varcountlist)
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
-                    keylist=[key for key in self.sitedatacomid_dict[maxvarcountcomid].items()]
+                    keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
                     #p#rint('varcount',varcount)
                     speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
                     speciesdata[:,0]=np.array(species01list)
@@ -568,7 +576,7 @@ class DataTool():
                         try: speciesdata[j,1:]=np.array(sitevars)
                         except: 
                             self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
-                            keylistj=[key for key in self.sitedatacomid_dict[comidj]]
+                            keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
                             missingkeys=[]
                             for k,key in enumerate(keylist):
                                 try:#added try: to handle missing bmmi values even if key exists
@@ -576,17 +584,19 @@ class DataTool():
                                 except:
                                     missingkeys.append(key)
                                     speciesdata[j,1+k]='999999'
-                            self.logger.info(f'missing keys from exception are: {missingkeys}')
+                            self.logger.warning(f'missing keys from exception are: {missingkeys}')
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)  
-                    print(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
+                    self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
                 else:
-                    print(f'{species_filename} already exists')
+                    self.logger.info(f'{species_filename} already exists')
                 fail_record.append(0)
             except:
                 self.logger.exception(f'problem came up for species number {i},{spec_i}')
                 try: fail_record.append((spec_i,missingkeys))
                 except: fail_record.append((spec_i,'none'))
+                recordfailcount+=1
+        self.logger.warning(f'succesful completion. len(speciesidx_list): {len(speciesidx_list)}, recordfailcount: {recordfailcount}')
         return fail_record
             
         
