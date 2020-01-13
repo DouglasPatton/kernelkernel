@@ -707,20 +707,12 @@ class kNdtool:
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
-<<<<<<< HEAD
-        if not iscrossmse:#lossfn=='mse'
-            return (yhat_un_std,None)
-        if iscrossmse:
-            #print('yhat_un_std',yhat_un_std)
-            crosserrors_unstd=crosserrors*self.ystd
-            #print('crosserrors_unstd',crosserrors_unstd)    
-            return (yhat_un_std,crosserrors_unstd)
-=======
+
         if not iscrossmse:
             return (yhat_un_std,'no_cross_errors')
         if iscrossmse:
             return (yhat_un_std,cross_errors*self.ystd)
->>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
+
         
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -841,33 +833,13 @@ class kNdtool:
         process_count=1#self.cores
         if process_count>1 and batchcount>1:
             with multiprocessing.Pool(processes=process_count) as pool:
-<<<<<<< HEAD
-                yhat_unstd_tup=pool.map(self.MPwrapperKDEpredict,arglistlist)
-=======
+
+
                 yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
->>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
                 sleep(2)
                 pool.close()
                 pool.join()
         else:
-<<<<<<< HEAD
-            yhat_unstd_tup=[]
-            for i in range(batchcount):
-                yhat_unst_i=self.MPwrapperKDEpredict(arglistlist[i])
-                #print('type(yhat_unst_i)',type(yhat_unst_i))
-                #try: print(yhat_unst_i.shape)
-                #except:pass
-                yhat_unstd_tup.append(yhat_unst_i)
-        #if iscrossmse:
-        #print('len(yhat_unstd_tup)',len(yhat_unstd_tup))
-        yhat_unstd=[];crosserrors=[]
-        for batch in yhat_unstd_tup:
-            #print('yhat unstd batch',batch)
-            yhat_unstd.append(batch[0])
-            crosserrors.append(batch[1])
-            
-        #yhat_unstd,crosserrors=zip(*yhat_unstd)
-=======
             yhat_unstd_outtup_list=[]
             for i in range(batchcount):
                 result_tup=self.MPwrapperKDEpredict(arglistlist[i])
@@ -876,7 +848,7 @@ class kNdtool:
         #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
         yhat_unstd,crosserrors=zip(*yhat_unstd_outtup_list)
         
->>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
+
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         
 
@@ -1063,13 +1035,13 @@ class optimize_free_params(kNdtool):
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
-<<<<<<< HEAD
+
         self.name=myname
-=======
+
         self.logger.info(f'optimizedict for {myname}:{optimizedict}')
         #Extract from optimizedict
-        modeldict=optimizedict['modeldict'] 
->>>>>>> cccf8cf2bf0e09364c138f34797e180e362879db
+
+
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
