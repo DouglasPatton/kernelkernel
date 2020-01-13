@@ -1,5 +1,7 @@
 import numpy as np
 import logging
+import os
+import psutil
 
 class Ndiff:
     def __init__(self,savedir=None,myname=None):
@@ -20,7 +22,7 @@ class Ndiff:
 
         
 
-    def indiffsum_then_normalize_bw(self,kernstack,normalization):
+    def Ndiffsum_then_normalize_bw(self,kernstack,normalization):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
         if normalization=='none' or normalization==None:
@@ -37,12 +39,12 @@ class Ndiff:
         
     def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-                    self.indiffsum_then_normalize_bw(
+                    self.Ndiffsum_then_normalize_bw(
                         self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize),Ndiff_exp                   )
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
         return np.ma.power(
-            self.indiffsum_then_normalize_bw(
+            self.Ndiffsum_then_normalize_bw(
                 self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize),Ndiff_exp)
     
     def NdiffBWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):

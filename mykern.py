@@ -15,8 +15,9 @@ import logging
 #import logging.config
 import yaml
 import psutil
+from Ndiff import Ndiff
 
-class kNdtool:
+class kNdtool(Ndiff):
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
@@ -33,6 +34,7 @@ class kNdtool:
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
+        Ndiff.__init__(self,savedir=savedir,myname=myname)
         
 
 
@@ -284,15 +286,20 @@ class kNdtool:
     #def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)):
         
     
+    def BWmaker(self, fixed_or_free_paramdict, diffdict, modeldict,xory):
+        if self.Ndiff:
+            return Ndiff.NdiffBWmaker(self,modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
+    
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
         columns of x.
         """
-        if max_bw_Ndiff in modeldict:
+        if 'max_bw_Ndiff' in modeldict:
+            print('Ndiff==1')
             self.Ndiff=1
-            import Ndiff
+            #
         else:
             self.Ndiff=0
         
@@ -339,8 +346,8 @@ class kNdtool:
             yhat=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
         
-        xbw = self.NdiffBWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict, modeldict,'x')
-        ybw = self.NdiffBWmaker(max_bw_Ndiff, fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        xbw = self.BWmaker(fixed_or_free_paramdict, diffdict, modeldict,'x')
+        ybw = self.BWmaker(fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
 
         #print('xbw',xbw)
         #print('ybw',ybw)
@@ -403,9 +410,9 @@ class kNdtool:
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
         if self.Ndiff:
-            return Ndiff.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
+            return self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
         
-        prob_x = self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
+        
     
     def kernel_logistic(self,prob_x,xin,yin):
         lossfn=modeldict['loss_function']
@@ -653,8 +660,10 @@ class kNdtool:
 
         #pre-build list of masks
         if max_bw_Ndiff in modeldict:
-            self.Ndiff_list_of_masks_y=Ndiff.max_bw_Ndiff_maskstacker_y(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-            self.Ndiff_list_of_masks_x=Ndiff.max_bw_Ndiff_maskstacker_x(self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+            self.Ndiff_list_of_masks_y=Ndiff.max_bw_Ndiff_maskstacker_y(
+                self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+            self.Ndiff_list_of_masks_x=Ndiff.max_bw_Ndiff_maskstacker_x(
+                self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
