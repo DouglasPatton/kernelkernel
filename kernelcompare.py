@@ -413,12 +413,12 @@ class KernelOptModelTools(mk.kNdtool):
     
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
-            assert os.path.exists(merge_directory),"merge_directory does not exist"
+            assert os.path.exists(merge_directory),f"merge_directory does not exist:{merge_directory}"
         else:
             merge_directory=self.kc_savedirectory
                 
         if not save_directory==None:
-            assert os.path.exists(save_directory),"save_directory does not exist"
+            assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
         else:
             save_directory=self.kc_savedirectory
                 #os.makedirs(save_directory)
@@ -717,8 +717,10 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=0
         if verbose=='yes':
             verbose=1
+
         if deletekey=='yes':deletekey=1
         if deletekey==None:deletekey=='no'
+
         vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
