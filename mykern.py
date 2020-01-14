@@ -288,7 +288,7 @@ class kNdtool(Ndiff):
     
     def BWmaker(self, fixed_or_free_paramdict, diffdict, modeldict,xory):
         if self.Ndiff:
-            return Ndiff.NdiffBWmaker(self,modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
+            return self.NdiffBWmaker(modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
@@ -659,11 +659,13 @@ class kNdtool(Ndiff):
         #self.yout=yout
 
         #pre-build list of masks
-        if max_bw_Ndiff in modeldict:
-            self.Ndiff_list_of_masks_y=Ndiff.max_bw_Ndiff_maskstacker_y(
+        if 'max_bw_Ndiff' in modeldict:
+            print('---------------starting to make masks----------------')
+            self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
                 self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-            self.Ndiff_list_of_masks_x=Ndiff.max_bw_Ndiff_maskstacker_x(
+            self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
                 self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
+            print('---------------completed making masks----------------')
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
