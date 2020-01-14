@@ -13,7 +13,7 @@ import logging
 class DataTool():
     def __init__(self,):
         #logging.basicConfig(level=logging.INFO)
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.INFO)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
@@ -34,7 +34,7 @@ class DataTool():
                 
     
     def getNHDplus(self,):
-        self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
+        
         savefilename=os.path.join(self.savedir,'NHDplus.data')
         if os.path.exists(savefilename):
             try: 
@@ -57,7 +57,9 @@ class DataTool():
         print('finished read of NHDplus')
         print(f'opened {filename} with length:{len(dbf)} and type:{type(dbf)}')
         #p#rint(dbf.head())
-        
+        #self.NHDvarlist=dbf.columns.values
+        self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
+        print('self.NHDvarlist: ',self.NHDvarlist)
         
         #self.dbf=dbf
         #self.NHDplus=[dbf[var].tolist() for var in varlist]
@@ -321,6 +323,7 @@ class DataTool():
         except:self.getsitedata()
             
         comidcount=len(self.comidlist)
+
         if self.processcount>1:
             com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
             print(com_idx)
@@ -352,6 +355,7 @@ class DataTool():
             outlist=self.mpsearchcomidhuc12(self.comidlist)
             self.outlist=outlist
             self.comidsitedataidx,self.sitedatacomid_dict,self.comidsiteinfofindfaillist,self.huc12findfaillist=outlist
+
         
         with open(filepath,'wb') as f:
             pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
@@ -372,6 +376,13 @@ class DataTool():
         return
  
     def mpsearchcomidhuc12(self,comidlist):
+        
+        logdir=os.path.join(self.savedir,'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'mpsearchcomidhuc12{os.getpid()}.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__+str(os.getpid()))
+        self.logger.addHandler(handler)
         mypid=os.getpid()
         comidcount=len(comidlist)
         comidsitedataidx=[]
@@ -385,11 +396,12 @@ class DataTool():
             if i in printselection and i>0:
                 progress=np.round(100.0*i/comidcount,1)
                 failrate=np.round(100.0*huc12failcount/i,5)
-                print(f"{mypid}'s progress:{progress}%, failrate:{failrate}",end='. ')
+                self.logger.info(f"{mypid}'s progress:{progress}%, failrate:{failrate}")
             hucdatadict=self.findcomidhuc12reach(comid_i)
             if hucdatadict==None: 
                 huc12findfaillist[i]=1
                 huc12failcount+=1
+
             found=0
             try:
                 j=self.sitedata_comid_digits.index(comid_i)
@@ -397,6 +409,7 @@ class DataTool():
             except:                
                 sitedatacomid_dict[comid_i]='Not Found'
                 comidsitedataidx.append('Not Found')
+
                 comidsiteinfofindfaillist[i]=1
             if found==1:
                 sitedict=self.sitedata[j]
@@ -410,7 +423,9 @@ class DataTool():
         
     def findcomidhuc12reach(self,comid):
         try:self.NHDplus,self.NHDpluscomidlist
-        except:self.getNHDplus()
+        except:
+            self.logger.exception('could not access NHDplus in self')
+            self.getNHDplus()
         #p#rint('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
         itemcount=len(self.NHDplus)
         #comid_digits=comid#''.join(filter(str.isdigit,comid))
@@ -547,7 +562,7 @@ class DataTool():
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'pidatahuc12{os.getpid()}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__+str(os.getpid()))
         self.logger.addHandler(handler)
         fail_record=[];recordfailcount=0
         for i,idx in enumerate(speciesidx_list):
