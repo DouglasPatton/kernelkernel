@@ -6,18 +6,25 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-import logging
-import logging.config
+import logging, logging.config
 import yaml
 #import datetime
 
 class KernelOptModelTools(mk.kNdtool):
     def __init__(self,directory=None,myname=None):
+        if directory==None:
+            self.kc_savedirectory=os.getcwd
+        else:
+            self.kc_savedirectory=directory
+        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.name=myname
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('kcLogger')
+        logging.basicConfig(level=logging.INFO)
+        logdir=os.path.join(self.kc_savedirectory,'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'kernelcompare.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
         
         if directory==None:
             self.kc_savedirectory=os.getcwd
@@ -355,7 +362,7 @@ class KernelOptModelTools(mk.kNdtool):
         if len(model_save_list)==0:
             print(f'no models in model_save_list for printing')
             return
-        model_save_list.sort(key=self.getmodelrunmse)  #sorts by mse
+        model_save_list.sort(key=lambda savedicti: savedicti['mse'])  #sorts by mse
 
         output_loc=os.path.join(directory,'output')
         if not os.path.exists(output_loc):
@@ -382,6 +389,9 @@ class KernelOptModelTools(mk.kNdtool):
                     self.logger.exception(f'error in {__name__}')
                     return
 
+    '''def getmodelrunmse(self,modelrundict):
+        return modelrundict['mse']'''
+                
     def myflatdict(self, complexdict, keys=None):
         thistype = type(complexdict)
         if not thistype is dict:
@@ -405,20 +415,19 @@ class KernelOptModelTools(mk.kNdtool):
 
     
 
-    def getmodelrunmse(self,modelrundict):
-        return modelrundict['mse']
+
     
 
     
     
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
-            assert os.path.exists(merge_directory),"merge_directory does not exist"
+            assert os.path.exists(merge_directory),f"merge_directory does not exist:{merge_directory}"
         else:
             merge_directory=self.kc_savedirectory
                 
         if not save_directory==None:
-            assert os.path.exists(save_directory),"save_directory does not exist"
+            assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
         else:
             save_directory=self.kc_savedirectory
                 #os.makedirs(save_directory)
@@ -555,8 +564,8 @@ class KernelOptModelTools(mk.kNdtool):
         return final_keep_list
 
     def do_nwt_mse(self,mse,n,batch_count=1):
-        if np.isnan(mse):
-            return 10000000
+        if not type(mse) is float:
+            return 10**301
         
         else:
             #print('type(mse)',type(mse))
@@ -717,8 +726,10 @@ class KernelOptModelTools(mk.kNdtool):
             verbose=0
         if verbose=='yes':
             verbose=1
-        if delete=='yes':delete=1
-        if delete==None:delete=='no'
+
+        if deletekey=='yes':deletekey=1
+        if deletekey==None:deletekey=='no'
+
         vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
@@ -813,7 +824,6 @@ class KernelOptModelTools(mk.kNdtool):
         if opt_dict_override==None:
             opt_dict_override={}
         max_bw_Ndiff=2
-        
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
@@ -823,6 +833,7 @@ class KernelOptModelTools(mk.kNdtool):
             'Ndiff_start':Ndiff_start,
             'max_bw_Ndiff':max_bw_Ndiff,
             'normalize_Ndiffwtsum':'own_n',
+            'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':61,
             'outer_kern':'gaussian',
@@ -904,9 +915,6 @@ class KernelCompare(KernelOptModelTools):
         assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
         assert type(optdict_variation_list[0])==tuple,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a tuple'
                          
-        #initial_opt_dict=self.build_optdict(param_count=datagen_dict['param_count'])
-        #if optdict_variation_list==None:
-        #    optdict_list=[initial_opt_dict]
         
         model_run_dict_list=[]
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)

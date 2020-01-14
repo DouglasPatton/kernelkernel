@@ -1,22 +1,31 @@
 from time import sleep
 import multiprocessing as mp
 from random import randint,seed
-import os
+import os,sys,psutil
 import mycluster
 from datetime import datetime
-import logging
-import logging.config
+import logging,logging.config
 import yaml
 from numpy import log
 
 
-
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('multiClusterLogger')
+        logging.basicConfig(level=logging.INFO)
+        logdir=os.path.join(os.getcwd(),'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'multicluster.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
+
+        platform=sys.platform
+        p=psutil.Process(os.getpid())
+        if platform=='win32':
+            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        else:
+            p.nice(6)
+
         seed(datetime.now())
         self.local_test=local_test
         self.i=0
@@ -63,10 +72,12 @@ class mypool:
                 except KeyboardInterrupt:
                     rerun=False
                 except:
-                    self.i+=1
+                    #self.i+=500
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
-        sleeptime=3*log(25*float(self.i))
+
+        sleeptime=(.1*log(float(os.getpid())))**8#0.2->4min. 0.1->6sec
+
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
         rerun=True
