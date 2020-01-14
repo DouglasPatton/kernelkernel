@@ -381,10 +381,11 @@ class kNdtool(Ndiff):
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
                 xonedifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
-                xoutdiffs_stack=np.broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
+                xoutdiffs_stack=ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
                 xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xoutdiffs.shape)-1),xonedifftup)
             newaxis=len(youtdiffs.shape)
-            yx_outdiffs_endstack=np.ma.concatenate((np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
+            yx_outdiffs_endstack=np.ma.concatenate(
+                (np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
             #print('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             
@@ -405,11 +406,11 @@ class kNdtool(Ndiff):
         if iscrossmse:
             return (yhat_un_std,cross_errors*self.ystd)
 
+
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
         if self.Ndiff:
             return self.Ndiffdo_KDEsmalln(diffs, bw, modeldict)
-        
         
     
     def kernel_logistic(self,prob_x,xin,yin):
@@ -531,7 +532,6 @@ class kNdtool(Ndiff):
         process_count=1#self.cores
         if process_count>1 and batchcount>1:
             with multiprocessing.Pool(processes=process_count) as pool:
-
                 yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 sleep(2)
                 pool.close()
@@ -577,7 +577,7 @@ class kNdtool(Ndiff):
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
 
-        assert maskcount==0,print(f'{maskcount} masked values found in all_y_err')
+        assert maskcount==0,f'{maskcount} masked values found in all_y_err'
         
         if predict==0:
             self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
@@ -740,6 +740,7 @@ class optimize_free_params(kNdtool):
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
+
         self.name=myname
 
         self.logger.info(f'optimizedict for {myname}:{optimizedict}')
