@@ -297,9 +297,7 @@ class kNdtool(Ndiff):
         columns of x.
         """
         if 'max_bw_Ndiff' in modeldict:
-            print('Ndiff==1')
             self.Ndiff=1
-            #
         else:
             self.Ndiff=0
         
@@ -410,7 +408,7 @@ class kNdtool(Ndiff):
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
         if self.Ndiff:
-            return self.Ndiffdo_KDEsmalln(xoutdiffs, xbw, modeldict)
+            return self.Ndiffdo_KDEsmalln(diffs, bw, modeldict)
         
         
     
