@@ -371,7 +371,7 @@ class kNdtool(Ndiff):
             
             yhat_tup=self.kernel_logistic(prob_x,xin,yin)
             yhat_std=yhat_tup[0]
-            crosserrors=yhat_tup[1]
+            cross_errors=yhat_tup[1]
             
         if modeldict['regression_model'][0:2]=='NW':
             ybw=ybw*hy
@@ -381,7 +381,7 @@ class kNdtool(Ndiff):
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
                 xonedifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
-                xoutdiffs_stack=ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
+                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
                 xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xoutdiffs.shape)-1),xonedifftup)
             newaxis=len(youtdiffs.shape)
             yx_outdiffs_endstack=np.ma.concatenate(
@@ -394,7 +394,7 @@ class kNdtool(Ndiff):
             
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
             yhat_raw=KDEregtup[0]
-            crosserrors=KDEregtup[1]
+            cross_errors=KDEregtup[1]
             yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
 
         yhat_un_std=yhat_std*self.ystd+self.ymean
@@ -421,8 +421,8 @@ class kNdtool(Ndiff):
             xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1))
             yhat_i=LogisticRegression().fit(xin_const,yin,prob_x[...,i]).predict(xin)
             yhat_std.extend(yhat_i[i])
-            crosserrors.extend(yhat_i)#list with ii on dim0
-        crosserrors=np.masked_array(crosserrors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
+            cross_errors.extend(yhat_i)#list with ii on dim0
+        cross_errors=np.masked_array(cross_errors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
         yhat=np.array(yhat_std)                             
         if not iscrossmse:
             return (yhat,'no_cross_errors')
@@ -431,10 +431,10 @@ class kNdtool(Ndiff):
                 cross_exp=float(lossfn[8:])
                 wt_stack=prob_x**cross_exp
             
-            crosserrors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
             crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
-            wt_crosserrors=np.ma.sum(crosswt_stack*crosserrors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            return (yhat,wt_crosserrors)
+            wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
+            return (yhat,wt_cross_errors)
 
     def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
@@ -478,10 +478,10 @@ class kNdtool(Ndiff):
                 cross_exp=float(lossfn[8:])
                 wt_stack=wt_stack**cross_exp
             
-            crosserrors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
             crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
-            wt_crosserrors=np.ma.sum(crosswt_stack*crosserrors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            return (yhat,wt_crosserrors)
+            wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
+            return (yhat,wt_cross_errors)
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
         """
@@ -543,7 +543,7 @@ class kNdtool(Ndiff):
                 #self.logger.info(f'result_tup: {result_tup}')
                 yhat_unstd_outtup_list.append(result_tup)
         #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-        yhat_unstd,crosserrors=zip(*yhat_unstd_outtup_list)
+        yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
         
 
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
@@ -573,7 +573,7 @@ class kNdtool(Ndiff):
         
         #print('all_y_err',all_y_err)
         if iscrossmse:
-            all_y_err=np.ma.concatenate([all_y_err,np.ravel(crosserrors)],axis=0)
+            all_y_err=np.ma.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
 
