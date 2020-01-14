@@ -37,10 +37,13 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     def __init__(self,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('myClusterLogger')
+        logging.basicConfig(level=logging.INFO)
+        logdir=os.path.join(self.savedir,'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'mycluster.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
         if local_test==None or local_test=='yes' or local_test=='Yes':
             local_test=1
         if local_test=='no' or local_test=='No':
