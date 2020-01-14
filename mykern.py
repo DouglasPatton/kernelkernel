@@ -687,7 +687,7 @@ class kNdtool:
             if True:#type(ykern_grid) is int and xkern_grid=='no':
                 xonedifftup=xonediffs.shape[:-1]+(self.nout,)+(xonediffs.shape[-1],)
                 xonediffs_stack=np.broadcast_to(np.expand_dims(xonediffs,len(xonediffs.shape)-1),xonedifftup)
-                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
+                xbw_stack=self.ma_broadcast_to(np.ma.expand_dims(xbw,len(xonediffs.shape)-1),xonedifftup)
             newaxis=len(yonediffs.shape)
             yx_onediffs_endstack=np.ma.concatenate((np.expand_dims(xonediffs_stack,newaxis),np.expand_dims(yonediffs,newaxis)),axis=newaxis)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
@@ -880,7 +880,7 @@ class kNdtool:
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
 
-        assert maskcount==0,print(f'{maskcount} masked values found in all_y_err')
+        assert maskcount==0,f'{maskcount} masked values found in all_y_err'
         
         if predict==0:
             self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
