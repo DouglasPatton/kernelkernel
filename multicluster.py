@@ -12,7 +12,7 @@ from numpy import log
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
         logging.basicConfig(level=logging.INFO)
-        logdir=os.path.join(self.savedir,'log')
+        logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'multicluster.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))

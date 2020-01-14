@@ -37,10 +37,13 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     def __init__(self,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
+        self.savedirectory=self.setdirectory(local_test=local_test)
+        self.masterdirectory=self.setmasterdir(self.savedirectory)
+
         logging.basicConfig(level=logging.INFO)
-        logdir=os.path.join(self.savedir,'log')
+        logdir=os.path.join(self.savedirectory,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'mycluster.log'
+        handlername=f'mycluster_{myname}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
@@ -60,8 +63,7 @@ class run_cluster(kernelcompare.KernelCompare):
             datagen_variation_list=self.getdatagenvariations()
         
         self.oldnode_threshold=datetime.timedelta(minutes=360,seconds=1)
-        self.savedirectory=self.setdirectory(local_test=local_test)
-        self.masterdirectory=self.setmasterdir(self.savedirectory)
+        
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
 
         print(f'self.savedirectory{self.savedirectory}')

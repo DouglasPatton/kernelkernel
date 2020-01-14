@@ -12,11 +12,19 @@ import yaml
 
 class KernelOptModelTools(mk.kNdtool):
     def __init__(self,directory=None,myname=None):
+        if directory==None:
+            self.kc_savedirectory=os.getcwd
+        else:
+            self.kc_savedirectory=directory
+        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.name=myname
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('kcLogger')
+        logging.basicConfig(level=logging.INFO)
+        logdir=os.path.join(self.kc_savedirectory,'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'kernelcompare.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
         
         if directory==None:
             self.kc_savedirectory=os.getcwd
