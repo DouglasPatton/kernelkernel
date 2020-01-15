@@ -83,7 +83,7 @@ class run_cluster(kernelcompare.KernelCompare):
     def getoptdictvariations(self):
         ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
         NWnorm_variations=('modeldict:NWnorm',['across'])
-        loss_function_variations=('modeldict:loss_function',['mse','batch_crossval','crossmse2'])
+        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
