@@ -27,13 +27,12 @@ class kNdtool(Ndiff):
         self.savedir=savedir
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        logging.basicConfig(level=logging.INFO)
-        logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'kNdtool.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('myKernLogger')
+        
         Ndiff.__init__(self,savedir=savedir,myname=myname)
         
 
@@ -540,13 +539,17 @@ class kNdtool(Ndiff):
             if NWnorm=='across':
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2
+
         else:
             wt_stack=prob_yx/prob_x_stack
             if NWnorm=='across':
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+
         yhatmaskscount=np.ma.count_masked(yhat)
-        if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
+        if yhatmaskscount>0:
+            self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
+
         #print(f'yhat:{yhat}')
         #print("wt_stack.shape",wt_stack.shape)
         #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
