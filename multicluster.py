@@ -11,9 +11,19 @@ from numpy import log
 
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
-        logging.basicConfig(level=logging.INFO)
+        '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'multicluster.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)'''
+        logging.basicConfig(level=logging.INFO)
+        configfile=yaml.safe_load(f.read())
+        logdir=os.path.join(self.savedir,'log')
+        logging.config.dictConfig(configfile)
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        self.logger = logging.getLogger('multiClusterLogger')
         handlername=f'multicluster.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
