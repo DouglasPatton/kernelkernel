@@ -52,7 +52,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if local_test=='no' or local_test=='No':
             local_test=0
 
-        self.n=16 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
+        self.n=32 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
 
                     
         if myname==None:

@@ -26,7 +26,7 @@ class mypool:
         else:
             p.nice(6)
 
-        seed(datetime.now())
+        #seed(datetime.now())
         self.local_test=local_test
         self.i=0
         self.id=randint(0,100000000)
@@ -76,7 +76,7 @@ class mypool:
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
 
-        sleeptime=(.1*log(float(os.getpid())))**8#0.2->4min. 0.1->6sec
+        sleeptime=(.2*log(float(randint(5000000,99999999))/2000))**8#0.2->4min. 0.1->6sec
 
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times

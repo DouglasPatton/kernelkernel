@@ -467,7 +467,8 @@ class kNdtool(Ndiff):
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
             yhatmaskscount=np.ma.count_masked(yhat)
-            if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
+            if yhatmaskscount>0:
+                self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
         #print(f'yhat:{yhat}')
         
         #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
