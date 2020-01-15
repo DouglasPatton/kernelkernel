@@ -2,6 +2,7 @@ import numpy as np
 import logging,logging.config
 import os
 import psutil
+import yaml
 
 class Ndiff:
     def __init__(self,savedir=None,myname=None):

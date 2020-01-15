@@ -458,12 +458,12 @@ class kNdtool(Ndiff):
         if modeldict['regression_model']=='NW-rbf2':
             wt_stack=np.ma.power(np.ma.power(prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
             if NWnorm=='across':
-                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
+                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)
         else:
             wt_stack=prob_yx/prob_x_stack
             if NWnorm=='across':
-                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
+                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
             yhatmaskscount=np.ma.count_masked(yhat)
             if yhatmaskscount>0:
