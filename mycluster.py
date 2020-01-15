@@ -40,16 +40,11 @@ class run_cluster(kernelcompare.KernelCompare):
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         
-        logging.basicConfig(level=logging.INFO)
-        configfile=yaml.safe_load(f.read())
-        logdir=os.path.join(self.savedir,'log')
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
-        if not os.path.exists(logdir): os.mkdir(logdir)
         self.logger = logging.getLogger('myClusterLogger')
-        handlername=f'mycluster.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        
         '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.savedirectory,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)

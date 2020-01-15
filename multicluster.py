@@ -19,15 +19,10 @@ class mypool:
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)'''
         logging.basicConfig(level=logging.INFO)
-        configfile=yaml.safe_load(f.read())
-        logdir=os.path.join(self.savedir,'log')
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
-        if not os.path.exists(logdir): os.mkdir(logdir)
         self.logger = logging.getLogger('multiClusterLogger')
-        handlername=f'multicluster.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
 
         platform=sys.platform
         p=psutil.Process(os.getpid())

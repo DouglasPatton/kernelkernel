@@ -1,5 +1,5 @@
 import numpy as np
-import logging
+import logging,logging.config
 import os
 import psutil
 
@@ -8,14 +8,18 @@ class Ndiff:
         if savedir==None:
             savedir=os.getcwd()
         self.savedir=savedir
-        
-        logging.basicConfig(level=logging.INFO)
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('ndiffLogger')
+
+        '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.savedir,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'Ndiff.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        self.logger.addHandler(handler)'''
 
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)

@@ -27,13 +27,12 @@ class kNdtool(Ndiff):
         self.savedir=savedir
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        logging.basicConfig(level=logging.INFO)
-        logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'kNdtool.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('myKernLogger')
+        
         Ndiff.__init__(self,savedir=savedir,myname=myname)
         
 
