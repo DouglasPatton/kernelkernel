@@ -341,7 +341,7 @@ class kNdtool(Ndiff):
         if modeldict['Ndiff_bw_kern']=='product':
             outdiffs=makediffmat_itoj(xin,xpr)#scale now? if so, move if...='rbfkern' down 
             #predict
-            yhat=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
+            NWtup=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
         
         xbw = self.BWmaker(fixed_or_free_paramdict, diffdict, modeldict,'x')
@@ -393,18 +393,23 @@ class kNdtool(Ndiff):
             prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
             
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
-            yhat_raw=KDEregtup[0]
-            cross_errors=KDEregtup[1]
+            if modeldict['loss_function']=='batchnorm_crossval':
+                return KDEregtup
+            else:
+                yhat_raw=KDEregtup[0]
+                cross_errors=KDEregtup[1]
+            
             yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
 
         yhat_un_std=yhat_std*self.ystd+self.ymean
         
         #print(f'yhat_un_std:{yhat_un_std}')
 
-        if not iscrossmse:
-            return (yhat_un_std,'no_cross_errors')
+        
         if iscrossmse:
-            return (yhat_un_std,cross_errors*self.ystd)
+            cross_error=cross_errors*self.ystd
+        return (yhat_un_std,cross_errors)
+        
 
 
     
@@ -467,12 +472,15 @@ class kNdtool(Ndiff):
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
             yhatmaskscount=np.ma.count_masked(yhat)
-            if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
+        if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
         
         #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
+        
         if not iscrossmse:
-            return (yhat,'no_cross_errors')
+            cross_errors='no_cross_errors'
+            
+            
         if iscrossmse:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
@@ -481,7 +489,11 @@ class kNdtool(Ndiff):
             cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
             crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            return (yhat,wt_cross_errors)
+            cross_errors=wt_cross_errors)
+        if modeldict['loss_function']=='batchnorm_crossval':
+            return (yout_stack,wt_stack,cross_errors)
+        return (yhat,cross_errors)
+            
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
         """
@@ -543,9 +555,13 @@ class kNdtool(Ndiff):
                 #self.logger.info(f'result_tup: {result_tup}')
                 yhat_unstd_outtup_list.append(result_tup)
         #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-        yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
+        if modeldict['loss_function']=='batchnorm_crossval':
+            yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list)
+           
+        else:
+            yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
         
-
+        yhat_unstd,cross_errors=
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         
 
@@ -558,6 +574,9 @@ class kNdtool(Ndiff):
                     if not j==i:
                         ycross_j.append(yxvartup[0])
                 ybatch.append(np.concatenate(ycross_j,axis=0))
+        elif modeldict['loss_function']=='batchnorm_crossval'
+           y=np.concatenate([yxtup[0] for yxtup in yxtup_list],axis=0)
+            
                 
                 
         else:
