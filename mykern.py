@@ -652,19 +652,23 @@ class kNdtool(Ndiff):
                         ycross_j.append(yxvartup[0])
                 ybatch.append(np.concatenate(ycross_j,axis=0))
         elif modeldict['loss_function']=='batchnorm_crossval':
-            y=np.concatenate([yxtup[0] for yxtup in yxtup_list],axis=0)
-            
-                
+            all_y_list=[yxvartup[0] for yxvartup in self.datagen_obj.yxtup_list]
+            all_y=np.concatenate(all_y_list,axis=0)
+            all_y_err=all_y-yhat_unstd    
+            if type(cross_errors[0]) is np.ndarray:
+                cross_errors=np.concatenate(cross_errors,axis=0)
                 
         else:
             ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
-        for batch_i in range(batchcount):
-            y_batch_i=ybatch[i]
-            y_err = y_batch_i - yhat_unstd[batch_i]
-            y_err_tup = y_err_tup + (y_err,)
+        
+        if not modeldict['loss_function']=='batchnorm_crossval':
+            for batch_i in range(batchcount):
+                y_batch_i=ybatch[i]
+                y_err = y_batch_i - yhat_unstd[batch_i]
+                y_err_tup = y_err_tup + (y_err,)
 
 
-        all_y_err = np.ma.concatenate(y_err_tup,axis=0)
+            all_y_err = np.ma.concatenate(y_err_tup,axis=0)
 
         
         #print('all_y_err',all_y_err)
