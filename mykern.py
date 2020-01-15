@@ -411,47 +411,50 @@ class kNdtool(Ndiff):
         return (yhat_un_std,cross_errors)
         
     def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict):
-        if self.batchcount>1:
-            yout_stack,wt_stack,cross_errors=zip(*KDEregtup)
+        batchcount=self.batchcount
+        if batchcount>1:
+            yout,wt_stack,cross_errors=zip(*KDEregtup)
             
         else:
-            print('len(KDEregtup)',len(KDEregtup))
-            yout_stack,wt_stack,cross_errors=KDEregtup
+            #print('len(KDEregtup)',len(KDEregtup))
+            yout,wt_stack,cross_errors=KDEregtup
         nin=self.nin; ybatch=[];wtbatch=[]
-        for i in range(self.batchcount):
+        for i in range(batchcount):
+            #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
             #ybatchlist=[]
             wtbatchlist=[]
             
-            for j in range(self.batchcount):
+            for j in range(batchcount):
                 if j>i:
                     istart=(i)*nin
                     iend=istart+nin
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
-                    print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
+                    #print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
                 elif j<i:
                     istart=(i-1)*nin
                     iend=istart+nin
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
-                    print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
+                    #print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
                 else:
                     pass
             dimcount=np.ndim(wtbatchlist[0])
             #ybatchlist=[np.ma.expand_dims(yi,axis=dimcount) for yi in ybatchlist]
-            wtbatchlist=[np.ma.expand_dims(wt,axis=dimcount) for wt in wtbatchlist]
+            wtbatchlist=[np.ma.expand_dims(wt,axis=0) for wt in wtbatchlist]
             #ybatchshape=[y.shape for y in ybatchlist]
             wtbatchshape=[wt.shape for wt in wtbatchlist]
-            print('wtbatchshape',wtbatchshape)
+            #print('wtbatchshape',wtbatchshape)
             #ybatch.append(np.ma.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
-            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=dimcount))
-        wtbatchsum=[np.ma.sum(wt,axis=-2) for wt in wtbatch]
-        wtbatchsumsum=[np.ma.sum(wt,axis=0) for wt in wtbatchsum]
-        wtbatchnorm=[wtbatch[i]/wtbatchsumsum[i] for i in range(batchcount)]
-        yhatbatch=[np.sum(wtbatchnorm[i]*yout_stack,axis=-2) for i in range(batchcount)]
-        yhat_raw=np.concatenate(yhatbatch,axis=0)
+            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0))
+        wtstack=np.ma.concatenate(wtbatch,axis=-1)#lhs axis is npr axis
+        wtstacksum=np.ma.sum(wtstack,axis=0)#summed over the new,batch axis
+        wtstacksumsum=np.ma.sum(wtstacksum,axis=0)#summed over the yout axis
+        wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
+        yhat_raw=np.ma.sum(wtstacknorm*np.ma.expand_dims(yout,axis=-1),axis=0)#the npr axis is on rhs, so must be expanded manually. summation of yout axis, the lhs one at this point
+        
                 
         y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
@@ -522,7 +525,7 @@ class kNdtool(Ndiff):
         yhatmaskscount=np.ma.count_masked(yhat)
         if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
-        print("wt_stack.shape",wt_stack.shape)
+        #print("wt_stack.shape",wt_stack.shape)
         #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
         
         if not iscrossmse:
@@ -729,12 +732,12 @@ class kNdtool(Ndiff):
 
         #pre-build list of masks
         if 'max_bw_Ndiff' in modeldict:
-            print('---------------starting to make masks----------------')
+            #print('---------------starting to make masks----------------')
             self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
                 self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
             self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
                 self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-            print('---------------completed making masks----------------')
+            #print('---------------completed making masks----------------')
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
