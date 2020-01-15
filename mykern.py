@@ -416,31 +416,33 @@ class kNdtool(Ndiff):
         else:
             yout_stack,wt_stack,cross_errors=KDEregtup
         if self.batchcount>1:
-            ybatchlist=[[] for _ in range(self.batchcount)]
-            wtbatchlist=[[] for _ in range(self.batchcount)]
-            npr=self.npr
+            npr=self.npr; ybatch=[]
             for i in range(self.batchcount):
-                
+                ybatchlist=[]
+                wtbatchlist=[]
                 for j in range(self.batchcount):
                     if i<j:
                         istart=i*npr; iend=istart+npr
-                        ybatchlist[i].append(yout_stack[:,istart:iend])
-                        wtbatchlist[i].append(wt_stack[:,istart:iend])
-                    if i>j
+                        ybatchlist.append(yout_stack[:,istart:iend])
+                        wtbatchlist.append(wt_stack[:,istart:iend])
+                    if i>j:
                         istart=(i-1)*npr; iend=istart+npr
-                        ybatchlist[i].append(yout_stack[:,istart:iend])
-                        wtbatchlist[i].append(wt_stack[:,istart:iend])
-                dimcount=np.ndim(yout_stack[0])
-                np.concatenate(ybatchlist[i],axis=-1)
+                        ybatchlist.append(yout_stack[:,istart:iend])
+                        wtbatchlist.append(wt_stack[:,istart:iend])
+                dimcount=np.ndim(yout_stack)
+                ybatchlist=[np.ma.expand_dims(yi,axis=dimcount) for yi in ybatchlist]
+                wtbatchlist=[np.ma.expand_dims(wt,axis=dimcount) for wt in wtbatchlist]
+                ybatch.append(np.concatenate(ybatchlist,axis=-1))
+                wtbatch.append(np.concatenate(wtbatchlist,axis=-1))
+                
             
         
         
         
-        
+        y_bandscale_params=self.pull
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
-
-        yhat_un_std=yhat_std*self.ystd+self.ymean)
-
+        yhat_un_std=yhat_std*self.ystd+self.ymean
+        return yhat_unstd,cross_errors
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
         if self.Ndiff:
@@ -477,7 +479,9 @@ class kNdtool(Ndiff):
         iscrossmse=lossfn[0:8]=='crossmse'
             
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
-        
+        print('yout_axis(expected 0): ',yout_axis)
+        print('prob_yx.shape',prob_yx.shape)
+        print('prob_x.shape',prob_x.shape)
         #prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
         #cdfnorm_prob_yx=prob_yx/prob_yx_sum
         #cdfnorm_prob_yx=prob_yx#dropped normalization
@@ -493,12 +497,12 @@ class kNdtool(Ndiff):
         if modeldict['regression_model']=='NW-rbf2':
             wt_stack=np.ma.power(np.ma.power(prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
             if NWnorm=='across':
-                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
-            yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)
+                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
+            yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2
         else:
             wt_stack=prob_yx/prob_x_stack
             if NWnorm=='across':
-                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
+                wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
             yhatmaskscount=np.ma.count_masked(yhat)
         if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
@@ -518,7 +522,7 @@ class kNdtool(Ndiff):
             cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
             crosswt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=1),axis=1)
             wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            cross_errors=wt_cross_errors)
+            cross_errors=wt_cross_errors
         if modeldict['loss_function']=='batchnorm_crossval':
             return (yout_stack,wt_stack,cross_errors)
         return (yhat,cross_errors)
@@ -588,9 +592,12 @@ class kNdtool(Ndiff):
             yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list)
            
         else:
-            yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
+            if batchcount>1:
+                yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
+            else:
+                yhat_unstd,cross_errors=yhat_unstd_outtup_list
         
-        yhat_unstd,cross_errors=
+        
         #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
         
 
@@ -603,8 +610,8 @@ class kNdtool(Ndiff):
                     if not j==i:
                         ycross_j.append(yxvartup[0])
                 ybatch.append(np.concatenate(ycross_j,axis=0))
-        elif modeldict['loss_function']=='batchnorm_crossval'
-           y=np.concatenate([yxtup[0] for yxtup in yxtup_list],axis=0)
+        elif modeldict['loss_function']=='batchnorm_crossval':
+            y=np.concatenate([yxtup[0] for yxtup in yxtup_list],axis=0)
             
                 
                 
