@@ -418,11 +418,25 @@ class kNdtool(Ndiff):
         else:
             #print('len(KDEregtup)',len(KDEregtup))
             yout,wt_stack,cross_errors=KDEregtup
-        nin=self.nin; ybatch=[];wtbatch=[]
+        nin=self.nin; ybatch=[];wtbatch=[];youtbatch=[]
+        
         for i in range(batchcount):
             #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
             #ybatchlist=[]
             wtbatchlist=[]
+            youtbatchlist=[]
+            
+            
+            '''crossyoutshape=yout.shape
+            crossyoutshape[0]-=1
+            crossyout=np.empty(crossyoutshape)
+            for i in range(batchcount):
+                for j in range(batchcount):
+                    if not i==j:
+                    crossyout[i,:,:]=yout[]
+            '''
+            np.repeat
+            
             
             for j in range(batchcount):
                 if j>i:
@@ -430,36 +444,45 @@ class kNdtool(Ndiff):
                     iend=istart+nin
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
+                    yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
                     #print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
+                    youtbatchlist.append(yout_batchj)
                 elif j<i:
                     istart=(i-1)*nin
                     iend=istart+nin
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
+                    yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
                     #print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
+                    youtbatchlist.append(yout_batchj)
                 else:
                     pass
             dimcount=np.ndim(wtbatchlist[0])
             #ybatchlist=[np.ma.expand_dims(yi,axis=dimcount) for yi in ybatchlist]
             wtbatchlist=[np.ma.expand_dims(wt,axis=0) for wt in wtbatchlist]
+            youtbatchlist=[np.ma.expand_dims(youtj,axis=0) for youtj in wtbatchlist]
             #ybatchshape=[y.shape for y in ybatchlist]
             wtbatchshape=[wt.shape for wt in wtbatchlist]
             #print('wtbatchshape',wtbatchshape)
             #ybatch.append(np.ma.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
             wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0))
-        wtstack=np.ma.concatenate(wtbatch,axis=-1)#lhs axis is npr axis
+            youtbatch.append(np.ma.concatenate(youtbatchlist,axis=0))
+                                                     
+                                                     
+        wtstack=np.ma.concatenate(wtbatch,axis=-1)#rhs axis is npr axis
+        youtstack=np.ma.concatenate(youtbatch,axis=-1)
         wtstacksum=np.ma.sum(wtstack,axis=0)#summed over the new,batch axis
         wtstacksumsum=np.ma.sum(wtstacksum,axis=0)#summed over the yout axis
         wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
-        yhat_raw=np.ma.sum(wtstacknorm*np.ma.expand_dims(yout,axis=-1),axis=0)#the npr axis is on rhs, so must be expanded manually. summation of yout axis, the lhs one at this point
+        yhat_raw=np.ma.sum(wtstacknorm*youtstack,axis=0)#the npr axis is on rhs, so must be expanded manually. summation of yout axis, the lhs one at this point
         
                 
         y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
         yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
         yhat_un_std=yhat_std*self.ystd+self.ymean
-        return yhat_unstd,cross_errors
+        return yhat_un_std,cross_errors
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
         if self.Ndiff:
