@@ -421,23 +421,32 @@ class kNdtool(Ndiff):
         for i in range(self.batchcount):
             #ybatchlist=[]
             wtbatchlist=[]
-            istart=i*nin; iend=istart+nin
+            
             for j in range(self.batchcount):
-                if i<j:
-                    istart=(i)*nin; iend=istart+nin
+                if j>i:
+                    istart=(i)*nin
+                    iend=istart+nin
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
-                    wtbatchlist.append(wt_stack[j][:,istart:iend])
-                if i>j:
-                    istart=(i-1)*nin; iend=istart+nin
+                    wt_i_from_batch_j=wt_stack[j][:,istart:iend]
+                    print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
+                    wtbatchlist.append(wt_i_from_batch_j)
+                elif j<i:
+                    istart=(i-1)*nin
+                    iend=istart+nin
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
-                    wtbatchlist.append(wt_stack[j][:,istart:iend])
-            dimcount=np.ndim(yout_stack)
+                    wt_i_from_batch_j=wt_stack[j][:,istart:iend]
+                    print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
+                    wtbatchlist.append(wt_i_from_batch_j)
+                else:
+                    pass
+            dimcount=np.ndim(wtbatchlist[0])
             #ybatchlist=[np.ma.expand_dims(yi,axis=dimcount) for yi in ybatchlist]
             wtbatchlist=[np.ma.expand_dims(wt,axis=dimcount) for wt in wtbatchlist]
             #ybatchshape=[y.shape for y in ybatchlist]
-            print('ybatchshape',ybatchshape)
+            wtbatchshape=[wt.shape for wt in wtbatchlist]
+            print('wtbatchshape',wtbatchshape)
             #ybatch.append(np.ma.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
-            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0))
+            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=dimcount))
         wtbatchsum=[np.ma.sum(wt,axis=-2) for wt in wtbatch]
         wtbatchsumsum=[np.ma.sum(wt,axis=0) for wt in wtbatchsum]
         wtbatchnorm=[wtbatch[i]/wtbatchsumsum[i] for i in range(batchcount)]
@@ -513,7 +522,7 @@ class kNdtool(Ndiff):
         yhatmaskscount=np.ma.count_masked(yhat)
         if yhatmaskscount>0:print('in my_NW_KDEreg, yhatmaskscount:',yhatmaskscount)
         #print(f'yhat:{yhat}')
-        
+        print("wt_stack.shape",wt_stack.shape)
         #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
         
         if not iscrossmse:
@@ -745,7 +754,8 @@ class kNdtool(Ndiff):
         yintup = ()
         xprtup = ()
         youttup = ()
-        if modeldict['loss_function']=='batch_crossval':
+        if modeldict['loss_function']=='batch_crossval' or modeldict['loss_function']=='batchnorm_crossval':
+            #the equivalent condition for the y values in the mse function does not apply to batchnorm_crossval
             xpri=[]
             for i in range(batchcount):
                 xpricross_j=[]
