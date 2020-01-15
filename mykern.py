@@ -416,16 +416,22 @@ class kNdtool(Ndiff):
         else:
             yout_stack,wt_stack,cross_errors=KDEregtup
         if self.batchcount>1:
-            ybatch=[]
+            ybatchlist=[[] for _ in range(self.batchcount)]
+            wtbatchlist=[[] for _ in range(self.batchcount)]
+            npr=self.npr
             for i in range(self.batchcount):
-                ybatch.append(np.concatenate(yout_stack))
-                for j in range(self.batchcount):
-                    if not i==j:
-                        ybatch.append(yout_stack[:,start:stop])
                 
-            
-            dimcount=np.ndim(yout_stack[0])
-            np.concatenate(yout_stack,axis=dimcount)
+                for j in range(self.batchcount):
+                    if i<j:
+                        istart=i*npr; iend=istart+npr
+                        ybatchlist[i].append(yout_stack[:,istart:iend])
+                        wtbatchlist[i].append(wt_stack[:,istart:iend])
+                    if i>j
+                        istart=(i-1)*npr; iend=istart+npr
+                        ybatchlist[i].append(yout_stack[:,istart:iend])
+                        wtbatchlist[i].append(wt_stack[:,istart:iend])
+                dimcount=np.ndim(yout_stack[0])
+                np.concatenate(ybatchlist[i],axis=-1)
             
         
         
