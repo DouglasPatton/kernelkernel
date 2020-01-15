@@ -417,27 +417,31 @@ class kNdtool(Ndiff):
         else:
             print('len(KDEregtup)',len(KDEregtup))
             yout_stack,wt_stack,cross_errors=KDEregtup
-        npr=self.npr; ybatch=[]
+        nin=self.nin; ybatch=[];wtbatch=[]
         for i in range(self.batchcount):
-            ybatchlist=[]
+            #ybatchlist=[]
             wtbatchlist=[]
+            istart=i*nin; iend=istart+nin
             for j in range(self.batchcount):
                 if i<j:
-                    istart=i*npr; iend=istart+npr
-                    ybatchlist.append(yout_stack[j][:,istart:iend])
+                    istart=(i)*nin; iend=istart+nin
+                    #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wtbatchlist.append(wt_stack[j][:,istart:iend])
                 if i>j:
-                    istart=(i-1)*npr; iend=istart+npr
-                    ybatchlist.append(yout_stack[j][:,istart:iend])
+                    istart=(i-1)*nin; iend=istart+nin
+                    #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wtbatchlist.append(wt_stack[j][:,istart:iend])
-            #dimcount=np.ndim(yout_stack)
+            dimcount=np.ndim(yout_stack)
             #ybatchlist=[np.ma.expand_dims(yi,axis=dimcount) for yi in ybatchlist]
-            #wtbatchlist=[np.ma.expand_dims(wt,axis=dimcount) for wt in wtbatchlist]
-            ybatch.append(np.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
-            wtbatch.append(np.concatenate(wtbatchlist,axis=-2))
-        wtbatchsum=[np.ma.expand_dims(np.ma.sum(wt,axis=-2),axis=-2) for wt in wtbatch]
-        wtbatchnorm=[wtbatch[i]/wtbatchsum[i] for i in range(batchcount)]
-        yhatbatch=[np.sum(wtbatchnorm[i]*ybatch[i],axis=-2) for i in range(batchcount)]
+            wtbatchlist=[np.ma.expand_dims(wt,axis=dimcount) for wt in wtbatchlist]
+            #ybatchshape=[y.shape for y in ybatchlist]
+            print('ybatchshape',ybatchshape)
+            #ybatch.append(np.ma.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
+            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0))
+        wtbatchsum=[np.ma.sum(wt,axis=-2) for wt in wtbatch]
+        wtbatchsumsum=[np.ma.sum(wt,axis=0) for wt in wtbatchsum]
+        wtbatchnorm=[wtbatch[i]/wtbatchsumsum[i] for i in range(batchcount)]
+        yhatbatch=[np.sum(wtbatchnorm[i]*yout_stack,axis=-2) for i in range(batchcount)]
         yhat_raw=np.concatenate(yhatbatch,axis=0)
                 
         y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
@@ -490,7 +494,8 @@ class kNdtool(Ndiff):
         #cdfnorm_prob_x = prob_x / prob_x_sum
         #cdfnorm_prob_x = prob_x#dropped normalization
         
-        yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+        #yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+        yout_stack=np.ma.expand_dims(yout,1)
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
@@ -525,7 +530,7 @@ class kNdtool(Ndiff):
             wt_cross_errors=np.ma.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
             cross_errors=wt_cross_errors
         if modeldict['loss_function']=='batchnorm_crossval':
-            return (yout_stack,wt_stack,cross_errors)
+            return (yout,wt_stack,cross_errors)
         return (yhat,cross_errors)
             
     
