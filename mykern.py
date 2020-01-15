@@ -410,7 +410,30 @@ class kNdtool(Ndiff):
             cross_error=cross_errors*self.ystd
         return (yhat_un_std,cross_errors)
         
+    def do_batchnorm_crossval(KDEregtup):
+        if self.process_count>1:
+            yout_stack,wt_stack,cross_errors=zip(*KDEregtup)
+        else:
+            yout_stack,wt_stack,cross_errors=KDEregtup
+        if self.batchcount>1:
+            ybatch=[]
+            for i in range(self.batchcount):
+                ybatch.append(np.concatenate(yout_stack))
+                for j in range(self.batchcount):
+                    if not i==j:
+                        ybatch.append(yout_stack[:,start:stop])
+                
+            
+            dimcount=np.ndim(yout_stack[0])
+            np.concatenate(yout_stack,axis=dimcount)
+            
+        
+        
+        
+        
+        yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
 
+        yhat_un_std=yhat_std*self.ystd+self.ymean)
 
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
@@ -541,8 +564,8 @@ class kNdtool(Ndiff):
             arglist.append(fixed_or_free_paramdict)
             arglistlist.append(arglist)
 
-        process_count=1#self.cores
-        if process_count>1 and batchcount>1:
+        self.process_count=1#self.cores
+        if self.process_count>1 and batchcount>1:
             with multiprocessing.Pool(processes=process_count) as pool:
                 yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                 sleep(2)
