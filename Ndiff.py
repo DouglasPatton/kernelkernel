@@ -8,11 +8,11 @@ class Ndiff:
     def __init__(self,savedir=None,myname=None):
         if savedir==None:
             savedir=os.getcwd()
-        self.savedir=savedir
+        '''self.savedir=savedir
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('ndiffLogger')
+        self.logger = logging.getLogger('ndiffLogger')'''
 
         '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.savedir,'log')
