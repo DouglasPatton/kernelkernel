@@ -25,7 +25,22 @@ class DataTool():
         self.logger1 = logging.getLogger(__name__)
         self.logger1.addHandler(handler)
 
+    
+    def retrievespeciesdata(self,spec_idx)
+        try: self.specieslist
+        except: self.buildspecieslist()
+        species_name=self.specieslist[spec_idx]
+        
+        datadir=os.path.join(self.savedir,'speciesdata01')
+        species_filename=os.path.join(datadir,species_name+'.data')
+        with open(species_filename, 'rb') as f:
+            species_data=pickle.load(f)
+        return species_data
             
+        
+    
+    
+    
     def viewNHDplus_picklefile(self,):
         savefilename=os.path.join(self.savedir,'NHDplus.data')
         if os.path.exists(savefilename):
@@ -537,7 +552,7 @@ class DataTool():
             foundincomidlist=self.speciescomidlist[idx]
             hucidxlist=self.specieshuclist_survey_idx[idx]
             try:
-                hucidxlist.append(self.specieshuclist_survey_idx_newhucs[idx])
+                hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx])
             except:
                 self.logger1.exception('error appending new hucs.')
             species_huc_count=len(hucidxlist)

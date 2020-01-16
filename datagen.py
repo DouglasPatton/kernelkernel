@@ -33,7 +33,7 @@ class datagen():
         specieslist=datatool.specieslist
         if not spec_idx==No
         for spec_i in specieslist:
-            self.getfishfile01(spec_i)
+            pdh12datatool.retrievespeciesdata(spec_i)
             
             
 
