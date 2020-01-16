@@ -31,9 +31,10 @@ class datagen():
         pdh12datatool=pdh12.DataTool()
         self.specieslist=pdh12datatool.buildspecieslist()
         specieslist=datatool.specieslist
-        if not spec_idx==No
-        for spec_i in specieslist:
-            pdh12datatool.retrievespeciesdata(spec_i)
+        if spec_idx is None:
+            pdh12datatool.retrievespeciesdata(species_name=spec_name)
+        else:
+            pdh12datatool.retrievespeciesdata(species_idx=spec_idx)
             
             
 

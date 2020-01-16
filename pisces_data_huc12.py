@@ -26,10 +26,11 @@ class DataTool():
         self.logger1.addHandler(handler)
 
     
-    def retrievespeciesdata(self,spec_idx)
+    def retrievespeciesdata(self,species_idx=None,species_name=None):
         try: self.specieslist
         except: self.buildspecieslist()
-        species_name=self.specieslist[spec_idx]
+        if species_name==None:
+            species_name=self.specieslist[species_idx]
         
         datadir=os.path.join(self.savedir,'speciesdata01')
         species_filename=os.path.join(datadir,species_name+'.data')
