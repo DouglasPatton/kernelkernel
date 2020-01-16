@@ -112,7 +112,7 @@ class DataTool():
 
         
     def buildspecieslist(self,):
-        specieslistpath=os.path.join(self.savedir,'specieslist')
+        specieslistpath=os.path.join(self.savedir,'specieslistfiles')
         if os.path.exists(specieslistpath):
             try:
                 with open(specieslistpath,'rb') as f:
@@ -205,7 +205,51 @@ class DataTool():
         self.huccomidlist_survey=huccomidlist#or each huc in self.huclist_survey, a list of comids in that huc that were found in the survey
         
         self.specieshuclist_survey_idx=specieshuclist_survey_idx#for each species, a list of idx for self.huclist_survey indicating hucs that species appeared in
+
+        
+    def buildspecieshuc8list(self,):
+        self.otherhuclist=[]
+        
+        try: self.fishhucs
+        except: self.getfishhucs()
+        try: self.specieslist,self.huclist_survey
+        except: self.buildspecieslist()
+        self.specieshuclist_newhucs=[[] for _ in range(len(self.specieslist))]
+        self.specieshuclist_survey_idx_newhucs=[[] for _ in range(len(self.specieslist))]
+        specieshuc8list=[[] for _ in range(len(self.specieslist))]
+        lastspec_i=''
+        for i,item in enumerate(self.fishhucs):
+            spec_i=item['Scientific_name']
+            #d_i=item['ID']
+            huc8_i=item['HUC']
+            if not type(huc8_i) is str:
+                huc8_i=str(huc8_i)
+            if len(huc8_i)==7:
+                huc8_i='0'+huc8_i
+            assert len(huc8_i)==8,print(f'expecting 8 characters: huc8_i:{huc8_i}')
+            if not spec_i==lastspec_i:
+                specfound=0
+                #for j,spec_j in enumerate(self.specieslist):
+                #    if spec_i==spec_j:
+                try: 
+                    specieslist_idx=self.specieslist.index(spec_i)
+                    specfound=1                
+                except ValueError: self.otherspecieslist.append(spec_i)
+            if specfound==1:
+                specieshuc8list[specieslist_idx].append(huc8_i)
+                try:
+                    huclist_survey_idx=self.huclist_survey.index(huc8_i)
+                    try: self.specieshuclist[specieslist_idx].index(huc8_i)
+                    except ValueError: 
+                        self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)
+                        self.specieshuclist_survey_idx_newhucs[specieslist_idx].append(huclist_survey_idx)
+
+                except ValueError: self.otherhuclist.append(huc8_i)
+ 
+                
             
+            lastspec_i=spec_i    
+        self.specieshuc8list=specieshuc8list
 
             
     
@@ -253,27 +297,7 @@ class DataTool():
     
     
 
-    def buildspecieshuc8list():
-        try: self.fishhucs
-        except: self.getfishhucs()
-        specieshuc8list=[]*len(self.specieslist)
-        lastid=None
-        for item,i in enumerate(self.fishhucs):
-            spec_i=item['Scientific_name']
-            #d_i=item['ID']
-            huc8_i=item['HUC']
-            if not type(huc8_i) is str:
-                huc8_i=str(huc8_i)
-            if len(huc8_i)==7:
-                huc8_i=0+huc8_i
-            assert len(huc8_i)==8,print(f'expecting 8 characters: huc8_i:{huc8_i}')
-            if not spec_i==lastspec_i:
-                for j,spec_j in enumerate(self.specieslist):
-                    if spec_i==spec_j:
-                        specieslist_idx=j
-            specieshuc8list[specieslist_idx].append(huc8_i)
-            lastspec_i=spec_i    
-        self.specieshuc8list=specieshuc8list
+
         
     
     
@@ -479,6 +503,7 @@ class DataTool():
             except:pass
             foundincomidlist=self.speciescomidlist[idx]
             hucidxlist=self.specieshuclist_survey_idx[idx]
+            hucidxlist.append(self.specieshuclist_survey_idx_newhucs[idx])
             species_huc_count=len(hucidxlist)
             #p#rint('huc_count:',species_huc_count,sep=',')
             
@@ -622,8 +647,8 @@ if __name__=='__main__':
     test=DataTool()
     test.getfishdata()
     test.buildspecieslist()
+    test.buildspecieshuc8list()
     test.buildCOMIDlist()
-
     test.getNHDplus()
     test.buildCOMIDsiteinfo()
     test.buildspecieshuccomidlist()
