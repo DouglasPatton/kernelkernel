@@ -39,20 +39,25 @@ class run_cluster(kernelcompare.KernelCompare):
     def __init__(self,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
-
-        logging.basicConfig(level=logging.INFO)
+        
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('myClusterLogger')
+        
+        '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.savedirectory,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'mycluster_{myname}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        self.logger.addHandler(handler)'''
         if local_test==None or local_test=='yes' or local_test=='Yes':
             local_test=1
         if local_test=='no' or local_test=='No':
             local_test=0
 
-        self.n=16 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
+        self.n=32 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
 
                     
         if myname==None:
@@ -78,13 +83,13 @@ class run_cluster(kernelcompare.KernelCompare):
     def getoptdictvariations(self):
         ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
         NWnorm_variations=('modeldict:NWnorm',['across'])
-        loss_function_variations=('modeldict:loss_function',['mse','batch_crossval','crossmse2'])
+        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])
         regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
         optdict_variation_list = [ykerngrid_form_variations,NWnorm_variations,loss_function_variations,regression_model_variations, product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]

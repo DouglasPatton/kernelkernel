@@ -26,10 +26,12 @@ class datagen():
             self.gen_piscesdata01(seed=seed,batch_n=batch_n)
         
             
+
     def gen_piscesdata01(self,seed=0,batch_n=None,spec_idx=None,spec_name=None):
         pdh12datatool=pdh12.DataTool()
         datatool.buildspecieslist()
         specieslist=datatool.specieslist
+
         
         
             

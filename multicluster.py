@@ -11,13 +11,18 @@ from numpy import log
 
 class mypool:
     def __init__(self, nodecount=1,includemaster=1,local_test='no'):
-        logging.basicConfig(level=logging.INFO)
+        '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'multicluster.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        self.logger.addHandler(handler)'''
+        logging.basicConfig(level=logging.INFO)
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('multiClusterLogger')
 
         platform=sys.platform
         p=psutil.Process(os.getpid())
@@ -26,7 +31,7 @@ class mypool:
         else:
             p.nice(6)
 
-        seed(datetime.now())
+        #seed(datetime.now())
         self.local_test=local_test
         self.i=0
         self.id=randint(0,100000000)
@@ -76,7 +81,7 @@ class mypool:
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
 
-        sleeptime=(.1*log(float(os.getpid())))**8#0.2->4min. 0.1->6sec
+        sleeptime=(.2*log(float(randint(5000000,99999999))/2000))**8#0.2->4min. 0.1->6sec
 
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
