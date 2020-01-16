@@ -18,6 +18,12 @@ class DataTool():
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
         self.processcount=4
+        logdir=os.path.join(self.savedir,'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername='Datatool.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger1 = logging.getLogger(__name__)
+        self.logger1.addHandler(handler)
 
             
     def viewNHDplus_picklefile(self,):
@@ -30,7 +36,7 @@ class DataTool():
                 print(self.NHDplus)
                 return
             except:
-                self.logger.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
+                self.logger1.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
                 
     
     def getNHDplus(self,):
@@ -39,7 +45,7 @@ class DataTool():
         if os.path.exists(savefilename):
             try: 
                 with open(savefilename, 'rb') as f:
-                    self.NHDplus=pickle.load(f)
+                    (self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist)=pickle.load(f)
                 print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
                 print(self.NHDplus)
 
@@ -74,9 +80,9 @@ class DataTool():
         
         try:
             with open(savefilename,'wb') as f:
-                pickle.dump(self.NHDplus,f)
+                pickle.dump((self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist),f)
         except:
-            self.logger.exception('problem saving NHDplus:')
+            self.logger1.exception('problem saving NHDplus:')
         
         
         
@@ -208,6 +214,20 @@ class DataTool():
 
         
     def buildspecieshuc8list(self,):
+        
+        huc8listpath=os.path.join(self.savedir,'specieslistfiles')
+        if os.path.exists(huc8listpath):
+            try:
+                with open(huc8listpath,'rb') as f:
+                    huc8tup=pickle.load(f)
+                
+                
+                
+                print(f'opening {huc8listpath} with length:{len(huc8tup)} and type:{type(huc8tup)}')
+                return
+            except:
+                self.logger.exception(f'buildhuc8list found {huc8listpath} but there was an error loading variables')
+        
         self.otherhuclist=[]
         
         try: self.fishhucs
@@ -220,6 +240,7 @@ class DataTool():
         lastspec_i=''
         for i,item in enumerate(self.fishhucs):
             spec_i=item['Scientific_name']
+            
             #d_i=item['ID']
             huc8_i=item['HUC']
             if not type(huc8_i) is str:
@@ -228,28 +249,36 @@ class DataTool():
                 huc8_i='0'+huc8_i
             assert len(huc8_i)==8,print(f'expecting 8 characters: huc8_i:{huc8_i}')
             if not spec_i==lastspec_i:
+                #print(spec_i)
                 specfound=0
                 #for j,spec_j in enumerate(self.specieslist):
                 #    if spec_i==spec_j:
                 try: 
                     specieslist_idx=self.specieslist.index(spec_i)
                     specfound=1                
-                except ValueError: self.otherspecieslist.append(spec_i)
+                except ValueError: 
+                    try: self.otherspecieslist.append(spec_i)
+                    except AttributeError: self.otherspecieslist=[spec_i]
             if specfound==1:
                 specieshuc8list[specieslist_idx].append(huc8_i)
                 try:
                     huclist_survey_idx=self.huclist_survey.index(huc8_i)
                     try: self.specieshuclist[specieslist_idx].index(huc8_i)
                     except ValueError: 
+                        self.logger1.info(f'{spec_i} has new huc:{huc8_i}')
                         self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)
                         self.specieshuclist_survey_idx_newhucs[specieslist_idx].append(huclist_survey_idx)
 
-                except ValueError: self.otherhuclist.append(huc8_i)
+                except ValueError: 
+                    self.otherhuclist.append(huc8_i)
+                    self.logger1.info(f'{spec_i} has new huc:{huc8_i}, but it does not show up in survey, so not relevant')
  
                 
             
             lastspec_i=spec_i    
         self.specieshuc8list=specieshuc8list
+        with open(specieslistpath,'wb') as f:
+            pickle.dump((),f)
 
             
     
@@ -264,7 +293,7 @@ class DataTool():
                 print(f'opening {comidlistpath} with length:{len(comidtup)} and has first item length: {len(self.comidlist)} and type:{type(self.comidlist)}')
                 return
             except:
-                print(f'error when opening {comidlistpath}')
+                self.logger1.exception(f'error when opening {comidlistpath}')
             
         try: self.fishsurveydata
         except: self.getfishdata()
@@ -288,7 +317,7 @@ class DataTool():
                 occurencelist.append([idx])
             if found==1:
                 occurencelist[shortidx].append(idx)
-        print(f'buildCOMIDlist found {len(shortlist)}')
+        self.logger1.info(f'buildCOMIDlist found {len(shortlist)}')
         with open(comidlistpath,'wb') as f:
             pickle.dump((shortlist,occurencelist),f)
         
@@ -328,8 +357,8 @@ class DataTool():
             try:
                 with open(filepath,'rb') as f:
                     savefile=pickle.load(f)
-                print(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
-                print(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
+                self.logger1.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
+                self.logger1.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
                 
                 self.sitedatacomid_dict=savefile[0]
                 self.comidsitedataidx=savefile[1]
@@ -339,7 +368,7 @@ class DataTool():
                 self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
                 return
             except:
-                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+                self.logger1.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
                 
         else:
             print(f'{filepath} does not exist, building COMID site info')   
@@ -356,7 +385,7 @@ class DataTool():
             for i in range(self.processcount):
                 comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
             starttime=time()
-            print('pool starting at',starttime)
+            self.logger1.info(f'pool starting at {starttime}')
             with mp.Pool(processes=self.processcount) as pool:
                 outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
                 sleep(2)
@@ -364,7 +393,7 @@ class DataTool():
                 pool.join()
             self.outlist=outlist
             endtime=time()
-            print('pool complete at ',endtime,'. time elapsed: ',endtime-starttime)
+            self.logger1.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60/1000} minutes')
             comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
             self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
             self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
@@ -373,7 +402,7 @@ class DataTool():
 
             self.comidsitedataidx=[]
             for i in range(self.processcount):
-                print('len(comidsitedataidx[i])',len(comidsitedataidx[i]))
+                self.logger1.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
                 self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
         else:
             outlist=self.mpsearchcomidhuc12(self.comidlist)
@@ -388,13 +417,13 @@ class DataTool():
         if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
                 if self.comidsiteinfofindfaillist[i]==1:
-                    print(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
+                    self.logger1.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
                     self.comidsiteinfofindfail.append(self.comidlist[i])
                 
         if sum(self.huc12findfaillist)>0:
             for i in range(comidcount):
                 if self.huc12findfaillist[i]==1:
-                    print(f'huc12find failed for comid:{self.comidlist[i]}')
+                    self.logger1.warning(f'huc12find failed for comid:{self.comidlist[i]}')
                     self.huc12findfail.append([self.comidlist[i]])
 
         return
@@ -446,7 +475,7 @@ class DataTool():
                 
         
     def findcomidhuc12reach(self,comid):
-        try:self.NHDplus,self.NHDpluscomidlist
+        try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
         except:
             self.logger.exception('could not access NHDplus in self')
             self.getNHDplus()
