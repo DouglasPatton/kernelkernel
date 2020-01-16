@@ -27,10 +27,15 @@ class datagen():
         
             
 
-    def gen_piscesdata01(self,seed=0,batch_n=None,spec_idx=None,spec_name=None):
+    def gen_piscesdata01(self,seed=0,batch_n=32,spec_idx=None,spec_name=None):
         pdh12datatool=pdh12.DataTool()
-        datatool.buildspecieslist()
+        self.specieslist=pdh12datatool.buildspecieslist()
         specieslist=datatool.specieslist
+        if not spec_idx==No
+        for spec_i in specieslist:
+            self.getfishfile01(spec_i)
+            
+            
 
         
         

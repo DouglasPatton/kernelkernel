@@ -215,12 +215,12 @@ class DataTool():
         
     def buildspecieshuc8list(self,):
         
-        huc8listpath=os.path.join(self.savedir,'specieslistfiles')
+        huc8listpath=os.path.join(self.savedir,'specieshuc8files')
         if os.path.exists(huc8listpath):
             try:
                 with open(huc8listpath,'rb') as f:
                     huc8tup=pickle.load(f)
-                
+                (self.specieshuc8list,self.otherhuclist,self.specieshuclist_newhucs,self.specieshuclist_survey_idx_newhucs)=huc8tup
                 
                 
                 print(f'opening {huc8listpath} with length:{len(huc8tup)} and type:{type(huc8tup)}')
@@ -277,8 +277,8 @@ class DataTool():
             
             lastspec_i=spec_i    
         self.specieshuc8list=specieshuc8list
-        with open(specieslistpath,'wb') as f:
-            pickle.dump((),f)
+        with open(huc8listpath,'wb') as f:
+            pickle.dump((self.specieshuc8list,self.otherhuclist,self.specieshuclist_newhucs,self.specieshuclist_survey_idx_newhucs),f)
 
             
     
@@ -380,10 +380,13 @@ class DataTool():
         if self.processcount>1:
             com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
             print(com_idx)
-            comidlistlist=[]
             
+            comidlistlist=[]
             for i in range(self.processcount):
                 comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
+
+            arglist=[]
+            arglist.append[comidlist,]
             starttime=time()
             self.logger1.info(f'pool starting at {starttime}')
             with mp.Pool(processes=self.processcount) as pool:
@@ -393,7 +396,7 @@ class DataTool():
                 pool.join()
             self.outlist=outlist
             endtime=time()
-            self.logger1.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60/1000} minutes')
+            self.logger1.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
             comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
             self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
             self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
@@ -522,17 +525,21 @@ class DataTool():
         specieshuc_allcomid=[[] for _ in range(species_searchcount)]
         
         for i,idx in enumerate(species_idx_list):
-            
-            #p#rint('i=',i,sep=',')
-            #p#rint('i',i,'species_searchcount',species_searchcount)
             try:
                 if i%(species_searchcount//2)==0:
                     print('')
                     print(f'{round(100*i/species_searchcount,1)}%',end=',')
-            except:pass
+            except:
+                
+                pass
+            
+            print(f'idx:{idx}',end='. ')
             foundincomidlist=self.speciescomidlist[idx]
             hucidxlist=self.specieshuclist_survey_idx[idx]
-            hucidxlist.append(self.specieshuclist_survey_idx_newhucs[idx])
+            try:
+                hucidxlist.append(self.specieshuclist_survey_idx_newhucs[idx])
+            except:
+                self.logger1.exception('error appending new hucs.')
             species_huc_count=len(hucidxlist)
             #p#rint('huc_count:',species_huc_count,sep=',')
             
@@ -662,8 +669,10 @@ class DataTool():
                 fail_record.append(0)
             except:
                 self.logger.exception(f'problem came up for species number {i},{spec_i}')
-                try: fail_record.append((spec_i,missingkeys))
-                except: fail_record.append((spec_i,'none'))
+                try: 
+                    fail_record.append((spec_i,missingkeys))
+                except: 
+                    fail_record.append((spec_i,'none'))
                 recordfailcount+=1
         self.logger.warning(f'succesful completion. len(speciesidx_list): {len(speciesidx_list)}, recordfailcount: {recordfailcount}')
         return fail_record

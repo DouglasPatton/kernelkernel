@@ -143,10 +143,10 @@ class kNdtool(Ndiff):
         '''#for small data, pre-create the 'grid'/out data
         no big data version for now
         '''
-        if modeldict['regression_model']=='logistic':
+        '''if modeldict['regression_model']=='logistic':
             if type(ykerngrid) is int:
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
-                ykerngrid='no'
+                ykerngrid='no''''
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
@@ -187,6 +187,9 @@ class kNdtool(Ndiff):
             log_grid=np.linspace(0,log_gridrange,(count+2)//2)
             halfgrid=np.exp(log_grid[1:])-1
             return np.concatenate((-halfgrid[::-1],np.array([0]),halfgrid),axis=0)
+        if form[0]=='binary':
+            return np.linspace(0,1,count)
+            
             
     
     def standardize_yx(self,xdata,ydata):
