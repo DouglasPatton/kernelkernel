@@ -383,7 +383,7 @@ class kNdtool(Ndiff):
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
                 xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
-                print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
+                #print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
                 xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xoutdifftup)
                 xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
             newaxis=len(youtdiffs.shape)
