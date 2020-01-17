@@ -352,7 +352,7 @@ class kNdtool(Ndiff):
         
         xbwmaskcount=np.ma.count_masked(xbw)
         
-        if xbwmaskcount>0:
+        if xbwmaskcount>self.nin:
             self.logger.info(f'xbwmaskcount: {xbwmaskcount}')
             self.logger.warning(f'np.ma.getmask(xbw): {np.ma.getmask(xbw)}')
         
