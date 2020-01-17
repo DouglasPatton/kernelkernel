@@ -82,11 +82,11 @@ class Ndiff:
                 this_depth_bw=np.ones([self.nin,1,self.npr])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
             
             deeper_depth_bw=np.array([1])
-            for depth in range(max_bw_Ndiff,-1,-1):
+            for depth in range(max_bw_Ndiff,0,-1):
                 if normalization == 'own_n':
                     normalize=self.nin-(depth)
                 else:normalize=normalization
-                if depth<Ndiff_start-1:
+                if depth<Ndiff_start:
                     this_depth_bw_param=1
                     this_depth_exponent=1
                     normalize=1
@@ -95,10 +95,7 @@ class Ndiff:
                     if Ndiff_type=='product':this_depth_bw_param=Ndiff_depth_bw_params[param_idx]
                     this_depth_exponent=Ndiff_exponent_params[param_idx]
                 if Ndiff_type=='recursive':this_depth_bw_param=None
-                if depth>0:
-                    this_depth_data=self.Ndiff_datastacker(indiffs,outdiffs.shape,depth)
-                else:
-                    this_depth_data=outdiffs
+                this_depth_data=self.Ndiff_datastacker(indiffs,outdiffs.shape,depth)
                 this_depth_mask = masklist[depth]
                 if depth % 2 == 0 and depth>0:  # every other set of indiffs is transposed
                     #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
