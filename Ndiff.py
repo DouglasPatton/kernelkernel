@@ -97,15 +97,18 @@ class Ndiff:
                 if Ndiff_type=='recursive':this_depth_bw_param=None
                 this_depth_data=self.Ndiff_datastacker(indiffs,outdiffs.shape,depth)
                 this_depth_mask = masklist[depth]
-                if x_or_y=='x':
+                '''if x_or_y=='x':
                     expandedmasktup=this_depth_mask.shape[:-1]+(self.nout,)+this_depth_mask.shape[-1:]
-                    this_depth_mask=np.broadcast_to(np.expand_dims(this_depth_mask,-2),expandedmasktup)#adding the nout axis since it is now added for x by Ndiff datastacker
+                    this_depth_mask=np.broadcast_to(np.expand_dims(this_depth_mask,-2),expandedmasktup)#adding the nout axis since it is now added for x by Ndiff datastacker'''
                 if depth % 2 == 0:  # every other set of indiffs is transposed
                     #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
                     dimcount=this_depth_data.ndim
                     transposelist=[i for i in range(dimcount)]
-                    transposelist[dimcount-3]=dimcount-4#make 3rd to last dimension have the dimension number of 4th to last
-                    transposelist[dimcount - 4] = dimcount - 3#and make 4th to last dimension have dimension number of 3rd to last
+                    #transposelist[dimcount-3]=dimcount-4#make 3rd to last dimension have the dimension number of 4th to last
+                    #transposelist[dimcount - 4] = dimcount - 3#and make 4th to last dimension have dimension number of 3rd to last
+                    transposelist[0]=1#transpose lhs dimensions so sum over lhs dimension is transposed in even depths.
+                    transposelist[1]=0
+                    
                     this_depth_data = np.transpose(this_depth_data, transposelist)#implement the tranpose of 3rd to last and 2nd to last dimensions
                     this_depth_mask = np.transpose(this_depth_mask,transposelist)
 
@@ -171,10 +174,10 @@ class Ndiff:
             ytup=tuple([self.nin for _ in range(depth)])+outdiffs_shape#
             return np.broadcast_to(np.expand_dims(indiffs,2),ytup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
         if len(outdiffs_shape)==2:#this should only happen if we're working on x
-            #diff_shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
-            Ndiff_shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1:]#should result in (depth*ninxninxnoutxnpr)
-            #return np.broadcast_to(np.expand_dims(indiffs,2),Ndiff_shape_out_tup)#expand dims adds a dimension for npr
-            return np.broadcast_to(np.expand_dims(np.expand_dims(indiffs,-1),-1),Ndiff_shape_out_tup)#expand dims adds a dimension for nout and then npr
+            Ndiff_shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
+            #Ndiff_shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1:]#should result in (depth*ninxninxnoutxnpr)
+            return np.broadcast_to(np.expand_dims(indiffs,2),Ndiff_shape_out_tup)#expand dims adds a dimension for npr
+            #return np.broadcast_to(np.expand_dims(np.expand_dims(indiffs,-1),-1),Ndiff_shape_out_tup)#expand dims adds a dimension for nout and then npr
         
         
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
