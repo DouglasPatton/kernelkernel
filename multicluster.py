@@ -18,6 +18,8 @@ class mypool:
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)'''
+        self.sleepfactor=0.15 #0.2->4min. 0.1->6sec, 0.224 ->10min
+        
         logging.basicConfig(level=logging.INFO)
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
@@ -39,9 +41,9 @@ class mypool:
         self.workercount=nodecount
         if includemaster==1:
             self.workercount=nodecount+1
-            self.arg_list=['master']+['node']*(nodecount)
+            self.arg_list=['master']+['node' for _ in range(nodecount)]
         else:
-            self.arg_list = ['node'] * (nodecount)
+            self.arg_list = ['node' for _ in range(nodecount)]
         self.runpool(self.arg_list,self.workercount)
         
 
@@ -51,7 +53,7 @@ class mypool:
             
             
     def runpool(self,arg_list,workercount):
-        process_list=[None]*workercount
+        process_list=[None for _ in range(workercount)]
         for i in range(workercount):
             self.i+=1
             process_list[i]=mp.Process(target=self.runworker,args=(arg_list[i],))
@@ -81,7 +83,7 @@ class mypool:
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
 
-        sleeptime=(.2*log(float(randint(5000000,99999999))/2000))**8#0.2->4min. 0.1->6sec
+        sleeptime=(self.sleepfactor*log(float(randint(5000000,99999999))/2000))**8
 
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times

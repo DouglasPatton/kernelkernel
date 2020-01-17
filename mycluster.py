@@ -337,7 +337,7 @@ class run_cluster(kernelcompare.KernelCompare):
             list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
             print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
-            run_dict_status=['ready for node']*model_run_count
+            run_dict_status=['ready for node' for _ in range(model_run_count)]
         
 
         i=0

@@ -256,7 +256,7 @@ class DataTool():
     def buildspecieshuc8list():
         try: self.fishhucs
         except: self.getfishhucs()
-        specieshuc8list=[]*len(self.specieslist)
+        specieshuc8list=[[] for _ in range(len(self.specieslist))]
         lastid=None
         for item,i in enumerate(self.fishhucs):
             spec_i=item['Scientific_name']
@@ -387,9 +387,9 @@ class DataTool():
         comidcount=len(comidlist)
         comidsitedataidx=[]
         sitedatacomid_dict={}
-        huc12findfaillist=[0]*comidcount
+        huc12findfaillist=[0 for _ in range(comidcount)]
         huc12failcount=0
-        comidsiteinfofindfaillist=[0]*comidcount
+        comidsiteinfofindfaillist=[0 for _ in range(comidcount)]
         
         printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
         for i,comid_i in enumerate(comidlist):
