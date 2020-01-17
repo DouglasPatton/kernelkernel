@@ -534,8 +534,10 @@ class kNdtool(Ndiff):
         
         #yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         yout_stack=np.ma.expand_dims(yout,1)
-        prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
-        prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+        #prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
+        #prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+        prob_x_stack=prob_x
+        
         NWnorm=modeldict['NWnorm']
                 
         if modeldict['regression_model']=='NW-rbf2':
@@ -666,7 +668,7 @@ class kNdtool(Ndiff):
                 cross_errors=np.concatenate(cross_errors,axis=0)
                 
         else:
-            ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
+            ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tuples
         
         if not modeldict['loss_function']=='batchnorm_crossval':
             for batch_i in range(batchcount):

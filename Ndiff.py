@@ -97,6 +97,9 @@ class Ndiff:
                 if Ndiff_type=='recursive':this_depth_bw_param=None
                 this_depth_data=self.Ndiff_datastacker(indiffs,outdiffs.shape,depth)
                 this_depth_mask = masklist[depth]
+                if x_or_y=='x':
+                    expandedmasktup=this_depth_mask.shape[:-1]+(self.nout,)+this_depth_mask.shape[-1:]
+                    this_depth_mask=np.broadcast_to(np.expand_dims(this_depth_mask,-2),expandedmasktup)#adding the nout axis since it is now added for x by Ndiff datastacker
                 if depth % 2 == 0:  # every other set of indiffs is transposed
                     #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
                     dimcount=this_depth_data.ndim
@@ -165,13 +168,15 @@ class Ndiff:
         print('outdiffs_shape',outdiffs_shape)
         print('depth',depth)'''
         if len(outdiffs_shape)==3:#this should only happen if we're working on y
-            ytup=tupple([self.nin for _ in range(depth)])+outdiffs_shape#
+            ytup=tuple([self.nin for _ in range(depth)])+outdiffs_shape#
             return np.broadcast_to(np.expand_dims(indiffs,2),ytup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
         if len(outdiffs_shape)==2:#this should only happen if we're working on x
-            #diff_shape_out_tup=tupple([self.nin for _ in range(depth)])+outdiffs_shape
-            Ndiff_shape_out_tup=tupple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1]
+            #diff_shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
+            Ndiff_shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1:]#should result in (depth*ninxninxnoutxnpr)
             #return np.broadcast_to(np.expand_dims(indiffs,2),Ndiff_shape_out_tup)#expand dims adds a dimension for npr
-            return np.broadcast_to(knp.expand_dims(np.expand_dims(indiffs,-1),-1),Ndiff_shape_out_tup)#expand dims adds a dimension for nout and then npr
+            return np.broadcast_to(np.expand_dims(np.expand_dims(indiffs,-1),-1),Ndiff_shape_out_tup)#expand dims adds a dimension for nout and then npr
+        
+        
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         #print('nout:',nout)
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
@@ -274,15 +279,14 @@ class Ndiff:
         """ 
         assert diffs.shape==bw.shape, "diffs is shape:{} while bw is shape:{}".format(diffs.shape,bw.shape)
         allkerns=self.gkernh(diffs, bw)
-        second_to_last_axis=allkerns.ndim-2
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
-            allkerns_sum=np.ma.sum(allkerns,axis=second_to_last_axis)#this should be the nout axis
-            allkerns=allkerns/self.ma_broadcast_to(np.ma.expand_dims(allkerns_sum,second_to_last_axis),allkerns.shape)
+            allkerns_sum=np.ma.sum(allkerns,axis=-2)#this should be the nout axis
+            allkerns=allkerns/self.ma_broadcast_to(np.ma.expand_dims(allkerns_sum,-2),allkerns.shape)
             
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
-            allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=second_to_last_axis),second_to_last_axis)#1 should be the nout axis
+            allkerns=allkerns/np.ma.expand_dims(np.ma.count(allkerns,axis=-2),-2)#1 should be the nout axis
         if modeldict['regression_model']=='NW-rbf' or modeldict['regression_model']=='NW-rbf2':
             if allkerns.ndim>3:
                 for i in range((allkerns.ndim-3),0,-1):
