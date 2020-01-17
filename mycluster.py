@@ -430,7 +430,7 @@ class run_cluster(kernelcompare.KernelCompare):
         for i in range(10):
             try:
                 print(f'trying merge{i}')
-                self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=1,verbose=0)
+                self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=0)
                 print(f'completed merge{i}')
                 break
             except:
