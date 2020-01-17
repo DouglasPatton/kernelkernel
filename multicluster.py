@@ -41,9 +41,9 @@ class mypool:
         self.workercount=nodecount
         if includemaster==1:
             self.workercount=nodecount+1
-            self.arg_list=['master']+['node' for _ in range(nodecount)]
+            self.arg_list=['master']+['node']*(nodecount)
         else:
-            self.arg_list = ['node' for _ in range(nodecount)]
+            self.arg_list = ['node'] * (nodecount)
         self.runpool(self.arg_list,self.workercount)
         
 
@@ -53,7 +53,7 @@ class mypool:
             
             
     def runpool(self,arg_list,workercount):
-        process_list=[None for _ in range(workercount)]
+        process_list=[None]*workercount
         for i in range(workercount):
             self.i+=1
             process_list[i]=mp.Process(target=self.runworker,args=(arg_list[i],))

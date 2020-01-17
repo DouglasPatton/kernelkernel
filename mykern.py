@@ -382,9 +382,10 @@ class kNdtool(Ndiff):
             assert xoutdiffs.ndim==2, "xoutdiffs have ndim={} not 2".format(xoutdiffs.ndim)
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
-                xonedifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
-                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
-                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xoutdiffs.shape)-1),xonedifftup)
+                xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
+                print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
+                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xoutdifftup)
+                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
             newaxis=len(youtdiffs.shape)
             yx_outdiffs_endstack=np.ma.concatenate(
                 (np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
