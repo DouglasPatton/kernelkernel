@@ -385,7 +385,7 @@ class kNdtool(Ndiff):
                 xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
                 print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
                 xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xoutdifftup)
-                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
+                xbw_stack=xbw#np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup) this is now done in Ndiffbwmaker
             newaxis=len(youtdiffs.shape)
             yx_outdiffs_endstack=np.ma.concatenate(
                 (np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
