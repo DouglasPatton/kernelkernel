@@ -26,6 +26,8 @@ class DataTool():
         self.logger1.addHandler(handler)
 
     
+        
+        
     def retrievespeciesdata(self,species_idx=None,species_name=None):
         try: self.specieslist
         except: self.buildspecieslist()
@@ -102,7 +104,7 @@ class DataTool():
         
         
         
-    def getdatafile(self,filename):
+    def getcsvfile(self,filename):
         thisdir=os.getcwd()
         datadir=os.path.join(thisdir,'fishfiles',filename)
         if os.path.exists(datadir):
@@ -114,7 +116,7 @@ class DataTool():
         return datadict
 
     def getfishdata(self,):
-        self.fishsurveydata=self.getdatafile('surveydata.csv')
+        self.fishsurveydata=self.getcsvfile('surveydata.csv')
         print(self.fishsurveydata[0:5])
 
     def gethucdata(self,):
@@ -122,14 +124,14 @@ class DataTool():
         self.viewNHDplus_picklefile()
 
     def getsitedata(self,):
-        self.sitedata=self.getdatafile('siteinfo.csv')
+        self.sitedata=self.getcsvfile('siteinfo.csv')
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         print(self.sitedata[0:5])
         
     def getfishhucs(self,):
-        self.fishhucs=self.getdatafile('fishhucs.csv')
+        self.fishhucs=self.getcsvfile('fishhucs.csv')
         print(self.fishhucs[0:5])
 
         
