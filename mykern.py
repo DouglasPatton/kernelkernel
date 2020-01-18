@@ -430,7 +430,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         if not modeldict['loss_function']=='batchnorm_crossval':
             for batch_i in range(batchcount):
-                y_batch_i=ybatch[i]
+                y_batch_i=ybatch[batch_i]
                 y_err = y_batch_i - yhat_unstd[batch_i]
                 y_err_tup = y_err_tup + (y_err,)
 
