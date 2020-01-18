@@ -7,6 +7,7 @@ from time import sleep,strftime,time
 import multiprocessing as mp
 import geopandas as gpd
 import logging
+import traceback
 #import pandas as pd
 
 
@@ -29,13 +30,24 @@ class DataTool():
         
         
     def retrievespeciesdata(self,species_idx=None,species_name=None):
-        try: self.specieslist
+        try: 
+            self.specieslist
+            print(type(self.specieslist))
         except: self.buildspecieslist()
-        if species_name==None:
+        if species_name==None and type(species_idx) is int:
             species_name=self.specieslist[species_idx]
-        
+            
         datadir=os.path.join(self.savedir,'speciesdata01')
-        species_filename=os.path.join(datadir,species_name+'.data')
+        try: species_filename=os.path.join(datadir,species_name+'.data')  
+        except TypeError:
+            try:
+                with open(os.path.join(datadir,'sitedatakeylist'),'rb')as f:
+                    sitevarlist=pickle.load(f)
+                return sitevarlist   
+            except: 
+                print(traceback.format_exc())
+                return 'sitevarlist not found'
+        
         with open(species_filename, 'rb') as f:
             species_data=pickle.load(f)
         return species_data
@@ -602,7 +614,7 @@ class DataTool():
         except: self.buildCOMIDsiteinfo()
         #try: self.species01list,self.specieshuc_allcomid
         #except: self.buildspecieshuccomidlist()
-        with open(os.path.join(datadir,'sitedatakeylist'),'wb')as f:
+        with open(os.path.join(datadir,'sitedatakeylist'),'wb') as f:
             pickle.dump(self.sitedatakeylist,f)
         speciescount=len(self.specieslist)
         
