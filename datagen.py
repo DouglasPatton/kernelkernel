@@ -81,6 +81,8 @@ class datagen(DataTool):
         if validate_batchcount==None:
             validate_batchcount=batchcount
         
+        self.datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+        
         p=param_count
         n=batch_n
 
