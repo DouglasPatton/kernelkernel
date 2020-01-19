@@ -49,7 +49,7 @@ class datagen(DataTool):
         n=speciesdata.shape[0]
         
         floatselecttup=(3,4,5,6,7)
-        self.xdataarray_float=np.array(specesdata[:,floatselecttup] dtype=float)
+        self.xdataarray_float=np.array(specesdata[:,floatselecttup], dtype=float)
         #self.xdataarray_float=np.empty((n,4), dtype=float)
         #self.xdataarray_str=np.empty((n,2),dtype=str)
         strselecttup=(1,7,9)

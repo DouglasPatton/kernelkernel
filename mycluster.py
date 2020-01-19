@@ -104,7 +104,7 @@ class run_cluster(kernelcompare.KernelCompare):
             self.datagen_dict={
                 'batch_n':32,
                 'batchcount':10 #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
-                'sample_replace':'no' #if no, batches are created until all data is sampled, and samnpling with replacement used to fill up the last batch
+                'sample_replace':'no' #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if type(x) is int then it tells us to create x batches of batches with replacement
                 'species':'all', #could be 'all', int for the idx or a string with the species name
                 'missing':'drop_row', #drop the row(observation) if any data is missing

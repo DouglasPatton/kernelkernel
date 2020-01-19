@@ -904,7 +904,7 @@ class KernelCompare(KernelOptModelTools):
         KernelOptModelTools.__init__(self,directory=self.kc_savedirectory,myname=myname)
 
 
-    def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,datagen_dict=datagen_dict,verbose=0):
+    def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,datagen_dict=None,verbose=0):
         if datagen_dict==None:
             param_count=2
             datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
