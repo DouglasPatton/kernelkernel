@@ -43,9 +43,19 @@ class datagen(DataTool):
         except: self.buildspecieslist()
         varlist=self.retrievespeciesdata()
         if species_idx is None:
-            self.speciesdata=self.retrievespeciesdata(species_name=spec_name)
+            speciesdata=self.retrievespeciesdata(species_name=spec_name)
         else:
-            self.speciesdata=self.retrievespeciesdata(species_idx=species_idx)
+            speciesdata=self.retrievespeciesdata(species_idx=species_idx)
+        n=speciesdata.shape[0]
+        
+        floatselecttup=(3,4,5,6,7)
+        self.xdataarray_float=np.array(specesdata[:,floatselecttup] dtype=float)
+        #self.xdataarray_float=np.empty((n,4), dtype=float)
+        #self.xdataarray_str=np.empty((n,2),dtype=str)
+        strselecttup=(1,7,9)
+        self.xdataarray_str=np.array(speciesdata[:,strselecttup],dtype=str)
+        
+        self.ydataarray_=np.array(speciesdata[:,0],dtype='uint8')
         
         
         
