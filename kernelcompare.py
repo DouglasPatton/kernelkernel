@@ -810,13 +810,14 @@ class KernelOptModelTools(mk.kNdtool):
             
         
     def build_dataset_obj(self,datagen_dict):
-        param_count=datagen_dict['param_count']
-        seed=datagen_dict['seed']
-        ftype=datagen_dict['ftype']
-        evar=datagen_dict['evar']
-        batch_n=datagen_dict['batch_n']
-        batchcount=datagen_dict['batchcount']
-        validate_batchcount=datagen_dict['validate_batchcount']
+        if datagen_dict['source']=='monte':
+            param_count=datagen_dict['param_count']
+            seed=datagen_dict['seed']
+            ftype=datagen_dict['ftype']
+            evar=datagen_dict['evar']
+            batch_n=datagen_dict['batch_n']
+            batchcount=datagen_dict['batchcount']
+            validate_batchcount=datagen_dict['validate_batchcount']
         return dg.datagen(source = None, seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount, validate_batchcount=validate_batchcount)
 
 
@@ -827,6 +828,7 @@ class KernelOptModelTools(mk.kNdtool):
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
+            'std_data':'all',
             'loss_function':'mse',
             'Ndiff_type':'product',
             'param_count':param_count,
@@ -905,12 +907,14 @@ class KernelCompare(KernelOptModelTools):
 
 
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,datagen_dict=None,verbose=0):
-        if datagen_dict==None:
-            param_count=2
-            datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
-            
+        if not type(datagen_dict) is dict:
+            if datagen_dict is None or datagen_dict=='monte':
+                param_count=2
+                datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+            elif datagen_dict=='pisces':
+                do stuff
         if datagen_variation_list==None:
-            datagen_variation_list=[{}]#will default to parameters in datagen_dict below
+            datagen_variation_list=[{}]#will default to parameters in datagen_dict above
         assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
         assert type(datagen_variation_list[0])==tuple,f'first item of datagen_variation_list type:{type(datagen_variation_list[0])} but expected a tuple'
                         

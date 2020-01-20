@@ -57,6 +57,10 @@ class datagen(DataTool):
         
         self.ydataarray_=np.array(speciesdata[:,0],dtype='uint8')
         
+        modeldict_data_std_tup=([],[i for i in floatselecttup])
+        
+        
+        
         
         
             
