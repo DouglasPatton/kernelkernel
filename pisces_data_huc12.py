@@ -103,7 +103,7 @@ class DataTool():
         self.NHDplus=dbf[self.NHDvarlist]
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
-            self.NHDplus.loc[:,strvar]=self.NHDplus.loc[:,(strvar)].to_numpy().astype('str').copy()
+            self.NHDplus.loc[:,(strvar)]=self.NHDplus.loc[:,(strvar)].to_numpy().astype('str')
         self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
 
         print(self.NHDplus)
@@ -415,8 +415,7 @@ class DataTool():
             for i in range(self.processcount):
                 comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
 
-            arglist=[]
-            arglist.append[comidlist,]
+            
             starttime=time()
             self.logger1.info(f'pool starting at {starttime}')
             with mp.Pool(processes=self.processcount) as pool:
