@@ -40,19 +40,18 @@ class KernelOptModelTools(mk.kNdtool):
         if force_start_params=='yes':
             force_start_params=1
 
-
-        datagen_obj=self.build_dataset_obj(datagen_dict)
+        datagen_obj=dg.datagen((datagen_dict)
         print(f'datagen_dict:{datagen_dict} for directory,{self.kc_savedirectory}')
         
         if force_start_params==0:
-            optimizedict=self.run_opt_complete_check(optimizedict,datagen_obj,replace=1)
+            optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
         
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
         mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory,myname=self.name)
         return
         
-    def run_opt_complete_check(self,optimizedict_orig,datagen_obj,replace=None):
+    def run_opt_complete_check(self,optimizedict_orig,replace=None):
         '''
         checks model_save and then final_model_save to see if the same modeldict has been run before (e.g.,
         same model featuers, same starting parameters, same datagen_dict).
@@ -809,17 +808,7 @@ class KernelOptModelTools(mk.kNdtool):
         return hyper_paramdict1
             
         
-    def build_dataset_obj(self,datagen_dict):
-        if datagen_dict['source']=='monte':
-            param_count=datagen_dict['param_count']
-            seed=datagen_dict['seed']
-            ftype=datagen_dict['ftype']
-            evar=datagen_dict['evar']
-            batch_n=datagen_dict['batch_n']
-            batchcount=datagen_dict['batchcount']
-            validate_batchcount=datagen_dict['validate_batchcount']
-            return dg.datagen(source = 'monte', seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount, validate_batchcount=validate_batchcount)
-        if datagen_dict['source']=='pisces'
+
         
 
 
@@ -839,7 +828,7 @@ class KernelOptModelTools(mk.kNdtool):
             'normalize_Ndiffwtsum':'own_n',
             'NWnorm':'across',
             'xkern_grid':'no',
-            'ykern_grid':61,
+            'ykern_grid':33,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
@@ -910,19 +899,18 @@ class KernelCompare(KernelOptModelTools):
 
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,datagen_dict=None,verbose=0):
         if not type(datagen_dict) is dict:
-            if datagen_dict is None or datagen_dict=='monte':
+            if datagen_dict is None:
                 param_count=2
                 datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
-            elif datagen_dict=='pisces':
-                do stuff
+            else:assert False,f'datagen_dict:{datagen_dict}'
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict above
-        assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
+        '''assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
         assert type(datagen_variation_list[0])==tuple,f'first item of datagen_variation_list type:{type(datagen_variation_list[0])} but expected a tuple'
                         
         assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
         assert type(optdict_variation_list[0])==tuple,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a tuple'
-                         
+        '''                 
         
         model_run_dict_list=[]
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)

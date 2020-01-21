@@ -1,3 +1,4 @@
+from random import shuffle
 import numpy as np
 from pisces_data_huc12 import DataTool
 
@@ -5,60 +6,121 @@ class datagen(DataTool):
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,source=None,
+    def __init__(self,datagen_dict)
+        '''(self,source=None,
                  seed=None,
                  ftype=None,
                  evar=None,
                  batch_n=None,
                  param_count=None,
                  batchcount=None,
-                 validate_batchcount=None):
-        if param_count==None:
-            param_count=1
-        self.param_count=param_count
-        self.p = param_count
-        if batch_n==None:
-            batch_n=32
-        self.batch_n = batch_n
-        if batchcount==None:
-            batchcount=1
-        self.batchcount=batchcount
-        if validate_batchcount==None:
-            validate_batchcount=batchcount
-        self.validate_batchcount=validate_batchcount
-        self.source = source
-        if seed is None:
-            seed=0
-        if source==None or source=='monte':
+                 validate_batchcount=None):'''
+        source=datagen_dict['source']
+        if source=='monte':
+            param_count=datagen_dict['param_count']
+            if param_count==None:
+                param_count=1
+            self.param_count=param_count
+            self.p = param_count
+            batch_n=datagen_dict['batch_n']
+            if batch_n==None:
+                batch_n=32
+            self.batch_n = batch_n
+            batchcount=datagen_dict['batchcount']
+            if batchcount==None:
+                batchcount=1
+            self.batchcount=batchcount
+            validate_batchcount=datagen_dict['validate_batchcount']
+            if validate_batchcount==None:
+                validate_batchcount=batchcount
+            self.validate_batchcount=validate_batchcount
+            self.source = source
+            seed=datagen_dict['seed']
+            if seed is None:
+                seed=1
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
-        if type(source) is str and source.lower()=='pisces':
+            return
+        if source=='pisces':
             DataTool.__init__(self,)
+            
+            source=datagen_dict['source']
+            batch_n=datagen_dict['batch_n']
+            batchcount=datagen_dict['batchcount']
+            sample_replace==datagen_dict['sample_replace']
+            missing=datagen_dict['missing']
+            species=datagen_dict['species']
+            seed=1
+            
+            self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species)
             pass
         
         
             
 
-    def gen_piscesdata01(self,seed=0,batch_n=32,species_idx=None,spec_name=None):
+    def gen_piscesdata01(self,seed,batch_n,batchcount,sample_replace,missing,species):
         try:self.specieslist
         except: self.buildspecieslist()
-        varlist=self.retrievespeciesdata()
+        self.varlist=self.retrievespeciesdata()
+        if type(species) is str:
+            speciesdata=self.retrievespeciesdata(species_name=species)
+        if type(species) is int:
+            speciesdata=self.retrievespeciesdata(species_idx=species)
+        
+            
+            
         if species_idx is None:
             speciesdata=self.retrievespeciesdata(species_name=spec_name)
         else:
             speciesdata=self.retrievespeciesdata(species_idx=species_idx)
+        
+        
         n=speciesdata.shape[0]
         
         floatselecttup=(3,4,5,6,7)
+        
+        self.xvarname_dict={}
+        self.xvarname_dict['float']=self.varlist[[i-1 for i in floatselecttup]]
+        print('self.xvarnames: {self.xvarnames}')
         self.xdataarray_float=np.array(specesdata[:,floatselecttup], dtype=float)
         #self.xdataarray_float=np.empty((n,4), dtype=float)
         #self.xdataarray_str=np.empty((n,2),dtype=str)
-        strselecttup=(1,7,9)
-        self.xdataarray_str=np.array(speciesdata[:,strselecttup],dtype=str)
+        spatialselecttup=(9,)
+        self.xvarname_dict['spatial']=self.varlist[[i-1 for i in spatialselecttup]]
+        self.xdataarray_spatial=np.array(speciesdata[:,spatialselecttup],dtype=str)
+        print(f'self.svarname_dict:{self.svarname_dict}')
         
-        self.ydataarray_=np.array(speciesdata[:,0],dtype='uint8')
+        
+        self.ydataarray=np.array(speciesdata[:,0],dtype='uint8')
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
+        self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray_float,self.xdataarray_spatial,batch_n,batchcount,sample_replace,missing)
+        return
+        
+        
+        
+        
+    def genpiscesbatchbatchlist(self, ydataarray,xdataarray_float,xdataarray_spatial,batch_n,batchcount,sample_replace,missing):
+        n=ydataarray.shape[0]
+        selectlist=shuffle([i for i in range(n)])
+        batchsize=batch_n*batchcount
+        batchbatchcount=-(-n//batchsize)#ceiling divide
+        fullbatchbatch_n=batchbatchcount*batchsize
+        fullbatchbatch_shortby=fulbatchbatch_n-n
+        selectlist=selectlist+selectlist[:fullbatchbatch_shortby]#repeat the first group of random observations to fill out the dataset
+        
+        batchbatchlist=[[[] for b in batchcount] for _ in range(batchbatchcount)]
+        for i in range(batchbatchcount):
+            for j in range(batchcount):
+                start=(i+j)*batch_n
+                end=start+batch_n
+                batchbatchlist[i][j]=(ydataarray[start:end],xdataarray_float[start:end,:],xdataarray_spatial[start:end,:])
+        self.yxtup_batchbatch=batchbatchlist
+        
+                
+            
+            
+    
         
         
         
@@ -81,7 +143,7 @@ class datagen(DataTool):
         if batchcount==None:
             batchcount=1
         if not seed==None:
-            seed=0
+            seed=1
         if validate_batchcount==None:
             validate_batchcount=batchcount
         
@@ -102,7 +164,7 @@ class datagen(DataTool):
         for i in range(validate_batchcount):
             val_yxtup_list.append(self.buildrandomdataset(n,p,ftype,evar))
         self.val_yxtup_list=val_yxtup_list
-
+        return
 
     def buildrandomdataset(self,n,p,ftype,evar):
         betamax = 10

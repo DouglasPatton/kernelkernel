@@ -11,6 +11,7 @@ from random import randint
 import logging
 import logging.config
 import yaml
+from pisces_data_huc12 import DataTool
 
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
@@ -36,10 +37,13 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,data_source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
+    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
-        
+        self.oldnode_threshold=datetime.timedelta(minutes=360,seconds=1)
+        self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
+        if myname is None:
+            myname='node'
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
@@ -54,7 +58,13 @@ class run_cluster(kernelcompare.KernelCompare):
         self.logger.addHandler(handler)'''
 
         
-        self.datagen_dict=self.setdata(data_source)#creates the initial datagen_dict
+        print(f'self.savedirectory{self.savedirectory}')
+        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
+        if not myname=='master':
+            self.initialize(myname)
+        
+        
+        self.datagen_dict=self.setdata(source)#creates the initial datagen_dict
         
         
         if local_test==None or local_test=='yes' or local_test=='Yes':
@@ -65,51 +75,47 @@ class run_cluster(kernelcompare.KernelCompare):
         self.n=32 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
 
                     
-        if myname==None:
-            myname='node'
+        
         if optdict_variation_list==None:
-            optdict_variation_list=self.getoptdictvariations(data_source=data_source)
+            optdict_variation_list=self.getoptdictvariations(source=source)
         if datagen_variation_list==None:
-            datagen_variation_list=self.getdatagenvariations(data_source=data_source)
+            datagen_variation_list=self.getdatagenvariations(source=source)
         
-        self.oldnode_threshold=datetime.timedelta(minutes=360,seconds=1)
-        
-        self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
 
-        print(f'self.savedirectory{self.savedirectory}')
-        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
+
         print(f'datagen_variation_list:{datagen_variation_list}')
         self.initialize(
             myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
     
-    def setdata(self, data_source)#creates the initial datagen_dict
+    def setdata(self, source)#creates the initial datagen_dict
         
-        if data_source==None:
-            data_source='monte'
+        if source==None:
+            source='monte'
             datagen_dict={
+                'source':'monte',
                 'validate_batchcount':10,
                 'batch_n':32,
                 'batchcount':10, 
                 'param_count':param_count,
                 'seed':1, 
                 'ftype':'linear', 
-                'evar':1, 
-                'source':'monte'
+                'evar':1                
                                 }
-        if data_source=='pisces':
+        if source=='pisces':
             datagen_dict={
+                'source':'pisces',
                 'batch_n':32,
                 'batchcount':10 #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no' #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if type(x) is int then it tells us to create x batches of batches with replacement
-                'species':'all', #could be 'all', int for the idx or a string with the species name
-                'missing':'drop_row', #drop the row(observation) if any data is missing
+                'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
+                'missing':'drop_row' #drop the row(observation) if any data is missing
                               }
         return datagen_dict
 
 
-    def getoptdictvariations(self,data_source='monte'):
+    def getoptdictvariations(self,source='monte'):
         NWnorm_variations=('modeldict:NWnorm',['across','none'])
         loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
         #cross_mse,cross_mse2
@@ -120,22 +126,35 @@ class run_cluster(kernelcompare.KernelCompare):
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
-        if data_source='monte':
+        if source='monte':
+            standardization_variations=('modeldict:std_data',['all'])
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
             ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
-        if data_source='pisces'
+        if source='pisces'
+            standardization_variations=('modeldict:std_data',[([],['float'])])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2,5])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
         
         
-        optdict_variation_list = [ykerngrid_form_variations,NWnorm_variations,loss_function_variations,regression_model_variations, product_kern_norm_variations, normalize_Ndiffwtsum_variations, Ndiff_type_variations, ykern_grid_variations, max_bw_Ndiff_variations, Ndiff_start_variations]
+        optdict_variation_list = [ykerngrid_form_variations,
+                                  NWnorm_variations,
+                                  loss_function_variations,
+                                  regression_model_variations, 
+                                  product_kern_norm_variations,
+                                  normalize_Ndiffwtsum_variations,
+                                  Ndiff_type_variations,
+                                  ykern_grid_variations,
+                                  max_bw_Ndiff_variations,
+                                  Ndiff_start_variations,
+                                  standardization_variations
+                                 ]
         return optdict_variation_list
 
-    def getdatagenvariations(self,data_source='monte'):
-        if data_source='monte':
+    def getdatagenvariations(self,source='monte'):
+        if source=='monte':
             #the default datagen_dict as of 11/25/2019
             #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
             batch_n_variations=('batch_n',[self.n])
@@ -143,10 +162,16 @@ class run_cluster(kernelcompare.KernelCompare):
             ftype_variations=('ftype',['linear','quadratic'])
             param_count_variations=('param_count',[2,4])
             datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
-        if data_source='pisces':
+        if source=='pisces':
+            try:pdh12.specieslist
+            except:
+                pdh12=DataTool()
+                pdh12.buildspecieslist
+                
+            species_variations=('species',pdh12.specieslist)
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',[10])
-            datagen_variation_list=[batch_n_variations,batchcount_variations]
+            datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
     def setmasterdir(self,savedirectory):

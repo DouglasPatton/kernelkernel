@@ -38,8 +38,12 @@ class DataTool():
             species_name=self.specieslist[species_idx]
             
         datadir=os.path.join(self.savedir,'speciesdata01')
-        try: species_filename=os.path.join(datadir,species_name+'.data')  
-        except TypeError:
+        if not species_name is None:
+            species_filename=os.path.join(datadir,species_name+'.data')  
+            with open(species_filename, 'rb') as f:
+                species_data=pickle.load(f)
+        return species_data
+        else:
             try:
                 with open(os.path.join(datadir,'sitedatakeylist'),'rb')as f:
                     sitevarlist=pickle.load(f)
@@ -48,9 +52,7 @@ class DataTool():
                 print(traceback.format_exc())
                 return 'sitevarlist not found'
         
-        with open(species_filename, 'rb') as f:
-            species_data=pickle.load(f)
-        return species_data
+        
             
         
     
