@@ -149,7 +149,7 @@ class Ndiff:
         '''print('indiffs.shape',indiffs.shape)
         print('outdiffs_shape',outdiffs_shape)
         print('depth',depth)'''
-        if (depth+1)%2==0 and depth>1:#not relevant if depth is not greater than one
+        if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
             indifftup=indiffs.shape
             indifftup[0]=1
             indifftup[1]=0

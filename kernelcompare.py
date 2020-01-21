@@ -829,7 +829,7 @@ class KernelOptModelTools(mk.kNdtool):
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
-            'logic_date':'1-17-2020',
+            'logic_date':'1-21-2020',
             'loss_function':'mse',
             'Ndiff_type':'product',
             'param_count':param_count,
