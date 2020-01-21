@@ -76,7 +76,7 @@ class datagen(DataTool):
         
         n=speciesdata.shape[0]
         
-        floatselecttup=(3,4,5,6,7)
+        floatselecttup=(3,4,6,7)#5 is bmmi, which is left out for now
         
         self.xvarname_dict={}
         self.xvarname_dict['float']=self.varlist[[i-1 for i in floatselecttup]]

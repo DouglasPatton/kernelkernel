@@ -741,7 +741,7 @@ class kNdtool(Ndiff):
         #except:pass
         return KDEpredict_tup
     
-    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,predict=None):
+    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,source='monte',predict=None):
         if predict==None:
             predict=0
         
@@ -762,6 +762,7 @@ class kNdtool(Ndiff):
                 
         #save and transform the data
         #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
+        if 
         self.batchcount=datagen_obj.batchcount
         self.nin=datagen_obj.batch_n
         self.p=datagen_obj.param_count#p should work too
@@ -867,7 +868,7 @@ class optimize_free_params(kNdtool):
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
-
+        self.source=self.datagen_dict['source']
         self.name=myname
 
         self.logger.info(f'optimizedict for {myname}:{optimizedict}')
@@ -890,7 +891,7 @@ class optimize_free_params(kNdtool):
         if savedir==None:
             savedir=os.getcwd()
         
-        free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
+        free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]
