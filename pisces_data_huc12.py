@@ -18,7 +18,7 @@ class DataTool():
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
-        self.processcount=4
+        self.processcount=6
         logdir=os.path.join(self.savedir,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername='Datatool.log'
@@ -713,11 +713,14 @@ class DataTool():
 if __name__=='__main__':
     test=DataTool()
     test.getfishdata()
+    test.getsitedata()
+    test.getfishhucs()
+    test.gethucdata()
+    test.getNHDplus()
     test.buildspecieslist()
     test.buildspecieshuc8list()
     test.buildCOMIDlist()
-    test.getNHDplus()
     test.buildCOMIDsiteinfo()
-    test.buildspecieshuccomidlist()
+    #test.buildspecieshuccomidlist()
     test.buildspeciesdata01_file()
     
