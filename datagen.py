@@ -45,10 +45,13 @@ class datagen(DataTool):
             
             source=datagen_dict['source']
             batch_n=datagen_dict['batch_n']
+            self.batch_n=batch_n
             batchcount=datagen_dict['batchcount']
+            self.bachcount=batchcount
             sample_replace==datagen_dict['sample_replace']
             missing=datagen_dict['missing']
             species=datagen_dict['species']
+            self.species=species
             seed=1
             
             self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species)
@@ -77,11 +80,12 @@ class datagen(DataTool):
         n=speciesdata.shape[0]
         
         floatselecttup=(3,4,6,7)#5 is bmmi, which is left out for now
+        datagen_obj.param_count=len(floatselecttup)+1#+1 for the spatial variable, e.g., huc12
         
         self.xvarname_dict={}
         self.xvarname_dict['float']=self.varlist[[i-1 for i in floatselecttup]]
         print('self.xvarnames: {self.xvarnames}')
-        self.xdataarray_float=np.array(specesdata[:,floatselecttup], dtype=float)
+        self.xdataarray_float=np.array(specesdata[:,floatselecttup], dtype=float)#may need more attention due to missing values that won't convert to float
         #self.xdataarray_float=np.empty((n,4), dtype=float)
         #self.xdataarray_str=np.empty((n,2),dtype=str)
         spatialselecttup=(9,)
