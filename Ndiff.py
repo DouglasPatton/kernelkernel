@@ -150,17 +150,17 @@ class Ndiff:
         print('outdiffs_shape',outdiffs_shape)
         print('depth',depth)'''
         if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
-            indifftup=indiffs.shape
-            indifftup[0]=1
-            indifftup[1]=0
+            #indifftup=indiffs.shape
+            indifftup=(indifftup[1],indifftup[0])
+            
         outdiffs_shape=outdiffs.shape
-        if len(outdiffs_shape)==3:#this should only happen if we're working on y
+        if len(outdiffs_shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape#
             if depth>1:
                 return np.broadcast_to(np.expand_dims(indiffs,-2),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
             else:
                 return np.broadcast_to(outdiffs,shape_out_tup)
-        if len(outdiffs_shape)==2:#this should only happen if we're working on x
+        if len(outdiffs_shape)==2:#(ninXnpr)this should only happen if we're working on x
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
             if depth>1:
                 return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
