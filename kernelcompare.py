@@ -818,7 +818,9 @@ class KernelOptModelTools(mk.kNdtool):
             batch_n=datagen_dict['batch_n']
             batchcount=datagen_dict['batchcount']
             validate_batchcount=datagen_dict['validate_batchcount']
-        return dg.datagen(source = None, seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount, validate_batchcount=validate_batchcount)
+            return dg.datagen(source = 'monte', seed = seed, ftype = ftype, evar = evar, batch_n = batch_n, param_count = param_count, batchcount = batchcount, validate_batchcount=validate_batchcount)
+        if datagen_dict['source']=='pisces'
+        
 
 
     def build_optdict(self,opt_dict_override=None,param_count=None):

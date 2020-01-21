@@ -10,7 +10,7 @@ from numpy import log
 
 
 class mypool:
-    def __init__(self, nodecount=1,includemaster=1,local_test='no'):
+    def __init__(self,data_source='monte' nodecount=1,includemaster=1,local_run='no'):
         '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -18,6 +18,7 @@ class mypool:
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)'''
+        self.data_source=data_source
         logging.basicConfig(level=logging.INFO)
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
@@ -32,7 +33,7 @@ class mypool:
             p.nice(6)
 
         #seed(datetime.now())
-        self.local_test=local_test
+        self.local_run=local_run
         self.i=0
         self.id=randint(0,100000000)
         self.nodecount=nodecount
@@ -73,7 +74,7 @@ class mypool:
             rerun=True
             while rerun:
                 try:
-                    mycluster.run_cluster(startname, local_test=self.local_test)
+                    mycluster.run_cluster(startname, data_source=self.data_source, local_run=self.local_run)
                 except KeyboardInterrupt:
                     rerun=False
                 except:
@@ -90,7 +91,7 @@ class mypool:
             try:
                 self.i+=1#increments with start/restart of nodes or master
                 name=startname+str(self.id)+'-'+str(self.i)
-                mycluster.run_cluster(name,local_test=self.local_test)
+                mycluster.run_cluster(name,local_run=self.local_run)
             except KeyboardInterrupt:
                 rerun=False
 
@@ -100,10 +101,21 @@ class mypool:
 
 
 if __name__=='__main__':
-    #test = mypool(nodecount=1, includemaster=1,local_test='yes')
-    local_test=int(input('1 for local_test or 0 for network run'))
+    #test = mypool(nodecount=1, includemaster=1,local_run='yes')
+    choose_data_source=int(input(('0 for monte carlo, 1 for pisces')))
+    if choose_data_source==0:
+        data_source='monte'
+    elif choose_data_source==1:
+        data_source='pisces'
+    else: 
+        assert False, 'choose_data_source not 0 or 1'
+    local_run=int(input('1 for local_run or 0 for network run'))
     includemaster=int(input('1 for include master, 0 for not'))
     nodecount=int(input('node count:'))
     
 
-    test=mypool(nodecount=nodecount,includemaster=includemaster,local_test=local_test)
+    test=mypool(nodecount=nodecount,
+                data_source=data_source,
+                includemaster=includemaster,
+                local_run=local_run
+               )
