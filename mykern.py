@@ -146,7 +146,8 @@ class kNdtool(Ndiff):
         '''if modeldict['regression_model']=='logistic':
             if type(ykerngrid) is int:
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
-                ykerngrid='no''''
+                ykerngrid='no' 
+        '''
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
@@ -201,19 +202,36 @@ class kNdtool(Ndiff):
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
-    def standardize_yxtup(self,yxtup_list,val_yxtup_list=None):
+    def standardize_yxtup(self,yxtup_list,val_yxtup_list,modeldict):
         #yxtup_list=deepcopy(yxtup_list_unstd)
+        p=yxtup_list[0][1].shape[1]
+        modelstd=modeldict['std_data']
         all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         self.xmean=np.mean(all_x,axis=0)
         self.ymean=np.mean(all_y,axis=0)
         self.xstd=np.std(all_x,axis=0)
         self.ystd=np.std(all_y,axis=0)
+        
+        if type(modelstd) is str: 
+            if  modelstd=='all':
+                x_stdlist=[i for i in range(p)]
+            else:
+                assert False, f'modeldict:std_data is {modelstd} but expected "all"''
+        elif type(modelstd) is tuple:
+            xmodelstd=modelstd[1]
+            ymodelstd=modelstd[0]
+            x_stdlist=[i for i in range(p) if xmodelstd[p]==1]
+            xstdselect=modelstd[1]
+            x_stdlist[modelstd[1]]=1
+        
         tupcount=len(yxtup_list)#should be same as batchcount
         yxtup_list_std=[]
         for i in range(tupcount):
-            ystd=(yxtup_list[i][0] - self.ymean) / self.ystd
-            xstd=(yxtup_list[i][1] - self.xmean) / self.xstd
+            y=yxtup_list[i][0]
+            x=yxtup_list[i][1]
+            ystd=(y - self.ymean) / self.ystd
+            xstd=( - self.xmean) / self.xstd
             yxtup_list_std.append((ystd,xstd))
         if not val_yxtup_list==None:
             val_yxtup_list_std=[]
@@ -750,7 +768,8 @@ class kNdtool(Ndiff):
         #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
-        yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list)
+        
+        yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list,modeldict)
         #print('buildbatcdatadict')
         batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         #print('for validation buildbatcdatadict')

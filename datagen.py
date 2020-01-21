@@ -1,11 +1,18 @@
 import numpy as np
-import pisces_data_huc12 as pdh12
+from pisces_data_huc12 import DataTool
 
-class datagen():
+class datagen(DataTool):
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,source=None, seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
+    def __init__(self,source=None,
+                 seed=None,
+                 ftype=None,
+                 evar=None,
+                 batch_n=None,
+                 param_count=None,
+                 batchcount=None,
+                 validate_batchcount=None):
         if param_count==None:
             param_count=1
         self.param_count=param_count
@@ -20,21 +27,44 @@ class datagen():
             validate_batchcount=batchcount
         self.validate_batchcount=validate_batchcount
         self.source = source
+        if seed is None:
+            seed=0
         if source==None or source=='monte':
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
         if type(source) is str and source.lower()=='pisces':
-            self.gen_piscesdata01(seed=seed,batch_n=batch_n)
+            DataTool.__init__(self,)
+            pass
+        
         
             
 
-    def gen_piscesdata01(self,seed=0,batch_n=32,spec_idx=None,spec_name=None):
-        pdh12datatool=pdh12.DataTool()
-        self.specieslist=pdh12datatool.buildspecieslist()
-        specieslist=datatool.specieslist
-        if spec_idx is None:
-            pdh12datatool.retrievespeciesdata(species_name=spec_name)
+    def gen_piscesdata01(self,seed=0,batch_n=32,species_idx=None,spec_name=None):
+        try:self.specieslist
+        except: self.buildspecieslist()
+        varlist=self.retrievespeciesdata()
+        if species_idx is None:
+            speciesdata=self.retrievespeciesdata(species_name=spec_name)
         else:
-            pdh12datatool.retrievespeciesdata(species_idx=spec_idx)
+            speciesdata=self.retrievespeciesdata(species_idx=species_idx)
+        n=speciesdata.shape[0]
+        
+        floatselecttup=(3,4,5,6,7)
+        self.xdataarray_float=np.array(specesdata[:,floatselecttup], dtype=float)
+        #self.xdataarray_float=np.empty((n,4), dtype=float)
+        #self.xdataarray_str=np.empty((n,2),dtype=str)
+        strselecttup=(1,7,9)
+        self.xdataarray_str=np.array(speciesdata[:,strselecttup],dtype=str)
+        
+        self.ydataarray_=np.array(speciesdata[:,0],dtype='uint8')
+        
+        modeldict_data_std_tup=([],[i for i in floatselecttup])
+        
+        
+        
+        
+        
+            
+        
             
             
 
@@ -51,9 +81,11 @@ class datagen():
         if batchcount==None:
             batchcount=1
         if not seed==None:
-            np.random.seed(seed)
+            seed=0
         if validate_batchcount==None:
             validate_batchcount=batchcount
+        
+        self.datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
         
         p=param_count
         n=batch_n

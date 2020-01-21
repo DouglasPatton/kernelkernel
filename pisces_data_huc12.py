@@ -7,6 +7,7 @@ from time import sleep,strftime,time
 import multiprocessing as mp
 import geopandas as gpd
 import logging
+import traceback
 #import pandas as pd
 
 
@@ -26,14 +27,27 @@ class DataTool():
         self.logger1.addHandler(handler)
 
     
-    def retrievespeciesdata(self,species_idx=None,species_name=None):
-        try: self.specieslist
-        except: self.buildspecieslist()
-        if species_name==None:
-            species_name=self.specieslist[species_idx]
         
+        
+    def retrievespeciesdata(self,species_idx=None,species_name=None):
+        try: 
+            self.specieslist
+            print(type(self.specieslist))
+        except: self.buildspecieslist()
+        if species_name==None and type(species_idx) is int:
+            species_name=self.specieslist[species_idx]
+            
         datadir=os.path.join(self.savedir,'speciesdata01')
-        species_filename=os.path.join(datadir,species_name+'.data')
+        try: species_filename=os.path.join(datadir,species_name+'.data')  
+        except TypeError:
+            try:
+                with open(os.path.join(datadir,'sitedatakeylist'),'rb')as f:
+                    sitevarlist=pickle.load(f)
+                return sitevarlist   
+            except: 
+                print(traceback.format_exc())
+                return 'sitevarlist not found'
+        
         with open(species_filename, 'rb') as f:
             species_data=pickle.load(f)
         return species_data
@@ -102,7 +116,7 @@ class DataTool():
         
         
         
-    def getdatafile(self,filename):
+    def getcsvfile(self,filename):
         thisdir=os.getcwd()
         datadir=os.path.join(thisdir,'fishfiles',filename)
         if os.path.exists(datadir):
@@ -114,7 +128,7 @@ class DataTool():
         return datadict
 
     def getfishdata(self,):
-        self.fishsurveydata=self.getdatafile('surveydata.csv')
+        self.fishsurveydata=self.getcsvfile('surveydata.csv')
         print(self.fishsurveydata[0:5])
 
     def gethucdata(self,):
@@ -122,14 +136,14 @@ class DataTool():
         self.viewNHDplus_picklefile()
 
     def getsitedata(self,):
-        self.sitedata=self.getdatafile('siteinfo.csv')
+        self.sitedata=self.getcsvfile('siteinfo.csv')
         self.sitedata_k=len(self.sitedata[0])
         self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         print(self.sitedata[0:5])
         
     def getfishhucs(self,):
-        self.fishhucs=self.getdatafile('fishhucs.csv')
+        self.fishhucs=self.getcsvfile('fishhucs.csv')
         print(self.fishhucs[0:5])
 
         
@@ -600,7 +614,7 @@ class DataTool():
         except: self.buildCOMIDsiteinfo()
         #try: self.species01list,self.specieshuc_allcomid
         #except: self.buildspecieshuccomidlist()
-        with open(os.path.join(datadir,'sitedatakeylist'),'wb')as f:
+        with open(os.path.join(datadir,'sitedatakeylist'),'wb') as f:
             pickle.dump(self.sitedatakeylist,f)
         speciescount=len(self.specieslist)
         

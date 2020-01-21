@@ -36,9 +36,17 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
+    def __init__(self,data_source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
         self.savedirectory=self.setdirectory(local_test=local_test)
         self.masterdirectory=self.setmasterdir(self.savedirectory)
+        
+        self.setdata(data_source)#creates the initial datagen_dict
+        
+        if data_source==None:
+            data_source='monte'
+            self.datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+            
+        
         
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
@@ -77,7 +85,30 @@ class run_cluster(kernelcompare.KernelCompare):
         self.initialize(
             myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
-
+    
+    def setdata(self, data_source)#creates the initial datagen_dict
+        
+        if data_source==None:
+            data_source='monte'
+            self.datagen_dict={
+                'validate_batchcount':10,
+                'batch_n':32,
+                'batchcount':10, 
+                'param_count':param_count,
+                'seed':1, 
+                'ftype':'linear', 
+                'evar':1, 
+                'source':'monte'
+                                }
+        if data_source=='pisces':
+            self.datagen_dict={
+                'batch_n':32,
+                'batchcount':10 #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'sample_replace':'no' #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
+                #if type(x) is int then it tells us to create x batches of batches with replacement
+                'species':'all', #could be 'all', int for the idx or a string with the species name
+                'missing':'drop_row', #drop the row(observation) if any data is missing
+                              }
 
 
     def getoptdictvariations(self):
@@ -334,7 +365,7 @@ class run_cluster(kernelcompare.KernelCompare):
             model_run_count=len(list_of_run_dicts)
         except:
             assignment_tracker={}
-            list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+            list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
             list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
             print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
