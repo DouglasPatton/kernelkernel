@@ -121,12 +121,23 @@ class kNdtool(Ndiff):
         return free_params,fixed_or_free_paramdict
 
     
-    def makediffmat_itoj(self,xin,xpr):
+    def makediffmat_itoj(self,xin,xpr,spatial=None):
+        
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0)#should return ninXnoutXp if xin an xpr were ninXp and noutXp
+        if spatial==1:
+            diffs[:,-1]=self.my0log(diffs[:,-1])
+            
         #print('type(diffs)=',type(diffs))
         return diffs
-
-
+    
+    def my0log(self,nparray):
+        arraylist=[]
+        for i in nparray:
+            if i>0:
+                arraylist.append(np.round(np.log(i)),0)
+            else:
+                arraylist.append(0)
+        return np.array(arraylist,dtype=float)
 
     def MY_KDE_gridprep_smalln(self,m,p):
         """creates a grid with all possible combinations of m=n^p (kerngrid not nin or nout) evenly spaced values from -3 to 3.
@@ -202,7 +213,7 @@ class kNdtool(Ndiff):
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
-    def standardize_yxtup(self,yxtup_list,val_yxtup_list,modeldict):
+    def standardize_yxtup(self,yxtup_list,modeldict):
         #yxtup_list=deepcopy(yxtup_list_unstd)
         p=yxtup_list[0][1].shape[1]
         modelstd=modeldict['std_data']
@@ -236,16 +247,8 @@ class kNdtool(Ndiff):
             ystd=(y - self.ymean) / self.ystd
             xstd=( - self.xmean) / self.xstd
             yxtup_list_std.append((ystd,xstd))
-        if not val_yxtup_list==None:
-            val_yxtup_list_std=[]
-            val_tupcount=len(val_yxtup_list)
-            for i in range(val_tupcount):
-                val_ystd=(val_yxtup_list[i][0] - self.ymean) / self.ystd
-                val_xstd=(val_yxtup_list[i][1] - self.xmean) / self.xstd
-                val_yxtup_list_std.append((val_ystd,val_xstd))
-        else: 
-            val_yxtup_list_std=None
-        return yxtup_list_std,val_yxtup_list_std
+        
+        return yxtup_list_std
 
 
         
@@ -319,11 +322,8 @@ class kNdtool(Ndiff):
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
         columns of x.
         """
-        if 'max_bw_Ndiff' in modeldict:
-            self.Ndiff=1
-        else:
-            self.Ndiff=0
-        
+
+        """"""
             
         try:
             lossfn=modeldict['loss_function']
@@ -338,18 +338,21 @@ class kNdtool(Ndiff):
         p=x_bandscale_params.shape[0]
         assert self.p==p,\
             "p={} but x_bandscale_params.shape={}".format(self.p,x_bandscale_params.shape)
-
+        try 
+            spatial=self.datagen_obj.spatial
+        except:
+            spatial=0
         if modeldict['Ndiff_bw_kern']=='rbfkern':
-            xin_scaled=xin*x_bandscale_params
+            #xin_scaled=xin*x_bandscale_params
             #print('xin_scaled.shape',xin_scaled.shape)
-            xpr_scaled=xpr*x_bandscale_params
+            #xpr_scaled=xpr*x_bandscale_params
             #print('xpr_scaled.shape',xpr_scaled.shape)
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
-            outdiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xpr_scaled),2),axis=2),.5)
-            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin_scaled,xin_scaled),2),axis=2),.5)
+            outdiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xpr,spatial=spatial)*x_bandscale_params,2),axis=2),.5)
+            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial)*x_bandscale_params,2),axis=2),.5)
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
@@ -362,7 +365,7 @@ class kNdtool(Ndiff):
 
 
         if modeldict['Ndiff_bw_kern']=='product':
-            outdiffs=makediffmat_itoj(xin,xpr)#scale now? if so, move if...='rbfkern' down 
+            outdiffs=makediffmat_itoj(xin,xpr,spatial=spatial)#scale now? if so, move if...='rbfkern' down 
             #predict
             NWtup=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet
@@ -605,7 +608,8 @@ class kNdtool(Ndiff):
         
         return self.prediction.yhat
 
-    def MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None):
+    def MY_KDEpredictMSE(self, free_params, batchdata_dictlist, modeldict, fixed_or_free_paramdict,predict=None):
+        
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         if predict==None or predict=='no':
             predict=0
@@ -613,26 +617,26 @@ class kNdtool(Ndiff):
             predict=1
         if  type(fixed_or_free_paramdict['free_params']) is str and fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
+        batchcount=self.batchcount
+        fixed_or_free_paramdict['free_params'] = free_params
+        self.fixed_or_free_paramdict = fixed_or_free_paramdict
+        try:
+            lossfn=modeldict['loss_function']
+        except KeyError:
+            print(f'loss_function not found in modeldict')
+            lossfn='mse'
+        iscrossmse=lossfn[0:8]=='crossmse'
         
-        if self.batchbatchcount=1:
-            batchdata_dictlist=[batchdata_dict]
         
-        for batchdata_dict_i in batchdata_dictlist:
+        
+        if self.source=='monte': 
+            yxtup_list=self.datagen_obj.yxtup_list
+        batchbatch_all_y_err=[]
+        for batchbatchidx in range(self.batchbatchcount):
+            if self.source=='pisces':
+                yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
+            batchdata_dict_i=batchdata_dict[batchbatchidx]
             
-        
-            #batchcount = self.datagen_dict['batchcount']
-            batchcount = len(batchdata_dict_i['yintup'])
-            #print(f'batchcount:{batchcount}')
-            fixed_or_free_paramdict['free_params'] = free_params
-            # print(f'free_params added to dict. free_params:{free_params}')
-
-            try:
-                lossfn=modeldict['loss_function']
-            except KeyError:
-                print(f'loss_function not found in modeldict')
-                lossfn='mse'
-            iscrossmse=lossfn[0:8]=='crossmse'
-
             y_err_tup = ()
 
             arglistlist=[]
@@ -680,19 +684,19 @@ class kNdtool(Ndiff):
                 ybatch=[]
                 for i in range(batchcount):
                     ycross_j=[]
-                    for j,yxvartup in enumerate(self.datagen_obj.yxtup_list):
+                    for j,yxvartup in enumerate(yxtuplist):
                         if not j==i:
                             ycross_j.append(yxvartup[0])
                     ybatch.append(np.concatenate(ycross_j,axis=0))
             elif modeldict['loss_function']=='batchnorm_crossval':
-                all_y_list=[yxvartup[0] for yxvartup in self.datagen_obj.yxtup_list]
+                all_y_list=[yxvartup[0] for yxvartup in yxtuplist]
                 all_y=np.concatenate(all_y_list,axis=0)
                 all_y_err=all_y-yhat_unstd    
                 if type(cross_errors[0]) is np.ndarray:
                     cross_errors=np.concatenate(cross_errors,axis=0)
 
             else:
-                ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
+                ybatch=[tup[0] for tup in yxtuplist]#the original yx data is a list of tupples
 
             if not modeldict['loss_function']=='batchnorm_crossval':
                 for batch_i in range(batchcount):
@@ -702,19 +706,18 @@ class kNdtool(Ndiff):
 
 
                 all_y_err = np.ma.concatenate(y_err_tup,axis=0)
-
-
-            #print('all_y_err',all_y_err)
             if iscrossmse:
                 all_y_err=np.ma.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
-            
-            
-        mse = np.ma.mean(np.ma.power(all_y_err, 2))
-        maskcount=np.ma.count_masked(all_y_err)
+            batchbatch_all_y_err.append(all_y_err)
+            batchbatch_all_y_err=np.ma.concatenate([batchbatch_all_y_err],axis=0)
+        mse = np.ma.mean(np.ma.power(batchbatch_all_y_err, 2))
+        maskcount=np.ma.count_masked(batchbatch_all_y_err)
         if maskcount>1:
             mse=1000+mse*maskcount**3
+        if mse<0:
+            mse=-mse*100000
         #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
-        self.fixed_or_free_paramdict = fixed_or_free_paramdict
+        
         if predict==0:
             self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
             # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
@@ -767,8 +770,18 @@ class kNdtool(Ndiff):
             predict=0
 
         #free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
-
+        if 'max_bw_Ndiff' in modeldict:
+            self.Ndiff=1
+        else:
+            self.Ndiff=0
+        if self.source='pisces':
+            self.batchbatchcount=datagen_obj.batchbatchcount
+            self.batchbatch_stats(datagen_obj.yxtup_batchbatch)
+        else:
+            self.batchbatchcount=1 
+        
         self.datagen_obj=datagen_obj
+        #self.spatialvar_loc=datagen_obj.spatial_loc
         
         model_param_formdict=modeldict['hyper_param_form_dict']
         xkerngrid=modeldict['xkern_grid']
@@ -777,26 +790,32 @@ class kNdtool(Ndiff):
         
         #build dictionary for parameters
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
-        self.fixed_or_free_paramdict=fixed_or_free_paramdict
+        #self.fixed_or_free_paramdict=fixed_or_free_paramdict
         if predict==1:
-            self.fixed_or_free_paramdict['free_params']='predict'#instead of 'outside'
+            fixed_or_free_paramdict['free_params']='predict'#instead of 'outside'
                 
         #save and transform the data
         #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
-        if source=='monte'
+        
         self.batchcount=datagen_obj.batchcount
         self.nin=datagen_obj.batch_n
         self.p=datagen_obj.param_count#p should work too
         #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
+        if self.source=='monte':
+            yxtup_list=datagen_obj.yxtup_list
+        yxtup_listlist_std=[]
+        for batchbatchidx in range(self.batchbatchcount):
+            if self.source=='pisces':
+                yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
+            yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
         
-        yxtup_list_std,val_yxtup_list_std = self.standardize_yxtup(datagen_obj.yxtup_list,datagen_obj.val_yxtup_list,modeldict)
         #print('buildbatcdatadict')
-        batchdata_dict=self.buildbatchdatadict(yxtup_list_std,xkerngrid,ykerngrid,modeldict)
+        batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict)
         #print('for validation buildbatcdatadict')
-        val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
-        self.npr=len(batchdata_dict['xprtup'][0])
+        #val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
+        self.npr=len(batchdata_dictlist[0]['xprtup'][0])
         print('self.npr',self.npr)
         #print('=======================')
         #print(f'batchdata_dict{batchdata_dict}')
@@ -814,54 +833,57 @@ class kNdtool(Ndiff):
             #print('---------------completed making masks----------------')
         
         #setup and run scipy minimize
-        args_tuple=(batchdata_dict, modeldict, self.fixed_or_free_paramdict)
-        val_args_tuple=(val_batchdata_dict, modeldict, self.fixed_or_free_paramdict)
+        args_tuple=(batchdata_dictlist, modeldict, fixed_or_free_paramdict)
+        #val_args_tuple=(val_batchdata_dict, modeldict, fixed_or_free_paramdict)
         print(f'mykern modeldict:{modeldict}')
         
-        return free_params,args_tuple,val_args_tuple
+        return free_params,args_tuple#,val_args_tuple
     
     
-    def buildbatchdatadict(self,yxtup_list,xkerngrid,ykerngrid,modeldict):
+    def buildbatchdatadict(self,yxtup_listlist,xkerngrid,ykerngrid,modeldict):
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
-        batchcount=len(yxtup_list)
-        #print('from buildbatchdatadict: batchcount: ',batchcount)
-        #print('self.batchcount: ',self.batchcount)
-        xintup = ()
-        yintup = ()
-        xprtup = ()
-        youttup = ()
-        if modeldict['loss_function']=='batch_crossval' or modeldict['loss_function']=='batchnorm_crossval':
-            #the equivalent condition for the y values in the mse function does not apply to batchnorm_crossval
-            xpri=[]
-            for i in range(batchcount):
-                xpricross_j=[]
-                for j,yxvartup in enumerate(yxtup_list):
-                    if not j==i:
-                        xpricross_j.append(yxvartup[1])
-                xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
-                    #print('xpri_crossval_array.shape',xpri_crossval_array.shape)
-                xpri.append(xpri_crossval_array)
-                
-            
-        else:
-            xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
-        for i in range(batchcount):
-            xdata_std=yxtup_list[i][1]
-            #print('xdata_std.shape: ',xdata_std.shape)
-            ydata_std=yxtup_list[i][0]
-            #print('xprii[i]',xpri[i])
-            xpr_out_i,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
-            #print('xpr_out_i.shape',xpr_out_i.shape)
-            xintup=xintup+(xdata_std,)
-            yintup=yintup+(ydata_std,)
-            xprtup=xprtup+(xpr_out_i,)
-            youttup=youttup+(youti,)
-            #print('xprtup[0].shape:',xprtup[0].shape)
+        batchcount=self.batchcount
+        for  yxtuplist in yxtup_listlist:
+        
+            #print('from buildbatchdatadict: batchcount: ',batchcount)
+            #print('self.batchcount: ',self.batchcount)
+            xintup = ()
+            yintup = ()
+            xprtup = ()
+            youttup = ()
+            if modeldict['loss_function']=='batch_crossval' or modeldict['loss_function']=='batchnorm_crossval':
+                #the equivalent condition for the y values in the mse function does not apply to batchnorm_crossval
+                xpri=[]
+                for i in range(batchcount):
+                    xpricross_j=[]
+                    for j,yxvartup in enumerate(yxtup_list):
+                        if not j==i:
+                            xpricross_j.append(yxvartup[1])
+                    xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
+                        #print('xpri_crossval_array.shape',xpri_crossval_array.shape)
+                    xpri.append(xpri_crossval_array)
 
-        batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+
+            else:
+                xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
+            for i in range(batchcount):
+                xdata_std=yxtup_list[i][1]
+                #print('xdata_std.shape: ',xdata_std.shape)
+                ydata_std=yxtup_list[i][0]
+                #print('xprii[i]',xpri[i])
+                xpr_out_i,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
+                #print('xpr_out_i.shape',xpr_out_i.shape)
+                xintup=xintup+(xdata_std,)
+                yintup=yintup+(ydata_std,)
+                xprtup=xprtup+(xpr_out_i,)
+                youttup=youttup+(youti,)
+                #print('xprtup[0].shape:',xprtup[0].shape)
+
+            batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
+            batdata_dictlist.append(batchdata_dict)
         #print([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
-        return batchdata_dict
+        return batchdata_dictlist
 
 
     
@@ -912,15 +934,11 @@ class optimize_free_params(kNdtool):
         if savedir==None:
             savedir=os.getcwd()
             
-        if self.source='pisces':
-            self.batchbatchcount=datagen_obj.batchbatchcount
-            self.batchbatch_stats(datagen_obj.yxtup_batchbatch)
-        else:
-            self.batchbatchcount=1    
+   
             
             
         
-        free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
+        free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
         
         lastmse=self.mse_param_list[-1][0]

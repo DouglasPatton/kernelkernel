@@ -76,21 +76,27 @@ class datagen(DataTool):
         else:
             speciesdata=self.retrievespeciesdata(species_idx=species_idx)
         
+        floatselecttup=(0,1,2,3)
+        spatialselecttup=(9,)#9 should be huc12
+        dataselecttup=(0,)+floatselecttup+spatialselecttup
+        speciesdata=speciesdata[:,dataselecttup]
+        speciesdata=self.processmissingvalues(speciesdata,missing)
         
         n=speciesdata.shape[0]
         
-        floatselecttup=(3,4,6,7)#5 is bmmi, which is left out for now
-        datagen_obj.param_count=len(floatselecttup)+1#+1 for the spatial variable, e.g., huc12
+        floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
+        datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
         
-        self.xvarname_dict={}
-        self.xvarname_dict['float']=self.varlist[[i-1 for i in floatselecttup]]
+        self.xvarname_list={}
+        self.xvarname_list=self.varlist[floatselecttup-1]#i-1 b/c no dep var in self.varlist
+        self.xvarname_list.append(self.varlist[spatialselecttup-1])
         print('self.xvarnames: {self.xvarnames}')
-        self.xdataarray_float=np.array(specesdata[:,floatselecttup], dtype=float)#may need more attention due to missing values that won't convert to float
-        #self.xdataarray_float=np.empty((n,4), dtype=float)
-        #self.xdataarray_str=np.empty((n,2),dtype=str)
-        spatialselecttup=(9,)
-        self.xvarname_dict['spatial']=self.varlist[[i-1 for i in spatialselecttup]]
-        self.xdataarray_spatial=np.array(speciesdata[:,spatialselecttup],dtype=str)
+        
+        self.xdataarray=np.array(speciesdata[:,floatselecttup+spatialselecttup],dtype=float)
+        
+        self.spatial=1
+        self.float_loc=[i for i in range(len(floatselecttup))]
+        #self.xdataarray_spatial=np.array(speciesdata[:,spatialselecttup],dtype=str)
         print(f'self.svarname_dict:{self.svarname_dict}')
         
         
@@ -98,14 +104,24 @@ class datagen(DataTool):
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
-        self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray_float,self.xdataarray_spatial,batch_n,batchcount,sample_replace,missing)
+        self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray,batch_n,batchcount,sample_replace,missing)
         return
         
+    def processmissingvalues(self,nparray,missing_treatment):
+        outlist=[]
+        if missing_treatment=='drop_row':
+            for row in nparray:
+                keep=1
+                for val in row:
+                    if val=='999999':keep=0
+                if keep==1:outlist.append(row)
+        return np.array(outlist)
+                
+                
         
         
-        
-    def genpiscesbatchbatchlist(self, ydataarray,xdataarray_float,xdataarray_spatial,batch_n,batchcount,sample_replace,missing):
-        n=ydataarray.shape[0]
+    def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing):
+        n=ydataarray.shape[0]; p=xdataarray.shape[1]
         selectlist=shuffle([i for i in range(n)])
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
@@ -119,7 +135,7 @@ class datagen(DataTool):
             for j in range(batchcount):
                 start=(i+j)*batch_n
                 end=start+batch_n
-                batchbatchlist[i][j]=(ydataarray[start:end],xdataarray_float[start:end,:],xdataarray_spatial[start:end,:])
+                batchbatchlist[i][j]=(ydataarray[start:end],xdataarray[start:end,:])
         self.yxtup_batchbatch=batchbatchlist
         
                 
