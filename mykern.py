@@ -206,12 +206,15 @@ class kNdtool(Ndiff):
         #yxtup_list=deepcopy(yxtup_list_unstd)
         p=yxtup_list[0][1].shape[1]
         modelstd=modeldict['std_data']
-        all_y=[ii for i in yxtup_list for ii in i[0]]
-        all_x=[ii for i in yxtup_list for ii in i[1]]
-        self.xmean=np.mean(all_x,axis=0)
-        self.ymean=np.mean(all_y,axis=0)
-        self.xstd=np.std(all_x,axis=0)
-        self.ystd=np.std(all_y,axis=0)
+
+        try: self.xmean,self.ymean,self.xstd,self.ystd
+        except:
+            all_y=[ii for i in yxtup_list for ii in i[0]]
+            all_x=[ii for i in yxtup_list for ii in i[1]]
+            self.xmean=np.mean(all_x,axis=0)
+            self.ymean=np.mean(all_y,axis=0)
+            self.xstd=np.std(all_x,axis=0)
+            self.ystd=np.std(all_y,axis=0)
         
         if type(modelstd) is str: 
             if  modelstd=='all':
@@ -610,94 +613,102 @@ class kNdtool(Ndiff):
             predict=1
         if  type(fixed_or_free_paramdict['free_params']) is str and fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
-
-        #batchcount = self.datagen_dict['batchcount']
-        batchcount = len(batchdata_dict['yintup'])
-        #print(f'batchcount:{batchcount}')
-        fixed_or_free_paramdict['free_params'] = free_params
-        # print(f'free_params added to dict. free_params:{free_params}')
-
-        try:
-            lossfn=modeldict['loss_function']
-        except KeyError:
-            print(f'loss_function not found in modeldict')
-            lossfn='mse'
-        iscrossmse=lossfn[0:8]=='crossmse'
-
-        y_err_tup = ()
-
-        arglistlist=[]
-        for batch_i in range(batchcount):
+        
+        if self.batchbatchcount=1:
+            batchdata_dictlist=[batchdata_dict]
+        
+        for batchdata_dict_i in batchdata_dictlist:
             
-            arglist=[]
-            arglist.append(batchdata_dict['yintup'][batch_i])
-            arglist.append(batchdata_dict['youttup'][batch_i])
-            arglist.append(batchdata_dict['xintup'][batch_i])
-            arglist.append(batchdata_dict['xprtup'][batch_i])
+        
+            #batchcount = self.datagen_dict['batchcount']
+            batchcount = len(batchdata_dict_i['yintup'])
+            #print(f'batchcount:{batchcount}')
+            fixed_or_free_paramdict['free_params'] = free_params
+            # print(f'free_params added to dict. free_params:{free_params}')
 
-            arglist.append(modeldict)
-            arglist.append(fixed_or_free_paramdict)
-            arglistlist.append(arglist)
+            try:
+                lossfn=modeldict['loss_function']
+            except KeyError:
+                print(f'loss_function not found in modeldict')
+                lossfn='mse'
+            iscrossmse=lossfn[0:8]=='crossmse'
 
-        self.process_count=1#self.cores
-        if self.process_count>1 and batchcount>1:
-            with multiprocessing.Pool(processes=process_count) as pool:
-                yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
-                sleep(2)
-                pool.close()
-                pool.join()
-        else:
-            yhat_unstd_outtup_list=[]
-            for i in range(batchcount):
-                result_tup=self.MPwrapperKDEpredict(arglistlist[i])
-                #self.logger.info(f'result_tup: {result_tup}')
-                yhat_unstd_outtup_list.append(result_tup)
-        #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-        if modeldict['loss_function']=='batchnorm_crossval':
-            yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list,fixed_or_free_paramdict)
-           
-        else:
-            if batchcount>1:
-                yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
-            else:
-                yhat_unstd,cross_errors=yhat_unstd_outtup_list
-        
-        
-        #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
-        
+            y_err_tup = ()
 
-                
-        if modeldict['loss_function']=='batch_crossval':
-            ybatch=[]
-            for i in range(batchcount):
-                ycross_j=[]
-                for j,yxvartup in enumerate(self.datagen_obj.yxtup_list):
-                    if not j==i:
-                        ycross_j.append(yxvartup[0])
-                ybatch.append(np.concatenate(ycross_j,axis=0))
-        elif modeldict['loss_function']=='batchnorm_crossval':
-            all_y_list=[yxvartup[0] for yxvartup in self.datagen_obj.yxtup_list]
-            all_y=np.concatenate(all_y_list,axis=0)
-            all_y_err=all_y-yhat_unstd    
-            if type(cross_errors[0]) is np.ndarray:
-                cross_errors=np.concatenate(cross_errors,axis=0)
-                
-        else:
-            ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
-        
-        if not modeldict['loss_function']=='batchnorm_crossval':
+            arglistlist=[]
             for batch_i in range(batchcount):
-                y_batch_i=ybatch[i]
-                y_err = y_batch_i - yhat_unstd[batch_i]
-                y_err_tup = y_err_tup + (y_err,)
+
+                arglist=[]
+                arglist.append(batchdata_dict_i['yintup'][batch_i])
+                arglist.append(batchdata_dict_i['youttup'][batch_i])
+                arglist.append(batchdata_dict_i['xintup'][batch_i])
+                arglist.append(batchdata_dict_i['xprtup'][batch_i])
+
+                arglist.append(modeldict)
+                arglist.append(fixed_or_free_paramdict)
+                arglistlist.append(arglist)
+
+            self.process_count=1#self.cores
+            if self.process_count>1 and batchcount>1:
+                with multiprocessing.Pool(processes=process_count) as pool:
+                    yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
+                    sleep(2)
+                    pool.close()
+                    pool.join()
+            else:
+                yhat_unstd_outtup_list=[]
+                for i in range(batchcount):
+                    result_tup=self.MPwrapperKDEpredict(arglistlist[i])
+                    #self.logger.info(f'result_tup: {result_tup}')
+                    yhat_unstd_outtup_list.append(result_tup)
+            #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
+            if modeldict['loss_function']=='batchnorm_crossval':
+                yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list,fixed_or_free_paramdict)
+
+            else:
+                if batchcount>1:
+                    yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
+                else:
+                    yhat_unstd,cross_errors=yhat_unstd_outtup_list
 
 
-            all_y_err = np.ma.concatenate(y_err_tup,axis=0)
+            #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
 
-        
-        #print('all_y_err',all_y_err)
-        if iscrossmse:
-            all_y_err=np.ma.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
+
+
+            if modeldict['loss_function']=='batch_crossval':
+                ybatch=[]
+                for i in range(batchcount):
+                    ycross_j=[]
+                    for j,yxvartup in enumerate(self.datagen_obj.yxtup_list):
+                        if not j==i:
+                            ycross_j.append(yxvartup[0])
+                    ybatch.append(np.concatenate(ycross_j,axis=0))
+            elif modeldict['loss_function']=='batchnorm_crossval':
+                all_y_list=[yxvartup[0] for yxvartup in self.datagen_obj.yxtup_list]
+                all_y=np.concatenate(all_y_list,axis=0)
+                all_y_err=all_y-yhat_unstd    
+                if type(cross_errors[0]) is np.ndarray:
+                    cross_errors=np.concatenate(cross_errors,axis=0)
+
+            else:
+                ybatch=[tup[0] for tup in self.datagen_obj.yxtup_list]#the original yx data is a list of tupples
+
+            if not modeldict['loss_function']=='batchnorm_crossval':
+                for batch_i in range(batchcount):
+                    y_batch_i=ybatch[i]
+                    y_err = y_batch_i - yhat_unstd[batch_i]
+                    y_err_tup = y_err_tup + (y_err,)
+
+
+                all_y_err = np.ma.concatenate(y_err_tup,axis=0)
+
+
+            #print('all_y_err',all_y_err)
+            if iscrossmse:
+                all_y_err=np.ma.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
+            
+            
         mse = np.ma.mean(np.ma.power(all_y_err, 2))
         maskcount=np.ma.count_masked(all_y_err)
         if maskcount>1:
@@ -741,10 +752,20 @@ class kNdtool(Ndiff):
         #except:pass
         return KDEpredict_tup
     
+    
+    def batchbatch_stats(self,yxtup_batchbatch)
+        all_y=[ii for yxtup_list in yxtup_batchbatch for i in yxtup_list for ii in i[0]]
+        all_x=[ii for yxtup_list in yxtup_batchbatch for i in yxtup_list for ii in i[1]]
+        self.xmean=np.mean(all_x,axis=0)
+        self.ymean=np.mean(all_y,axis=0)
+        self.xstd=np.std(all_x,axis=0)
+        self.ystd=np.std(all_y,axis=0)
+                       
+                       
     def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,source='monte',predict=None):
         if predict==None:
             predict=0
-        
+
         #free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
 
         self.datagen_obj=datagen_obj
@@ -762,7 +783,7 @@ class kNdtool(Ndiff):
                 
         #save and transform the data
         #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
-        if 
+        if source=='monte'
         self.batchcount=datagen_obj.batchcount
         self.nin=datagen_obj.batch_n
         self.p=datagen_obj.param_count#p should work too
@@ -890,6 +911,14 @@ class optimize_free_params(kNdtool):
         
         if savedir==None:
             savedir=os.getcwd()
+            
+        if self.source='pisces':
+            self.batchbatchcount=datagen_obj.batchbatchcount
+            self.batchbatch_stats(datagen_obj.yxtup_batchbatch)
+        else:
+            self.batchbatchcount=1    
+            
+            
         
         free_params,args_tuple,val_args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
         self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)

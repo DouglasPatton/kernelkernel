@@ -109,6 +109,7 @@ class datagen(DataTool):
         selectlist=shuffle([i for i in range(n)])
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
+        self.batchbatchcount=batchbatchcount
         fullbatchbatch_n=batchbatchcount*batchsize
         fullbatchbatch_shortby=fulbatchbatch_n-n
         selectlist=selectlist+selectlist[:fullbatchbatch_shortby]#repeat the first group of random observations to fill out the dataset
