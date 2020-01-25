@@ -1,8 +1,8 @@
 from random import shuffle
 import numpy as np
-from pisces_data_huc12 import DataTool
+from pisces_data_huc12 import PiscesDataTool
 
-class datagen(DataTool):
+class datagen(PiscesDataTool):
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
@@ -41,7 +41,7 @@ class datagen(DataTool):
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             return
         if source=='pisces':
-            DataTool.__init__(self,)
+            PiscesDataTool.__init__(self,)
             
             source=datagen_dict['source']
             batch_n=datagen_dict['batch_n']

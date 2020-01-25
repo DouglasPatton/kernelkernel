@@ -11,7 +11,7 @@ import traceback
 #import pandas as pd
 
 
-class DataTool():
+class PiscesDataTool():
     def __init__(self,):
         #logging.basicConfig(level=logging.INFO)
         logging.basicConfig(level=logging.INFO)

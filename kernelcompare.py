@@ -8,6 +8,7 @@ import mykern as mk
 import re
 import logging, logging.config
 import yaml
+from kernelparams import KernelParams
 #import datetime
 
 class KernelOptModelTools(mk.kNdtool):
@@ -40,7 +41,7 @@ class KernelOptModelTools(mk.kNdtool):
         if force_start_params=='yes':
             force_start_params=1
 
-        datagen_obj=dg.datagen((datagen_dict)
+        datagen_obj=dg.datagen(datagen_dict)
         print(f'datagen_dict:{datagen_dict} for directory,{self.kc_savedirectory}')
         
         if force_start_params==0:
@@ -51,6 +52,10 @@ class KernelOptModelTools(mk.kNdtool):
         mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory,myname=self.name)
         return
         
+                               
+    
+                               
+                               
     def run_opt_complete_check(self,optimizedict_orig,replace=None):
         '''
         checks model_save and then final_model_save to see if the same modeldict has been run before (e.g.,
@@ -780,111 +785,13 @@ class KernelOptModelTools(mk.kNdtool):
             #print(f'old_dict_copy{old_dict_copy}')
             return old_dict_copy
     
-    def build_hyper_param_start_values(self,modeldict):
-        max_bw_Ndiff=modeldict['max_bw_Ndiff']
-        Ndiff_start=modeldict['Ndiff_start']
-        Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
-        p=modeldict['param_count']
-        assert not p==None, f"p is unexpectedly p:{p}"
-        if modeldict['Ndiff_type']=='product':
-                hyper_paramdict1={
-                'Ndiff_exponent':.3*np.ones([Ndiff_param_count,]),
-                'x_bandscale':1*np.ones([p,]),
-                'outer_x_bw':np.array([2.7,]),
-                'outer_y_bw':np.array([2.2,]),
-                'Ndiff_depth_bw':.5*np.ones([Ndiff_param_count,]),
-                'y_bandscale':1.0*np.ones([1,])
-                    }
 
-        if modeldict['Ndiff_type']=='recursive':
-            hyper_paramdict1={
-                'Ndiff_exponent':0.00001*np.ones([Ndiff_param_count,]),
-                'x_bandscale':1*np.ones([p,]),#
-                'outer_x_bw':np.array([0.3,]),
-                'outer_y_bw':np.array([0.3,]),
-                'Ndiff_depth_bw':np.array([0.5]),
-                'y_bandscale':1.0*np.ones([1,])
-                }
-        return hyper_paramdict1
-            
-        
-
-        
-
-
-    def build_optdict(self,opt_dict_override=None,param_count=None):
-        if opt_dict_override==None:
-            opt_dict_override={}
-        max_bw_Ndiff=2
-        Ndiff_start=1
-        Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
-        modeldict1={
-            'std_data':'all',
-            'loss_function':'mse',
-            'Ndiff_type':'product',
-            'param_count':param_count,
-            'Ndiff_start':Ndiff_start,
-            'max_bw_Ndiff':max_bw_Ndiff,
-            'normalize_Ndiffwtsum':'own_n',
-            'NWnorm':'across',
-            'xkern_grid':'no',
-            'ykern_grid':33,
-            'outer_kern':'gaussian',
-            'Ndiff_bw_kern':'rbfkern',
-            'outer_x_bw_form':'one_for_all',
-            'regression_model':'NW',
-            'product_kern_norm':'self',
-            'hyper_param_form_dict':{
-                'Ndiff_exponent':'free',
-                'x_bandscale':'non-neg',
-                'Ndiff_depth_bw':'non-neg',
-                'outer_x_bw':'non-neg',
-                'outer_y_bw':'non-neg',
-                'y_bandscale':'fixed'
-                }
-            }
-        #hyper_paramdict1=self.build_hyper_param_start_values(modeldict1)
-        hyper_paramdict1={}
-        
-        #optimization settings for Nelder-Mead optimization algorithm
-        optiondict_NM={
-            'xatol':0.5,
-            'fatol':1,
-            'adaptive':True
-            }
-        optimizer_settings_dict1={
-            'method':'Nelder-Mead',
-            'options':optiondict_NM,
-            #'mse_threshold':2,
-            'help_start':1,
-            'partial_match':1
-            }
-        
-        optimizedict1={
-            'opt_settings_dict':optimizer_settings_dict1,
-            'hyper_param_dict':hyper_paramdict1,
-            'modeldict':modeldict1
-            } 
-        
-        newoptimizedict1=self.do_dict_override(optimizedict1,opt_dict_override,verbose=0)
-        
-        newhyper_paramdict1=self.build_hyper_param_start_values(newoptimizedict1['modeldict'])
-        newoptimizedict1['hyper_param_dict']=newhyper_paramdict1
-        try: 
-            start_val_override_dict=opt_dict_override['hyper_param_dict']
-            print(f'start_val_override_dict:{start_val_override_dict}')
-            start_override_opt_dict={'hyper_param_dict':start_val_override_dict}
-            newoptimizedict1=self.do_dict_override(newoptimizedict1,start_override_opt_dict,verbose=0)
-        except:
-            pass
-        #    self.logger.exception(f'error in {__name__}')             
-        #    print('------no start value overrides encountered------')
-        #print(f'newoptimizedict1{newoptimizedict1}')
-        return newoptimizedict1
+                               
+    
 
         
         
-class KernelCompare(KernelOptModelTools):
+class KernelCompare(KernelOptModelTools,KernelParams):
     def __init__(self,directory=None,myname=None):
         self.name=myname
         if directory==None:
@@ -895,7 +802,7 @@ class KernelCompare(KernelOptModelTools):
             merge_directory=os.path.join(self.kc_savedirectory,'..')
 
         KernelOptModelTools.__init__(self,directory=self.kc_savedirectory,myname=myname)
-
+        KernelParams.__init__(self,)
 
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,datagen_dict=None,verbose=0):
         if not type(datagen_dict) is dict:
@@ -928,6 +835,8 @@ class KernelCompare(KernelOptModelTools):
                 #print('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
+                               
+                        
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
@@ -986,40 +895,15 @@ class KernelCompare(KernelOptModelTools):
             return {dict_string[0:colon_loc[0]]:self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],colon_loc[1:],val)}
         
                          
-    def build_quadratic_datagen_dict_override(self):
+    '''def build_quadratic_datagen_dict_override(self):
         datagen_dict_override={}
         datagen_dict_override['ftype']='quadratic'
-        return datagen_dict_override
+        return datagen_dict_override'''
         
                          
-    def test_build_opt_dict_override(self):
-        
-        opt_dict_override={}
-        modeldict={}
-        hyper_param_form_dict={}
-        hyper_param_dict={}
-        opt_settings_dict={}
-        options={}
 
-        modeldict['Ndiff_type']='recursive'
-        modeldict['max_bw_Ndiff']=3
-        modeldict['Ndiff_start']=1
-        modeldict['ykern_grid']=51
-        #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
-        #hyper_param_dict['y_bandscale']=np.array([1])
-        #opt_dict_override['hyper_param_dict']=hyper_param_dict
-        opt_dict_override['modeldict']=modeldict
-
-        #options['mse_threshold']=32.0
-        options['fatol']=0.9
-        options['xatol']=.1
-        opt_settings_dict['options']=options
-        #opt_settings_dict['mse_threshold']=32.0
-        #opt_settings_dict['help_start']='no'
-        #opt_settings_dict['partial_match']='no'
-        opt_dict_override['opt_settings_dict']=opt_settings_dict
-        return opt_dict_override
-
+                               
+                               
 if __name__=='__main__':
     import kernelcompare as kc
     kc_obj=kc.KernelCompare()
