@@ -220,18 +220,13 @@ class kNdtool(Ndiff):
 
         try: self.xmean,self.ymean,self.xstd,self.ystd
         except:
-            all_y=[ii for i in yxtup_list for ii in i[0]]
-            all_x=[ii for i in yxtup_list for ii in i[1]]
-            self.xmean=np.mean(all_x,axis=0)
-            self.ymean=np.mean(all_y,axis=0)
-            self.xstd=np.std(all_x,axis=0)
-            self.ystd=np.std(all_y,axis=0)
+
         
         if type(modelstd) is str: 
             if  modelstd=='all':
                 x_stdlist=[i for i in range(p)]
             else:
-                assert False, f'modeldict:std_data is {modelstd} but expected "all"''
+                assert False, f'modeldict:std_data is {modelstd} but expected "all"'
         elif type(modelstd) is tuple:
             xmodelstd=modelstd[1]
             ymodelstd=modelstd[0]

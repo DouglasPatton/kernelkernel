@@ -6,7 +6,7 @@ class datagen(PiscesDataTool):
     '''generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,datagen_dict)
+    def __init__(self,datagen_dict):
         '''(self,source=None,
                  seed=None,
                  ftype=None,
@@ -104,8 +104,21 @@ class datagen(PiscesDataTool):
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
+        
+        self.
         self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray,batch_n,batchcount,sample_replace,missing)
         return
+        
+        
+    def build_sumstats_dict(self,ydata,xdata):
+        self.xmean=np.mean(xdata,axis=0)
+        self.ymean=np.mean(ydata,axis=0)
+        self.xstd=np.std(xdata,axis=0)
+        self.ystd=np.std(ydata,axis=0)
+        self.summary_stats_dict={'xmean':self.xmean,
+                                'ymean':self.ymean,
+                                'ystd':self.ystd,
+                                'xstd':self.xstd}
         
     def processmissingvalues(self,nparray,missing_treatment):
         outlist=[]
@@ -137,6 +150,10 @@ class datagen(PiscesDataTool):
                 end=start+batch_n
                 batchbatchlist[i][j]=(ydataarray[start:end],xdataarray[start:end,:])
         self.yxtup_batchbatch=batchbatchlist
+        
+        all_y=[ii for i in yxtup_list for ii in i[0]]
+        all_x=[ii for i in yxtup_list for ii in i[1]]
+
         
                 
             
