@@ -1,0 +1,221 @@
+class KernelParams:
+    
+    def __init__(self,):
+        pass
+
+    def test_build_opt_dict_override(self):
+        
+        opt_dict_override={}
+        modeldict={}
+        hyper_param_form_dict={}
+        hyper_param_dict={}
+        opt_settings_dict={}
+        options={}
+
+        modeldict['Ndiff_type']='recursive'
+        modeldict['max_bw_Ndiff']=3
+        modeldict['Ndiff_start']=1
+        modeldict['ykern_grid']=51
+        #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
+        #hyper_param_dict['y_bandscale']=np.array([1])
+        #opt_dict_override['hyper_param_dict']=hyper_param_dict
+        opt_dict_override['modeldict']=modeldict
+
+        #options['mse_threshold']=32.0
+        options['fatol']=0.9
+        options['xatol']=.1
+        opt_settings_dict['options']=options
+        #opt_settings_dict['mse_threshold']=32.0
+        #opt_settings_dict['help_start']='no'
+        #opt_settings_dict['partial_match']='no'
+        opt_dict_override['opt_settings_dict']=opt_settings_dict
+        return opt_dict_override
+
+                               
+    def setdata(self, source)#creates the initial datagen_dict
+        
+        if source==None:
+            source='monte'
+            datagen_dict={
+                'source':'monte',
+                'validate_batchcount':10,
+                'batch_n':32,
+                'batchcount':10, 
+                'param_count':2,
+                'seed':1, 
+                'ftype':'linear', 
+                'evar':1                
+                                }
+        if source=='pisces':
+            datagen_dict={
+                'source':'pisces',
+                'batch_n':32,
+                'batchcount':10 #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'sample_replace':'no' #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
+                #if type(x) is int then it tells us to create x batches of batches with replacement
+                'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
+                'missing':'drop_row' #drop the row(observation) if any data is missing
+                              }
+        return datagen_dict
+
+
+    def getoptdictvariations(self,source='monte'):
+        NWnorm_variations=('modeldict:NWnorm',['across','none'])
+        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
+        #cross_mse,cross_mse2
+        #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
+        Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        
+        if source='monte':
+            standardization_variations=('modeldict:std_data',['all'])
+            ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
+            ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])
+            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
+            
+        if source='pisces'
+            standardization_variations=('modeldict:std_data',[([],['float'])])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
+            ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
+            ykern_grid_variations=('modeldict:ykern_grid',[2,5])
+            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
+        
+        
+        optdict_variation_list = [ykerngrid_form_variations,
+                                  NWnorm_variations,
+                                  loss_function_variations,
+                                  regression_model_variations, 
+                                  product_kern_norm_variations,
+                                  normalize_Ndiffwtsum_variations,
+                                  Ndiff_type_variations,
+                                  ykern_grid_variations,
+                                  max_bw_Ndiff_variations,
+                                  Ndiff_start_variations,
+                                  standardization_variations
+                                 ]
+        return optdict_variation_list
+
+    def getdatagenvariations(self,source='monte'):
+        if source=='monte':
+            #the default datagen_dict as of 11/25/2019
+            #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+            batch_n_variations=('batch_n',[self.n])
+            batchcount_variations=('batchcount',[10])
+            ftype_variations=('ftype',['linear','quadratic'])
+            param_count_variations=('param_count',[2,4])
+            datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
+        if source=='pisces':
+            try:pdh12.specieslist
+            except:
+                pdh12=PiscesDataTool()
+                pdh12.buildspecieslist
+                
+            species_variations=('species',pdh12.specieslist)
+            batch_n_variations=('batch_n',[self.n])
+            batchcount_variations=('batchcount',[10])
+            datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
+        return datagen_variation_list
+    
+        def build_hyper_param_start_values(self,modeldict):
+        max_bw_Ndiff=modeldict['max_bw_Ndiff']
+        Ndiff_start=modeldict['Ndiff_start']
+        Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
+        p=modeldict['param_count']
+        assert not p==None, f"p is unexpectedly p:{p}"
+        if modeldict['Ndiff_type']=='product':
+                hyper_paramdict1={
+                'Ndiff_exponent':.3*np.ones([Ndiff_param_count,]),
+                'x_bandscale':1*np.ones([p,]),
+                'outer_x_bw':np.array([2.7,]),
+                'outer_y_bw':np.array([2.2,]),
+                'Ndiff_depth_bw':.5*np.ones([Ndiff_param_count,]),
+                'y_bandscale':1.0*np.ones([1,])
+                    }
+
+        if modeldict['Ndiff_type']=='recursive':
+            hyper_paramdict1={
+                'Ndiff_exponent':0.00001*np.ones([Ndiff_param_count,]),
+                'x_bandscale':1*np.ones([p,]),#
+                'outer_x_bw':np.array([0.3,]),
+                'outer_y_bw':np.array([0.3,]),
+                'Ndiff_depth_bw':np.array([0.5]),
+                'y_bandscale':1.0*np.ones([1,])
+                }
+        return hyper_paramdict1
+            
+        
+
+        
+
+
+    def build_optdict(self,opt_dict_override=None,param_count=None):
+        if opt_dict_override==None:
+            opt_dict_override={}
+        max_bw_Ndiff=2
+        Ndiff_start=1
+        Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
+        modeldict1={
+            'std_data':'all',
+            'loss_function':'mse',
+            'Ndiff_type':'product',
+            'param_count':param_count,
+            'Ndiff_start':Ndiff_start,
+            'max_bw_Ndiff':max_bw_Ndiff,
+            'normalize_Ndiffwtsum':'own_n',
+            'NWnorm':'across',
+            'xkern_grid':'no',
+            'ykern_grid':33,
+            'outer_kern':'gaussian',
+            'Ndiff_bw_kern':'rbfkern',
+            'outer_x_bw_form':'one_for_all',
+            'regression_model':'NW',
+            'product_kern_norm':'self',
+            'hyper_param_form_dict':{
+                'Ndiff_exponent':'free',
+                'x_bandscale':'non-neg',
+                'Ndiff_depth_bw':'non-neg',
+                'outer_x_bw':'non-neg',
+                'outer_y_bw':'non-neg',
+                'y_bandscale':'fixed'
+                }
+            }
+        #hyper_paramdict1=self.build_hyper_param_start_values(modeldict1)
+        hyper_paramdict1={}
+        
+        #optimization settings for Nelder-Mead optimization algorithm
+        optiondict_NM={
+            'xatol':0.5,
+            'fatol':1,
+            'adaptive':True
+            }
+        optimizer_settings_dict1={
+            'method':'Nelder-Mead',
+            'options':optiondict_NM,
+            #'mse_threshold':2,
+            'help_start':1,
+            'partial_match':1
+            }
+        
+        optimizedict1={
+            'opt_settings_dict':optimizer_settings_dict1,
+            'hyper_param_dict':hyper_paramdict1,
+            'modeldict':modeldict1
+            } 
+        
+        newoptimizedict1=self.do_dict_override(optimizedict1,opt_dict_override,verbose=0)
+        
+        newhyper_paramdict1=self.build_hyper_param_start_values(newoptimizedict1['modeldict'])
+        newoptimizedict1['hyper_param_dict']=newhyper_paramdict1
+        try: 
+            start_val_override_dict=opt_dict_override['hyper_param_dict']
+            print(f'start_val_override_dict:{start_val_override_dict}')
+            start_override_opt_dict={'hyper_param_dict':start_val_override_dict}
+            newoptimizedict1=self.do_dict_override(newoptimizedict1,start_override_opt_dict,verbose=0)
+        except:
+            pass
+        #    self.logger.exception(f'error in {__name__}')             
+        #    print('------no start value overrides encountered------')
+        #print(f'newoptimizedict1{newoptimizedict1}')
+        return newoptimizedict1
