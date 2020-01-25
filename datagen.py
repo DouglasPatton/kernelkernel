@@ -39,7 +39,12 @@ class datagen(PiscesDataTool):
             if seed is None:
                 seed=1
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
+            
+            ydata=np.concatenate([yxtup[0] for yxtup in self.yxtup_list],axis=0)
+            xdata=np.concatenate([yxtup[1] for yxtup in self.yxtup_list],axis=0)
+            self.build_sumstats_dict(ydata,xdata)
             return
+        
         if source=='pisces':
             PiscesDataTool.__init__(self,)
             
@@ -55,6 +60,7 @@ class datagen(PiscesDataTool):
             seed=1
             
             self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species)
+            self.build_sumstats_dict(self.ydataarray,self.xdataarray)
             pass
         
         
@@ -104,8 +110,6 @@ class datagen(PiscesDataTool):
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
-        
-        self.
         self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray,batch_n,batchcount,sample_replace,missing)
         return
         

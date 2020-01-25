@@ -220,6 +220,10 @@ class kNdtool(Ndiff):
 
         try: self.xmean,self.ymean,self.xstd,self.ystd
         except:
+            self.xmean=self.datagen_obj.summary_stats_dict['xmean']
+            self.ymean=self.datagen_obj.summary_stats_dict['ymean']
+            self.xstd=self.datagen_obj.summary_stats_dict['xstd']
+            self.ystd=self.datagen_obj.summary_stats_dict['ystd']
 
         
         if type(modelstd) is str: 
@@ -333,7 +337,7 @@ class kNdtool(Ndiff):
         p=x_bandscale_params.shape[0]
         assert self.p==p,\
             "p={} but x_bandscale_params.shape={}".format(self.p,x_bandscale_params.shape)
-        try 
+        try :
             spatial=self.datagen_obj.spatial
         except:
             spatial=0
@@ -750,14 +754,14 @@ class kNdtool(Ndiff):
         #except:pass
         return KDEpredict_tup
     
-    
-    def batchbatch_stats(self,yxtup_batchbatch)
+        '''below functionality moved to datagen.py and accessed as datagen.summary_stats_dict['xmean'],etc
+        def batchbatch_stats(self,yxtup_batchbatch):
         all_y=[ii for yxtup_list in yxtup_batchbatch for i in yxtup_list for ii in i[0]]
         all_x=[ii for yxtup_list in yxtup_batchbatch for i in yxtup_list for ii in i[1]]
         self.xmean=np.mean(all_x,axis=0)
         self.ymean=np.mean(all_y,axis=0)
         self.xstd=np.std(all_x,axis=0)
-        self.ystd=np.std(all_y,axis=0)
+        self.ystd=np.std(all_y,axis=0)'''
                        
                        
     def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,source='monte',predict=None):
@@ -771,7 +775,7 @@ class kNdtool(Ndiff):
             self.Ndiff=0
         if self.source='pisces':
             self.batchbatchcount=datagen_obj.batchbatchcount
-            self.batchbatch_stats(datagen_obj.yxtup_batchbatch)
+            #self.batchbatch_stats(datagen_obj.yxtup_batchbatch) #moved to datagen.py
         else:
             self.batchbatchcount=1 
         
