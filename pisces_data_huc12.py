@@ -121,10 +121,13 @@ class PiscesDataTool():
     def getcsvfile(self,filename):
         thisdir=os.getcwd()
         datadir=os.path.join(thisdir,'fishfiles',filename)
-        if os.path.exists(datadir):
-            with open(datadir, 'r') as f:
-                datadict=[row for row in csv.DictReader(f)]
+        #if os.path.exists(datadir):
+        
+        with open(datadir, 'r') as f:
+            datadict=[row for row in csv.DictReader(f)]
         print(f'opening {filename} with length:{len(datadict)} and type:{type(datadict)}')
+        
+            
         
         keylist=[key for row in datadict for key,val in row.items()]
         return datadict

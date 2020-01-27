@@ -66,7 +66,7 @@ class datagen(PiscesDataTool):
             
             seed=1
             
-            self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species)
+            self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup)
             self.build_sumstats_dict(self.ydataarray,self.xdataarray)
             pass
         

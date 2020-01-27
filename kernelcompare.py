@@ -822,6 +822,10 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
         assert type(optdict_variation_list[0])==tuple,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a tuple'
         '''                 
+        if datagen_dict['source']=='pisces':
+            if datagen_dict['species']=='all':
+                datagen_variation_list=self.addspeciesvariations(datagen_variation_list)
+        
         
         model_run_dict_list=[]
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)
@@ -839,8 +843,17 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 #print('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
-                               
-                        
+    def addspeciesvariations(self,datagen_variation_list):
+        #remove existing species variations in case species:all is included in the list
+        remove_existing_species_variations=[var for var in datagen_variation_list if var[0]!='species']
+        
+        try:pdh12.specieslist
+        except:
+            pdh12=PiscesDataTool()
+            pdh12.buildspecieslist
+
+        species_variations=('species',pdh12.specieslist)
+        return remove_existing_species_variations.append(species_variations)                
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
