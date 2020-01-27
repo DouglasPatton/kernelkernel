@@ -160,6 +160,7 @@ class kNdtool(Ndiff):
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
                 ykerngrid='no' 
         '''
+        print('type(ykerngrid):',type(ykerngrid))
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
@@ -172,6 +173,7 @@ class kNdtool(Ndiff):
             self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
             yout=self.generate_grid(ykerngrid_form,ykerngrid)#will broadcast later
+            print('yout:',yout)
             self.nout=ykerngrid
         if type(xkerngrid) is int:#this maybe doesn't work yet
             self.logger.warning("xkerngrid is not fully developed")
@@ -201,6 +203,7 @@ class kNdtool(Ndiff):
             halfgrid=np.exp(log_grid[1:])-1
             return np.concatenate((-halfgrid[::-1],np.array([0]),halfgrid),axis=0)
         if form[0]=='binary':
+            
             return np.linspace(0,1,count)
             
             
@@ -235,20 +238,36 @@ class kNdtool(Ndiff):
         elif type(modelstd) is tuple:
             xmodelstd=modelstd[1]
             ymodelstd=modelstd[0]
-            x_stdlist=[i for i in range(p) if xmodelstd[p]==1]
-            xstdselect=modelstd[1]
-            x_stdlist[modelstd[1]]=1
+            floatselecttup=self.datagen_obj.floatselecttup
+            spatialselecttup=self.datagen_obj.spatialselecttup
+            if xmodelstd=='float':
+                x_stdlist=[i for i in range(len(floatselecttup))]
+            if xmodelstd=='all':
+                x_stdlist=[i for i in range(p)]
+            if ymodelstd=='std':
+                y_stdlist=[0]
+            if ymodelstd==[]:
+                y_stdlist=[]
+            #xstdselect=modelstd[1]
+            #x_stdlist[modelstd[1]]=1
         
         tupcount=len(yxtup_list)#should be same as batchcount
-        yxtup_list_std=[]
+        meanstack=[self.ymean,self.xmean]
+        stdstack=[self.ystd,self.xstd]
+        stdlisttup=[y_stdlist,x_stdlist]
         for i in range(tupcount):
-            y=yxtup_list[i][0]
-            x=yxtup_list[i][1]
+            for j,stdlist in enumerate(stdlisttup):
+                for k in stdlist:
+                    yxtup_list[i][j][k]=(yxtup_list[i][j][k]-meanstack[j][k])/stdstack[j][k]
+        '''  
             ystd=(y - self.ymean) / self.ystd
-            xstd=( - self.xmean) / self.xstd
+            
             yxtup_list_std.append((ystd,xstd))
-        
-        return yxtup_list_std
+
+            y=yxtup_list[i][0]'''
+
+            
+        return yxtup_list
 
 
         
@@ -742,7 +761,7 @@ class kNdtool(Ndiff):
         return mse
 
     def MPwrapperKDEpredict(self,arglist):
-        #print(f'arglist inside wrapper is:::::::{arglist}')
+        print(f'arglist inside wrapper is:::::::{arglist}')
         yin=arglist[0]
         yout=arglist[1]
         xin=arglist[2]
@@ -877,6 +896,7 @@ class kNdtool(Ndiff):
                 yintup=yintup+(ydata_std,)
                 xprtup=xprtup+(xpr_out_i,)
                 youttup=youttup+(youti,)
+                print('youttup',youttup)
                 #print('xprtup[0].shape:',xprtup[0].shape)
 
             batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
