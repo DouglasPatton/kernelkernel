@@ -681,6 +681,7 @@ class PiscesDataTool():
                     #p#rint('varcount',varcount)
                     speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
                     speciesdata[:,0]=np.array(species01list)
+                    #self.missingvals=[]
                     for j,comidj in enumerate(specieshuc_allcomid):
                         sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
                         try: speciesdata[j,1:]=np.array(sitevars)
@@ -688,9 +689,11 @@ class PiscesDataTool():
                             self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
                             keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
                             missingkeys=[]
+                            
                             for k,key in enumerate(keylist):
                                 try:#added try: to handle missing bmmi values even if key exists
-                                    speciesdata[j,1+k]=self.sitedatacomid_dict[comidj][key]
+                                    data_point=self.sitedatacomid_dict[comidj][key]
+                                    speciesdata[j,1+k]=data_point
                                 except:
                                     missingkeys.append(key)
                                     speciesdata[j,1+k]='999999'

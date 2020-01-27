@@ -86,6 +86,8 @@ class datagen(PiscesDataTool):
         spatialselect_plus1=[i+1 for i in spatialselecttup]#plus1 required because selecttups are defined for x matrix, not full data matrix
         dataselecttup=[0]+floatselect_plus1+spatialselect_plus1
         speciesdata=speciesdata[:,dataselecttup]
+        #print(f'speciesdata[0:5,:]:{speciesdata[0:5,:]}')
+        
         speciesdata=self.processmissingvalues(speciesdata,missing)
         if len(spatialselecttup)>0:
             self.spatial=1
@@ -99,18 +101,26 @@ class datagen(PiscesDataTool):
         
         #self.xvarname_list=[]
         self.xvarname_list=[self.fullvarlist[i] for i in floatselecttup]
-        self.xvarname_list.append([self.fullvarlist[i]+'(spatial)' for i in spatialselecttup])
+        self.xvarname_list.extend([self.fullvarlist[i]+'(spatial)' for i in spatialselecttup])
         print(f'self.xvarname_list: {self.xvarname_list}')
-        self.fullxdataarray=np.array(speciesdata[:,1:],dtype=float)
+        try: self.xdataarray=np.array(speciesdata[:,1:],dtype=float)
+        except ValueError:
+            k=speciesdata.shape[1]
+            for row in range(n):
+                for col in range(k):
+                    try: float(speciesdata[row,col])
+                    except: print(speciesdata[row,:],row,col,sep=',',end='.  ')
+            
         #self.xdataarray=np.array(self.fullxdataarray[:,floatselecttup+spatialselecttup],dtype=float)
         
-        
+        '''
         self.float_loc=[i for i in range(len(floatselecttup))]
         #self.xdataarray_spatial=np.array(speciesdata[:,spatialselecttup],dtype=str)
-        print(f'self.svarname_dict:{self.svarname_dict}')
+        '''
         
         
         self.ydataarray=np.array(speciesdata[:,0],dtype='uint8')
+        print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
@@ -134,7 +144,7 @@ class datagen(PiscesDataTool):
             for row in nparray:
                 keep=1
                 for val in row:
-                    if val=='999999':keep=0
+                    if val=='999999' or val=='':keep=0
                 if keep==1:outlist.append(row)
         return np.array(outlist)
                 
@@ -143,13 +153,17 @@ class datagen(PiscesDataTool):
         
     def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing):
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
-        selectlist=shuffle([i for i in range(n)])
+        selectlist=[i for i in range(n)]
+        shuffle(selectlist)
+        print('selectlist',selectlist)
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
         self.batchbatchcount=batchbatchcount
         fullbatchbatch_n=batchbatchcount*batchsize
-        fullbatchbatch_shortby=fulbatchbatch_n-n
-        selectlist=selectlist+selectlist[:fullbatchbatch_shortby]#repeat the first group of random observations to fill out the dataset
+        fullbatchbatch_shortby=fullbatchbatch_n-n
+        if fullbatchbatch_shortby>0:
+            selectfill=shuffle(selectlist[:fullbatchbatch_n-batchsize].copy())#fill in the missing values with items that aren't in that batch
+            selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
         
         batchbatchlist=[[[] for b in batchcount] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
