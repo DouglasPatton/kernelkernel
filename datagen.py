@@ -52,17 +52,20 @@ class datagen(PiscesDataTool):
             batch_n=datagen_dict['batch_n']
             self.batch_n=batch_n
             batchcount=datagen_dict['batchcount']
-            self.bachcount=batchcount
+            self.batchcount=batchcount
             sample_replace=datagen_dict['sample_replace']
             missing=datagen_dict['missing']
             species=datagen_dict['species']
             self.species=species
+            
+            
             
             #the next two selection tups are for the independent (x) variable and they select from xdata not yxdata
             floatselecttup=datagen_dict['floatselecttup']
             self.floatselecttup=floatselecttup
             spatialselecttup=datagen_dict['spatialselecttup']
             self.spatialselecttup=spatialselecttup
+            self.param_count=datagen_dict['param_count']
             
             seed=1
             
@@ -155,17 +158,18 @@ class datagen(PiscesDataTool):
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
         selectlist=[i for i in range(n)]
         shuffle(selectlist)
-        print('selectlist',selectlist)
+        #print('selectlist',selectlist)
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
         self.batchbatchcount=batchbatchcount
         fullbatchbatch_n=batchbatchcount*batchsize
         fullbatchbatch_shortby=fullbatchbatch_n-n
         if fullbatchbatch_shortby>0:
-            selectfill=shuffle(selectlist[:fullbatchbatch_n-batchsize].copy())#fill in the missing values with items that aren't in that batch
+            selectfill=selectlist[:fullbatchbatch_n-batchsize].copy()#fill in the missing values with items that aren't in that batch
+            shuffle(selectfill)
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
         
-        batchbatchlist=[[[] for b in batchcount] for _ in range(batchbatchcount)]
+        batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
             for j in range(batchcount):
                 start=(i+j)*batch_n
@@ -173,10 +177,11 @@ class datagen(PiscesDataTool):
                 batchbatchlist[i][j]=(ydataarray[start:end],xdataarray[start:end,:])
         self.yxtup_batchbatch=batchbatchlist
         
-        all_y=[ii for i in yxtup_list for ii in i[0]]
+        '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
-
+        '''
         
+        return
                 
             
             

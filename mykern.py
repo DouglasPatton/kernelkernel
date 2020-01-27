@@ -684,19 +684,19 @@ class kNdtool(Ndiff):
                 ybatch=[]
                 for i in range(batchcount):
                     ycross_j=[]
-                    for j,yxvartup in enumerate(yxtuplist):
+                    for j,yxvartup in enumerate(yxtup_list):
                         if not j==i:
                             ycross_j.append(yxvartup[0])
                     ybatch.append(np.concatenate(ycross_j,axis=0))
             elif modeldict['loss_function']=='batchnorm_crossval':
-                all_y_list=[yxvartup[0] for yxvartup in yxtuplist]
+                all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
                 all_y=np.concatenate(all_y_list,axis=0)
                 all_y_err=all_y-yhat_unstd    
                 if type(cross_errors[0]) is np.ndarray:
                     cross_errors=np.concatenate(cross_errors,axis=0)
 
             else:
-                ybatch=[tup[0] for tup in yxtuplist]#the original yx data is a list of tupples
+                ybatch=[tup[0] for tup in yxtup_list]#the original yx data is a list of tupples
 
             if not modeldict['loss_function']=='batchnorm_crossval':
                 for batch_i in range(batchcount):
@@ -842,7 +842,7 @@ class kNdtool(Ndiff):
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
         batchcount=self.batchcount
-        for  yxtuplist in yxtup_listlist:
+        for  yxtup-list in yxtup_listlist:
         
             #print('from buildbatchdatadict: batchcount: ',batchcount)
             #print('self.batchcount: ',self.batchcount)
