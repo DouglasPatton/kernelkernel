@@ -126,18 +126,24 @@ class kNdtool(Ndiff):
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0)#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         if spatial==1:
             #assuming the spatial variable is always the last one
-            diffs[:,-1]=self.my0log(diffs[:,-1])
+            diffs[:,:,-1]=self.my0log(diffs[:,:,-1])
             
         #print('type(diffs)=',type(diffs))
         return diffs
     
-    def my0log(self,nparray):
+    def my0log(self,nparray):#need to rewrite using np.nditer
         arraylist=[]
-        for i in nparray:
-            if i>0:
-                arraylist.append(np.round(np.log(i)),0)
-            else:
-                arraylist.append(0)
+        for row in nparray:
+            for i in row:
+                if i>0:
+                    arraylist.append(int((np.log(i)+2)/2))
+                    #if i is 3, huc10's match, log3<1, so (log(3)+2)/2 is a little over 1, so int returns 1.
+                    #if i is 13, huc 10's match, log13>1 so (log(13)+2)/2 is a little over 1.5, so int returns 1.
+                    # if i is 100, huc 10's do not match, but huc 8's do. (log(100)+2) is 4 and 4/2 is 2, so int returns 2
+                    #if i is 999, huc8's match, log(999)<3so half that plus 2 floors to 2.
+                    # if i is 10000, huc8's do not match, log 10000=4, so 4+2 is 6 and 6/2 is 3.
+                else:
+                    arraylist.append(0)
         return np.array(arraylist,dtype=float)
 
     def MY_KDE_gridprep_smalln(self,m,p):
@@ -160,7 +166,7 @@ class kNdtool(Ndiff):
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
                 ykerngrid='no' 
         '''
-        print('type(ykerngrid):',type(ykerngrid))
+        #print('type(ykerngrid):',type(ykerngrid))
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
@@ -173,7 +179,7 @@ class kNdtool(Ndiff):
             self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
             yout=self.generate_grid(ykerngrid_form,ykerngrid)#will broadcast later
-            print('yout:',yout)
+            #print('yout:',yout)
             self.nout=ykerngrid
         if type(xkerngrid) is int:#this maybe doesn't work yet
             self.logger.warning("xkerngrid is not fully developed")
@@ -896,7 +902,7 @@ class kNdtool(Ndiff):
                 yintup=yintup+(ydata_std,)
                 xprtup=xprtup+(xpr_out_i,)
                 youttup=youttup+(youti,)
-                print('youttup',youttup)
+                #print('youttup',youttup)
                 #print('xprtup[0].shape:',xprtup[0].shape)
 
             batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}

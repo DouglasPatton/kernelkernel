@@ -72,18 +72,18 @@ class KernelOptModelTools(mk.kNdtool):
             replace=0
         best_dict_list=[]
         help_start=optimizedict['opt_settings_dict']['help_start']
-        #print(f'help_start:{help_start}')
+        #p#rint(f'help_start:{help_start}')
         partial_match=optimizedict['opt_settings_dict']['partial_match']
          #search the parent directory first
         condensedfilename=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
         same_modelxy_dict_list1=self.open_and_compare_optdict(
             condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
-        print('here1')
+        #print('here1')
         if len(same_modelxy_dict_list1)==0:
             condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
             same_modelxy_dict_list2=self.open_and_compare_optdict(
                 condensedfilename,optimizedict,help_start=help_start,partial_match=partial_match)
-            print('here2')
+            #print('here2')
             if len(same_modelxy_dict_list2)==0:
                 same_modelxy_dict_list3=self.open_and_compare_optdict(
                     'model_save',optimizedict,help_start=help_start,partial_match=partial_match)
@@ -94,8 +94,8 @@ class KernelOptModelTools(mk.kNdtool):
         
         
         if len(same_modelxy_dict_list)>0:
-            #print(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
-            #print(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
+            #p#rint(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
+            #p#rint(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             try:
                 n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
@@ -125,7 +125,7 @@ class KernelOptModelTools(mk.kNdtool):
             
             #try:print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["whensaved"]}')
             print(f"optimization dict with lowest mse:{best_dict['mse']}, n:{best_dict['datagen_dict']['batch_n']}was last saved{best_dict['when_saved']}")
-            #print(f'best_dict:{best_dict}')
+            #p#rint(f'best_dict:{best_dict}')
             if replace==1:
                 print("overriding start parameters with saved parameters")
                 optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
@@ -444,7 +444,7 @@ class KernelOptModelTools(mk.kNdtool):
         if verbose=='yes':
             verbose=1
         model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
-        #print('here',model_save_filelist)
+        #p#rint('here',model_save_filelist)
         
 
         condensedfilename=os.path.join(save_directory,'condensed_model_save')
@@ -572,7 +572,7 @@ class KernelOptModelTools(mk.kNdtool):
             return 10**301
         
         else:
-            #print('type(mse)',type(mse))
+            #p#rint('type(mse)',type(mse))
             return np.log(mse+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
@@ -592,8 +592,8 @@ class KernelOptModelTools(mk.kNdtool):
         try:    
             with open(saved_filename,'rb') as saved_model_bytes:
                 saved_dict_list=pickle.load(saved_model_bytes)
-                #print(f'from filename:{saved_filename}, last in saved_dict_list:{saved_dict_list[-1]["modeldict"]}')
-                #print(f'optimizedict["modeldict"]:{optimizedict["modeldict"]}')
+                #p#rint(f'from filename:{saved_filename}, last in saved_dict_list:{saved_dict_list[-1]["modeldict"]}')
+                #p#rint(f'optimizedict["modeldict"]:{optimizedict["modeldict"]}')
         except:
             #self.logger.exception(f'error in {__name__}')
             self.logger.info(f'saved_filename is {saved_filename}, but does not seem to exist')
@@ -601,8 +601,8 @@ class KernelOptModelTools(mk.kNdtool):
         #saved_dict_list=[model for model in saved_model]
         
         this_2dicts=self.pull2dicts(optimizedict)
-        #print(saved_filename)
-        #print(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
+        #p#rint(saved_filename)
+        #p#rint(f'saved_dict_list has first item of:{type(saved_dict_list[0])}')
         doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_dict_list]
         print(f'in saved_filename:{saved_filename}, len(doubledict_list):{len(doubledict_list)},len(saved_dict_list):{len(saved_dict_list)}')
         doubledict_match_list_select=[self.are_dicts_equal(dict_i,this_2dicts) for dict_i in doubledict_list]#list of boolean
@@ -612,7 +612,7 @@ class KernelOptModelTools(mk.kNdtool):
         if help_start==1 and len(doubledict_match_list)==0:
             print('--------------------------------help_start is triggered---------------------------')
             doubledict_match_list=self.do_partial_match(saved_dict_list,optimizedict,help_start=1, strict=1)
-            #print('len(doubledict_match_list)',len(doubledict_match_list))
+            #p#rint('len(doubledict_match_list)',len(doubledict_match_list))
             
             if len(doubledict_match_list)>0:
                 return self.condense_saved_model_list(doubledict_match_list,help_start=0,strict=1)
@@ -658,7 +658,7 @@ class KernelOptModelTools(mk.kNdtool):
         matchcount=len(matches)
         if strict==1:
             #keys=[key for key,val in afullmodel.items()]
-            #print(f'keys:{keys}')
+            #p#rint(f'keys:{keys}')
             return matches
         
         if not matchcount<help_start:
@@ -677,7 +677,7 @@ class KernelOptModelTools(mk.kNdtool):
         simple_doubledict_list=deepcopy(saved_doubledict_list)#added deepcopy abovedeepcopy(saved_doubledict_list)#initialize these as copies that will be progressively simplified
         #simple_adoubledict=deepcopy(adoubledict)
         for new_dict in new_dict_list:
-            #print(f'partial match trying {new_dict}')
+            #p#rint(f'partial match trying {new_dict}')
             simple_doubledict_list=[self.do_dict_override(dict_i,new_dict) for dict_i in simple_doubledict_list]
             
             matchlist_idx=[self.are_dicts_equal(adoubledict,dict_i) for dict_i in simple_doubledict_list]
@@ -746,7 +746,7 @@ class KernelOptModelTools(mk.kNdtool):
                 if verbose==1:print(f'val is dict in {key}, recursive call')
                 old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1,verbose=verbose,replace=replace)
                 vstring=vstring+vstring2
-                #print('made it back from recursive call')
+                #p#rint('made it back from recursive call')
             elif type(val) is None and deletekey==1:
                 try: 
                     old_dict_copy.pop(key)
@@ -782,7 +782,7 @@ class KernelOptModelTools(mk.kNdtool):
             return old_dict_copy, vstring
 
         else:
-            #print(f'old_dict_copy{old_dict_copy}')
+            #p#rint(f'old_dict_copy{old_dict_copy}')
             return old_dict_copy
     
 
@@ -828,7 +828,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         
         
         model_run_dict_list=[]
-        print(f'datagen_dict:{datagen_dict}, datagen_variation_list:{datagen_variation_list}')
+        #print(f'datagen_dict:{datagen_dict}, datagen_variation_list:{datagen_variation_list}')
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)
         print(f'len(datagen_dict_list):{len(datagen_dict_list)}')
         for alt_datagen_dict in datagen_dict_list:
@@ -841,7 +841,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
-                #print('model_run_dict_list:',model_run_dict_list)
+                #p#rint('model_run_dict_list:',model_run_dict_list)
         return model_run_dict_list
     
     def addspeciesvariations(self,datagen_variation_list):
@@ -857,9 +857,9 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             self.specieslist=pdh12.specieslist
         
         species_variations=('species',self.specieslist)
-        print(f'before-datagen_variation_list:{datagen_variation_list}')
+        #p#rint(f'before-datagen_variation_list:{datagen_variation_list}')
         datagen_variation_list.append(species_variations)
-        print(f'after-datagen_variation_list:{datagen_variation_list}')
+        #p#rint(f'after-datagen_variation_list:{datagen_variation_list}')
         return datagen_variation_list
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
@@ -897,7 +897,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             for k,val in enumerate(tup_i[1]):
                 override_dict_ik=self.build_override_dict_from_str(tup_i[0],val)
                 dict_ik=self.do_dict_override(initial_dict,override_dict_ik)
-                #print('dict_combo_list',dict_combo_list)
+                #p#rint('dict_combo_list',dict_combo_list)
                 dict_combo_list.append(dict_ik)
                 if len(sub_list)>0:
                     new_items=self.build_dict_variations(dict_ik,sub_list)
