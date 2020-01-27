@@ -53,7 +53,7 @@ class datagen(PiscesDataTool):
             self.batch_n=batch_n
             batchcount=datagen_dict['batchcount']
             self.bachcount=batchcount
-            sample_replace==datagen_dict['sample_replace']
+            sample_replace=datagen_dict['sample_replace']
             missing=datagen_dict['missing']
             species=datagen_dict['species']
             self.species=species
@@ -104,11 +104,11 @@ class datagen(PiscesDataTool):
         datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
         
         self.xvarname_list={}
-        self.xvarname_list=self.fullvarlist[floatselecttup-1]#i-1 b/c no dep var in self.fullvarlist
-        self.xvarname_list.append(self.fullvarlist[spatialselecttup-1])
+        self.xvarname_list=self.fullvarlist[floatselecttup]#i-1 b/c no dep var in self.fullvarlist
+        self.xvarname_list.append(self.fullvarlist[spatialselecttup])
         print('self.xvarnames: {self.xvarnames}')
-        
-        self.xdataarray=np.array(speciesdata[:,floatselecttup+spatialselecttup],dtype=float)
+        self.fullxdataarray=np.array(speciesdata[:,1:],dtype=float)
+        self.xdataarray=self.fullxdataarray[:,floatselecttup+spatialselecttup]
         
         
         self.float_loc=[i for i in range(len(floatselecttup))]

@@ -776,7 +776,7 @@ class kNdtool(Ndiff):
             self.Ndiff=0
         try: self.batchbatchcount=datagen_obj.batchbatchcount
             #self.batchbatch_stats(datagen_obj.yxtup_batchbatch) #moved to datagen.py
-        else: self.batchbatchcount=1 
+        except: self.batchbatchcount=1 
         
         self.datagen_obj=datagen_obj
         #self.spatialvar_loc=datagen_obj.spatial_loc

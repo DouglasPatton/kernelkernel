@@ -50,16 +50,20 @@ class KernelParams:
                 'evar':1                
                                 }
         elif source=='pisces':
+            floatselecttup=(0,1,2,3)
+            spatialselecttup=(9,)
+            param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
                 'source':'pisces',
                 'batch_n':self.n,
                 'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
-                #if type(x) is int then it tells us to create x batches of batches with replacement
+                #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
                 'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
                 'missing':'drop_row', #drop the row(observation) if any data is missing
-                'floatselecttup':(0,1,2,3),
-                'spatialselecttup':(9,)
+                'floatselecttup':floatselecttup,
+                'spatialselecttup':spatialselecttup,
+                'param_count':param_count
             }
         else: 
             assert False, f"error, source not recognized. source:{source}"
