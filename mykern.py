@@ -126,14 +126,16 @@ class kNdtool(Ndiff):
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0)#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         if spatial==1:
             #assuming the spatial variable is always the last one
-            diffs[:,:,-1]=self.my0log(diffs[:,:,-1])
+            diffs[:,:,-1]=self.myspatialhucdiff(diffs[:,:,-1])
             
         #print('type(diffs)=',type(diffs))
         return diffs
     
-    def my0log(self,nparray):#need to rewrite using np.nditer
-        arraylist=[]
+    def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer
+        print('nparray.shape',nparray.shape)
+        rowlist=[]
         for row in nparray:
+            arraylist=[]
             for i in row:
                 if i>0:
                     arraylist.append(int((np.log(i)+2)/2))
@@ -144,7 +146,8 @@ class kNdtool(Ndiff):
                     # if i is 10000, huc8's do not match, log 10000=4, so 4+2 is 6 and 6/2 is 3.
                 else:
                     arraylist.append(0)
-        return np.array(arraylist,dtype=float)
+            rowlist.append(arraylist)
+        return np.array(rowlist,dtype=float)
 
     def MY_KDE_gridprep_smalln(self,m,p):
         """creates a grid with all possible combinations of m=n^p (kerngrid not nin or nout) evenly spaced values from -3 to 3.
@@ -657,7 +660,9 @@ class kNdtool(Ndiff):
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
         batchbatch_all_y_err=[]
+        print('self.batchbatchcount',self.batchbatchcount)
         for batchbatchidx in range(self.batchbatchcount):
+            print('batchbatchidx:',batchbatchidx)
             if self.source=='pisces':
                 yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
             batchdata_dict_i=batchdata_dictlist[batchbatchidx]
@@ -679,7 +684,7 @@ class kNdtool(Ndiff):
 
             self.process_count=1#self.cores
             if self.process_count>1 and batchcount>1:
-                with multiprocessing.Pool(processes=process_count) as pool:
+                with multiprocessing.Pool(processes=self.process_count) as pool:
                     yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                     sleep(2)
                     pool.close()
@@ -734,7 +739,7 @@ class kNdtool(Ndiff):
             if iscrossmse:
                 all_y_err=np.ma.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
             batchbatch_all_y_err.append(all_y_err)
-            batchbatch_all_y_err=np.ma.concatenate([batchbatch_all_y_err],axis=0)
+        batchbatch_all_y_err=np.ma.concatenate([batchbatch_all_y_err],axis=0)
         mse = np.ma.mean(np.ma.power(batchbatch_all_y_err, 2))
         maskcount=np.ma.count_masked(batchbatch_all_y_err)
         if maskcount>1:
@@ -767,7 +772,7 @@ class kNdtool(Ndiff):
         return mse
 
     def MPwrapperKDEpredict(self,arglist):
-        print(f'arglist inside wrapper is:::::::{arglist}')
+        #print(f'arglist inside wrapper is:::::::{arglist}')
         yin=arglist[0]
         yout=arglist[1]
         xin=arglist[2]

@@ -141,7 +141,7 @@ class KernelParams:
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
-                'Ndiff_exponent':.3*np.ones([Ndiff_param_count,]),
+                'Ndiff_exponent':.0001*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
@@ -153,8 +153,8 @@ class KernelParams:
             hyper_paramdict1={
                 'Ndiff_exponent':0.00001*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),#
-                'outer_x_bw':np.array([0.3,]),
-                'outer_y_bw':np.array([0.3,]),
+                'outer_x_bw':np.array([3,]),
+                'outer_y_bw':np.array([3,]),
                 'Ndiff_depth_bw':np.array([0.5]),
                 'y_bandscale':1.0*np.ones([1,])
                 }
