@@ -57,6 +57,13 @@ class datagen(PiscesDataTool):
             missing=datagen_dict['missing']
             species=datagen_dict['species']
             self.species=species
+            
+            #the next two selection tups are for the independent (x) variable and they select from xdata not yxdata
+            floatselecttup=datagen_dict['floatselecttup']
+            self.floatselecttup=floatselecttup
+            spatialselecttup=datagen_dict['spatialselecttup']
+            self.spatialselecttup=spatialselecttup
+            
             seed=1
             
             self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species)
@@ -66,10 +73,10 @@ class datagen(PiscesDataTool):
         
             
 
-    def gen_piscesdata01(self,seed,batch_n,batchcount,sample_replace,missing,species):
+    def gen_piscesdata01(self,seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup):
         try:self.specieslist
         except: self.buildspecieslist()
-        self.varlist=self.retrievespeciesdata()
+        self.fullvarlist=self.retrievespeciesdata()
         if type(species) is str:
             speciesdata=self.retrievespeciesdata(species_name=species)
         if type(species) is int:
@@ -82,25 +89,28 @@ class datagen(PiscesDataTool):
         else:
             speciesdata=self.retrievespeciesdata(species_idx=species_idx)
         
-        floatselecttup=(0,1,2,3)
-        spatialselecttup=(9,)#9 should be huc12
+        #9 should be huc12
         dataselecttup=(0,)+floatselecttup+spatialselecttup
         speciesdata=speciesdata[:,dataselecttup]
         speciesdata=self.processmissingvalues(speciesdata,missing)
+        if len(spatialselecttup)>0:
+            self.spatial=1
+        else: self.spatial=0
+        
         
         n=speciesdata.shape[0]
         
-        floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
+        #floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
         datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
         
         self.xvarname_list={}
-        self.xvarname_list=self.varlist[floatselecttup-1]#i-1 b/c no dep var in self.varlist
-        self.xvarname_list.append(self.varlist[spatialselecttup-1])
+        self.xvarname_list=self.fullvarlist[floatselecttup-1]#i-1 b/c no dep var in self.fullvarlist
+        self.xvarname_list.append(self.fullvarlist[spatialselecttup-1])
         print('self.xvarnames: {self.xvarnames}')
         
         self.xdataarray=np.array(speciesdata[:,floatselecttup+spatialselecttup],dtype=float)
         
-        self.spatial=1
+        
         self.float_loc=[i for i in range(len(floatselecttup))]
         #self.xdataarray_spatial=np.array(speciesdata[:,spatialselecttup],dtype=str)
         print(f'self.svarname_dict:{self.svarname_dict}')

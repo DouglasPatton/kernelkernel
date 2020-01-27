@@ -807,8 +807,12 @@ class KernelCompare(KernelOptModelTools,KernelParams):
     def prep_model_list(self, optdict_variation_list=None,datagen_variation_list=None,datagen_dict=None,verbose=0):
         if not type(datagen_dict) is dict:
             if datagen_dict is None:
-                param_count=2
-                datagen_dict={'validate_batchcount':10,'batch_n':64,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
+                try: datagen_dict=self.datagen_dict
+                except:
+                    print('initializing monte carlo datagen_dict')
+                    self.logger.warning('initializing monte carlo datagen_dict')
+                    param_count=2
+                    datagen_dict={'validate_batchcount':10,'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
             else:assert False,f'datagen_dict:{datagen_dict}'
         if datagen_variation_list==None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict above

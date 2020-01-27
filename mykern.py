@@ -125,6 +125,7 @@ class kNdtool(Ndiff):
         
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0)#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         if spatial==1:
+            #assuming the spatial variable is always the last one
             diffs[:,-1]=self.my0log(diffs[:,-1])
             
         #print('type(diffs)=',type(diffs))
@@ -773,11 +774,9 @@ class kNdtool(Ndiff):
             self.Ndiff=1
         else:
             self.Ndiff=0
-        if self.source='pisces':
-            self.batchbatchcount=datagen_obj.batchbatchcount
+        try: self.batchbatchcount=datagen_obj.batchbatchcount
             #self.batchbatch_stats(datagen_obj.yxtup_batchbatch) #moved to datagen.py
-        else:
-            self.batchbatchcount=1 
+        else: self.batchbatchcount=1 
         
         self.datagen_obj=datagen_obj
         #self.spatialvar_loc=datagen_obj.spatial_loc

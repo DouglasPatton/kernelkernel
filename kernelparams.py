@@ -1,7 +1,10 @@
+import numpy as np
+
 class KernelParams:
     
     def __init__(self,):
-        pass
+        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        
 
     def test_build_opt_dict_override(self):
         
@@ -32,30 +35,36 @@ class KernelParams:
         return opt_dict_override
 
                                
-    def setdata(self, source)#creates the initial datagen_dict
+    def setdata(self, source):#creates the initial datagen_dict
         
-        if source==None:
+        if source is None or source=='monte':
             source='monte'
             datagen_dict={
                 'source':'monte',
                 'validate_batchcount':10,
-                'batch_n':32,
+                'batch_n':self.n,
                 'batchcount':10, 
                 'param_count':2,
                 'seed':1, 
                 'ftype':'linear', 
                 'evar':1                
                                 }
-        if source=='pisces':
+        elif source=='pisces':
             datagen_dict={
                 'source':'pisces',
-                'batch_n':32,
-                'batchcount':10 #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
-                'sample_replace':'no' #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
+                'batch_n':self.n,
+                'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if type(x) is int then it tells us to create x batches of batches with replacement
                 'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
-                'missing':'drop_row' #drop the row(observation) if any data is missing
-                              }
+                'missing':'drop_row', #drop the row(observation) if any data is missing
+                'floatselecttup':(0,1,2,3),
+                'spatialselecttup':(9,)
+            }
+        else: 
+            assert False, f"error, source not recognized. source:{source}"
+            
+        self.datagen_dict=datagen_dict
         return datagen_dict
 
 
@@ -70,13 +79,13 @@ class KernelParams:
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
-        if source='monte':
+        if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
             ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
-        if source='pisces'
+        if source=='pisces':
             standardization_variations=('modeldict:std_data',[([],['float'])])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2,5])
@@ -118,7 +127,7 @@ class KernelParams:
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
-        def build_hyper_param_start_values(self,modeldict):
+    def build_hyper_param_start_values(self,modeldict):
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
