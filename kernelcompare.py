@@ -99,7 +99,7 @@ class KernelOptModelTools(mk.kNdtool):
             mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
             try:
                 n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
-                batchcount_list=[1]*len(n_list)
+                batchcount_list=[1 for _ in range(len(n_list))]
             except:
                 n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
@@ -107,15 +107,15 @@ class KernelOptModelTools(mk.kNdtool):
             lowest_n_wt_mse=min(n_wt_mse_list)
             
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
-        if len(same_modelxy_dict_list)==0:
-            print('--------------no matching models found----------')
+        #if len(same_modelxy_dict_list)==0:
+            #print('--------------no matching models found----------')
         
         mse_list=[dict_i['mse'] for dict_i in best_dict_list]
         if len(mse_list)>0:
             mse_list=[dict_i['mse'] for dict_i in best_dict_list]
             try:
                 n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
-                batchcount_list=[1]*len(n_list)
+                batchcount_list=[1 for _ in range(len(n_list))]
             except:
                 n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
@@ -124,10 +124,13 @@ class KernelOptModelTools(mk.kNdtool):
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
             
             #try:print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["whensaved"]}')
-            print(f"optimization dict with lowest mse:{best_dict['mse']}, n:{best_dict['datagen_dict']['batch_n']}was last saved{best_dict['when_saved']}")
+            printstring=f"optimization dict with lowest mse:{best_dict['mse']}, n:{best_dict['datagen_dict']['batch_n']}was last saved{best_dict['when_saved']}"
+            print(printstring)
+            self.logger.info(printstring)
+
             #p#rint(f'best_dict:{best_dict}')
             if replace==1:
-                print("overriding start parameters with saved parameters")
+                self.logger.info("overriding start parameters with saved parameters")
                 optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_dict['params'],verbose=0)
             else:
                 print('continuing without replacing parameters with their saved values')
@@ -360,11 +363,11 @@ class KernelOptModelTools(mk.kNdtool):
                     model_save_list=pickle.load(model_save)
             except:
                 if i==9:
-                    print(f'could not open{file_loc}')
+                    self.logger.info(f'could not open{file_loc}')
                     self.logger.exception(f'error in {__name__}')
                     return
         if len(model_save_list)==0:
-            print(f'no models in model_save_list for printing')
+            self.logger.info(f'no models in model_save_list for printing')
             return
         model_save_list.sort(key=lambda savedicti: savedicti['mse'])  #sorts by mse
 
@@ -377,7 +380,7 @@ class KernelOptModelTools(mk.kNdtool):
 
         modeltablehtml=''
         keylist = ['mse','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
-        print(f'len(model_save_list:{len(model_save_list)}')
+        self.logger.info(f'len(model_save_list:{len(model_save_list)}')
         for j,model in enumerate(model_save_list):
             simpledicti=self.myflatdict(model,keys=keylist)
             this_model_html_string=pd.DataFrame(simpledicti).T.to_html()
@@ -389,7 +392,7 @@ class KernelOptModelTools(mk.kNdtool):
                 return
             except:
                 if i==9:
-                    print(f'could not write modeltablehtml to location:{output_filename}')
+                    self.logger.critical(f'could not write modeltablehtml to location:{output_filename}')
                     self.logger.exception(f'error in {__name__}')
                     return
 
@@ -453,7 +456,7 @@ class KernelOptModelTools(mk.kNdtool):
                 saved_condensed_list=pickle.load(savedfile)
         except: 
             if verbose==1:
-                print("couldn't open condensed_model_save in save_directory, trying self.kc_savedirectory")
+                self.logger.info("couldn't open condensed_model_save in save_directory, trying self.kc_savedirectory")
 
             condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
             try:
@@ -462,14 +465,14 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 saved_condensed_list=[]
                 if verbose==1:
-                    print("---------no existing files named condensed_model_save could be found. "
+                    self.logger.info("---------no existing files named condensed_model_save could be found. "
                         "if it is in merge_directory, it will be picked up and merged anyways--------")
         
 
 
 
         if len(model_save_filelist)==0:
-            print('0 models found in save_directory:{merge_directory} when merging')
+            self.logger.warning('0 models found in save_directory:{merge_directory} when merging')
             return
                          
         #if len(model_save_filelist)==1 and saved_condensed_list==[]:
@@ -520,7 +523,7 @@ class KernelOptModelTools(mk.kNdtool):
         if strict=='yes':strict=1
         if strict=='no':strict=0
         modelcount=len(saved_model_list)
-        keep_model=[1]*modelcount
+        keep_model=[1 for _ in range(modelcount)]
         for i,full_model_i in enumerate(saved_model_list):
             if verbose>0:
                 print(f'{100*i/modelcount}%',end=',')
@@ -666,7 +669,7 @@ class KernelOptModelTools(mk.kNdtool):
         print('-----partial match is looking for a partial match------')
         new_dict_list=[]
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
-        string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form')]
+        string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form'),('modeldict','logic_date')]
         for string_tup in string_list:
             sub_value=adoubledict[string_tup[0]][string_tup[1]]
             new_dict_list.append({string_tup[0]:{string_tup[1]:sub_value}})#make the list match amodeldict, so optimization settings aren't changed
@@ -786,10 +789,6 @@ class KernelOptModelTools(mk.kNdtool):
             return old_dict_copy
     
 
-                               
-    
-
-        
         
 class KernelCompare(KernelOptModelTools,KernelParams):
     def __init__(self,directory=None,myname=None):

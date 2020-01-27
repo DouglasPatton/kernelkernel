@@ -16,8 +16,9 @@ import logging
 import yaml
 import psutil
 from Ndiff import Ndiff
+from mykernhelper import MyKernHelper
 
-class kNdtool(Ndiff):
+class kNdtool(Ndiff,MyKernHelper):
     """kNd refers to the fact that there will be kernels in kernels in these estimators
 
     """
@@ -34,6 +35,7 @@ class kNdtool(Ndiff):
         self.logger = logging.getLogger('myKernLogger')
         
         Ndiff.__init__(self,savedir=savedir,myname=myname)
+        MyKernHelper.__init__(self,)
         
 
 
@@ -368,10 +370,12 @@ class kNdtool(Ndiff):
         except:
             spatial=0
         if modeldict['Ndiff_bw_kern']=='rbfkern':
+
             #xin_scaled=xin*x_bandscale_params
             #print('xin_scaled.shape',xin_scaled.shape)
             #xpr_scaled=xpr*x_bandscale_params
             #print('xpr_scaled.shape',xpr_scaled.shape)
+
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
             y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
@@ -398,17 +402,20 @@ class kNdtool(Ndiff):
         xbw = self.BWmaker(fixed_or_free_paramdict, diffdict, modeldict,'x')
         ybw = self.BWmaker(fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
 
-        #print('xbw',xbw)
-        #print('ybw',ybw)
+        #p#rint('xbw',xbw)
+        #p#rint('ybw',ybw)
         
         
-        '''xbwmaskcount=np.ma.count_masked(xbw)
-        print('xbwmaskcount',xbwmaskcount)
-        print('np.ma.getmask(xbw)',np.ma.getmask(xbw))
+        xbwmaskcount=np.ma.count_masked(xbw)
+        
+        if xbwmaskcount>self.nin:
+            self.logger.info(f'xbwmaskcount: {xbwmaskcount}')
+            self.logger.warning(f'np.ma.getmask(xbw): {np.ma.getmask(xbw)}')
         
         ybwmaskcount=np.ma.count_masked(ybw)
-        print('ybwmaskcount',ybwmaskcount)
-        print('np.ma.getmask(ybw)',np.ma.getmask(ybw))'''
+        if ybwmaskcount>0:
+            self.logger.info(f'ybwmaskcount: {ybwmaskcount}, ybw.shape: {ybw.shape}')
+            self.logger.info(f'np.ma.getmask(ybw): {np.ma.getmask(ybw)}')
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
@@ -431,14 +438,15 @@ class kNdtool(Ndiff):
             assert xoutdiffs.ndim==2, "xoutdiffs have ndim={} not 2".format(xoutdiffs.ndim)
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
-                xonedifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
-                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xonedifftup)
-                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,len(xoutdiffs.shape)-1),xonedifftup)
+                xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
+                #print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
+                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xoutdifftup)
+                xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
             newaxis=len(youtdiffs.shape)
             yx_outdiffs_endstack=np.ma.concatenate(
                 (np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
-            #print('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
+            #p#rint('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             
             prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
             prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
@@ -462,7 +470,7 @@ class kNdtool(Ndiff):
                 yhat_un_std=yhat_std*self.ystd+self.ymean
         else: yhat_un_std=yhat_std
         
-        #print(f'yhat_un_std:{yhat_un_std}')
+        #p#rint(f'yhat_un_std:{yhat_un_std}')
 
         
         if iscrossmse:
@@ -475,7 +483,7 @@ class kNdtool(Ndiff):
             yout,wt_stack,cross_errors=zip(*KDEregtup)
             
         else:
-            #print('len(KDEregtup)',len(KDEregtup))
+            #p#rint('len(KDEregtup)',len(KDEregtup))
             yout,wt_stack,cross_errors=KDEregtup
         nin=self.nin; ybatch=[];wtbatch=[];youtbatch=[]
         
@@ -504,7 +512,7 @@ class kNdtool(Ndiff):
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
                     yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
-                    #print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
+                    #p#rint(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
                     youtbatchlist.append(yout_batchj)
                 elif j<i:
@@ -513,7 +521,7 @@ class kNdtool(Ndiff):
                     #ybatchlist.append(yout_stack[j][:,istart:iend])
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
                     yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
-                    #print(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
+                    #p#rint(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
                     youtbatchlist.append(yout_batchj)
                 else:
@@ -524,7 +532,7 @@ class kNdtool(Ndiff):
             youtbatchlist=[np.ma.expand_dims(youtj,axis=0) for youtj in wtbatchlist]
             #ybatchshape=[y.shape for y in ybatchlist]
             wtbatchshape=[wt.shape for wt in wtbatchlist]
-            #print('wtbatchshape',wtbatchshape)
+            #p#rint('wtbatchshape',wtbatchshape)
             #ybatch.append(np.ma.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
             wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0))
             youtbatch.append(np.ma.concatenate(youtbatchlist,axis=0))
@@ -610,8 +618,8 @@ class kNdtool(Ndiff):
         if yhatmaskscount>0:
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
 
-        #print(f'yhat:{yhat}')
-        #print("wt_stack.shape",wt_stack.shape)
+        #p#rint(f'yhat:{yhat}')
+        #p#rint("wt_stack.shape",wt_stack.shape)
         #self.logger.info(f'type(yhat):{type(yhat)}. yhat: {yhat}')
         
         if not iscrossmse:
@@ -650,7 +658,9 @@ class kNdtool(Ndiff):
             predict=1
         if  type(fixed_or_free_paramdict['free_params']) is str and fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
+
         batchcount=self.batchcount
+
         fixed_or_free_paramdict['free_params'] = free_params
         self.fixed_or_free_paramdict = fixed_or_free_paramdict
         try:
@@ -659,8 +669,7 @@ class kNdtool(Ndiff):
             print(f'loss_function not found in modeldict')
             lossfn='mse'
         iscrossmse=lossfn[0:8]=='crossmse'
-        
-        
+
         
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
@@ -676,6 +685,7 @@ class kNdtool(Ndiff):
 
             arglistlist=[]
             for batch_i in range(batchcount):
+
 
                 arglist=[]
                 arglist.append(batchdata_dict_i['yintup'][batch_i])
@@ -747,7 +757,10 @@ class kNdtool(Ndiff):
         batchbatch_all_y_err=np.ma.concatenate([batchbatch_all_y_err],axis=0)
         mse = np.ma.mean(np.ma.power(batchbatch_all_y_err, 2))
         maskcount=np.ma.count_masked(batchbatch_all_y_err)
+
         if maskcount>1:
+            self.logger.warning(f'all_y_err maskcount:{maskcount}')
+            self.logger.warning(f'all_y_err mask: {np.ma.getmask(all_y_err)}')
             mse=1000+mse*maskcount**3
         if mse<0:
             mse=-mse*100000
@@ -766,7 +779,7 @@ class kNdtool(Ndiff):
                         self.iter_start_time_list[-2], t_format))
                 self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
                                               1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-                print(f'save_interval changed to {self.save_interval}')
+                self.logger.info(f'save_interval changed to {self.save_interval}')
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
@@ -777,7 +790,7 @@ class kNdtool(Ndiff):
         return mse
 
     def MPwrapperKDEpredict(self,arglist):
-        #print(f'arglist inside wrapper is:::::::{arglist}')
+        #p#rint(f'arglist inside wrapper is:::::::{arglist}')
         yin=arglist[0]
         yout=arglist[1]
         xin=arglist[2]
@@ -785,7 +798,7 @@ class kNdtool(Ndiff):
         modeldict=arglist[4]
         fixed_or_free_paramdict=arglist[5]
         KDEpredict_tup=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
-        #print('type(KDEpredict_tup)',type(KDEpredict_tup))
+        #p#rint('type(KDEpredict_tup)',type(KDEpredict_tup))
         #try:print(KDEpredict_tup[0].shape)
         #except:pass
         return KDEpredict_tup
@@ -836,6 +849,7 @@ class kNdtool(Ndiff):
         #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
         #standardize x and y and save their means and std to self
+
         if self.source=='monte':
             yxtup_list=datagen_obj.yxtup_list
         yxtup_listlist_std=[]
@@ -853,17 +867,18 @@ class kNdtool(Ndiff):
         #print('=======================')
         #print(f'batchdata_dict{batchdata_dict}')
         #print('=======================')
+
         #self.npr=xpr.shape[0]#probably redundant
         #self.yout=yout
 
         #pre-build list of masks
         if 'max_bw_Ndiff' in modeldict:
-            #print('---------------starting to make masks----------------')
+            #p#rint('---------------starting to make masks----------------')
             self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
                 self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
             self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
                 self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-            #print('---------------completed making masks----------------')
+            #p#rint('---------------completed making masks----------------')
         
         #setup and run scipy minimize
         args_tuple=(batchdata_dictlist, modeldict, fixed_or_free_paramdict)
@@ -919,6 +934,7 @@ class kNdtool(Ndiff):
             batchdata_dictlist.append(batchdata_dict)
         #print([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
         return batchdata_dictlist
+
 
 
     
@@ -981,7 +997,7 @@ class optimize_free_params(kNdtool):
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')
         #self.sort_then_saveit(self.mse_param_list[-self.save_interval*3:],modeldict,'final_model_save')
         self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
-        print(f'lastparamdict:{lastparamdict}')
+        self.logger.info(f'after final save, lastparamdict:{lastparamdict}')
         
 
 if __name__ == "__main__":

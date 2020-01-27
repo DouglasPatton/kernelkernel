@@ -362,9 +362,6 @@ class PiscesDataTool():
     
 
 
-        
-    
-    
     def mergelistofdicts(self,listofdicts):
         mergedict={}
         for i,dict_i in enumerate(listofdicts):
@@ -477,9 +474,9 @@ class PiscesDataTool():
         comidcount=len(comidlist)
         comidsitedataidx=[]
         sitedatacomid_dict={}
-        huc12findfaillist=[0]*comidcount
+        huc12findfaillist=[0 for _ in range(comidcount)]
         huc12failcount=0
-        comidsiteinfofindfaillist=[0]*comidcount
+        comidsiteinfofindfaillist=[0 for _ in range(comidcount)]
         
         printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
         for i,comid_i in enumerate(comidlist):

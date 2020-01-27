@@ -18,7 +18,11 @@ class mypool:
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)'''
+
         self.data_source=data_source
+
+        self.sleepfactor=0.15 #0.2->4min. 0.1->6sec, 0.224 ->10min
+        
         logging.basicConfig(level=logging.INFO)
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
@@ -82,7 +86,7 @@ class mypool:
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
 
-        sleeptime=(.2*log(float(randint(5000000,99999999))/2000))**8#0.2->4min. 0.1->6sec
+        sleeptime=(self.sleepfactor*log(float(randint(5000000,99999999))/2000))**8
 
         print(f'sleeping for {sleeptime/60} minutes')
         sleep(sleeptime)#make nodes start at different times
