@@ -631,7 +631,7 @@ class PiscesDataTool():
         print('pool starting at',starttime)
         with mp.Pool(processes=self.processcount) as pool:
             outlist=pool.map(self.mp_buildspeciesdata01_file,speciesidxlistlist)
-            sleep(5)
+            sleep(2)
             i=0
             while len(outlist)<self.processcount:
                 print(f'len(outlist):{len(outlist)}, i:{i}')

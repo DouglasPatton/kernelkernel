@@ -98,6 +98,7 @@ class datagen(PiscesDataTool):
         
         
         n=speciesdata.shape[0]
+        print('species_n:',n)
         
         #floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
         #datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
@@ -123,7 +124,7 @@ class datagen(PiscesDataTool):
         
         
         self.ydataarray=np.array(speciesdata[:,0],dtype='uint8')
-        print('self.ydataarray',self.ydataarray,type(self.ydataarray))
+        #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         

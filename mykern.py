@@ -261,21 +261,18 @@ class kNdtool(Ndiff):
             #x_stdlist[modelstd[1]]=1
         
         tupcount=len(yxtup_list)#should be same as batchcount
-        meanstack=[self.ymean,self.xmean]
-        stdstack=[self.ystd,self.xstd]
-        stdlisttup=[y_stdlist,x_stdlist]
+        
         for i in range(tupcount):
-            for j,stdlist in enumerate(stdlisttup):
-                for k in stdlist:
-                    yxtup_list[i][j][k]=(yxtup_list[i][j][k]-meanstack[j][k])/stdstack[j][k]
-        '''  
-            ystd=(y - self.ymean) / self.ystd
             
-            yxtup_list_std.append((ystd,xstd))
-
-            y=yxtup_list[i][0]'''
-
+            xarray=yxtup_list[i][1]
+            for j in x_stdlist:
+                xarray[:,j]=(xarray[:,j]-self.xmean[j])/self.xstd[j]
             
+            yarray=yxtup_list[i][0]
+            if y_stdlist!=[]:
+                yarray=(yarray-self.ymean)/self.xstd
+            yxtup_list[i]=(yarray,xarray)
+                
         return yxtup_list
 
 
@@ -454,8 +451,16 @@ class kNdtool(Ndiff):
                 cross_errors=KDEregtup[1]
             
             yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
-
-        yhat_un_std=yhat_std*self.ystd+self.ymean
+        
+        std_data=modeldict['std_data']
+        
+        if type(std_data) is str:
+            if std_data=='all':
+                yhat_un_std=yhat_std*self.ystd+self.ymean
+        elif type(std_data) is tuple:
+            if not std_data[0]==[]:
+                yhat_un_std=yhat_std*self.ystd+self.ymean
+        else: yhat_un_std=yhat_std
         
         #print(f'yhat_un_std:{yhat_un_std}')
 
@@ -682,7 +687,7 @@ class kNdtool(Ndiff):
                 arglist.append(fixed_or_free_paramdict)
                 arglistlist.append(arglist)
 
-            self.process_count=1#self.cores
+            self.process_count=batchcount#self.cores
             if self.process_count>1 and batchcount>1:
                 with multiprocessing.Pool(processes=self.process_count) as pool:
                     yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)

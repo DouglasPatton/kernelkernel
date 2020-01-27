@@ -43,7 +43,7 @@ class KernelParams:
                 'source':'monte',
                 'validate_batchcount':10,
                 'batch_n':self.n,
-                'batchcount':10, 
+                'batchcount':10,  
                 'param_count':2,
                 'seed':1, 
                 'ftype':'linear', 
@@ -165,7 +165,7 @@ class KernelParams:
         
 
 
-    def build_optdict(self,opt_dict_override=None,param_count=None):
+    def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
         if opt_dict_override==None:
             opt_dict_override={}
         max_bw_Ndiff=2
@@ -196,6 +196,8 @@ class KernelParams:
                 'y_bandscale':'fixed'
                 }
             }
+        if not species is None:
+            modeldict1['species']=species
         #hyper_paramdict1=self.build_hyper_param_start_values(modeldict1)
         hyper_paramdict1={}
         
