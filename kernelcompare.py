@@ -886,8 +886,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                     newdict=self.do_dict_override(dict_i,override_dict)
                     additions.append(newdict)
             dict_combo_list=dict_combo_list+additions
-        if verbose==1:
-            print(f'dict_combo_list has {len(dict_combo_list)} variations to run')
+        '''if verbose==1:
+            print(f'dict_combo_list has {len(dict_combo_list)} variations to run')'''
         return dict_combo_list    
             
     '''def build_dict_variations(self,initial_dict,variation_list):

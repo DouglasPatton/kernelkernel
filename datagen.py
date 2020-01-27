@@ -82,7 +82,9 @@ class datagen(PiscesDataTool):
         if type(species) is int:
             speciesdata=self.retrievespeciesdata(species_idx=species)
         
-        dataselecttup=(0,)+floatselecttup+spatialselecttup
+        floatselect_plus1=[i+1 for i in floatselecttup]
+        spatialselect_plus1=[i+1 for i in spatialselecttup]#plus1 required because selecttups are defined for x matrix, not full data matrix
+        dataselecttup=[0]+floatselect_plus1+spatialselect_plus1
         speciesdata=speciesdata[:,dataselecttup]
         speciesdata=self.processmissingvalues(speciesdata,missing)
         if len(spatialselecttup)>0:
@@ -93,14 +95,14 @@ class datagen(PiscesDataTool):
         n=speciesdata.shape[0]
         
         #floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
-        datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
+        #datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
         
-        self.xvarname_list={}
-        self.xvarname_list=self.fullvarlist[floatselecttup]#i-1 b/c no dep var in self.fullvarlist
-        self.xvarname_list.append(self.fullvarlist[spatialselecttup])
-        print('self.xvarnames: {self.xvarnames}')
+        #self.xvarname_list=[]
+        self.xvarname_list=[self.fullvarlist[i] for i in floatselecttup]
+        self.xvarname_list.append([self.fullvarlist[i]+'(spatial)' for i in spatialselecttup])
+        print(f'self.xvarname_list: {self.xvarname_list}')
         self.fullxdataarray=np.array(speciesdata[:,1:],dtype=float)
-        self.xdataarray=self.fullxdataarray[:,floatselecttup+spatialselecttup]
+        #self.xdataarray=np.array(self.fullxdataarray[:,floatselecttup+spatialselecttup],dtype=float)
         
         
         self.float_loc=[i for i in range(len(floatselecttup))]
