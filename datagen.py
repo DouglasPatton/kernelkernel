@@ -82,14 +82,6 @@ class datagen(PiscesDataTool):
         if type(species) is int:
             speciesdata=self.retrievespeciesdata(species_idx=species)
         
-            
-            
-        if species_idx is None:
-            speciesdata=self.retrievespeciesdata(species_name=spec_name)
-        else:
-            speciesdata=self.retrievespeciesdata(species_idx=species_idx)
-        
-        #9 should be huc12
         dataselecttup=(0,)+floatselecttup+spatialselecttup
         speciesdata=speciesdata[:,dataselecttup]
         speciesdata=self.processmissingvalues(speciesdata,missing)

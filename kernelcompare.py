@@ -814,7 +814,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                     param_count=2
                     datagen_dict={'validate_batchcount':10,'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
             else:assert False,f'datagen_dict:{datagen_dict}'
-        if datagen_variation_list==None:
+        if datagen_variation_list is None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict above
         '''assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
         assert type(datagen_variation_list[0])==tuple,f'first item of datagen_variation_list type:{type(datagen_variation_list[0])} but expected a tuple'
@@ -828,6 +828,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         
         
         model_run_dict_list=[]
+        print(f'datagen_dict:{datagen_dict}, datagen_variation_list:{datagen_variation_list}')
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)
         print(f'len(datagen_dict_list):{len(datagen_dict_list)}')
         for alt_datagen_dict in datagen_dict_list:
@@ -845,15 +846,21 @@ class KernelCompare(KernelOptModelTools,KernelParams):
     
     def addspeciesvariations(self,datagen_variation_list):
         #remove existing species variations in case species:all is included in the list
-        remove_existing_species_variations=[var for var in datagen_variation_list if var[0]!='species']
         
-        try:pdh12.specieslist
+        datagen_variation_list=[tup_i for tup_i in datagen_variation_list if tup_i[0]!='species']
+        
+         
+        try:self.specieslist
         except:
-            pdh12=PiscesDataTool()
-            pdh12.buildspecieslist
-
-        species_variations=('species',pdh12.specieslist)
-        return remove_existing_species_variations.append(species_variations)                
+            pdh12=dg.PiscesDataTool()
+            pdh12.buildspecieslist()
+            self.specieslist=pdh12.specieslist
+        
+        species_variations=('species',self.specieslist)
+        print(f'before-datagen_variation_list:{datagen_variation_list}')
+        datagen_variation_list.append(species_variations)
+        print(f'after-datagen_variation_list:{datagen_variation_list}')
+        return datagen_variation_list
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)

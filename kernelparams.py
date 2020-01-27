@@ -120,12 +120,14 @@ class KernelParams:
             param_count_variations=('param_count',[2,4])
             datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
         if source=='pisces':
-            try:pdh12.specieslist
+            try:self.specieslist
             except:
-                pdh12=PiscesDataTool()
-                pdh12.buildspecieslist
+                pdh12=dg.PiscesDataTool()
+                pdh12.buildspecieslist()
+                self.specieslist=pdh12.specieslist
                 
-            species_variations=('species',pdh12.specieslist)
+                
+            species_variations=('species',self.specieslist)
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',[10])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
