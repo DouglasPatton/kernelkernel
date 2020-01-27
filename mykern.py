@@ -635,7 +635,7 @@ class kNdtool(Ndiff):
         for batchbatchidx in range(self.batchbatchcount):
             if self.source=='pisces':
                 yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
-            batchdata_dict_i=batchdata_dict[batchbatchidx]
+            batchdata_dict_i=batchdata_dictlist[batchbatchidx]
             
             y_err_tup = ()
 
@@ -842,7 +842,8 @@ class kNdtool(Ndiff):
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
         batchcount=self.batchcount
-        for  yxtup-list in yxtup_listlist:
+        batchdata_dictlist=[]
+        for  yxtup_list in yxtup_listlist:
         
             #print('from buildbatchdatadict: batchcount: ',batchcount)
             #print('self.batchcount: ',self.batchcount)
@@ -879,7 +880,7 @@ class kNdtool(Ndiff):
                 #print('xprtup[0].shape:',xprtup[0].shape)
 
             batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
-            batdata_dictlist.append(batchdata_dict)
+            batchdata_dictlist.append(batchdata_dict)
         #print([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
         return batchdata_dictlist
 
