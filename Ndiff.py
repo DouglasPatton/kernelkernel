@@ -144,11 +144,11 @@ class Ndiff:
         if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
             indifftup=indiffs.shape
             if len(indifftup)==3:
-                indiffshape=[indifftup[i] for i in [1,0,2]]
+                transposeorder=[1,0,2]
             if len(indifftup)==2:
-                indiffshape=[indifftup[i] for i in [1,0]]
-            
-            np.transpose(indiffs,indiffshape)
+                transposeorder=[1,0]
+            print('indiffshape:',transposeorder)
+            np.transpose(indiffs,transposeorder)
             
         outdiffs_shape=outdiffs.shape
         if len(outdiffs_shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y

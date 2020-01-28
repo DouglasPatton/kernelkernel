@@ -10,7 +10,7 @@ from numpy import log
 
 
 class mypool:
-    def __init__(self,data_source='monte', nodecount=1,includemaster=1,local_run='no'):
+    def __init__(self,source='monte', nodecount=1,includemaster=1,local_run='no'):
         '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -19,7 +19,7 @@ class mypool:
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)'''
 
-        self.data_source=data_source
+        self.source=source
 
         self.sleepfactor=0.15 #0.2->4min. 0.1->6sec, 0.224 ->10min
         
@@ -78,7 +78,7 @@ class mypool:
             rerun=True
             while rerun:
                 try:
-                    mycluster.run_cluster(startname, data_source=self.data_source, local_run=self.local_run)
+                    mycluster.run_cluster(startname, source=self.source, local_run=self.local_run)
                 except KeyboardInterrupt:
                     rerun=False
                 except:
@@ -106,20 +106,20 @@ class mypool:
 
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_run='yes')
-    choose_data_source=int(input(('0 for monte carlo, 1 for pisces')))
-    if choose_data_source==0:
-        data_source='monte'
-    elif choose_data_source==1:
-        data_source='pisces'
+    choose_source=int(input(('0 for monte carlo, 1 for pisces')))
+    if choose_source==0:
+        source='monte'
+    elif choose_source==1:
+        source='pisces'
     else: 
-        assert False, 'choose_data_source not 0 or 1'
+        assert False, 'choose_source not 0 or 1'
     local_run=int(input('1 for local_run or 0 for network run'))
     includemaster=int(input('1 for include master, 0 for not'))
     nodecount=int(input('node count:'))
     
 
     test=mypool(nodecount=nodecount,
-                data_source=data_source,
+                source=source,
                 includemaster=includemaster,
                 local_run=local_run
                )
