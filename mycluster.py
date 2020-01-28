@@ -37,11 +37,11 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
+    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
         if source==None:
             source='monte'
         self.source=source
-        self.savedirectory=self.setdirectory(local_test=local_test)
+        self.savedirectory=self.setdirectory(local_run=local_run)
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
@@ -72,10 +72,10 @@ class run_cluster(kernelcompare.KernelCompare):
         self.datagen_dict=self.setdata(source)#creates the initial datagen_dict
         
         
-        if local_test==None or local_test=='yes' or local_test=='Yes':
-            local_test=1
-        if local_test=='no' or local_test=='No':
-            local_test=0
+        if local_run==None or local_run=='yes' or local_run=='Yes':
+            local_run=1
+        if local_run=='no' or local_run=='No':
+            local_run=0
 
         self.n=32 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
 
@@ -88,7 +88,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
 
 
-        print(f'datagen_variation_list:{datagen_variation_list}')
+        #print(f'datagen_variation_list:{datagen_variation_list}')
         self.initialize(
             myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
@@ -108,11 +108,11 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.logger.exception(f'error in {__name__}')
         return masterdir
         
-    def setdirectory(self,local_test='yes'):
-        if local_test==0:
+    def setdirectory(self,local_run='yes'):
+        if local_run==0:
             savedirectory='O:/Public/DPatton/kernel/'
-        elif local_test==1:
-            print('------------local_test:',local_test)
+        elif local_run==1:
+            print('------------local_run:',local_run)
             savedirectory=os.path.join(os.getcwd(),'cluster_test')
             if not os.path.exists(savedirectory):
                 for i in range(10):
@@ -124,7 +124,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             if i==9:
                                 self.logger.exception(f'error in {__name__}')
         else: 
-            assert False,f"local_test not understood. value:{local_test}"
+            assert False,f"local_run not understood. value:{local_run}"
         return savedirectory
 
         

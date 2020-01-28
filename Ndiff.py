@@ -160,7 +160,7 @@ class Ndiff:
         if len(outdiffs_shape)==2:#(ninXnpr)this should only happen if we're working on x
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
             if depth>1:
-                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for npr
+                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxnin, expand_dims adds a dimension for npr
             else:
                 return np.broadcast_to(outdiffs,shape_out_tup)
             

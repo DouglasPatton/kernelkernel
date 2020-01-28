@@ -150,7 +150,35 @@ class PiscesDataTool():
     def getfishhucs(self,):
         self.fishhucs=self.getcsvfile('fishhucs.csv')
         print(self.fishhucs[0:5])
-
+    
+    def returnspecieslist(self,):
+        try:
+            specieslist=self.specieslist
+            return specieslist
+        except:
+            pass
+        
+        specieslistpath=os.path.join(self.savedir,'specieslistfiles')
+        if os.path.exists(specieslistpath):
+            
+            try:
+                with open(specieslistpath,'rb') as f:
+                    speciestup=pickle.load(f)
+                self.specieslist=speciestup[0]
+                '''self.speciesoccurencelist=speciestup[1]
+                self.speciescomidlist=speciestup[2] 
+                self.specieshuclist=speciestup[3]
+                self.huclist_survey=speciestup[4]
+                self.huccomidlist_survey=speciestup[5]
+                self.specieshuclist_survey_idx=speciestup[6]'''
+                return self.specieslist
+            except:
+                pass
+        self.buildspecieslist()
+        return self.specieslist
+        
+        
+        
         
     def buildspecieslist(self,):
         specieslistpath=os.path.join(self.savedir,'specieslistfiles')

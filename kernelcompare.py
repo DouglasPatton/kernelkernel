@@ -18,6 +18,7 @@ class KernelOptModelTools(mk.kNdtool):
         else:
             self.kc_savedirectory=directory
         mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
+        
         self.name=myname
         logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.kc_savedirectory,'log')
@@ -27,11 +28,11 @@ class KernelOptModelTools(mk.kNdtool):
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
         
-        if directory==None:
+        '''if directory==None:
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
-        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
+        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)'''
         
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         optimizedict['datagen_dict']=datagen_dict
@@ -671,9 +672,10 @@ class KernelOptModelTools(mk.kNdtool):
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form'),('modeldict','logic_date')]
         for string_tup in string_list:
-            
-            sub_value=adoubledict[string_tup[0]][string_tup[1]]
-            new_dict_list.append({string_tup[0]:{string_tup[1]:sub_value}})#make the list match amodeldict, so optimization settings aren't changed
+            try:
+                sub_value=adoubledict[string_tup[0]][string_tup[1]]
+                new_dict_list.append({string_tup[0]:{string_tup[1]:sub_value}})#make the list match amodeldict, so optimization settings aren't changed
+            except: pass
         #new_dict_list.append(amodeldict['xkern_grid'])
         #new_dict_list.append(amodeldict['hyper_param_form_dict'])
         #new_dict_list.append(amodeldict['regression_model'])

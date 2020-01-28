@@ -1,4 +1,5 @@
 import numpy as np
+from pisces_data_huc12 import PiscesDataTool
 
 class KernelParams:
     
@@ -90,7 +91,7 @@ class KernelParams:
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
         if source=='pisces':
-            standardization_variations=('modeldict:std_data',[([],['float'])])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
+            standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2,5])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
@@ -122,9 +123,9 @@ class KernelParams:
         if source=='pisces':
             try:self.specieslist
             except:
-                pdh12=dg.PiscesDataTool()
-                pdh12.buildspecieslist()
-                self.specieslist=pdh12.specieslist
+                pdh12=PiscesDataTool()
+                self.specieslist=pdh12.returnspecieslist()
+                
                 
                 
             species_variations=('species',self.specieslist)

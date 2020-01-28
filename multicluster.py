@@ -78,10 +78,11 @@ class mypool:
             rerun=True
             while rerun:
                 try:
-                    mycluster.run_cluster(startname, source=self.source, local_run=self.local_run)
+                    mycluster.run_cluster(myname=startname, source=self.source, local_run=self.local_run)
                 except KeyboardInterrupt:
                     rerun=False
                 except:
+                    sleep(1)
                     #self.i+=500
                     print(f'restarting:{startname}')
                     self.logger.exception(f'error in {__name__}')
@@ -95,11 +96,12 @@ class mypool:
             try:
                 self.i+=1#increments with start/restart of nodes or master
                 name=startname+str(self.id)+'-'+str(self.i)
-                mycluster.run_cluster(name,local_run=self.local_run)
+                mycluster.run_cluster(myname=name,local_run=self.local_run,source=self.source)
             except KeyboardInterrupt:
                 rerun=False
 
             except:
+                sleep(1)
                 print(f'restarting:{name}')
                 self.logger.exception(f'error in {__name__}')
 

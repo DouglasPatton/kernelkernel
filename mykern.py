@@ -469,7 +469,7 @@ class kNdtool(Ndiff,MyKernHelper):
         elif type(std_data) is tuple:
             if not std_data[0]==[]:
                 yhat_un_std=yhat_std*self.ystd+self.ymean
-        else: yhat_un_std=yhat_std
+            else: yhat_un_std=yhat_std
         
         #p#rint(f'yhat_un_std:{yhat_un_std}')
 
