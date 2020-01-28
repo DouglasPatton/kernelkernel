@@ -380,10 +380,12 @@ class KernelOptModelTools(mk.kNdtool):
         output_filename = os.path.join(output_loc,f'models{filecount}'+'.html')
 
         modeltablehtml=''
-        keylist = ['mse','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
+        #keylist = ['mse','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
+        
         self.logger.info(f'len(model_save_list:{len(model_save_list)}')
         for j,model in enumerate(model_save_list):
-            simpledicti=self.myflatdict(model,keys=keylist)
+            keylistj=[key for key in model]
+            simpledicti=self.myflatdict(model,keys=keylistj)
             this_model_html_string=pd.DataFrame(simpledicti).T.to_html()
             modeltablehtml=modeltablehtml+f'model:{j+1}<br>'+this_model_html_string+"<br>"
         for i in range(10):
@@ -421,13 +423,7 @@ class KernelOptModelTools(mk.kNdtool):
 
         return flatdict
 
-    
 
-
-    
-
-    
-    
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
             assert os.path.exists(merge_directory),f"merge_directory does not exist:{merge_directory}"
