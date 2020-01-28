@@ -92,11 +92,33 @@ class MyKernHelper:
         return free_params,fixed_or_free_paramdict
 
     
-    def makediffmat_itoj(self,xin,xpr):
+    def makediffmat_itoj(self,xin,xpr,spatial=None):
+        
         diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0)#should return ninXnoutXp if xin an xpr were ninXp and noutXp
-        #p#rint('type(diffs)=',type(diffs))
+        if spatial==1:
+            #assuming the spatial variable is always the last one
+            diffs[:,:,-1]=self.myspatialhucdiff(diffs[:,:,-1])
+            
+        #print('type(diffs)=',type(diffs))
         return diffs
 
+    def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer
+        print('nparray.shape',nparray.shape)
+        rowlist=[]
+        for row in nparray:
+            arraylist=[]
+            for i in row:
+                if i>0:
+                    arraylist.append(int((np.log(i)+2)/2))
+                    #if i is 3, huc10's match, log3<1, so (log(3)+2)/2 is a little over 1, so int returns 1.
+                    #if i is 13, huc 10's match, log13>1 so (log(13)+2)/2 is a little over 1.5, so int returns 1.
+                    # if i is 100, huc 10's do not match, but huc 8's do. (log(100)+2) is 4 and 4/2 is 2, so int returns 2
+                    #if i is 999, huc8's match, log(999)<3so half that plus 2 floors to 2.
+                    # if i is 10000, huc8's do not match, log 10000=4, so 4+2 is 6 and 6/2 is 3.
+                else:
+                    arraylist.append(0)
+            rowlist.append(arraylist)
+        return np.array(rowlist,dtype=float)
 
 
     def MY_KDE_gridprep_smalln(self,m,p):
@@ -114,14 +136,16 @@ class MyKernHelper:
         '''#for small data, pre-create the 'grid'/out data
         no big data version for now
         '''
-        if modeldict['regression_model']=='logistic':
+        '''if modeldict['regression_model']=='logistic':
             if type(ykerngrid) is int:
                 print(f'overriding modeldict:ykerngrid:{ykerngrid} to {"no"} b/c logisitic regression')
-                ykerngrid='no'
+                ykerngrid='no' 
+        '''
+        #print('type(ykerngrid):',type(ykerngrid))
         ykerngrid_form=modeldict['ykerngrid_form']
         if xpr is None:
             xpr=xdata_std
-            #p#rint('1st xpr.shape',xpr.shape)
+            #print('1st xpr.shape',xpr.shape)
             
             self.predict_self_without_self='yes'
         elif not xpr.shape==xdata_std.shape: 
@@ -130,6 +154,7 @@ class MyKernHelper:
             self.predict_self_without_self='n/a'
         if type(ykerngrid) is int and xkerngrid=="no":
             yout=self.generate_grid(ykerngrid_form,ykerngrid)#will broadcast later
+            #print('yout:',yout)
             self.nout=ykerngrid
         if type(xkerngrid) is int:#this maybe doesn't work yet
             self.logger.warning("xkerngrid is not fully developed")
@@ -143,8 +168,8 @@ class MyKernHelper:
         if xkerngrid=='no'and ykerngrid=='no':
             self.nout=self.nin
             yout=ydata_std
-        #p#rint('2nd xpr.shape',xpr.shape)
-        #p#rint('xdata_std.shape',xdata_std.shape)
+        #print('2nd xpr.shape',xpr.shape)
+        #print('xdata_std.shape',xdata_std.shape)
         return xpr,yout
     
     def generate_grid(self,form,count):
@@ -158,6 +183,8 @@ class MyKernHelper:
             log_grid=np.linspace(0,log_gridrange,(count+2)//2)
             halfgrid=np.exp(log_grid[1:])-1
             return np.concatenate((-halfgrid[::-1],np.array([0]),halfgrid),axis=0)
+        if form[0]=='binary':
+            return np.linspace(0,1,count)
             
     
     def standardize_yx(self,xdata,ydata):
@@ -169,30 +196,54 @@ class MyKernHelper:
         standard_y=(ydata-self.ymean)/self.ystd
         return standard_x,standard_y
 
-    def standardize_yxtup(self,yxtup_list,val_yxtup_list=None):
+    def standardize_yxtup(self,yxtup_list,modeldict):
         #yxtup_list=deepcopy(yxtup_list_unstd)
-        all_y=[ii for i in yxtup_list for ii in i[0]]
-        all_x=[ii for i in yxtup_list for ii in i[1]]
-        self.xmean=np.mean(all_x,axis=0)
-        self.ymean=np.mean(all_y,axis=0)
-        self.xstd=np.std(all_x,axis=0)
-        self.ystd=np.std(all_y,axis=0)
+        p=yxtup_list[0][1].shape[1]
+        modelstd=modeldict['std_data']
+
+        try: self.xmean,self.ymean,self.xstd,self.ystd
+        except:
+            self.xmean=self.datagen_obj.summary_stats_dict['xmean']
+            self.ymean=self.datagen_obj.summary_stats_dict['ymean']
+            self.xstd=self.datagen_obj.summary_stats_dict['xstd']
+            self.ystd=self.datagen_obj.summary_stats_dict['ystd']
+
+        
+        if type(modelstd) is str: 
+            if  modelstd=='all':
+                x_stdlist=[i for i in range(p)]
+            else:
+                assert False, f'modeldict:std_data is {modelstd} but expected "all"'
+        elif type(modelstd) is tuple:
+            xmodelstd=modelstd[1]
+            ymodelstd=modelstd[0]
+            floatselecttup=self.datagen_obj.floatselecttup
+            spatialselecttup=self.datagen_obj.spatialselecttup
+            if xmodelstd=='float':
+                x_stdlist=[i for i in range(len(floatselecttup))]
+            if xmodelstd=='all':
+                x_stdlist=[i for i in range(p)]
+            if ymodelstd=='std':
+                y_stdlist=[0]
+            if ymodelstd==[]:
+                y_stdlist=[]
+            #xstdselect=modelstd[1]
+            #x_stdlist[modelstd[1]]=1
+        
         tupcount=len(yxtup_list)#should be same as batchcount
-        yxtup_list_std=[]
+        
         for i in range(tupcount):
-            ystd=(yxtup_list[i][0] - self.ymean) / self.ystd
-            xstd=(yxtup_list[i][1] - self.xmean) / self.xstd
-            yxtup_list_std.append((ystd,xstd))
-        if not val_yxtup_list==None:
-            val_yxtup_list_std=[]
-            val_tupcount=len(val_yxtup_list)
-            for i in range(val_tupcount):
-                val_ystd=(val_yxtup_list[i][0] - self.ymean) / self.ystd
-                val_xstd=(val_yxtup_list[i][1] - self.xmean) / self.xstd
-                val_yxtup_list_std.append((val_ystd,val_xstd))
-        else: 
-            val_yxtup_list_std=None
-        return yxtup_list_std,val_yxtup_list_std
+            
+            xarray=yxtup_list[i][1]
+            for j in x_stdlist:
+                xarray[:,j]=(xarray[:,j]-self.xmean[j])/self.xstd[j]
+            
+            yarray=yxtup_list[i][0]
+            if y_stdlist!=[]:
+                yarray=(yarray-self.ymean)/self.xstd
+            yxtup_list[i]=(yarray,xarray)
+                
+        return yxtup_list
 
 
         

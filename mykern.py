@@ -40,7 +40,7 @@ class kNdtool(Ndiff,MyKernHelper):
 
 
     
-    def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
+    ''' def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
         params={}
         paramlist=[key for key,val in modeldict['hyper_param_form_dict'].items()]
         for param in paramlist:
@@ -70,7 +70,8 @@ class kNdtool(Ndiff,MyKernHelper):
             if fixed_or_free_paramdict[param_name]['const']=='non-neg':#transform variable with e^(.) if there is a non-negative constraint
                 the_param_values=np.exp(the_param_values)
         return the_param_values
-
+    '''
+    """ 
     def setup_fixed_or_free(self,model_param_formdict,param_valdict):
         '''takes a dictionary specifying fixed or free and a dictionary specifying starting (if free) or
         fixed (if fixed) values
@@ -152,8 +153,8 @@ class kNdtool(Ndiff,MyKernHelper):
         return np.array(rowlist,dtype=float)
 
     def MY_KDE_gridprep_smalln(self,m,p):
-        """creates a grid with all possible combinations of m=n^p (kerngrid not nin or nout) evenly spaced values from -3 to 3.
-        """
+        '''creates a grid with all possible combinations of m=n^p (kerngrid not nin or nout) evenly spaced values from -3 to 3.'''
+        
         agrid=np.linspace(-3,3,m)[:,None] #assuming variables have been standardized
         #pgrid=agrid.copy()
         for idx in range(p-1):
@@ -336,7 +337,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
         return
     
-    #def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)):
+    #def validate_KDEreg(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict)):"""
         
     
     def BWmaker(self, fixed_or_free_paramdict, diffdict, modeldict,xory):
