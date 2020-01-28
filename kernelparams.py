@@ -74,11 +74,14 @@ class KernelParams:
 
 
     def getoptdictvariations(self,source='monte'):
-        NWnorm_variations=('modeldict:NWnorm',['across','none'])
-        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
+        #NWnorm_variations=('modeldict:NWnorm',['across','none'])
+        NWnorm_variations=('modeldict:NWnorm',['across'])
+        #loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
+        loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
@@ -93,9 +96,9 @@ class KernelParams:
         if source=='pisces':
             standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2,5])
-            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
-        
+            ykern_grid_variations=('modeldict:ykern_grid',[2])
+            #regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
+            regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
         
         optdict_variation_list = [ykerngrid_form_variations,
                                   NWnorm_variations,
@@ -130,7 +133,7 @@ class KernelParams:
                 
             species_variations=('species',self.specieslist)
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[10])
+            batchcount_variations=('batchcount',[16])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -142,7 +145,7 @@ class KernelParams:
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
-                'Ndiff_exponent':.0001*np.ones([Ndiff_param_count,]),
+                'Ndiff_exponent':.001*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
@@ -152,7 +155,7 @@ class KernelParams:
 
         if modeldict['Ndiff_type']=='recursive':
             hyper_paramdict1={
-                'Ndiff_exponent':0.00001*np.ones([Ndiff_param_count,]),
+                'Ndiff_exponent':0.001*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),#
                 'outer_x_bw':np.array([3,]),
                 'outer_y_bw':np.array([3,]),
@@ -183,6 +186,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
+            'maxbatchbatchcount':1,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',

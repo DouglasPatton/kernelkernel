@@ -676,7 +676,13 @@ class kNdtool(Ndiff,MyKernHelper):
             yxtup_list=self.datagen_obj.yxtup_list
         batchbatch_all_y_err=[]
         print('self.batchbatchcount',self.batchbatchcount)
-        for batchbatchidx in range(self.batchbatchcount):
+        maxbatchbatchcount=modeldict['maxbatchbatchcount']
+        if type(maxbatchbatchcount) is int:
+            if maxbatchbatchcount<self.batchbatchcount:
+                batchbatchcount=maxbatchbatchcount
+        else:
+            batchbatchcount=self.batchbatchcount
+        for batchbatchidx in range(batchbatchcount):
             print('batchbatchidx:',batchbatchidx)
             if self.source=='pisces':
                 yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
@@ -684,7 +690,7 @@ class kNdtool(Ndiff,MyKernHelper):
             
             y_err_tup = ()
 
-            arglistlist=[]
+            arglistlist=[] 
             for batch_i in range(batchcount):
 
 
