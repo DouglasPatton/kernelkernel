@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
             source='monte'
         self.source=source
         self.savedirectory=self.setdirectory(local_run=local_run)
-        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
+        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.oldnode_threshold=datetime.timedelta(minutes=15,seconds=1)

@@ -104,7 +104,21 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i]) for i in range(len(mse_list))]
+
+            batchbatchcountlist=[];naivemselist=[]
+            for dict_i in same_modelxy_dict_list:
+                try:
+                    i_batchbatch1=dict_i['datagen_dict']['batchbatchcount']
+                    i_batchbatch2=dict_i['modeldict']['maxbatchbatchcount']
+                    if i_batchbatch1<i_batchbatch2:
+                        batchbatchcountlist.append(i_batchbatch1)
+                    else: batchbatchcountlist.append(i_batchbatch2)
+                except: batchbatchcountlist.append(1)
+                try:
+                    naivemselist.append(dict_i['naivemse'])
+                except: naivemselist.append(1)
+                           
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naivemse=naivemselist[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
@@ -120,7 +134,21 @@ class KernelOptModelTools(mk.kNdtool):
             except:
                 n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i]) for i in range(len(mse_list))]
+
+            batchbatchcountlist=[];naivemselist=[]
+            for dict_i in same_modelxy_dict_list:
+                try:
+                    i_batchbatch1=dict_i['datagen_dict']['batchbatchcount']
+                    i_batchbatch2=dict_i['modeldict']['maxbatchbatchcount']
+                    if i_batchbatch1<i_batchbatch2:
+                        batchbatchcountlist.append(i_batchbatch1)
+                    else: batchbatchcountlist.append(i_batchbatch2)
+                except: batchbatchcountlist.append(1)
+                try:
+                    naivemselist.append(dict_i['naivemse'])
+                except: naivemselist.append(1)
+                           
+            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naivemse=naivemselist[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
             
@@ -535,6 +563,12 @@ class KernelOptModelTools(mk.kNdtool):
                             i_mse=full_model_i['mse']
                             j_mse=full_model_j['mse']
                             try:
+                                i_naivemse=full_model_i['naivemse']
+                                j_naivemse=full_model_j['naivemse']
+                            except:
+                                i_naivemse=1
+                                j_naivemse=1
+                            try:
                                 i_n=full_model_i['datagen_dict']['train_n']
                                 i_batchcount=1                               
                             except:
@@ -546,9 +580,25 @@ class KernelOptModelTools(mk.kNdtool):
                             except:
                                 j_n=full_model_j['datagen_dict']['batch_n']
                                 j_batchcount=full_model_j['datagen_dict']['batchcount']
+
+                            try:
+                                j_batchbatch1=full_model_j['datagen_dict']['batchbatchcount']
+                                j_batchbatch2=full_model_j['modeldict']['maxbatchbatchcount']
+                                if j_batchbatch1<j_batchbatch2:
+                                    j_batchbatchcount=j_batchbatch1
+                                else: j_batchbatchcount=j_batchbatch2
+                            except: j_batchbatchcount=1
+                            try:
+                                i_batchbatch1=full_model_i['datagen_dict']['batchbatchcount']
+                                i_batchbatch2=full_model_i['modeldict']['maxbatchbatchcount']
+                                if i_batchbatch1<i_batchbatch2:
+                                    i_batchbatchcount=i_batchbatch1
+                                else: i_batchbatchcount=i_batchbatch2
+                            except: i_batchbatchcount=1
                                 
-                            iwt=self.do_nwt_mse(i_mse,i_n,i_batchcount)
-                            jwt=self.do_nwt_mse(j_mse,j_n,j_batchcount)
+                                
+                            iwt=self.do_nwt_mse(i_mse,i_n,i_batchcount,naivemse=i_naivemse,batchbatchcount=i_batchbatchcount)
+                            jwt=self.do_nwt_mse(j_mse,j_n,j_batchcount,naivemse=j_naivemse,batchbatchcount=j_batchbatchcount)
                             if verbose>1:
                                 print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
@@ -567,13 +617,14 @@ class KernelOptModelTools(mk.kNdtool):
             print(f'len(final_keep_list):{len(final_keep_list)}')
         return final_keep_list
 
-    def do_nwt_mse(self,mse,n,batch_count=1):
+    def do_nwt_mse(self,mse,n,batch_count=1,naivemse=1,batchbatchcount=1):
+        batch_count=batch_count*batchbatchcount
         if not type(mse) is float:
             return 10**301
         
         else:
             #p#rint('type(mse)',type(mse))
-            return np.log(mse+1)/(np.log(n**2*batch_count)**1.5)
+            return np.log(mse/naivemse+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}
@@ -792,7 +843,10 @@ class KernelOptModelTools(mk.kNdtool):
 
         
 class KernelCompare(KernelOptModelTools,KernelParams):
-    def __init__(self,directory=None,myname=None):
+    def __init__(self,directory=None,myname=None, source=None):
+        if source is None:
+            source='monte'
+        self.source=source
         self.name=myname
         if directory==None:
             self.kc_savedirectory=os.getcwd()
