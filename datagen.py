@@ -162,6 +162,8 @@ class datagen(PiscesDataTool):
         #print('selectlist',selectlist)
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
+        if batchbatchcount>10:
+            batchbatchcount=10
         self.batchbatchcount=batchbatchcount
         fullbatchbatch_n=batchbatchcount*batchsize
         fullbatchbatch_shortby=fullbatchbatch_n-n
