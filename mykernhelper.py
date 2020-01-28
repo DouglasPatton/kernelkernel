@@ -262,7 +262,7 @@ class MyKernHelper:
         bestparams=fof_param_dict_list[mse_list.index(minmse)]
         savedict={}
         savedict['mse']=minmse
-        
+        savedict['naivemse']=self.naivemse
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
