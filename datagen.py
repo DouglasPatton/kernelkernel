@@ -60,6 +60,7 @@ class datagen(PiscesDataTool):
             
             
             
+            
             #the next two selection tups are for the independent (x) variable and they select from xdata not yxdata
             floatselecttup=datagen_dict['floatselecttup']
             self.floatselecttup=floatselecttup
@@ -99,7 +100,7 @@ class datagen(PiscesDataTool):
         
         n=speciesdata.shape[0]
         print('species_n:',n)
-        
+        self.species_n=n
         #floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
         #datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
         
@@ -162,11 +163,12 @@ class datagen(PiscesDataTool):
         #print('selectlist',selectlist)
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
-        if batchbatchcount>10:
-            batchbatchcount=10
+        self.batchbatchcount=batchbatchcount
         self.batchbatchcount=batchbatchcount
         fullbatchbatch_n=batchbatchcount*batchsize
+        self.fullbatchbatch_n=fullbatchbatch_n
         fullbatchbatch_shortby=fullbatchbatch_n-n
+        self.fullbatchbatch_shortby=fullbatchbatch_shortby
         if fullbatchbatch_shortby>0:
             selectfill=selectlist.copy()#fill in the missing values with random observations from the list.
             shuffle(selectfill)
