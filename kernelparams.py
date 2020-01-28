@@ -57,7 +57,7 @@ class KernelParams:
             datagen_dict={
                 'source':'pisces',
                 'batch_n':self.n,
-                'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'batchcount':6, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
                 'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
@@ -85,7 +85,7 @@ class KernelParams:
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -119,7 +119,7 @@ class KernelParams:
             #the default datagen_dict as of 11/25/2019
             #datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[10])
+            batchcount_variations=('batchcount',[])
             ftype_variations=('ftype',['linear','quadratic'])
             param_count_variations=('param_count',[2,4])
             datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
@@ -133,7 +133,7 @@ class KernelParams:
                 
             species_variations=('species',self.specieslist)
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[16])
+            batchcount_variations=('batchcount',[6])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -145,11 +145,11 @@ class KernelParams:
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
-                'Ndiff_exponent':.001*np.ones([Ndiff_param_count,]),
+                'Ndiff_exponent':-.0001*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
-                'Ndiff_depth_bw':.5*np.ones([Ndiff_param_count,]),
+                'Ndiff_depth_bw':.05*np.ones([Ndiff_param_count,]),
                 'y_bandscale':1.0*np.ones([1,])
                     }
 

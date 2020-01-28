@@ -21,7 +21,7 @@ class mypool:
 
         self.source=source
 
-        self.sleepfactor=0.15 #0.2->4min. 0.1->6sec, 0.224 ->10min
+        self.sleepfactor=0.00015 #0.2->4min. 0.1->6sec, 0.224 ->10min
         
         logging.basicConfig(level=logging.INFO)
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:

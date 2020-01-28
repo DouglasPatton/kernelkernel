@@ -347,7 +347,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     job_time,job_status=self.check_node_job_status(name,time=1)
                 except:
                     print(f'check_node_job_status failed for node:{name}')
-                    break
+                    job_status='failed'
+                    job_time='failed'
 
                 #print(f"job_time:{job_time},job_status:{job_status}")
                 now=strftime("%Y%m%d-%H%M%S")
@@ -377,16 +378,17 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
 
-                if job_status=='failed':
+                elif job_status=='failed':
                     job_idx=assignment_tracker[name]
                     self.discard_job_for_node(name)
                     print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                     del assignment_tracker[name]
                     run_dict_status[job_idx]='ready for node'
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
-                    self.update_my_namefile(name,status='ready for job')
+                    if job_time !='failed':
+                        self.update_my_namefile(name,status='ready for job')
                     _=self.mergethisnode(name)
-                if job_status=='finished':
+                elif job_status=='finished':
                     print(f'node:{name} has finished')
                     try:job_idx=assignment_tracker[name]
                     except:
