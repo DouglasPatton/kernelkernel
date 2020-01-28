@@ -947,7 +947,7 @@ class kNdtool(Ndiff,MyKernHelper):
         y=datagen_obj.ydataarray
         ymean=np.mean(y)
         err=y-ymean
-        mse=np.sum(np.power(err,2))
+        mse=np.mean(np.power(err,2))
         return mse
 
 
