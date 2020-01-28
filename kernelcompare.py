@@ -671,6 +671,7 @@ class KernelOptModelTools(mk.kNdtool):
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         string_list=[('datagen_dict','seed'),('datagen_dict','batch_n'),('modeldict','ykern_grid'),('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form'),('modeldict','logic_date')]
         for string_tup in string_list:
+            
             sub_value=adoubledict[string_tup[0]][string_tup[1]]
             new_dict_list.append({string_tup[0]:{string_tup[1]:sub_value}})#make the list match amodeldict, so optimization settings aren't changed
         #new_dict_list.append(amodeldict['xkern_grid'])
@@ -681,13 +682,15 @@ class KernelOptModelTools(mk.kNdtool):
         #simple_adoubledict=deepcopy(adoubledict)
         for new_dict in new_dict_list:
             #p#rint(f'partial match trying {new_dict}')
-            simple_doubledict_list=[self.do_dict_override(dict_i,new_dict) for dict_i in simple_doubledict_list]
-            
-            matchlist_idx=[self.are_dicts_equal(adoubledict,dict_i) for dict_i in simple_doubledict_list]
-            matchlist=[dict_i for i,dict_i in enumerate(saved_optdict_list) if matchlist_idx[i]]
-            if len(matchlist)>0:
-                print(f'{len(matchlist)} partial matches found only after substituting {new_dict}')
-                break
+            try: 
+                simple_doubledict_list=[self.do_dict_override(dict_i,new_dict) for dict_i in simple_doubledict_list]
+                matchlist_idx=[self.are_dicts_equal(adoubledict,dict_i) for dict_i in simple_doubledict_list]
+                matchlist=[dict_i for i,dict_i in enumerate(saved_optdict_list) if matchlist_idx[i]]
+                if len(matchlist)>0:
+                    print(f'{len(matchlist)} partial matches found only after substituting {new_dict}')
+                    break
+            except: 
+                self.logger.warning('dict override failed for dict_i:{dict_i}')
         if len(matchlist)==0:
             print(f'partial_match could not find any partial matches')
         return matchlist

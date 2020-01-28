@@ -11,7 +11,7 @@ from random import randint
 import logging
 import logging.config
 import yaml
-from pisces_data_huc12 import DataTool
+#from pisces_data_huc12 import PiscesDataTool
 
 '''to do:
 master needs to maintain a modelrun status list to make sure models don't get left behind.
@@ -37,7 +37,10 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None):
+    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_test=None,data_source=None):
+        if data_source==None:
+            data_source='monte'
+        self.data_source=data_source
         self.savedirectory=self.setdirectory(local_test=local_test)
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
         

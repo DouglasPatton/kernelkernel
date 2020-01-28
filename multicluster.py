@@ -10,7 +10,7 @@ from numpy import log
 
 
 class mypool:
-    def __init__(self,data_source='monte' nodecount=1,includemaster=1,local_run='no'):
+    def __init__(self,data_source='monte', nodecount=1,includemaster=1,local_run='no'):
         '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)

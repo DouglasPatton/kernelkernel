@@ -143,9 +143,9 @@ class Ndiff:
         print('depth',depth)'''
         if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
             indifftup=indiffs.shape
-            if len(indifftup)=3:
+            if len(indifftup)==3:
                 indiffshape=[indifftup[i] for i in [1,0,2]]
-            if len(indifftup)=2
+            if len(indifftup)==2:
                 indiffshape=[indifftup[i] for i in [1,0]]
             
             np.transpose(indiffs,indiffshape)
