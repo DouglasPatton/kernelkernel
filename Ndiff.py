@@ -147,7 +147,7 @@ class Ndiff:
                 transposeorder=[1,0,2]
             if len(indifftup)==2:
                 transposeorder=[1,0]
-            print('indiffshape:',transposeorder)
+            #print('indiffshape:',transposeorder)
             np.transpose(indiffs,transposeorder)
             
         outdiffs_shape=outdiffs.shape

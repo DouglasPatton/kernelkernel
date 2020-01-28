@@ -166,14 +166,15 @@ class datagen(PiscesDataTool):
         fullbatchbatch_n=batchbatchcount*batchsize
         fullbatchbatch_shortby=fullbatchbatch_n-n
         if fullbatchbatch_shortby>0:
-            selectfill=selectlist[:fullbatchbatch_n-batchsize].copy()#fill in the missing values with items that aren't in that batch
+            selectfill=selectlist.copy()#fill in the missing values with random observations from the list.
             shuffle(selectfill)
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
+        assert len(selectlist)==fullbatchbatch_n
         
         batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
             for j in range(batchcount):
-                start=(i+j)*batch_n
+                start=(i*batch_n*batchcount)+(j)*batch_n
                 end=start+batch_n
                 batchbatchlist[i][j]=(ydataarray[start:end],xdataarray[start:end,:])
         self.yxtup_batchbatch=batchbatchlist

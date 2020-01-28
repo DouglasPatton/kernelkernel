@@ -103,7 +103,7 @@ class MyKernHelper:
         return diffs
 
     def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer
-        print('nparray.shape',nparray.shape)
+        #print('nparray.shape',nparray.shape)
         rowlist=[]
         for row in nparray:
             arraylist=[]
