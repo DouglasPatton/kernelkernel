@@ -57,7 +57,7 @@ class KernelParams:
             datagen_dict={
                 'source':'pisces',
                 'batch_n':self.n,
-                'batchcount':6, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
                 'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
@@ -133,7 +133,7 @@ class KernelParams:
                 
             species_variations=('species',self.specieslist)
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[6])
+            batchcount_variations=('batchcount',[10])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -145,7 +145,7 @@ class KernelParams:
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
-                'Ndiff_exponent':-.01*np.ones([Ndiff_param_count,]),
+                'Ndiff_exponent':-.1*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
@@ -186,7 +186,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
-            'maxbatchbatchcount':1,
+            'maxbatchbatchcount':5,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
