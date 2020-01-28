@@ -677,11 +677,11 @@ class kNdtool(Ndiff,MyKernHelper):
         batchbatch_all_y_err=[]
         print('self.batchbatchcount',self.batchbatchcount)
         maxbatchbatchcount=modeldict['maxbatchbatchcount']
+        batchbatchcount=self.batchbatchcount
         if type(maxbatchbatchcount) is int:
             if maxbatchbatchcount<self.batchbatchcount:
                 batchbatchcount=maxbatchbatchcount
-        else:
-            batchbatchcount=self.batchbatchcount
+            
         for batchbatchidx in range(batchbatchcount):
             print('batchbatchidx:',batchbatchidx)
             if self.source=='pisces':
