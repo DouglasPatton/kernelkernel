@@ -171,7 +171,7 @@ class datagen(PiscesDataTool):
             selectfill=selectlist.copy()#fill in the missing values with random observations from the list.
             shuffle(selectfill)
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
-        assert len(selectlist)==fullbatchbatch_n
+        #assert len(selectlist)==fullbatchbatch_n
         
         batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
