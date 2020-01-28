@@ -262,6 +262,7 @@ class MyKernHelper:
         bestparams=fof_param_dict_list[mse_list.index(minmse)]
         savedict={}
         savedict['mse']=minmse
+        
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
@@ -297,7 +298,7 @@ class MyKernHelper:
             try:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                print(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} with mse={minmse}')
+                print(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and mse={minmse}')
                 break
             except:
                 if i==9:

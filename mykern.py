@@ -943,6 +943,13 @@ class kNdtool(Ndiff,MyKernHelper):
         return batchdata_dictlist
 
 
+    def do_naivemse(self,datagen_obj):
+        y=datagen_obj.ydataarray
+        ymean=np.mean(y)
+        err=y-ymean
+        mse=np.sum(np.power(err,2))
+        return mse
+
 
     
 class optimize_free_params(kNdtool):
@@ -992,7 +999,8 @@ class optimize_free_params(kNdtool):
         if savedir==None:
             savedir=os.getcwd()
             
-   
+        
+        self.naivemse=self.do_naivemse(datagen_obj)
             
             
         

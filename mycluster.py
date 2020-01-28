@@ -45,7 +45,7 @@ class run_cluster(kernelcompare.KernelCompare):
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
-        self.oldnode_threshold=datetime.timedelta(minutes=360,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=15,seconds=1)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
         if myname is None:
             myname='node'
