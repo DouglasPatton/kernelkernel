@@ -34,7 +34,7 @@ class kNdtool(Ndiff,MyKernHelper):
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('myKernLogger')
         
-        Ndiff.__init__(self,savedir=savedir,myname=myname)
+        Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
         
 
@@ -385,11 +385,11 @@ class kNdtool(Ndiff,MyKernHelper):
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
-            diffdict['outdiffs']=outdiffs_scaled_l2norm
-            diffdict['indiffs']=indiffs_scaled_l2norm
+            diffdict['outdiffs']=outdiffs_scaled_l2norm#ninXnpr?
+            diffdict['indiffs']=indiffs_scaled_l2norm#ninXnin?
             ydiffdict={}
-            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None],y_outdiffs.shape+(self.npr,))
-            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None],y_indiffs.shape+(self.npr,))
+            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None],y_outdiffs.shape+(self.npr,))#ninXnoutXnpr
+            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None],y_indiffs.shape+(self.npr,))#ninXninXnpr
             diffdict['ydiffdict']=ydiffdict
 
 

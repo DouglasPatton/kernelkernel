@@ -831,7 +831,10 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         datagen_dict_list=self.build_dict_variations(datagen_dict,datagen_variation_list,verbose=1)
         print(f'len(datagen_dict_list):{len(datagen_dict_list)}')
         for alt_datagen_dict in datagen_dict_list:
-            initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'],species=alt_datagen_dict['species'])
+            if 'species' in alt_datagen_dict:
+                species=alt_datagen_dict['species']
+            else: species=None
+            initial_opt_dict=self.build_optdict(param_count=alt_datagen_dict['param_count'],species=species)
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_list:
                 #rebuild hyper_param_start_values since variations may change array length.

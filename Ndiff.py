@@ -5,25 +5,10 @@ import psutil
 import yaml
 
 class Ndiff:
-    def __init__(self,savedir=None,myname=None):
-        if savedir==None:
-            savedir=os.getcwd()
-        '''self.savedir=savedir
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('ndiffLogger')'''
-
-        '''logging.basicConfig(level=logging.INFO)
-        logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'Ndiff.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)'''
-
-        self.name=myname
-        self.cores=int(psutil.cpu_count(logical=False)-1)
+    def __init__(self,):
+        pass
+            
+        
 
         
 
@@ -145,13 +130,25 @@ class Ndiff:
 
     def Ndiff_datastacker(self,indiffs,outdiffs,depth):
         """
+            for x: (x has it's nout dimension (-2) added later on)
+            outdiffs is #ninXnpr?
+            indiffs is #ninXnin?
+            for y:
+            outdiffs is broadcast to dim2 npr times #ninXnoutXnpr?
+            indiffs is broadcast to dim2 npr times #ninXninXnpr?
+        
         """
         '''print('indiffs.shape',indiffs.shape)
         print('outdiffs_shape',outdiffs_shape)
         print('depth',depth)'''
         if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
-            #indifftup=indiffs.shape
-            indifftup=(indifftup[1],indifftup[0])
+            indifftup=indiffs.shape
+            if len(indifftup)=3:
+                indiffshape=[indifftup[i] for i in [1,0,2]]
+            if len(indifftup)=2
+                indiffshape=[indifftup[i] for i in [1,0]]
+            
+            np.transpose(indiffs,indiffshape)
             
         outdiffs_shape=outdiffs.shape
         if len(outdiffs_shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
@@ -163,7 +160,7 @@ class Ndiff:
         if len(outdiffs_shape)==2:#(ninXnpr)this should only happen if we're working on x
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
             if depth>1:
-                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
+                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for npr
             else:
                 return np.broadcast_to(outdiffs,shape_out_tup)
             
