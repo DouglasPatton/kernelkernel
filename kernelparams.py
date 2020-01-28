@@ -75,7 +75,7 @@ class KernelParams:
 
     def getoptdictvariations(self,source='monte'):
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
-        NWnorm_variations=('modeldict:NWnorm',['across'])
+        NWnorm_variations=('modeldict:NWnorm',['none'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
         loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
@@ -145,7 +145,7 @@ class KernelParams:
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
-                'Ndiff_exponent':-.0001*np.ones([Ndiff_param_count,]),
+                'Ndiff_exponent':-.01*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([2.7,]),
                 'outer_y_bw':np.array([2.2,]),
