@@ -74,6 +74,21 @@ class KernelParams:
 
 
     def getoptdictvariations(self,source='monte'):
+        max_bw_Ndiff=2
+        
+        
+        
+        ''''hyper_param_form_dict':{
+                'Ndiff_exponent':'free',
+                'x_bandscale':'non-neg',
+                'Ndiff_depth_bw':'non-neg',
+                'outer_x_bw':'non-neg',
+                'outer_y_bw':'non-neg',
+                'y_bandscale':'fixed''''
+        
+        hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
+        startingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([-1,1]),np.array([1,-1]),np.array([1,1]),.5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
+                                  
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['none'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
@@ -81,11 +96,11 @@ class KernelParams:
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product'])
-        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
+        max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -131,7 +146,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',self.specieslist)
+            species_variations=('species',self.specieslist[0])
             
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',[10])
