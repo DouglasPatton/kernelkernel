@@ -898,8 +898,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             optdict_list=self.build_dict_variations(initial_opt_dict,optdict_variation_list)    
             for optdict_i in optdict_list:
                 #rebuild hyper_param_start_values since variations may change array length.
-                newhyper_paramdict=self.build_hyper_param_start_values(optdict_i['modeldict'])
-                optdict_i['hyper_param_dict']=newhyper_paramdict
+                #newhyper_paramdict=self.build_hyper_param_start_values(optdict_i['modeldict'])
+                #optdict_i['hyper_param_dict']=newhyper_paramdict
                 
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
