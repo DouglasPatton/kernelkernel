@@ -20,20 +20,19 @@ class KernelOptModelTools(mk.kNdtool):
         mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         
         self.name=myname
+        
         logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.kc_savedirectory,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
+        #if not os.path.exists(logdir): 
+        try:
+            os.mkdir(logdir)
+        except:pass
         handlername=f'kernelcompare.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
         
-        '''if directory==None:
-            self.kc_savedirectory=os.getcwd
-        else:
-            self.kc_savedirectory=directory
-        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)'''
-        
+                
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         optimizedict['datagen_dict']=datagen_dict
         
@@ -883,6 +882,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         '''                 
         if datagen_dict['source']=='pisces':
             if datagen_dict['species']=='all':
+                print('adding all species variations')
                 datagen_variation_list=self.addspeciesvariations(datagen_variation_list)
         
         
@@ -945,6 +945,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             for val in tup_i[1]:
                 for dict_i in dict_combo_list:
                     override_dict=self.build_override_dict_from_str(tup_i[0],val)
+                    #print(override_dict)
                     newdict=self.do_dict_override(dict_i,override_dict)
                     additions.append(newdict)
             dict_combo_list=dict_combo_list+additions
@@ -969,16 +970,20 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         return dict_combo_list'''
 
                          
-    def build_override_dict_from_str(self,string_address,val):
-        colon_loc=[i for i,char in enumerate(string_address) if char==':']
-        return self.recursive_string_dict_helper(string_address,colon_loc,val)
+    def build_override_dict_from_str(self,dict_string,val):
+        colon_loc=[i for i,char in enumerate(dict_string) if char==':']
+        print(f'string_address: {dict_string}, colon_loc: {colon_loc}')
+        return self.recursive_string_dict_helper(dict_string,colon_loc,val)
           
                          
     def recursive_string_dict_helper(self,dict_string,colon_loc,val):
         if len(colon_loc)==0:
             return {dict_string:val}
         if len(colon_loc)>0:
-            return {dict_string[0:colon_loc[0]]:self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],colon_loc[1:],val)}
+            key=dict_string[0:colon_loc[0]]
+            val=self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],colon_loc[1:],val)
+            outdict={key:val}
+            return outdict
         
                          
     '''def build_quadratic_datagen_dict_override(self):

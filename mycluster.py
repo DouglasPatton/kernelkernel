@@ -311,16 +311,24 @@ class run_cluster(kernelcompare.KernelCompare):
         
 
     def runmaster(self,optdict_variation_list,datagen_variation_list):
+        dorestart=1
         if self.checkmaster(): 
             masterfile=self.getmaster()
-        try: 
-            assignment_tracker=masterfile['assignment_tracker']
-            list_of_run_dicts=masterfile['list_of_run_dicts']
-            run_dict_status=masterfile['run_dict_status']
-            model_run_count=len(list_of_run_dicts)
-        except:
+            
+            
+            try: 
+                assignment_tracker=masterfile['assignment_tracker']
+                list_of_run_dicts=masterfile['list_of_run_dicts']
+                run_dict_status=masterfile['run_dict_status']
+                model_run_count=len(list_of_run_dicts)
+                dorestart=0
+            except:
+                dorestart=1
+        
+        if dorestart==1:
             assignment_tracker={}
-            list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
+            list_of_run_dicts=self.prep_model_list(
+                optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
             list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
             print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
