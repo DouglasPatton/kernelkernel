@@ -10,7 +10,8 @@ if __name__=='__main__':
     print(f'type 1 for cluster_test directory:{mydir2}')
     print(f'type 0 for network directory,{networkdir}')
     whichdir=input('or enter a directory manually: ')
-    wantprint=input('type 1 to print results to html or 0 to skip')
+    wantprint=input('type 1 to print results to html or 0 to skip: ')
+    condensechoice=int(input('type 1 to condense, 0 to not condesnse: '))
     if str(whichdir)==str(1):
         thedir=mydir2
     elif str(whichdir)==str(0):
@@ -19,6 +20,6 @@ if __name__=='__main__':
         thedir=whichdir
     print(f'thedir:{thedir}')
     test=kc.KernelCompare(directory=thedir)
-    test.recursive_merge(thedir,overwrite=0,verbose=1)    
+    test.recursive_merge(thedir,overwrite=0,verbose=1,condense=condensechoice)    
     if wantprint==str(1):
         test.print_model_save(filename=os.path.join(thedir,'mergedfiles',"condensed_model_save"))

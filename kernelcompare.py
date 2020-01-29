@@ -183,7 +183,7 @@ class KernelOptModelTools(mk.kNdtool):
         return new_opt_dict
 
 
-    def recursive_merge(self,startdirectory,overwrite=0,verbose=0):
+    def recursive_merge(self,startdirectory,overwrite=0,verbose=0,condense=0):
         if verbose==1:
             print(f'startdirectory:{startdirectory}')
         if not os.path.exists(startdirectory):
@@ -198,7 +198,7 @@ class KernelOptModelTools(mk.kNdtool):
         dirlist=[startdirectory]+dirlist
         for diri in dirlist:
             if verbose==1:print('diri',diri)
-            self.merge_and_condense_saved_models(merge_directory=diri, save_directory=save_directory, condense=1,verbose=verbose)
+            self.merge_and_condense_saved_models(merge_directory=diri, save_directory=save_directory, condense=condense,verbose=verbose)
 
     def recursive_add_dict(self,startdirectory,add_tuple_list,overwrite=0,verbose=0):
         if not type(add_tuple_list) is list:

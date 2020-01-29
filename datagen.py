@@ -74,7 +74,7 @@ class datagen(PiscesDataTool):
             
             pass
         
-    def expand_datagen_dict(self,key,val)
+    def expand_datagen_dict(self,key,val):
         try: self.datagen_dict_expanded
         except: self.datagen_dict_expanded=self.initial_datagen_dict
         self.datagen_dict_expanded[key]=val
