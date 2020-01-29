@@ -246,7 +246,7 @@ class MyKernHelper:
             
             yarray=yxtup_list[i][0]
             if y_stdlist!=[]:
-                yarray=(yarray-self.ymean)/self.xstd
+                yarray=(yarray-self.ymean)/self.ystd
             yxtup_list[i]=(yarray,xarray)
                 
         return yxtup_list
