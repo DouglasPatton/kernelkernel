@@ -229,7 +229,7 @@ class MyKernHelper:
                 x_stdlist=[i for i in range(len(floatselecttup))]
             if xmodelstd=='all':
                 x_stdlist=[i for i in range(p)]
-            if ymodelstd=='std':
+            if ymodelstd==[0]:
                 y_stdlist=[0]
             if ymodelstd==[]:
                 y_stdlist=[]
