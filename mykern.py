@@ -663,14 +663,18 @@ class kNdtool(Ndiff,MyKernHelper):
             return self.forcefail
         except:
             pass
-            
+        if self.call_iter>10:
+            try:
+                self.success
+            exccept:
+                self.forcefail='fail'
         if predict==None or predict=='no':
             predict=0
         if predict=='yes':
             predict=1
         if  type(fixed_or_free_paramdict['free_params']) is str and fixed_or_free_paramdict['free_params'] =='outside':  
             self.call_iter += 1  # then it must be a new call during optimization
-
+        
         batchcount=self.batchcount
 
         fixed_or_free_paramdict['free_params'] = free_params
@@ -803,6 +807,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
             if self.call_iter>10 and mse>self.mse_threshold:
                 self.forcefail=mse
+        self.success=1
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
