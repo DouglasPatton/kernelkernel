@@ -7,14 +7,13 @@ class datagen(PiscesDataTool):
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
     def __init__(self,datagen_dict):
-        '''(self,source=None,
-                 seed=None,
-                 ftype=None,
-                 evar=None,
-                 batch_n=None,
-                 param_count=None,
-                 batchcount=None,
-                 validate_batchcount=None):'''
+        try:
+            seed=datagen_dict['seed']
+        except:
+            seed=1
+        if seed is None:
+            seed=1
+        random.seed(seed)  
         source=datagen_dict['source']
         self.initial_datagen_dict=datagen_dict
         if source=='monte':
@@ -36,9 +35,8 @@ class datagen(PiscesDataTool):
                 validate_batchcount=batchcount
             self.validate_batchcount=validate_batchcount
             self.source = source
-            seed=datagen_dict['seed']
-            if seed is None:
-                seed=1
+              
+            
             self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             
             ydata=np.concatenate([yxtup[0] for yxtup in self.yxtup_list],axis=0)
@@ -79,7 +77,7 @@ class datagen(PiscesDataTool):
     def expand_datagen_dict(self,key,val)
         try: self.datagen_dict_expanded
         except: self.datagen_dict_expanded=self.initial_datagen_dict
-        self.datagen_dict_expanded=
+        self.datagen_dict_expanded[key]=val
 
             
 
@@ -107,12 +105,14 @@ class datagen(PiscesDataTool):
         n=speciesdata.shape[0]
         print('species_n:',n)
         self.species_n=n
+        self.expand_datagen_dict('species_n',self.species_n)
         #floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
         #datagen_obj.param_count=len(dataselecttup)-1#-1 bc dep var included in the tupple
         
         #self.xvarname_list=[]
         self.xvarname_list=[self.fullvarlist[i] for i in floatselecttup]
         self.xvarname_list.extend([self.fullvarlist[i]+'(spatial)' for i in spatialselecttup])
+        self.expand_datagen_dict('xvarnamelist',self.xvarname_list)
         print(f'self.xvarname_list: {self.xvarname_list}')
         try: self.xdataarray=np.array(speciesdata[:,1:],dtype=float)
         except ValueError:
@@ -148,6 +148,7 @@ class datagen(PiscesDataTool):
                                 'ymean':self.ymean,
                                 'ystd':self.ystd,
                                 'xstd':self.xstd}
+        self.expand_datagen_dict('summary_stats',self.summary_stats_dict)
         
     def processmissingvalues(self,nparray,missing_treatment):
         outlist=[]
@@ -171,10 +172,14 @@ class datagen(PiscesDataTool):
         batchbatchcount=-(-n//batchsize)#ceiling divide
         self.batchbatchcount=batchbatchcount
         self.batchbatchcount=batchbatchcount
+        self.expand_datagen_dict('batchbatchcount',self.batchbatchcount)
         fullbatchbatch_n=batchbatchcount*batchsize
         self.fullbatchbatch_n=fullbatchbatch_n
+        self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
+
         fullbatchbatch_shortby=fullbatchbatch_n-n
         self.fullbatchbatch_shortby=fullbatchbatch_shortby
+        
         if fullbatchbatch_shortby>0:
             selectfill=selectlist.copy()#fill in the missing values with random observations from the list.
             shuffle(selectfill)
