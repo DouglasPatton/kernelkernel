@@ -388,14 +388,22 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
                 elif job_status=='failed':
-                    job_idx=assignment_tracker[name]
-                    self.discard_job_for_node(name)
+                    try:
+                        job_idx=assignment_tracker[name]
+                        tracked=1
+                    except:
+                        tracked=0
+                    try:
+                        self.discard_job_for_node(name)
+                    except:pass
                     print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                    del assignment_tracker[name]
-                    run_dict_status[job_idx]='ready for node'
+                    if tracked==1: 
+                        del assignment_tracker[name]
+                        run_dict_status[job_idx]='ready for node'
+                        
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
-                    if job_time !='failed':
-                        self.update_my_namefile(name,status='ready for job')
+                    try:self.update_my_namefile(name,status='ready for job')
+                    except:pass
                     _=self.mergethisnode(name)
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
