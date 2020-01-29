@@ -89,7 +89,7 @@ class KernelParams:
                 '''
         
         hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        startingvalue_variations=('hyper_param_dict:Ndiff_exponent',
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
                                   [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
                                    .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
                                  )
@@ -104,8 +104,8 @@ class KernelParams:
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self','own_n','none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none','across'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -114,14 +114,16 @@ class KernelParams:
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
         if source=='pisces':
-            standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
+            #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
+            standardization_variations=('modeldict:std_data',[([0],'float'),([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2,5])
+            ykern_grid_variations=('modeldict:ykern_grid',[2,9])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
+            spatialtransform_variations=('modeldict:spatialtransform',[('divide',4),('ln1')])#
         
         optdict_variation_list = [hyper_param_form_dict_variations,
-                                  startingvalue_variations,
+                                  Ndiff_exponentstartingvalue_variations,
                                   ykerngrid_form_variations,
                                   NWnorm_variations,
                                   loss_function_variations,
@@ -132,7 +134,8 @@ class KernelParams:
                                   ykern_grid_variations,
                                   max_bw_Ndiff_variations,
                                   Ndiff_start_variations,
-                                  standardization_variations
+                                  standardization_variations,
+                                  spatialtransform_variations
                                  ]
         return optdict_variation_list
 
@@ -171,9 +174,9 @@ class KernelParams:
                 hyper_paramdict1={
                 'Ndiff_exponent':-.1*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),
-                'outer_x_bw':np.array([2.7,]),
-                'outer_y_bw':np.array([2.2,]),
-                'Ndiff_depth_bw':.05*np.ones([Ndiff_param_count,]),
+                'outer_x_bw':np.array([0.3,]),
+                'outer_y_bw':np.array([0.3,]),
+                'Ndiff_depth_bw':.1*np.ones([Ndiff_param_count,]),
                 'y_bandscale':1.0*np.ones([1,])
                     }
 
@@ -181,9 +184,9 @@ class KernelParams:
             hyper_paramdict1={
                 'Ndiff_exponent':0.001*np.ones([Ndiff_param_count,]),
                 'x_bandscale':1*np.ones([p,]),#
-                'outer_x_bw':np.array([3,]),
-                'outer_y_bw':np.array([3,]),
-                'Ndiff_depth_bw':np.array([0.5]),
+                'outer_x_bw':np.array([0.3,]),
+                'outer_y_bw':np.array([0.3,]),
+                'Ndiff_depth_bw':np.array([0.1]),
                 'y_bandscale':1.0*np.ones([1,])
                 }
         return hyper_paramdict1
@@ -227,6 +230,7 @@ class KernelParams:
             }
         if not species is None:
             modeldict1['species']=species
+            modeldict1['spatialtransform']=('divide',1)
         #hyper_paramdict1=self.build_hyper_param_start_values(modeldict1)
         hyper_paramdict1={}
         
@@ -239,7 +243,7 @@ class KernelParams:
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
-            #'mse_threshold':2,
+            'mse_threshold':10**4,
             'help_start':1,
             'partial_match':1
             }

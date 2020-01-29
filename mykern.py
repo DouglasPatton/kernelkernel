@@ -370,6 +370,8 @@ class kNdtool(Ndiff,MyKernHelper):
             spatial=self.datagen_obj.spatial
         except:
             spatial=0
+        try: spatialtransform=modeldict['spatialtransform']
+        except: spatialtransform=None
         if modeldict['Ndiff_bw_kern']=='rbfkern':
 
             #xin_scaled=xin*x_bandscale_params
@@ -381,8 +383,11 @@ class kNdtool(Ndiff,MyKernHelper):
             yout_scaled=yout*y_bandscale_params
             y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
             y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
-            outdiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xpr,spatial=spatial)*x_bandscale_params,2),axis=2),.5)
-            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial)*x_bandscale_params,2),axis=2),.5)
+            
+            outdiffs_scaled_l2norm=np.power(np.sum(np.power(
+                self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params,2)
+                                                   ,axis=2),.5)
+            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params,2),axis=2),.5)
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
 
             diffdict={}
@@ -653,6 +658,12 @@ class kNdtool(Ndiff,MyKernHelper):
     def MY_KDEpredictMSE(self, free_params, batchdata_dictlist, modeldict, fixed_or_free_paramdict,predict=None):
         
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
+        try:
+            self.forcefail
+            return self.forcefail
+        except:
+            pass
+            
         if predict==None or predict=='no':
             predict=0
         if predict=='yes':
@@ -790,7 +801,8 @@ class kNdtool(Ndiff,MyKernHelper):
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
-
+            if self.call_iter>10 and mse>self.mse_threshold:
+                self.forcefail=mse
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
@@ -984,11 +996,7 @@ class optimize_free_params(kNdtool):
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
-        '''mse_threshold=opt_settings_dict['mse_threshold']
-        inherited_mse=optimizedict['mse']
-        if inherited_mse<mse_threshold:
-            print(f'optimization halted because inherited mse:{inherited_mse}<mse_threshold:{mse_threshold}')
-            return'''
+        self.mse_threshold=opt_settings_dict['mse_threshold']
         
         #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
