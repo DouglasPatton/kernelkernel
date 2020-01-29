@@ -1,4 +1,4 @@
-from random import shuffle,seed
+import random
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 
@@ -11,9 +11,10 @@ class datagen(PiscesDataTool):
             theseed=datagen_dict['seed']
         except:
             theseed=1
-        if seed is None:
+        if theseed is None:
             theseed=1
-        seed(theseed)  
+            
+        random.seed(theseed)  
         source=datagen_dict['source']
         self.initial_datagen_dict=datagen_dict
         if source=='monte':
@@ -37,7 +38,7 @@ class datagen(PiscesDataTool):
             self.source = source
               
             
-            self.gen_montecarlo(seed=seed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
+            self.gen_montecarlo(seed=theseed,ftype=ftype,evar=evar,batch_n=batch_n,param_count=param_count,batchcount=batchcount)
             
             ydata=np.concatenate([yxtup[0] for yxtup in self.yxtup_list],axis=0)
             xdata=np.concatenate([yxtup[1] for yxtup in self.yxtup_list],axis=0)
@@ -166,7 +167,7 @@ class datagen(PiscesDataTool):
     def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing):
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
         selectlist=[i for i in range(n)]
-        shuffle(selectlist)
+        random.shuffle(selectlist)
         #print('selectlist',selectlist)
         batchsize=batch_n*batchcount
         batchbatchcount=-(-n//batchsize)#ceiling divide
@@ -182,7 +183,7 @@ class datagen(PiscesDataTool):
         
         if fullbatchbatch_shortby>0:
             selectfill=selectlist.copy()#fill in the missing values with random observations from the list.
-            shuffle(selectfill)
+            random.shuffle(selectfill)
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
         #assert len(selectlist)==fullbatchbatch_n
         
