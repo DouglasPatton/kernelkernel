@@ -1046,7 +1046,8 @@ if __name__ == "__main__":
     testrun = test.prep_model_list(optdict_variation_list=optdict_variation_list,
                                    datagen_variation_list=datagen_variation_list, verbose=1)
 
-    from random import shuffle
+    from random import shuffle,seed
+    seed(1)
 
     #shuffle(testrun)
     # a_rundict=testrun[100]#this produced the Ndiff_exponent error for recursive Ndiff

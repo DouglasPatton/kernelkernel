@@ -7,7 +7,7 @@ import kernelcompare
 import traceback
 import shutil
 from numpy import log
-from random import randint
+from random import randint,seed
 import logging
 import logging.config
 import yaml
@@ -38,6 +38,7 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
+        seed(1)
         if source==None:
             source='monte'
         self.source=source

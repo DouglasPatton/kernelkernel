@@ -937,6 +937,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         #pull and replace first value from each variation
         for tup_i in variation_list:
             override_dict_ik=self.build_override_dict_from_str(tup_i[0],tup_i[1][0])
+            print('override_dict_ik',override_dict_ik)
             dict_ik=self.do_dict_override(dict_ik,override_dict_ik)
         dict_combo_list.append(dict_ik)#this is now the starting dictionary.
         remaining_variation_list=[(tup_i[0],tup_i[1][1:]) for tup_i in variation_list if len(tup_i[1])>1]
@@ -972,8 +973,9 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                          
     def build_override_dict_from_str(self,dict_string,val):
         colon_loc=[i for i,char in enumerate(dict_string) if char==':']
-        print(f'string_address: {dict_string}, colon_loc: {colon_loc}')
-        return self.recursive_string_dict_helper(dict_string,colon_loc,val)
+        #print(f'string_address: {dict_string}, colon_loc: {colon_loc}')
+        outdict=self.recursive_string_dict_helper(dict_string,colon_loc,val)
+        return outdict
           
                          
     def recursive_string_dict_helper(self,dict_string,colon_loc,val):
@@ -981,7 +983,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             return {dict_string:val}
         if len(colon_loc)>0:
             key=dict_string[0:colon_loc[0]]
-            val=self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],colon_loc[1:],val)
+            newcolon_loc=[i-(colon_loc[0]+1) for i in colon_loc[1:]]#+1 b/c we removed that many characters plus 1 since zero was included
+            val=self.recursive_string_dict_helper(dict_string[colon_loc[0]+1:],newcolon_loc,val)
             outdict={key:val}
             return outdict
         

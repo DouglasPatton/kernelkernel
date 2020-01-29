@@ -1,4 +1,4 @@
-from random import shuffle
+from random import shuffle,seed
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 
@@ -8,12 +8,12 @@ class datagen(PiscesDataTool):
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
     def __init__(self,datagen_dict):
         try:
-            seed=datagen_dict['seed']
+            theseed=datagen_dict['seed']
         except:
-            seed=1
+            theseed=1
         if seed is None:
-            seed=1
-        random.seed(seed)  
+            theseed=1
+        seed(theseed)  
         source=datagen_dict['source']
         self.initial_datagen_dict=datagen_dict
         if source=='monte':
