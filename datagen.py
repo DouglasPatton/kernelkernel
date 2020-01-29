@@ -16,6 +16,7 @@ class datagen(PiscesDataTool):
                  batchcount=None,
                  validate_batchcount=None):'''
         source=datagen_dict['source']
+        self.initial_datagen_dict=datagen_dict
         if source=='monte':
             param_count=datagen_dict['param_count']
             if param_count==None:
@@ -72,9 +73,14 @@ class datagen(PiscesDataTool):
             
             self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup)
             self.build_sumstats_dict(self.ydataarray,self.xdataarray)
+            
             pass
         
-        
+    def expand_datagen_dict(self,key,val)
+        try: self.datagen_dict_expanded
+        except: self.datagen_dict_expanded=self.initial_datagen_dict
+        self.datagen_dict_expanded=
+
             
 
     def gen_piscesdata01(self,seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup):

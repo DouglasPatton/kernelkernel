@@ -43,6 +43,7 @@ class KernelOptModelTools(mk.kNdtool):
             force_start_params=1
 
         datagen_obj=dg.datagen(datagen_dict)
+        datagen_dict_expanded=datagen_obj.datagen_dict_expanded
         print(f'datagen_dict:{datagen_dict} for directory,{self.kc_savedirectory}')
         
         if force_start_params==0:

@@ -132,6 +132,7 @@ class KernelParams:
                 
                 
             species_variations=('species',self.specieslist)
+            
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',[10])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
