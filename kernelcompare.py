@@ -42,6 +42,8 @@ class KernelOptModelTools(mk.kNdtool):
             force_start_params=1
 
         datagen_obj=dg.datagen(datagen_dict)
+        naive_mse=self.do_naivemse(datagen_obj)
+        print('naive_mse:',naive_mse)
         datagen_dict_expanded=datagen_obj.datagen_dict_expanded
         optimizedict['datagen_dict']=datagen_dict_expanded
         print(f'datagen_dict_expanded:{datagen_dict_expanded} for directory,{self.kc_savedirectory}')
@@ -937,7 +939,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         #pull and replace first value from each variation
         for tup_i in variation_list:
             override_dict_ik=self.build_override_dict_from_str(tup_i[0],tup_i[1][0])
-            print('override_dict_ik',override_dict_ik)
+            #print('override_dict_ik',override_dict_ik)
             dict_ik=self.do_dict_override(dict_ik,override_dict_ik)
         dict_combo_list.append(dict_ik)#this is now the starting dictionary.
         remaining_variation_list=[(tup_i[0],tup_i[1][1:]) for tup_i in variation_list if len(tup_i[1])>1]

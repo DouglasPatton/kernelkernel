@@ -167,7 +167,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[0]])
+            species_variations=('species',[self.specieslist[2]])
             print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
