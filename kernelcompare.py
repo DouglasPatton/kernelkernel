@@ -915,8 +915,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         try:self.specieslist
         except:
             pdh12=dg.PiscesDataTool()
-            pdh12.buildspecieslist()
-            self.specieslist=pdh12.specieslist
+            self.specieslist=pdh12.returnspecieslist()
+            
         
         species_variations=('species',self.specieslist)
         #p#rint(f'before-datagen_variation_list:{datagen_variation_list}')

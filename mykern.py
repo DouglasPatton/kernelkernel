@@ -667,7 +667,7 @@ class kNdtool(Ndiff,MyKernHelper):
             try:
                 self.success
             except:
-                self.forcefail=999.999*10**299
+                self.forcefail=999.999*10**297
         if predict==None or predict=='no':
             predict=0
         if predict=='yes':

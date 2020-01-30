@@ -60,7 +60,7 @@ class KernelParams:
                 'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
-                'species':0,
+                'species':'all',
                 #'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
                 'missing':'drop_row', #drop the row(observation) if any data is missing
                 'floatselecttup':floatselecttup,
@@ -162,6 +162,8 @@ class KernelParams:
             except:
                 pdh12=PiscesDataTool()
                 self.specieslist=pdh12.returnspecieslist()
+            
+                
                 
                 
                 
