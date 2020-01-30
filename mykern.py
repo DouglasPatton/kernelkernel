@@ -805,7 +805,7 @@ class kNdtool(Ndiff,MyKernHelper):
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
-            if self.call_iter>10 and mse>self.mse_threshold:
+            if self.call_iter>2 and mse>self.mse_threshold:
                 self.forcefail=mse
         self.success=1
 
