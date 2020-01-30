@@ -721,7 +721,8 @@ class run_cluster(kernelcompare.KernelCompare):
             
 
     def update_node_job_status(self,myname,status=None,mydir=None):
-        self.update_my_namefile(myname,status)
+        self.update_my_namefile(myname,status=status)
+        
         if mydir==None:
             mydir=os.path.join(self.savedirectory,myname)
         my_job_file=os.path.join(mydir,myname+'_job')
