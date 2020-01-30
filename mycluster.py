@@ -355,6 +355,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
+                    print(f'job_time:{job_time},job_status:{job_status} for name:{name}'
                 except:
                     print(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
@@ -380,6 +381,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             #print('assignment_tracker', assignment_tracker)
                             i+=1
                         except:
+                            self.logger.exception('setup job for node failed')
                             run_dict_status[random_ready_dict_idx] = 'ready for node'
                             ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
 
