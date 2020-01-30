@@ -93,10 +93,14 @@ class KernelParams:
                                   [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
                                    .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
                                  )
+        Ndiff______startingvalue_variations=('hyper_param_dict:Ndiff_exponent',
+                          [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
+                           .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
+                         )
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['none'])
-        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval','mse'])
+        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval','mse','cross_mse'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])

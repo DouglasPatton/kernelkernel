@@ -322,6 +322,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 list_of_run_dicts=masterfile['list_of_run_dicts']
                 run_dict_status=masterfile['run_dict_status']
                 model_run_count=len(list_of_run_dicts)
+                
                 dorestart=0
             except:
                 dorestart=1
@@ -334,7 +335,7 @@ class run_cluster(kernelcompare.KernelCompare):
             print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node' for _ in range(model_run_count)]
-        
+        print('model_run_count',model_run_count)
 
         i=0
         while all([status=='finished' for status in run_dict_status])==False:
