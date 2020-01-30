@@ -93,9 +93,12 @@ class KernelParams:
                                   [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
                                    .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
                                  )
-        Ndiff______startingvalue_variations=('hyper_param_dict:Ndiff_exponent',
-                          [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
-                           .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',
+                          [np.array([.1]),np.array([.3]),np.array([.7]),np.array([.01])]
+                         )
+
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',
+                          [np.array([.1]),np.array([.3]),np.array([.7]),np.array([.01])]
                          )
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
@@ -121,13 +124,15 @@ class KernelParams:
             #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
             standardization_variations=('modeldict:std_data',[([0],'float'),([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2,9])
-            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])#add logistic when developed fully
+            ykern_grid_variations=('modeldict:ykern_grid',[2])
+            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             spatialtransform_variations=('modeldict:spatialtransform',[('divide',4),('ln1')])#
         
         optdict_variation_list = [hyper_param_form_dict_variations,
                                   Ndiff_exponentstartingvalue_variations,
+                                  Ndiff_outer_x_bw_startingvalue_variations,
+                                  Ndiff_outer_y_bw_startingvalue_variations,
                                   ykerngrid_form_variations,
                                   NWnorm_variations,
                                   loss_function_variations,
