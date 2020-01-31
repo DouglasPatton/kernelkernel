@@ -677,13 +677,17 @@ class kNdtool(Ndiff,MyKernHelper):
             return self.forcefail
         except:
             pass
-        if self.call_iter>0:
+        if self.iter>0:
             try:
                 self.success
+                if not type(self.success) is np.float64:
+                    self.forcefail=9.99999*10**295
+                    print(f'self.success:{self.success},type(self.success):{type(self.success)}')
                 if self.success>self.mse_threshold:
                     print(f'self.success:{self.success},self.mse_threshold:{self.mse_threshold}')
             except:
-                self.forcefail=999.999*10**297
+                self.forcefail=9.99999*10**297
+        self.iter+=1
         if predict==None or predict=='no':
             predict=0
         if predict=='yes':
@@ -821,7 +825,7 @@ class kNdtool(Ndiff,MyKernHelper):
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
-            if self.call_iter>1 and mse>self.mse_threshold:
+            if self.iter>1 and mse>self.mse_threshold:
                 self.forcefail=mse
                 print(f'forcefail(mse):{self.forcefail}')
         self.success=mse
@@ -1006,6 +1010,7 @@ class optimize_free_params(kNdtool):
     def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
         kNdtool.__init__(self,savedir=savedir,myname=myname)
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
+        self.iter=0
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
         self.save_interval=1
