@@ -43,7 +43,7 @@ class run_cluster(kernelcompare.KernelCompare):
             source='monte'
         self.source=source
         self.savedirectory=self.setdirectory(local_run=local_run)
-        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source)
+        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
         self.oldnode_threshold=datetime.timedelta(minutes=75,seconds=1)
@@ -607,7 +607,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.update_node_job_status(myname,status='starting',mydir=mydir)
         try:
             kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
-                my_optimizedict,my_datagen_dict,force_start_params=1)
+                my_optimizedict,my_datagen_dict,force_start_params=0)
             print('----------success!!!!!!-------')
             success=1
         except:
