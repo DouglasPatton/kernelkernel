@@ -145,9 +145,7 @@ class KernelParams:
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             spatialtransform_variations=('modeldict:spatialtransform',[('divide',4),('ln1')])#
         
-            optdict_variation_list = [hyper_param_form_dict_variations,
-                                      Ndiff_exponentstartingvalue_variations,
-                                      Ndiff_outer_x_bw_startingvalue_variations,
+            optdict_variation_list = [Ndiff_outer_x_bw_startingvalue_variations,
                                       Ndiff_outer_y_bw_startingvalue_variations,
                                       ykerngrid_form_variations,
                                       NWnorm_variations,
@@ -161,7 +159,7 @@ class KernelParams:
                                       Ndiff_start_variations,
                                       standardization_variations,
                                       spatialtransform_variations
-                                     ]
+                                     ]#hyper_param_form_dict_variations,
         return optdict_variation_list
 
     def getdatagenvariations(self,source='monte'):
