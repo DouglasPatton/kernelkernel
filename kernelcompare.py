@@ -20,7 +20,7 @@ class KernelOptModelTools(mk.kNdtool):
         mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         
         self.name=myname
-        
+        '''
         logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.kc_savedirectory,'log')
         #if not os.path.exists(logdir): 
@@ -31,6 +31,11 @@ class KernelOptModelTools(mk.kNdtool):
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
+        '''
+        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+            configfile=yaml.safe_load(f.read())
+        logging.config.dictConfig(configfile)
+        self.logger = logging.getLogger('kcLogger')
         
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):

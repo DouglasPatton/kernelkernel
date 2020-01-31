@@ -29,7 +29,7 @@ class kNdtool(Ndiff,MyKernHelper):
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
         
-       ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+        ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('myKernLogger')

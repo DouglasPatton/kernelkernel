@@ -187,9 +187,13 @@ class run_cluster(kernelcompare.KernelCompare):
                 with open(self.masterfilefilename,'rb') as themasterfile:
                     masterfile=pickle.load(themasterfile)
                 return masterfile
-            except(FileNotFoundError):
+            except FileNotFoundError:
                 self.logger.exception(f'error in {__name__}')
                 return False
+            except EOFError:
+                self.logger.exception('masterfile is corrupt')
+                masterfile={}
+                return masterfile
             except:
                 if i==9:
                     sleep(.5)
