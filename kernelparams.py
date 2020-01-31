@@ -265,16 +265,16 @@ class KernelParams:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.05,
-            'fatol':.01,
+            'xatol':0.5,
+            'fatol':.1,
             'adaptive':True
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
             'mse_threshold':1,
-            'help_start':1,
-            'partial_match':1
+            'help_start':0,
+            'partial_match':0
             }
         
         optimizedict1={
