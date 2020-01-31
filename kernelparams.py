@@ -120,6 +120,24 @@ class KernelParams:
             ykern_grid_variations=('modeldict:ykern_grid',[self.n+1,'no'])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
+            
+            optdict_variation_list = [hyper_param_form_dict_variations,
+                                      Ndiff_exponentstartingvalue_variations,
+                                      Ndiff_outer_x_bw_startingvalue_variations,
+                                      Ndiff_outer_y_bw_startingvalue_variations,
+                                      ykerngrid_form_variations,
+                                      NWnorm_variations,
+                                      loss_function_variations,
+                                      regression_model_variations, 
+                                      product_kern_norm_variations,
+                                      normalize_Ndiffwtsum_variations,
+                                      Ndiff_type_variations,
+                                      ykern_grid_variations,
+                                      max_bw_Ndiff_variations,
+                                      Ndiff_start_variations,
+                                      standardization_variations,
+                                     ]
+                                     
         if source=='pisces':
             #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
             standardization_variations=('modeldict:std_data',[([0],'float'),([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
@@ -129,23 +147,23 @@ class KernelParams:
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             spatialtransform_variations=('modeldict:spatialtransform',[('divide',4),('ln1')])#
         
-        optdict_variation_list = [hyper_param_form_dict_variations,
-                                  Ndiff_exponentstartingvalue_variations,
-                                  Ndiff_outer_x_bw_startingvalue_variations,
-                                  Ndiff_outer_y_bw_startingvalue_variations,
-                                  ykerngrid_form_variations,
-                                  NWnorm_variations,
-                                  loss_function_variations,
-                                  regression_model_variations, 
-                                  product_kern_norm_variations,
-                                  normalize_Ndiffwtsum_variations,
-                                  Ndiff_type_variations,
-                                  ykern_grid_variations,
-                                  max_bw_Ndiff_variations,
-                                  Ndiff_start_variations,
-                                  standardization_variations,
-                                  spatialtransform_variations
-                                 ]
+            optdict_variation_list = [hyper_param_form_dict_variations,
+                                      Ndiff_exponentstartingvalue_variations,
+                                      Ndiff_outer_x_bw_startingvalue_variations,
+                                      Ndiff_outer_y_bw_startingvalue_variations,
+                                      ykerngrid_form_variations,
+                                      NWnorm_variations,
+                                      loss_function_variations,
+                                      regression_model_variations, 
+                                      product_kern_norm_variations,
+                                      normalize_Ndiffwtsum_variations,
+                                      Ndiff_type_variations,
+                                      ykern_grid_variations,
+                                      max_bw_Ndiff_variations,
+                                      Ndiff_start_variations,
+                                      standardization_variations,
+                                      spatialtransform_variations
+                                     ]
         return optdict_variation_list
 
     def getdatagenvariations(self,source='monte'):

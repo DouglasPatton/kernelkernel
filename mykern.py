@@ -29,10 +29,23 @@ class kNdtool(Ndiff,MyKernHelper):
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
         
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+       ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('myKernLogger')
+        '''
+    
+        handlername=f'mykern-{self.name}.log'
+        print(f'handlername:{handlername}')
+        #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
+        if not self.name==None:
+            handler=logging.FileHandler(os.path.join(savedir,'..',handlername))
+        else:
+            handler=logging.FileHandler(os.path.join(savedir,handlername))
+        
+        #self.logger = logging.getLogger('mkLogger')
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
         
         Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
