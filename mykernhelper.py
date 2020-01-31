@@ -99,6 +99,7 @@ class MyKernHelper:
             #assuming the spatial variable is always the last one
             diffs[:,:,-1]=self.myspatialhucdiff(diffs[:,:,-1])
         if type(spatialtransform) is tuple:
+            diffs[:,:,-1]=np.abs(diffs[:,:,-1])
             if spatialtransform[0]=='divide':
                 diffs[:,:-1]=diffs[:,:-1]/spatialtransform[1]
             if spatialtransform[0]=='ln1':
