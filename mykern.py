@@ -685,6 +685,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     print(f'self.success:{self.success},type(self.success):{type(self.success)}')
                 if self.success>self.mse_threshold:
                     print(f'self.success:{self.success},self.mse_threshold:{self.mse_threshold}')
+                    self.forcefail=9.99999*10**296
             except:
                 self.forcefail=9.99999*10**297
         self.iter+=1

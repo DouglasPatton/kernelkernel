@@ -35,7 +35,7 @@ class mypool:
             p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
         else:
             p.nice(6)
-        seed(1)
+        #seed(1)
         #seed(datetime.now())
         self.local_run=local_run
         self.i=0

@@ -272,7 +272,7 @@ class KernelParams:
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
-            'mse_threshold':10**10,
+            'mse_threshold':1,
             'help_start':1,
             'partial_match':1
             }

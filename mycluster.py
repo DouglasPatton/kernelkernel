@@ -38,7 +38,7 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        #seed(1)
+        seed(1)
         if source==None:
             source='monte'
         self.source=source
