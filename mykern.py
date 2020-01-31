@@ -673,12 +673,15 @@ class kNdtool(Ndiff,MyKernHelper):
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         try:
             self.forcefail
+            print(f'returning self.forcefail:{self.forcefail}')
             return self.forcefail
         except:
             pass
         if self.call_iter>0:
             try:
                 self.success
+                if self.success>self.mse_threshold:
+                    print(f'self.success:{self.success},self.mse_threshold:{self.mse_threshold}')
             except:
                 self.forcefail=999.999*10**297
         if predict==None or predict=='no':
@@ -818,9 +821,10 @@ class kNdtool(Ndiff,MyKernHelper):
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
-            if self.call_iter>2 and mse>self.mse_threshold:
+            if self.call_iter>1 and mse>self.mse_threshold:
                 self.forcefail=mse
-        self.success=1
+                print(f'forcefail(mse):{self.forcefail}')
+        self.success=mse
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
