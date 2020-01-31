@@ -888,9 +888,9 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         if datagen_dict['source']=='pisces':
             speciesvarfound=0
             for datagenvar in datagen_variation_list:
-                if datagenvar[0]=='species'
-                speciesvarfound=1
-            if speciesvarfound=0 and datagen_dict['species']=='all':
+                if datagenvar[0]=='species':
+                    speciesvarfound=1
+            if speciesvarfound==0 and datagen_dict['species']=='all':
                 print('adding all species variations')
                 datagen_variation_list=self.addspeciesvariations(datagen_variation_list)
                 
