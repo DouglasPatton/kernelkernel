@@ -88,7 +88,7 @@ class KernelParams:
                 'y_bandscale':'fixed'
                 '''
         
-        hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
+        #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
                                   [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
                                    .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
@@ -121,9 +121,7 @@ class KernelParams:
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
             
-            optdict_variation_list = [hyper_param_form_dict_variations,
-                                      Ndiff_exponentstartingvalue_variations,
-                                      Ndiff_outer_x_bw_startingvalue_variations,
+            optdict_variation_list = [Ndiff_outer_x_bw_startingvalue_variations,
                                       Ndiff_outer_y_bw_startingvalue_variations,
                                       ykerngrid_form_variations,
                                       NWnorm_variations,
@@ -136,7 +134,7 @@ class KernelParams:
                                       max_bw_Ndiff_variations,
                                       Ndiff_start_variations,
                                       standardization_variations,
-                                     ]
+                                     ]#hyper_param_form_dict_variations,
                                      
         if source=='pisces':
             #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
