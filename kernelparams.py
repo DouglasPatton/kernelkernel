@@ -159,7 +159,8 @@ class KernelParams:
                                       Ndiff_start_variations,
                                       standardization_variations,
                                       spatialtransform_variations
-                                     ]#hyper_param_form_dict_variations,
+                                     ]
+            #hyper_param_form_dict_variations,
         return optdict_variation_list
 
     def getdatagenvariations(self,source='monte'):
