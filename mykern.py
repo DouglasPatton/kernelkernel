@@ -673,7 +673,7 @@ class kNdtool(Ndiff,MyKernHelper):
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         try:
             self.forcefail
-            print(f'returning self.forcefail:{self.forcefail}')
+            #print(f'returning self.forcefail:{self.forcefail}')
             return self.forcefail
         except:
             pass
