@@ -32,11 +32,12 @@ class KernelOptModelTools(mk.kNdtool):
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
         '''
+        '''
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('kcLogger')
-        
+        '''
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         optimizedict['datagen_dict']=datagen_dict
@@ -879,18 +880,26 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                     param_count=2
                     datagen_dict={'validate_batchcount':10,'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
             else:assert False,f'datagen_dict:{datagen_dict}'
+        
+        
+        
         if datagen_variation_list is None:
             datagen_variation_list=[{}]#will default to parameters in datagen_dict above
+        if datagen_dict['source']=='pisces':
+            speciesvarfound=0
+            for datagenvar in datagen_variation_list:
+                if datagenvar[0]=='species'
+                speciesvarfound=1
+            if speciesvarfound=0 and datagen_dict['species']=='all':
+                print('adding all species variations')
+                datagen_variation_list=self.addspeciesvariations(datagen_variation_list)
+                
         '''assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
         assert type(datagen_variation_list[0])==tuple,f'first item of datagen_variation_list type:{type(datagen_variation_list[0])} but expected a tuple'
                         
         assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
         assert type(optdict_variation_list[0])==tuple,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a tuple'
-        '''                 
-        if datagen_dict['source']=='pisces':
-            if datagen_dict['species']=='all':
-                print('adding all species variations')
-                datagen_variation_list=self.addspeciesvariations(datagen_variation_list)
+        '''
         
         
         model_run_dict_list=[]

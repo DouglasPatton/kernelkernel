@@ -51,19 +51,20 @@ class run_cluster(kernelcompare.KernelCompare):
         if myname is None:
             myname='node'
         
-        
+        '''
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('myClusterLogger')
+        '''
+        logging.basicConfig(level=logging.INFO)
         
-        '''logging.basicConfig(level=logging.INFO)
         logdir=os.path.join(self.savedirectory,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'mycluster_{myname}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)'''
+        self.logger.addHandler(handler)
 
         
         print(f'self.savedirectory{self.savedirectory}')
@@ -85,6 +86,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     
         
         if optdict_variation_list==None:
+            
             optdict_variation_list=self.getoptdictvariations(source=source)
         if datagen_variation_list==None:
             datagen_variation_list=self.getdatagenvariations(source=source)
@@ -117,7 +119,9 @@ class run_cluster(kernelcompare.KernelCompare):
         elif local_run==1:
             print('------------local_run:',local_run)
             savedirectory=os.path.join(os.getcwd(),'cluster_test')
-            if not os.path.exists(savedirectory):
+        else: 
+            assert False,f"local_run not understood. value:{local_run}"
+        if not os.path.exists(savedirectory):
                 for i in range(10):
                     if not os.path.exists(savedirectory):
                         try:
@@ -125,9 +129,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             break
                         except:
                             if i==9:
-                                self.logger.exception(f'error in {__name__}')
-        else: 
-            assert False,f"local_run not understood. value:{local_run}"
+                                self.logger.exception(f'error in {__name__} attempting mkdir({savedirectory})')
         return savedirectory
 
         
@@ -337,7 +339,7 @@ class run_cluster(kernelcompare.KernelCompare):
             assignment_tracker={}
             list_of_run_dicts=self.prep_model_list(
                 optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
-            list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
+            #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
             print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node' for _ in range(model_run_count)]
