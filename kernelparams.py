@@ -232,7 +232,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
-            'maxbatchbatchcount':1,
+            'maxbatchbatchcount':2,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
@@ -255,8 +255,8 @@ class KernelParams:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.5,
-            'fatol':.1,
+            'xatol':0.05,
+            'fatol':.01,
             'adaptive':True
             }
         optimizer_settings_dict1={
