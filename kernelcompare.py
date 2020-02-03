@@ -463,7 +463,10 @@ class KernelOptModelTools(mk.kNdtool):
 
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
         if not merge_directory==None:
-            assert os.path.exists(merge_directory),f"merge_directory does not exist:{merge_directory}"
+            if not os.path.exists(merge_directory):
+                print(f'could not find merge_directory:{merge_directory}')
+                self.logger.error(f'could not find merge_directory:{merge_directory}')
+                return
         else:
             merge_directory=self.kc_savedirectory
                 
