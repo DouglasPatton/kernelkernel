@@ -868,7 +868,12 @@ class kNdtool(Ndiff,MyKernHelper):
             self.Ndiff=1
         else:
             self.Ndiff=0
-        try: self.batchbatchcount=datagen_obj.batchbatchcount
+        try:
+            batchbatchcount1=datagen_obj.batchbatchcount
+            batchbatchcount2=modeldict['maxbatchbatchcount']
+            
+            
+            self.batchbatchcount=min([batchbatchcount1,batchbatchcount2])
             #self.batchbatch_stats(datagen_obj.yxtup_batchbatch) #moved to datagen.py
         except: self.batchbatchcount=1 
         
