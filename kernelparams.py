@@ -4,7 +4,7 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.n=96 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
         
 
     def test_build_opt_dict_override(self):
@@ -89,21 +89,14 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
-                                  [np.array([-1,1]),np.array([1,-1]),np.array([1,1]),
-                                   .5*np.array([-1,1]),.5*np.array([1,-1]),.5*np.array([1,1])]
-                                 )
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',
-                          [np.array([.1]),np.array([.3]),np.array([.7]),np.array([.01])]
-                         )
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1])])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7])])
 
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',
-                          [np.array([.1]),np.array([.3]),np.array([.7]),np.array([.01])]
-                         )
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['none'])
-        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval','mse','cross_mse'])
+        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -111,8 +104,8 @@ class KernelParams:
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self','own_n','none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none','across'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','across'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -138,12 +131,12 @@ class KernelParams:
                                      
         if source=='pisces':
             #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
-            standardization_variations=('modeldict:std_data',[([0],'float'),([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
+            standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2])
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('divide',4),('ln1')])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1')])#
         
             optdict_variation_list = [Ndiff_outer_x_bw_startingvalue_variations,
                                       Ndiff_outer_y_bw_startingvalue_variations,
@@ -239,7 +232,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
-            'maxbatchbatchcount':4,
+            'maxbatchbatchcount':1,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
