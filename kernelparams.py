@@ -89,7 +89,7 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1]),.7*np.array([-1,1]),.3*np.array([-1,1])]])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7])])
 
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3])])
@@ -105,7 +105,7 @@ class KernelParams:
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','across'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['self'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -196,7 +196,7 @@ class KernelParams:
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
-                'Ndiff_depth_bw':.1*np.ones([Ndiff_param_count,]),
+                'Ndiff_depth_bw':.3*np.ones([Ndiff_param_count,]),
                 'y_bandscale':1.0*np.ones([1,])
                     }
 
@@ -206,7 +206,7 @@ class KernelParams:
                 'x_bandscale':1*np.ones([p,]),#
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
-                'Ndiff_depth_bw':np.array([0.1]),
+                'Ndiff_depth_bw':np.array([0.3]),
                 'y_bandscale':1.0*np.ones([1,])
                 }
         return hyper_paramdict1
