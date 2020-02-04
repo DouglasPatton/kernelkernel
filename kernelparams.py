@@ -138,7 +138,8 @@ class KernelParams:
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             spatialtransform_variations=('modeldict:spatialtransform',[('ln1')])#
         
-            optdict_variation_list = [Ndiff_outer_x_bw_startingvalue_variations,
+            optdict_variation_list = [Ndiff_exponentstartingvalue_variations,
+                                      Ndiff_outer_x_bw_startingvalue_variations,
                                       Ndiff_outer_y_bw_startingvalue_variations,
                                       ykerngrid_form_variations,
                                       NWnorm_variations,
