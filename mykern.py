@@ -602,7 +602,9 @@ class kNdtool(Ndiff,MyKernHelper):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
         lossfn=modeldict['loss_function']
-        iscrossmse=lossfn[0:8]=='crossmse'
+        try:
+            iscrossmse=lossfn[0:8]=='crossmse'
+        except: iscrossmse=0
             
         yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         '''print('yout_axis(expected 0): ',yout_axis)
@@ -620,12 +622,15 @@ class kNdtool(Ndiff,MyKernHelper):
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
+        
         lssfn=modeldict['loss_function']
+        print('before',NWnorm,'lossfn:',lssfn)
         if NWnorm=='across-except:batchnorm':
             if lssfn=='batchnorm_crossval':
                 NWnorm='none'
             else:
                 NWnorm='across'
+        print('after',NWnorm,'lossfn:',lssfn)
         
                 
         if modeldict['regression_model']=='NW-rbf2':
