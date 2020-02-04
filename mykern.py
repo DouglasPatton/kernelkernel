@@ -621,7 +621,7 @@ class kNdtool(Ndiff,MyKernHelper):
         prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
         lssfn=modeldict['loss_function']
-        if NWnorm=='across-except:batchnorm'
+        if NWnorm=='across-except:batchnorm':
             if lssfn=='batchnorm_crossval':
                 NWnorm='none'
             else:

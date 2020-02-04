@@ -95,7 +95,7 @@ class KernelParams:
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
-        NWnorm_variations=('modeldict:NWnorm',['none'])
+        NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
         loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
