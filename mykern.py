@@ -752,7 +752,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 arglist.append(fixed_or_free_paramdict)
                 arglistlist.append(arglist)
 
-            self.process_count=1#self.cores
+            self.process_count=2#self.cores
             if self.process_count>1 and batchcount>1:
                 with multiprocessing.Pool(processes=self.process_count) as pool:
                     yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
