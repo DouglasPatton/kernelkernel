@@ -620,6 +620,13 @@ class kNdtool(Ndiff,MyKernHelper):
         prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
         prob_x_stack=self.ma_broadcast_to(np.ma.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
+        lssfn=modeldict['loss_function']
+        if NWnorm=='across-except:batchnorm'
+            if lssfn=='batchnorm_crossval':
+                NWnorm='none'
+            else:
+                NWnorm='across'
+        
                 
         if modeldict['regression_model']=='NW-rbf2':
             wt_stack=np.ma.power(np.ma.power(prob_yx,2)-np.ma.power(prob_x_stack,2),0.5)
