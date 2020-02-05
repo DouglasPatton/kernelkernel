@@ -51,7 +51,8 @@ class KernelParams:
                 'evar':1                
                                 }
         elif source=='pisces':
-            floatselecttup=(2,3,5,6)
+            #floatselecttup=(2,3,5,6)
+            floatselecttup=()
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
