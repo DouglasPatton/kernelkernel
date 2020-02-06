@@ -58,7 +58,7 @@ class KernelParams:
             datagen_dict={
                 'source':'pisces',
                 'batch_n':self.n,
-                'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'batchcount':16, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
                 'species':'all',
@@ -234,7 +234,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
-            'maxbatchbatchcount':2,
+            'maxbatchbatchcount':4,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
