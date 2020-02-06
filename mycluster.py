@@ -607,7 +607,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.update_node_job_status(myname,status='starting',mydir=mydir)
         try:
             kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
-                my_optimizedict,my_datagen_dict,force_start_params=1)
+                my_optimizedict,my_datagen_dict,force_start_params=0)
             print('----------success!!!!!!-------')
             success=1
         except:
