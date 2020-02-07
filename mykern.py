@@ -28,7 +28,7 @@ class kNdtool(Ndiff,MyKernHelper):
         self.savedir=savedir
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        self.batch_process_count=8#self.cores
+        self.batch_process_count=4#self.cores
         ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
