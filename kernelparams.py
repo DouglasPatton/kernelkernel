@@ -5,81 +5,11 @@ class KernelParams:
     
     def __init__(self,):
         self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        
-
-    def test_build_opt_dict_override(self):
-        
-        opt_dict_override={}
-        modeldict={}
-        hyper_param_form_dict={}
-        hyper_param_dict={}
-        opt_settings_dict={}
-        options={}
-
-        modeldict['Ndiff_type']='recursive'
-        modeldict['max_bw_Ndiff']=3
-        modeldict['Ndiff_start']=1
-        modeldict['ykern_grid']=51
-        #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
-        #hyper_param_dict['y_bandscale']=np.array([1])
-        #opt_dict_override['hyper_param_dict']=hyper_param_dict
-        opt_dict_override['modeldict']=modeldict
-
-        #options['mse_threshold']=32.0
-        options['fatol']=0.9
-        options['xatol']=.1
-        opt_settings_dict['options']=options
-        #opt_settings_dict['mse_threshold']=32.0
-        #opt_settings_dict['help_start']='no'
-        #opt_settings_dict['partial_match']='no'
-        opt_dict_override['opt_settings_dict']=opt_settings_dict
-        return opt_dict_override
-
-                               
-    def setdata(self, source):#creates the initial datagen_dict
-        
-        if source is None or source=='monte':
-            source='monte'
-            datagen_dict={
-                'source':'monte',
-                'validate_batchcount':10,
-                'batch_n':self.n,
-                'batchcount':10,  
-                'param_count':2,
-                'seed':1, 
-                'ftype':'linear', 
-                'evar':1                
-                                }
-        elif source=='pisces':
-            #floatselecttup=(2,3,5,6)
-            floatselecttup=()
-            spatialselecttup=(8,)
-            param_count=len(floatselecttup)+len(spatialselecttup)
-            datagen_dict={
-                'source':'pisces',
-                'batch_n':self.n,
-                'batchcount':16, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
-                'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
-                #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
-                'species':'all',
-                #'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
-                'missing':'drop_row', #drop the row(observation) if any data is missing
-                'floatselecttup':floatselecttup,
-                'spatialselecttup':spatialselecttup,
-                'param_count':param_count
-            }
-        else: 
-            assert False, f"error, source not recognized. source:{source}"
             
-        self.datagen_dict=datagen_dict
-        return datagen_dict
-
-
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
         
-        
-        
+               
         ''''hyper_param_form_dict':{
                 'Ndiff_exponent':'free',
                 'x_bandscale':'non-neg',
@@ -90,7 +20,7 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.5*np.array([-1,1]),.7*np.array([-1,1]),2*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.5*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7])])
 
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3])])
@@ -102,7 +32,7 @@ class KernelParams:
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
@@ -135,9 +65,9 @@ class KernelParams:
             standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2])
-            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2'])#add logistic when developed fully
+            regression_model_variations=('modeldict:regression_model',['NW-rbf2'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('ln1')])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',)])#
         
             optdict_variation_list = [Ndiff_exponentstartingvalue_variations,
                                       Ndiff_outer_x_bw_startingvalue_variations,
@@ -214,7 +144,46 @@ class KernelParams:
             
         
 
+    
+
+                               
+    def setdata(self, source):#creates the initial datagen_dict
         
+        if source is None or source=='monte':
+            source='monte'
+            datagen_dict={
+                'source':'monte',
+                'validate_batchcount':10,
+                'batch_n':self.n,
+                'batchcount':10,  
+                'param_count':2,
+                'seed':1, 
+                'ftype':'linear', 
+                'evar':1                
+                                }
+        elif source=='pisces':
+            #floatselecttup=(2,3,5,6)
+            floatselecttup=()
+            spatialselecttup=(8,)
+            param_count=len(floatselecttup)+len(spatialselecttup)
+            datagen_dict={
+                'source':'pisces',
+                'batch_n':self.n,
+                'batchcount':16, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
+                #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
+                'species':'all',
+                #'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
+                'missing':'drop_row', #drop the row(observation) if any data is missing
+                'floatselecttup':floatselecttup,
+                'spatialselecttup':spatialselecttup,
+                'param_count':param_count
+            }
+        else: 
+            assert False, f"error, source not recognized. source:{source}"
+            
+        self.datagen_dict=datagen_dict
+        return datagen_dict    
 
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
@@ -290,3 +259,32 @@ class KernelParams:
         #    print('------no start value overrides encountered------')
         #print(f'newoptimizedict1{newoptimizedict1}')
         return newoptimizedict1
+
+
+    def test_build_opt_dict_override(self):
+        
+        opt_dict_override={}
+        modeldict={}
+        hyper_param_form_dict={}
+        hyper_param_dict={}
+        opt_settings_dict={}
+        options={}
+
+        modeldict['Ndiff_type']='recursive'
+        modeldict['max_bw_Ndiff']=3
+        modeldict['Ndiff_start']=1
+        modeldict['ykern_grid']=51
+        #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
+        #hyper_param_dict['y_bandscale']=np.array([1])
+        #opt_dict_override['hyper_param_dict']=hyper_param_dict
+        opt_dict_override['modeldict']=modeldict
+
+        #options['mse_threshold']=32.0
+        options['fatol']=0.9
+        options['xatol']=.1
+        opt_settings_dict['options']=options
+        #opt_settings_dict['mse_threshold']=32.0
+        #opt_settings_dict['help_start']='no'
+        #opt_settings_dict['partial_match']='no'
+        opt_dict_override['opt_settings_dict']=opt_settings_dict
+        return opt_dict_override
