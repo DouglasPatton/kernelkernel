@@ -28,7 +28,7 @@ class kNdtool(Ndiff,MyKernHelper):
         self.savedir=savedir
         self.name=myname
         self.cores=int(psutil.cpu_count(logical=False)-1)
-        
+        self.batch_process_count=4#self.cores
         ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
@@ -752,9 +752,9 @@ class kNdtool(Ndiff,MyKernHelper):
                 arglist.append(fixed_or_free_paramdict)
                 arglistlist.append(arglist)
 
-            self.process_count=1#self.cores
-            if self.process_count>1 and batchcount>1:
-                with multiprocessing.Pool(processes=self.process_count) as pool:
+            
+            if self.batch_process_count>1 and batchcount>1:
+                with multiprocessing.Pool(processes=self.batch_process_count) as pool:
                     yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                     sleep(2)
                     pool.close()

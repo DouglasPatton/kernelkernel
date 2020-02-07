@@ -111,7 +111,7 @@ class KernelParams:
             print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[16])
+            batchcount_variations=('batchcount',[32])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -203,7 +203,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
-            'maxbatchbatchcount':4,
+            'maxbatchbatchcount':1,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
