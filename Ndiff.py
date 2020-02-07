@@ -106,7 +106,7 @@ class Ndiff:
                     dim_select_tup=tuple(select_dims)
                     this_depth_mask=this_depth_mask[dim_select_tup]
                     this_depth_data=this_depth_data[dim_select_tup]
-                this_depth_masked_data=np.ma.array(this_depth_data,mask=this_depth_mask)
+                this_depth_masked_data=np.ma.array(this_depth_data,mask=this_depth_mask,keep_mask=False)
 
                 if Ndiff_type=='product':
                     this_depth_bw=self.Ndiff_product(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize)
