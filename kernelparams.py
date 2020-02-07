@@ -20,7 +20,7 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.5*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.5*np.array([-1,1]),.5*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7])])
 
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3])])
@@ -31,12 +31,12 @@ class KernelParams:
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
-        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
+        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','across'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -107,7 +107,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[2,3,4,5,6,7,8,9,10]])
+            species_variations=('species',[self.specieslist[2:7]])
             print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
