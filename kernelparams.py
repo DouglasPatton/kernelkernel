@@ -67,7 +67,7 @@ class KernelParams:
             ykern_grid_variations=('modeldict:ykern_grid',[2])
             regression_model_variations=('modeldict:regression_model',['NW-rbf2'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',)])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),None])#
         
             optdict_variation_list = [Ndiff_exponentstartingvalue_variations,
                                       Ndiff_outer_x_bw_startingvalue_variations,
