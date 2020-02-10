@@ -65,7 +65,7 @@ class KernelParams:
             standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2])
-            regression_model_variations=('modeldict:regression_model',['NW-rbf2'])#add logistic when developed fully
+            regression_model_variations=('modeldict:regression_model',['NW-rbf2','NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),None])#
         
@@ -112,7 +112,7 @@ class KernelParams:
             print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[16])
+            batchcount_variations=('batchcount',[32])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -135,7 +135,7 @@ class KernelParams:
         if modeldict['Ndiff_type']=='recursive':
             hyper_paramdict1={
                 'Ndiff_exponent':0.001*np.ones([Ndiff_param_count,]),
-                'x_bandscale':1*np.ones([p,]),#
+                'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
                 'Ndiff_depth_bw':np.array([0.3]),
