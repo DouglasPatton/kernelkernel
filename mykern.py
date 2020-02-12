@@ -275,6 +275,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if not binary_threshold is None:
             binary_yhat=np.zeros(yhat_un_std.shape)
             binary_yhat[yhat_un_std>binary_threshold]=1
+            binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so mse_threshold throws them out
             yhat_un_std=binary_yhat
             
         return yhat_un_std,cross_errors
