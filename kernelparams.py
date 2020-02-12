@@ -90,13 +90,13 @@ class KernelParams:
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1]),.7*np.array([-1,1]),.3*np.array([-1,1]),1.5*np.array([-1,1]),2*np.array([-1,1])])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])]])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])])
 
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3]),np.array([.7])]])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3]),np.array([.7])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
-        binary_y_variations=('modeldict:binary_y':[None,0.5])
+        binary_y_variations=('modeldict:binary_y',[None,0.5])
         loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
@@ -178,7 +178,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[2,3,4,5,6]])
+            species_variations=('species',[self.specieslist[2:6]])
             print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
@@ -225,7 +225,7 @@ class KernelParams:
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
-            'binary_y':None # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
+            'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
             'std_data':'all',
             'loss_function':'mse',
             'Ndiff_type':'product',

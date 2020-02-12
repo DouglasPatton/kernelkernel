@@ -63,8 +63,6 @@ class kNdtool(Ndiff,MyKernHelper):
         columns of x.
         """
 
-        """"""
-            
         try:
             lossfn=modeldict['loss_function']
         except KeyError:
