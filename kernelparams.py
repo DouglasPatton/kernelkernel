@@ -51,13 +51,13 @@ class KernelParams:
                 'evar':1                
                                 }
         elif source=='pisces':
-            floatselecttup=(2,3,5,6)
+            floatselecttup=() # (2,3,5,6)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
                 'source':'pisces',
                 'batch_n':self.n,
-                'batchcount':10, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'batchcount':8, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
                 'species':'all',
@@ -89,14 +89,15 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1]),.7*np.array([-1,1]),.3*np.array([-1,1])])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1]),.7*np.array([-1,1]),.3*np.array([-1,1]),1.5*np.array([-1,1]),2*np.array([-1,1])])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])]])
 
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3])])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3]),np.array([.7])]])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
-        loss_function_variations=('modeldict:loss_function',['batch_crossval','batchnorm_crossval'])
+        binary_y_variations=('modeldict:binary_y':[None,0.5])
+        loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -105,7 +106,7 @@ class KernelParams:
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -114,7 +115,8 @@ class KernelParams:
             regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2','NW-rbf'])
             
             
-            optdict_variation_list = [Ndiff_outer_x_bw_startingvalue_variations,
+            optdict_variation_list = [binary_y_variations,
+                                      Ndiff_outer_x_bw_startingvalue_variations,
                                       Ndiff_outer_y_bw_startingvalue_variations,
                                       ykerngrid_form_variations,
                                       NWnorm_variations,
@@ -131,12 +133,12 @@ class KernelParams:
                                      
         if source=='pisces':
             #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
-            standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
+            standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2])
-            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf2'])#add logistic when developed fully
+            ykern_grid_variations=('modeldict:ykern_grid',[2,5])
+            regression_model_variations=('modeldict:regression_model',['NW','NW-rbf','NW-rbf2'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('ln1')])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1','none')])#
         
             optdict_variation_list = [Ndiff_exponentstartingvalue_variations,
                                       Ndiff_outer_x_bw_startingvalue_variations,
@@ -176,11 +178,11 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[2]])
+            species_variations=('species',[self.specieslist[2,3,4,5,6]])
             print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[10])
+            batchcount_variations=('batchcount',[8])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -223,6 +225,7 @@ class KernelParams:
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
+            'binary_y':None # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
             'std_data':'all',
             'loss_function':'mse',
             'Ndiff_type':'product',
@@ -233,7 +236,7 @@ class KernelParams:
             'NWnorm':'across',
             'xkern_grid':'no',
             'ykern_grid':33,
-            'maxbatchbatchcount':2,
+            'maxbatchbatchcount':1,
             'outer_kern':'gaussian',
             'Ndiff_bw_kern':'rbfkern',
             'outer_x_bw_form':'one_for_all',
