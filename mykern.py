@@ -273,7 +273,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         binary_threshold=modeldict['binary_y']
         if not binary_threshold is None:
-            binary_yhat=np.zeros(yhat.shape)
+            binary_yhat=np.zeros(yhat_un_std.shape)
             binary_yhat[yhat_un_std>binary_threshold]=1
             yhat_un_std=binary_yhat
             
