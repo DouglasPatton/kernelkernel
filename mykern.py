@@ -333,13 +333,13 @@ class kNdtool(Ndiff,MyKernHelper):
         NWnorm=modeldict['NWnorm']
         
         lssfn=modeldict['loss_function']
-        print('before',NWnorm,'lossfn:',lssfn)
+        # print('before',NWnorm,'lossfn:',lssfn)
         if NWnorm=='across-except:batchnorm':
             if lssfn=='batchnorm_crossval':
                 NWnorm='none'
             else:
                 NWnorm='across'
-        print('after',NWnorm,'lossfn:',lssfn)
+        # print('after',NWnorm,'lossfn:',lssfn)
         
                 
         if modeldict['regression_model']=='NW-rbf2':
