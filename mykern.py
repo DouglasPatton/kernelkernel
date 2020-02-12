@@ -27,8 +27,9 @@ class kNdtool(Ndiff,MyKernHelper):
         if savedir==None: savedir=os.getcwd()
         self.savedir=savedir
         self.name=myname
-        # self.cores=int(psutil.cpu_count(logical=False)-1)
-        
+
+        self.cores=int(psutil.cpu_count(logical=False)-1)
+        self.batch_process_count=1#self.cores
         ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
         logging.config.dictConfig(configfile)
@@ -50,8 +51,8 @@ class kNdtool(Ndiff,MyKernHelper):
         Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
         
+
         
-    
     def BWmaker(self, fixed_or_free_paramdict, diffdict, modeldict,xory):
         if self.Ndiff:
             return self.NdiffBWmaker(modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
@@ -464,9 +465,9 @@ class kNdtool(Ndiff,MyKernHelper):
                 arglist.append(fixed_or_free_paramdict)
                 arglistlist.append(arglist)
 
-            self.process_count=2#self.cores
-            if self.process_count>1 and batchcount>1:
-                with multiprocessing.Pool(processes=self.process_count) as pool:
+            
+            if self.batch_process_count>1 and batchcount>1:
+                with multiprocessing.Pool(processes=self.batch_process_count) as pool:
                     yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                     sleep(2)
                     pool.close()
@@ -755,6 +756,7 @@ class optimize_free_params(kNdtool):
         opt_method_options=opt_settings_dict['options']
         self.mse_threshold=opt_settings_dict['mse_threshold']
         
+        
         #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
         
@@ -770,13 +772,20 @@ class optimize_free_params(kNdtool):
             
         
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
-        self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-        
-        lastmse=self.mse_param_list[-1][0]
-        lastparamdict=self.mse_param_list[-1][1]
+
+        starting_mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
+        if not starting_mse>self.mse_threshold:
+            self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+            lastmse=self.mse_param_list[-1][0]
+            lastparamdict=self.mse_param_list[-1][1]
+            self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
+        else:
+            self.logger.info(f'starting_mse: {starting_mse} > mse_threshold: {self.mse_threshold}')
+            lastmse=starting_mse
+            lastparamdict=self.fixed_or_free_paramdict
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')
         #self.sort_then_saveit(self.mse_param_list[-self.save_interval*3:],modeldict,'final_model_save')
-        self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
+        
         self.logger.info(f'after final save, lastparamdict:{lastparamdict}')
         
 

@@ -56,7 +56,8 @@ class KernelOptModelTools(mk.kNdtool):
         
         if force_start_params==0:
             optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
-        
+            
+            
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
         mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory,myname=self.name)
@@ -730,7 +731,7 @@ class KernelOptModelTools(mk.kNdtool):
         new_dict_list=[]
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         string_list=[('modeldict','ykern_grid'),('modeldict','maxbatchbatchcount'),('datagen_dict','batchbatchcount'),('datagen_dict','batchcount'),('datagen_dict','seed'),('datagen_dict','batch_n'),
-                     ('modeldict','species_n'),('modeldict','species'),('modeldict','ykern_grid'),
+                     ('modeldict','species_n'),('modeldict','spatialtransform'),('modeldict','species'),('modeldict','ykern_grid'),
                      ('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),
                      ('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form'),('modeldict','logic_date')]
         for string_tup in string_list:
