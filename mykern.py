@@ -203,44 +203,67 @@ class kNdtool(Ndiff,MyKernHelper):
         else:
             #p#rint('len(KDEregtup)',len(KDEregtup))
             yout,wt_stack,cross_errors=KDEregtup
-        nin=self.nin; ybatch=[];wtbatch=[];youtbatch=[]
-        
+        nin=self.nin;
+        #ybatch=[]
+        wtbatch=[]
+        youtbatch=[]
+        trueybatch
         for i in range(batchcount):
             #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
             #ybatchlist=[]
             wtbatchlist=[]
             youtbatchlist=[]
-            
+            trueybatchlist=[]
             for j in range(batchcount):
                 if j>i:
                     istart=(i)*nin
                     iend=istart+nin
-                    #ybatchlist.append(yout_stack[j][:,istart:iend])
-                    wt_i_from_batch_j=wt_stack[j][:,istart:iend]
-                    yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
-                    #p#rint(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
-                    wtbatchlist.append(wt_i_from_batch_j)
-                    youtbatchlist.append(yout_batchj)
                 elif j<i:
                     istart=(i-1)*nin
                     iend=istart+nin
-                    #ybatchlist.append(yout_stack[j][:,istart:iend])
+                if j!=i:
+                    all_y_fori_fromj=all_y[istart:iend]
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
                     yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
-                    #p#rint(f'i:{i},j:{j},wt_i_from_batch_j.shape:{wt_i_from_batch_j.shape},istart:{istart},iend:{iend}')
                     wtbatchlist.append(wt_i_from_batch_j)
                     youtbatchlist.append(yout_batchj)
-                else:
-                    pass
+                    trueybatchlist.append(all_y_fori_fromj)
+                
             dimcount=np.ndim(wtbatchlist[0])
+            trueybatch.append(np.ma.concatenate([trueybatchj[None,:,:] for trueybatchj in trueybatchlist],axis=0))
+            wtbatch.append(np.ma.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
+            #   of each of i's y.# 2/20a: concat switch from axis0 to -1
+            youtbatch.append(np.ma.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
+            #   leaving rhs dim as nin*(batchcoun-1)=npr
+
+            #summary:
+            #   for 2/20b: each i has batch_n values that batch_i doesn't predict, but each of the other batches does
+            #   so for each i we will get the batch_n true values of y and compre those to the weighted
+            #   average of youts from batch_j*(batchcount-1) other batches (i.e., i!=j)
+            #   so for a stack, dims are batchcount-1,yout,nin.  for each batchi, nin is
+            #       effectively npr, but only after we rearrange the data for crossval.
+            
+        
+        wtstack=np.ma.concatenate(wtbatch[:,:,:,None],axis=-1)#adding new rhs axis for stacking batches(i)
+        youtstack=np.ma.concatenate(youtbatch[:,:,:,None],axis=-1)
+        trueystack=np.ma.concatenate(trueybatch[:,:,:,None],axis=-1)
+        wtstacksum=np.ma.sum(wtstack,axis=0)#summed over batchj axis for each batchi
+        wtstacksumsum=np.ma.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
+        wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
+        yhat_raw=np.ma.sum(np.ma.sum(wtstacknorm*youtstack,axis=0),axis=0).flatten(order='F')
+        print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount)')
+
+        # on 2/20, something wrong with logic in the 2 blocks below,maybe above the previous 2 replacement blocks too
+        
+        """dimcount=np.ndim(wtbatchlist[0])
             #ybatchlist=[np.ma.expand_dims(yi,axis=dimcount) for yi in ybatchlist]
             wtbatchlist=[np.ma.expand_dims(wt,axis=0) for wt in wtbatchlist]
-            youtbatchlist=[np.ma.expand_dims(youtj,axis=0) for youtj in wtbatchlist]
+            youtbatchlist=[np.ma.expand_dims(youtj,axis=0) for youtj in youtbatchlist]
             #ybatchshape=[y.shape for y in ybatchlist]
-            wtbatchshape=[wt.shape for wt in wtbatchlist]
+            #wtbatchshape=[wt.shape for wt in wtbatchlist]
             #p#rint('wtbatchshape',wtbatchshape)
             #ybatch.append(np.ma.concatenate(ybatchlist,axis=-2))#concatenating on the yout axis for each npr
-            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0))
+            wtbatch.append(np.ma.concatenate(wtbatchlist,axis=0)) # 2/20: appending an array that is (batchcount-1,ykerngrid,self.nin)
             youtbatch.append(np.ma.concatenate(youtbatchlist,axis=0))
                                                      
                                                      
@@ -249,7 +272,7 @@ class kNdtool(Ndiff,MyKernHelper):
         wtstacksum=np.ma.sum(wtstack,axis=0)#summed over the new,batch axis
         wtstacksumsum=np.ma.sum(wtstacksum,axis=0)#summed over the yout axis
         wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
-        yhat_raw=np.ma.sum(wtstacknorm*youtstack,axis=0)
+        yhat_raw=np.ma.sum(wtstacknorm*youtstack,axis=0)"""
         
                 
         y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
