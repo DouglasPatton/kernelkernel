@@ -14,26 +14,30 @@ class PickleToJson:
         print(startdir)
         print(savedir)
         #print(*os.walk(startdir))
-        dirpath,dirnames,filenames=zip(*os.walk(startdir))
+    def makejson(self)
+    dirpath,dirnames,_filenames=zip(*os.walk(startdir))
         
         
         if not os.path.exists(savedir):os.mkdir(savedir)
         #print('dirnames',dirnames[0])   
-        #print('filenames',filenames[0])
+        #print('_filenames',_filenames[0])
         #print('dirpath',dirpath[0])
        
         
-        for filename in filenames[0]:
-            if filename[0]!='.':
-                path=os.path.join(dirpath[0],filename)
-                savepath=os.path.join(savedir,filename+'.json')
-                if filename[-4:]!='.npy':
+        for _filename in _filenames[0]:
+            #if _filename[0]!='.':
+            if _filename=='model_save':
+                path=os.path.join(dirpath[0],_filename)
+                savepath=os.path.join(savedir,_filename+'.json')
+                if _filename[-4:]!='.npy':
                     try:
                         with open(path,'rb') as f:
-                            filedata=pickle.load(f)
+                            the_data=pickle.load(f)
+                        print('here')
+                        print(the_data)
                         try:
                             with open(savepath,'w') as f:
-                                json.dump(filedata,f)
+                                json.dump(the_data,f)
                         except:
                             print(f"JSON couldn't dump {path}")
                             print(traceback.format_exc())
@@ -41,7 +45,7 @@ class PickleToJson:
                     except:
                         print(f"PICKLE couldn't load {path}")
                         pass
-                if filename[-4:]=='.npy':
+                if _filename[-4:]=='.npy':
                     try:
                         data_array=np.load(path)
                         datalist=data_array.tolist()
@@ -56,7 +60,7 @@ class PickleToJson:
                         print(f"numpy couldn't load {path}")
                         pass
 
-        for directory in dirnames[0]:  # depth first traversal of filetree....
+        '''for directory in dirnames[0]:  # depth first traversal of filetree....
             if directory[0]!='.':
                 #print(directory)
                 nextsavedir=os.path.join(savedir,directory)
@@ -64,7 +68,8 @@ class PickleToJson:
                     os.mkdir(nextsavedir)
                 
                 nextstartdir=os.path.join(startdir,directory)
-                PickleToJson(startdir=nextstartdir,savedir=nextsavedir)
+                PickleToJson(startdir=nextstartdir,savedir=nextsavedir)'''
+        
 
 def main(startdir=None,savedir=None):
     PickleToJson()
