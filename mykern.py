@@ -282,20 +282,20 @@ class kNdtool(Ndiff,MyKernHelper):
             self.binary_y_mse_list=[]
             for threshold in binary_threshold:
                 if type(threshold) is str:
-                    if threshold='avgavg':
+                    if threshold=='avgavg':
                         avg_phat_0=np.ma.mean(yhat_un_std[all_y==0])
                         avg_phat_1=np.ma.mean(yhat_un_std[all_y==1])
                         threshold=(avg_phat_0+avg_phat_1)/2
-                    if threshold='avgmedian':
+                    if threshold=='avgmedian':
                         median_phat_0=np.ma.median(yhat_un_std[all_y==0])
-                        median_phat_1=np.ma.median[all_y==1])
+                        median_phat_1=np.ma.median(yhat_un_std[all_y==1])
                         threshold=(median_phat_0+median_phat_1)/2
                     
                     
                 binary_yhat=np.zeros(yhat_un_std.shape)
                 binary_yhat[yhat_un_std>threshold]=1
                 threshmse=(np.ma.mean(np.ma.power(all_y-binary_yhat,2)))
-                self.binary_y_mse_list.append((threshold,threshmse)
+                self.binary_y_mse_list.append((threshold,threshmse))
             
             
         return yhat_un_std,cross_errors

@@ -41,7 +41,7 @@ class KernelParams:
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none']
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
