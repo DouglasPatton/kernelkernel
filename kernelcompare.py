@@ -417,7 +417,13 @@ class KernelOptModelTools(mk.kNdtool):
         if len(model_save_list)==0:
             self.logger.info(f'no models in model_save_list for printing')
             return
-        model_save_list.sort(key=lambda savedicti: savedicti['mse'])  #sorts by mse
+        try:
+            model_save_list.sort(key=lambda savedicti: savedicti['mse']/savedicti['naivemse'])
+            
+        except:
+            print(traceback.format_exc())
+            model_save_list.sort(key=lambda savedicti: savedicti['mse'])
+              #sorts by mse
 
         output_loc=os.path.join(directory,'output')
         if not os.path.exists(output_loc):

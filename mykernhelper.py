@@ -275,14 +275,16 @@ class MyKernHelper:
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
+        try:
+            self.binary_y_mse_list
+            modeldict['binary_y']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
+        except:
+            pass
         savedict['modeldict']=modeldict
         now=strftime("%Y%m%d-%H%M%S")
         savedict['when_saved']=now
         savedict['datagen_dict']=self.datagen_dict
-        try:
-            savedict['threshold,mse']=self.binary_y_mse_list
-        except:
-            pass
+        
         try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
         except:
