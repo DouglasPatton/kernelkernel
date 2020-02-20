@@ -30,7 +30,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if not os.path.exists(logdir):os.mkdir(logdir)
         else:
             logdir=os.path.join(savedir,'..','log') #assuming this steps out of the nodedir 1 step
-            it not os.path.exists(logdir):os.mkdir(logdir)
+            if not os.path.exists(logdir):os.mkdir(logdir)
         self.name=myname
 
         self.cores=int(psutil.cpu_count(logical=False)-1)
@@ -212,13 +212,13 @@ class kNdtool(Ndiff,MyKernHelper):
         #ybatch=[]
         wtbatch=[]
         youtbatch=[]
-        trueybatch=[]
+        #trueybatch=[]
         for i in range(batchcount):
             #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
             #ybatchlist=[]
             wtbatchlist=[]
             youtbatchlist=[]
-            trueybatchlist=[]
+            #trueybatchlist=[]
             for j in range(batchcount):
                 if j>i:
                     istart=(i)*nin
@@ -232,10 +232,10 @@ class kNdtool(Ndiff,MyKernHelper):
                     yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
                     wtbatchlist.append(wt_i_from_batch_j)
                     youtbatchlist.append(yout_batchj)
-                    trueybatchlist.append(all_y_fori_fromj)
+                    #trueybatchlist.append(all_y_fori_fromj)
                 
             dimcount=np.ndim(wtbatchlist[0])
-            trueybatch.append(np.ma.concatenate([trueybatchj[None,:,:] for trueybatchj in trueybatchlist],axis=0))
+            #trueybatch.append(np.ma.concatenate([trueybatchj[None,:] for trueybatchj in trueybatchlist],axis=0))
             wtbatch.append(np.ma.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
             #   of each of i's y.# 2/20a: concat switch from axis0 to -1
             youtbatch.append(np.ma.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
@@ -251,12 +251,13 @@ class kNdtool(Ndiff,MyKernHelper):
         
         wtstack=np.ma.concatenate(wtbatch[:,:,:,None],axis=-1)#adding new rhs axis for stacking batches(i)
         youtstack=np.ma.concatenate(youtbatch[:,:,:,None],axis=-1)
-        trueystack=np.ma.concatenate(trueybatch[:,:,:,None],axis=-1)
+        #trueystack=np.ma.concatenate(trueybatch[:,:,None],axis=-1)
         wtstacksum=np.ma.sum(wtstack,axis=0)#summed over batchj axis for each batchi
         wtstacksumsum=np.ma.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
         wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
-        yhat_raw=np.ma.sum(np.ma.sum(wtstacknorm*youtstack,axis=0),axis=0).flatten(order='F')
-        print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount)')
+        yhat_raw=np.ma.sum(np.ma.sum(wtstacknorm*youtstack,axis=0),axis=0)
+        print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
+        yhat_raw=yhat_raw.flatten(order='F')
 
         # on 2/20, something wrong with logic in the 2 blocks below,maybe above the previous 2 replacement blocks too
         
