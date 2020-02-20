@@ -235,7 +235,7 @@ class KernelParams:
             'xatol':0.05,
             'fatol':.01,
             'adaptive':True,
-            'maxiter':50
+            'maxiter':10
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
