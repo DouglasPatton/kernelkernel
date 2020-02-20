@@ -4,7 +4,7 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
             
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
@@ -20,7 +20,7 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1]),.7*np.array([-1,1]),.3*np.array([-1,1]),1.5*np.array([-1,1]),2*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[.5*np.array([-1,1]),1.8*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])])
 
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.3]),np.array([.7])])
@@ -28,7 +28,7 @@ class KernelParams:
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
         #binary_y_variations=('modeldict:binary_y',[0.5])
-        binary_y_variations=('modeldict:binary_y',[(.5, 'avgavg', 'avgmedian')]) # if binary_y is a tuple,
+        binary_y_variations=('modeldict:binary_y',[(.5, .25, .125, 'avgavg', 'avgmedian')]) # if binary_y is a tuple,
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
@@ -166,7 +166,8 @@ class KernelParams:
                                 }
         elif source=='pisces':
             #floatselecttup=(2,3,5,6)
-            floatselecttup=()
+            #floatselecttup=()
+            floatselecttup=(3,5)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
@@ -265,31 +266,3 @@ class KernelParams:
         #print(f'newoptimizedict1{newoptimizedict1}')
         return newoptimizedict1
 
-
-    def test_build_opt_dict_override(self):
-        
-        opt_dict_override={}
-        modeldict={}
-        hyper_param_form_dict={}
-        hyper_param_dict={}
-        opt_settings_dict={}
-        options={}
-
-        modeldict['Ndiff_type']='recursive'
-        modeldict['max_bw_Ndiff']=3
-        modeldict['Ndiff_start']=1
-        modeldict['ykern_grid']=51
-        #modeldict['hyper_param_form_dict']={'y_bandscale':'fixed'}
-        #hyper_param_dict['y_bandscale']=np.array([1])
-        #opt_dict_override['hyper_param_dict']=hyper_param_dict
-        opt_dict_override['modeldict']=modeldict
-
-        #options['mse_threshold']=32.0
-        options['fatol']=0.9
-        options['xatol']=.1
-        opt_settings_dict['options']=options
-        #opt_settings_dict['mse_threshold']=32.0
-        #opt_settings_dict['help_start']='no'
-        #opt_settings_dict['partial_match']='no'
-        opt_dict_override['opt_settings_dict']=opt_settings_dict
-        return opt_dict_override
