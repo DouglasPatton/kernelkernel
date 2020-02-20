@@ -277,6 +277,10 @@ class MyKernHelper:
         now=strftime("%Y%m%d-%H%M%S")
         savedict['when_saved']=now
         savedict['datagen_dict']=self.datagen_dict
+        try:
+            savedict['threshold,mse']=self.binary_y_mse_list
+        except:
+            pass
         try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
         except:

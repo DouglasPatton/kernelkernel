@@ -195,7 +195,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         return (yhat_un_std,cross_errors)
         
-    def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict,modeldict):
+    def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
         batchcount=self.batchcount
         if batchcount>1:
             yout,wt_stack,cross_errors=zip(*KDEregtup)
@@ -249,7 +249,7 @@ class kNdtool(Ndiff,MyKernHelper):
         wtstacksum=np.ma.sum(wtstack,axis=0)#summed over the new,batch axis
         wtstacksumsum=np.ma.sum(wtstacksum,axis=0)#summed over the yout axis
         wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
-        yhat_raw=np.ma.sum(wtstacknorm*youtstack,axis=0)#the npr axis is on rhs, so must be expanded manually. summation of yout axis, the lhs one at this point
+        yhat_raw=np.ma.sum(wtstacknorm*youtstack,axis=0)
         
                 
         y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
@@ -270,13 +270,33 @@ class kNdtool(Ndiff,MyKernHelper):
         
         
         yhat_un_std=yhat_std*self.ystd+self.ymean
-        
+
+                
         binary_threshold=modeldict['binary_y']
-        if not binary_threshold is None:
+        if type(binary_threshold) is float:
             binary_yhat=np.zeros(yhat_un_std.shape)
             binary_yhat[yhat_un_std>binary_threshold]=1
             binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so mse_threshold throws them out
             yhat_un_std=binary_yhat
+        if type(binary_threshold) is tuple:
+            self.binary_y_mse_list=[]
+            for threshold in binary_threshold:
+                if type(threshold) is str:
+                    if threshold='avgavg':
+                        avg_phat_0=np.ma.mean(yhat_un_std[all_y==0])
+                        avg_phat_1=np.ma.mean(yhat_un_std[all_y==1])
+                        threshold=(avg_phat_0+avg_phat_1)/2
+                    if threshold='avgmedian':
+                        median_phat_0=np.ma.median(yhat_un_std[all_y==0])
+                        median_phat_1=np.ma.median[all_y==1])
+                        threshold=(median_phat_0+median_phat_1)/2
+                    
+                    
+                binary_yhat=np.zeros(yhat_un_std.shape)
+                binary_yhat[yhat_un_std>threshold]=1
+                threshmse=(np.ma.mean(np.ma.power(all_y-binary_yhat,2)))
+                self.binary_y_mse_list.append((threshold,threshmse)
+            
             
         return yhat_un_std,cross_errors
     
@@ -481,7 +501,9 @@ class kNdtool(Ndiff,MyKernHelper):
                     yhat_unstd_outtup_list.append(result_tup)
             #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
             if modeldict['loss_function']=='batchnorm_crossval':
-                yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list, fixed_or_free_paramdict, modeldict)
+                all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
+                all_y=np.concatenate(all_y_list,axis=0)
+                yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list, fixed_or_free_paramdict, modeldict, all_y)
 
             else:
                 if batchcount>1:
@@ -503,8 +525,7 @@ class kNdtool(Ndiff,MyKernHelper):
                             ycross_j.append(yxvartup[0])
                     ybatch.append(np.concatenate(ycross_j,axis=0))
             elif modeldict['loss_function']=='batchnorm_crossval':
-                all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
-                all_y=np.concatenate(all_y_list,axis=0)
+                # calculation of all_y moved up
                 all_y_err=all_y-yhat_unstd    
                 if type(cross_errors[0]) is np.ndarray:
                     cross_errors=np.concatenate(cross_errors,axis=0)

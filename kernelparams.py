@@ -28,7 +28,9 @@ class KernelParams:
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
         #binary_y_variations=('modeldict:binary_y',[0.5])
-        binary_y_variations=('modeldict:binary_y',None)
+        binary_y_variations=('modeldict:binary_y',[(.5, 'avgavg', 'avgmedian')]) # if binary_y is a tuple,
+        #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
+        #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
