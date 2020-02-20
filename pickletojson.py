@@ -9,17 +9,17 @@ class PickleToJson:
         if savedir is None:
             print('starting')
             savedir=os.path.join(os.getcwd(),'json')
-        if stardir is None:
-            stardir=os.getcwd()
-        dirpath,dirnames,filenames=os.walk(stardir)
+        if startdir is None:
+            startdir=os.getcwd()
+        _dirpath,_dirnames,_filenames=os.walk(startdir)
         
         
         if not os.path.exists(savedir):os.mkdir(savedir)
            
-        for directory in enumerate(dirnames)
+        for directory in enumerate(dirnames): # depth first traversal of filetree....
             nextsavedir=os.path.join(savedir,directory)
             nextstartdir=os.path.join(startdir,directory)
-            PickleToJson(stardir=nextstartdir,savedir=nextsavedir)
+            PickleToJson(startdir=nextstartdir,savedir=nextsavedir)
         
         for filename in filenames:
             path=os.path.join(dirpath,filename)
@@ -50,8 +50,12 @@ class PickleToJson:
         
         
            
-def main():
+def main(startdir=None,savedir=None):
     PickleToJson()
     
 if __name__=="__main__":
-    main()
+    thispath=os.path.realpath(__file__)
+    gitsdir=r'C:\Users\DPatton\gits'.split('\\')
+    lastdir=thispath.split('\\')[-1]
+    savedir=os.path.join(*gitsdir,'lastdir')
+    main(startdir=thispath,savedir=gitsdir)
