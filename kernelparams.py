@@ -27,7 +27,8 @@ class KernelParams:
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
-        binary_y_variations=('modeldict:binary_y',[0.5])
+        #binary_y_variations=('modeldict:binary_y',[0.5])
+        binary_y_variations=('modeldict:binary_y',None)
         loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
@@ -37,7 +38,8 @@ class KernelParams:
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none']
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -64,12 +66,13 @@ class KernelParams:
                                      
         if source=='pisces':
             #standardization_variations=('modeldict:std_data',[([],'float')])#a tuple containing lists of variables to standardize in y,x. 'float' means standardize all variables that are floats rather than string
-            standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
+            #standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
+            standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
             ykern_grid_variations=('modeldict:ykern_grid',[2])
-            regression_model_variations=('modeldict:regression_model',['NW-rbf2','NW'])#add logistic when developed fully
+            regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),None])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',)])#
         
             optdict_variation_list = [Ndiff_exponentstartingvalue_variations,
                                       Ndiff_outer_x_bw_startingvalue_variations,
@@ -108,9 +111,9 @@ class KernelParams:
                 
                 
                 
-            #species_variations=('species',[self.specieslist[2]])
-            species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
-            print('species_variations',species_variations)
+            species_variations=('species',self.specieslist)
+            #species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
+            # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',[4])
@@ -227,7 +230,8 @@ class KernelParams:
         optiondict_NM={
             'xatol':0.05,
             'fatol':.01,
-            'adaptive':True
+            'adaptive':True,
+            'maxiter':50
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
