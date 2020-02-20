@@ -24,8 +24,13 @@ class kNdtool(Ndiff,MyKernHelper):
     """
 
     def __init__(self,savedir=None,myname=None):
-        if savedir==None: savedir=os.getcwd()
-        self.savedir=savedir
+        if savedir==None:
+            savedir=os.getcwd()
+            logdir=os.path.join(savedir,'log')
+            if not os.path.exists(logdir);os.mkdir(logdir)
+        else:
+            logdir=os.path.join(savedir,'..','log') #assuming this steps out of the nodedir 1 step
+            it not os.path.exists(logdir);os.mkdir(logdir)
         self.name=myname
 
         self.cores=int(psutil.cpu_count(logical=False)-1)
@@ -40,7 +45,7 @@ class kNdtool(Ndiff,MyKernHelper):
         print(f'handlername:{handlername}')
         #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
         if not self.name==None:
-            handler=logging.FileHandler(os.path.join(savedir,'..',handlername))
+            handler=logging.FileHandler(os.path.join(logdir,handlername))
         else:
             handler=logging.FileHandler(os.path.join(savedir,'log',handlername))
         
@@ -207,7 +212,7 @@ class kNdtool(Ndiff,MyKernHelper):
         #ybatch=[]
         wtbatch=[]
         youtbatch=[]
-        trueybatch
+        trueybatch=[]
         for i in range(batchcount):
             #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
             #ybatchlist=[]
