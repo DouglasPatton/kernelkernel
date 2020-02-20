@@ -42,7 +42,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if not self.name==None:
             handler=logging.FileHandler(os.path.join(savedir,'..',handlername))
         else:
-            handler=logging.FileHandler(os.path.join(savedir,handlername))
+            handler=logging.FileHandler(os.path.join(savedir,'log',handlername))
         
         #self.logger = logging.getLogger('mkLogger')
         self.logger = logging.getLogger(__name__)
@@ -282,6 +282,7 @@ class kNdtool(Ndiff,MyKernHelper):
             self.binary_y_mse_list=[]
             for threshold in binary_threshold:
                 if type(threshold) is str:
+                    print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
                     if threshold=='avgavg':
                         avg_phat_0=np.ma.mean(yhat_un_std[all_y==0])
                         avg_phat_1=np.ma.mean(yhat_un_std[all_y==1])
@@ -374,11 +375,13 @@ class kNdtool(Ndiff,MyKernHelper):
             if NWnorm=='across':
                 wt_stack=wt_stack/np.ma.expand_dims(np.ma.sum(wt_stack,axis=yout_axis),axis=yout_axis)
             yhat=np.ma.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
-        binary_threshold=modeldict['binary_y']
-        if not binary_threshold is None:
+
+        binary_threshold=modeldict['binary_y']   
+        if not binary_threshold is None and not lssfn=='batchnorm_crossval':
             binary_yhat=np.zeros(yhat.shape)
             binary_yhat[yhat>binary_threshold]=1
             yhat=binary_yhat
+            
         yhatmaskscount=np.ma.count_masked(yhat)
         if yhatmaskscount>0:
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
@@ -795,20 +798,21 @@ class optimize_free_params(kNdtool):
         
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
 
-        starting_mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
-        if not starting_mse>self.mse_threshold:
-            self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-            lastmse=self.mse_param_list[-1][0]
-            lastparamdict=self.mse_param_list[-1][1]
-            self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
-        else:
-            self.logger.info(f'starting_mse: {starting_mse} > mse_threshold: {self.mse_threshold}')
-            lastmse=starting_mse
-            lastparamdict=self.fixed_or_free_paramdict
+
+        #starting_mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
+        #if not starting_mse>self.mse_threshold:
+        self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+        lastmse=self.mse_param_list[-1][0]
+        lastparamdict=self.mse_param_list[-1][1]
+            #self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
+        #else:
+        #    self.logger.info(f'starting_mse: {starting_mse} > mse_threshold: {self.mse_threshold}')
+        #    lastmse=starting_mse
+        #    lastparamdict=self.fixed_or_free_paramdict
         self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')
         #self.sort_then_saveit(self.mse_param_list[-self.save_interval*3:],modeldict,'final_model_save')
         
-        self.logger.info(f'after final save, lastparamdict:{lastparamdict}')
+        #self.logger.info(f'after final save, lastparamdict:{lastparamdict}')
         
 
 if __name__ == "__main__":
