@@ -27,10 +27,10 @@ class kNdtool(Ndiff,MyKernHelper):
         if savedir==None:
             savedir=os.getcwd()
             logdir=os.path.join(savedir,'log')
-            if not os.path.exists(logdir);os.mkdir(logdir)
+            if not os.path.exists(logdir):os.mkdir(logdir)
         else:
             logdir=os.path.join(savedir,'..','log') #assuming this steps out of the nodedir 1 step
-            it not os.path.exists(logdir);os.mkdir(logdir)
+            it not os.path.exists(logdir):os.mkdir(logdir)
         self.name=myname
 
         self.cores=int(psutil.cpu_count(logical=False)-1)
