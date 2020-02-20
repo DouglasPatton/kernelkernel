@@ -5,19 +5,21 @@ import numpy as np
 
 
 class PickleToJson:
-    def __init__(self,startdir=None,initialdir=None):
-        if initialdir is None:
+    def __init__(self,startdir=None,savedir=None):
+        if savedir is None:
             print('starting')
-            initialdir=os.getcwd()
+            savedir=os.path.join(os.getcwd(),'json')
         if stardir is None:
             stardir=os.getcwd()
         dirpath,dirnames,filenames=os.walk(stardir)
-        dirlist=[os.path.join(dirpath,dirname) for dirname in dirnames]
-        savedir=os.path.join(initialdir,'json')
+        
+        
         if not os.path.exists(savedir):os.mkdir(savedir)
-            
-        for directory in dirlist:
-            result=PickleToJson(stardir=directory,initialdir=initialdir)
+           
+        for directory in enumerate(dirnames)
+            nextsavedir=os.path.join(savedir,directory)
+            nextstartdir=os.path.join(startdir,directory)
+            PickleToJson(stardir=nextstartdir,savedir=nextsavedir)
         
         for filename in filenames:
             path=os.path.join(dirpath,filename)
