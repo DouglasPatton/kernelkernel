@@ -50,7 +50,7 @@ class KernelOptModelTools(mk.kNdtool):
         datagen_obj=dg.datagen(datagen_dict)
         if datagen_obj.species_n<datagen_obj.fullbatchbatch_n:
             print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
-            self.logger.info(
+            self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             return
             
         naive_mse=self.do_naivemse(datagen_obj)
