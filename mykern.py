@@ -227,7 +227,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     istart=(i-1)*nin
                     iend=istart+nin
                 if j!=i:
-                    all_y_fori_fromj=all_y[istart:iend]
+                    #all_y_fori_fromj=all_y[istart:iend]
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
                     yout_batchj=self.ma_broadcast_to(np.ma.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
                     wtbatchlist.append(wt_i_from_batch_j)
@@ -249,8 +249,8 @@ class kNdtool(Ndiff,MyKernHelper):
             #       effectively npr, but only after we rearrange the data for crossval.
             
         
-        wtstack=np.ma.concatenate(wtbatch[:,:,:,None],axis=-1)#adding new rhs axis for stacking batches(i)
-        youtstack=np.ma.concatenate(youtbatch[:,:,:,None],axis=-1)
+        wtstack=np.ma.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
+        youtstack=np.ma.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
         #trueystack=np.ma.concatenate(trueybatch[:,:,None],axis=-1)
         wtstacksum=np.ma.sum(wtstack,axis=0)#summed over batchj axis for each batchi
         wtstacksumsum=np.ma.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
