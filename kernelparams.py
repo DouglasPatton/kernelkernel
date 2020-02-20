@@ -39,9 +39,9 @@ class KernelParams:
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
-        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -71,10 +71,10 @@ class KernelParams:
             #standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2])
+            ykern_grid_variations=('modeldict:ykern_grid',[2,5])
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',)])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),'none'])#
         
             optdict_variation_list = [binary_y_variations,
                                       Ndiff_exponentstartingvalue_variations,
@@ -114,8 +114,8 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',self.specieslist)
-            #species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
+            #species_variations=('species',self.specieslist)
+            species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
             # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
@@ -168,7 +168,7 @@ class KernelParams:
         elif source=='pisces':
             #floatselecttup=(2,3,5,6)
             #floatselecttup=()
-            floatselecttup=(3,5)
+            floatselecttup=(3,5,6)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
