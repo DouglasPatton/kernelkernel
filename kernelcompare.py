@@ -48,8 +48,12 @@ class KernelOptModelTools(mk.kNdtool):
             force_start_params=1
 
         datagen_obj=dg.datagen(datagen_dict)
-        if datagen_obj.species_n<datagen_obj.fullbatchbatch_n:
-            print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
+        maxbatchbatchcount=optimizedict['modeldict']['maxbatchbatchcount']
+        if type(maxbatchbatchcount) is int:
+            thisbatchbatchcount=maxbatchbatchcount*datagen_obj.batch_n
+            
+        if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
+            print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < datagen_obj.batch_n*datagen_obj.batchcount:{datagen_obj.batch_n*datagen_obj.batchcount}')
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             return
             
