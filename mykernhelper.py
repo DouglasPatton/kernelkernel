@@ -94,12 +94,14 @@ class MyKernHelper:
     
     def makediffmat_itoj(self,xin,xpr,spatial=None,spatialtransform=None):
         
-        diffs= np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0)#should return ninXnoutXp if xin an xpr were ninXp and noutXp
+        diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
+        
         if spatial==1:
             #assuming the spatial variable is always the last one
+            
             diffs[:,:,-1]=self.myspatialhucdiff(diffs[:,:,-1])
         if type(spatialtransform) is tuple:
-            diffs[:,:,-1]=np.abs(diffs[:,:,-1])
+            
             if spatialtransform[0]=='divide':
                 diffs[:,:-1]=diffs[:,:-1]/spatialtransform[1]
             if spatialtransform[0]=='ln1':
