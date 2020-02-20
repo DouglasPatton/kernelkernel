@@ -4,7 +4,7 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
             
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
