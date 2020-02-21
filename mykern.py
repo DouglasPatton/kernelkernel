@@ -606,7 +606,10 @@ class kNdtool(Ndiff,MyKernHelper):
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
-            if self.iter>1 and mse>self.mse_threshold:
+            '''
+            else:
+                mse_threshold=self.mse_threshold
+            if self.iter>20 and mse>mse_threshold:
                 self.forcefail=mse
                 print(f'forcefail(mse):{self.forcefail}')
         self.success=mse
@@ -823,10 +826,14 @@ class optimize_free_params(kNdtool):
             
         
         self.naivemse=self.do_naivemse(datagen_obj)
-            
+        if type(self.mse_threshold) is str:
+                if self.mse_threshold='naive_mse':
+                    self.mse_threshold=self.naive_mse    
             
         
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
+
+        
 
 
         #starting_mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
