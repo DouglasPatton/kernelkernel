@@ -6,7 +6,7 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-import logging, logging.config
+#import logging, logging.config
 import yaml
 from kernelparams import KernelParams
 #import datetime
@@ -623,8 +623,7 @@ class KernelOptModelTools(mk.kNdtool):
                                     i_batchbatchcount=i_batchbatch1
                                 else: i_batchbatchcount=i_batchbatch2
                             except: i_batchbatchcount=1
-                                
-                                
+                                                                
                             iwt=self.do_nwt_mse(i_mse,i_n,i_batchcount,naivemse=i_naivemse,batchbatchcount=i_batchbatchcount)
                             jwt=self.do_nwt_mse(j_mse,j_n,j_batchcount,naivemse=j_naivemse,batchbatchcount=j_batchbatchcount)
                             if verbose>1:

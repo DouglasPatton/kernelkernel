@@ -26,8 +26,8 @@ class kNdtool(Ndiff,MyKernHelper):
     def __init__(self,savedir=None,myname=None):
         if savedir==None:
             savedir=os.getcwd()
-        logdir=os.path.join(savedir,'log')
-        if not os.path.exists(logdir):os.mkdir(logdir)
+        #logdir=os.path.join(savedir,'log')
+        #if not os.path.exists(logdir):os.mkdir(logdir)
         
         self.savedir=savedir
         self.name=myname
@@ -40,20 +40,21 @@ class kNdtool(Ndiff,MyKernHelper):
         self.logger = logging.getLogger('myKernLogger')
         '''
     
-        handlername=f'mykern-{self.name}.log'
-        print(f'handlername:{handlername}')
+        #handlername=f'mykern-{self.name}.log'
+        #print(f'handlername:{handlername}')
         #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
-            level=logging.DEBUG,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        
-        #self.logger = logging.getLogger('mkLogger')
-        
-        self.logger = logging.getLogger(__name__)
-        #self.logger.addHandler(handler)
-        
+        """try: self.logger.debug('test')
+        except:
+            print('mykern creating a logger')
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+                level=logging.DEBUG,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            #self.logger = logging.getLogger('mkLogger')
+            self.logger = logging.getLogger(__name__)
+            #self.logger.addHandler(handlers)
+        """
         Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
         
@@ -797,6 +798,7 @@ class optimize_free_params(kNdtool):
 
     def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
         kNdtool.__init__(self,savedir=savedir,myname=myname)
+        
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.iter=0
         self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
@@ -806,6 +808,20 @@ class optimize_free_params(kNdtool):
         self.source=self.datagen_dict['source']
         self.name=myname
 
+        logdir=os.path.join(savedir,'..','log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=os.path.join(logdir,f'mykern_{myname}.log')
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10000, backupCount=4)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
+      
+        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
+        self.logger = logging.getLogger(handlername)
+
+
+        
         self.logger.info(f'optimizedict for {myname}:{optimizedict}')
 
         opt_settings_dict=optimizedict['opt_settings_dict']

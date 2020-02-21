@@ -43,14 +43,6 @@ class run_cluster(kernelcompare.KernelCompare):
             source='monte'
         self.source=source
         self.savedirectory=self.setdirectory(local_run=local_run)
-        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
-        
-        self.masterdirectory=self.setmasterdir(self.savedirectory)
-        self.oldnode_threshold=datetime.timedelta(minutes=200,seconds=1)
-        self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
-        if myname is None:
-            myname='node'
-        
         '''
         with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
             configfile=yaml.safe_load(f.read())
@@ -59,18 +51,30 @@ class run_cluster(kernelcompare.KernelCompare):
         '''
         #logging.basicConfig(level=logging.INFO)
         
-        logdir=os.path.join(self.savedirectory,'log')
+        logdir=os.path.join(self.savedirectory,'..','log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'mycluster_{myname}.log'
+        handlername=os.path.join(logdir,f'mycluster_{myname}.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10000, backupCount=4)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
       
         #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(handlername)
         #self.logger.addHandler(handlers)
+
+
+
+        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
+        
+        self.masterdirectory=self.setmasterdir(self.savedirectory)
+        self.oldnode_threshold=datetime.timedelta(minutes=200,seconds=1)
+        self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
+        if myname is None:
+            myname='node'
+        
+        
 
         
         print(f'self.savedirectory{self.savedirectory}')
@@ -612,8 +616,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
         self.update_node_job_status(myname,status='starting',mydir=mydir)
         try:
-            kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
-                my_optimizedict,my_datagen_dict,force_start_params=0)
+            #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
+            #    my_optimizedict,my_datagen_dict,force_start_params=0)
+            self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
             print('----------success!!!!!!-------')
             success=1
         except:

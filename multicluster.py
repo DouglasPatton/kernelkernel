@@ -11,23 +11,28 @@ from numpy import log
 
 class mypool:
     def __init__(self,source='monte', nodecount=1,includemaster=1,local_run='no'):
-        '''logging.basicConfig(level=logging.INFO)
+
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'multicluster.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)'''
+        handlername=os.path.join(logdir,f'multicluster.log')
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
+      
+        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
+        self.logger = logging.getLogger(handlername)
 
         self.source=source
 
-        self.sleepfactor=0.14 #0.2->4min. 0.1->6sec, 0.224 ->10min
+        self.sleepfactor=0.1 #0.2->4min. 0.1->6sec, 0.224 ->10min
         
-        logging.basicConfig(level=logging.INFO)
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('multiClusterLogger')
+        #logging.basicConfig(level=logging.INFO)
+        #with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
+        #    configfile=yaml.safe_load(f.read())
+        #logging.config.dictConfig(configfile)
+        #self.logger = logging.getLogger('multiClusterLogger')
 
         platform=sys.platform
         p=psutil.Process(os.getpid())
