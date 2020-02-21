@@ -7,6 +7,19 @@ class datagen(PiscesDataTool):
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
     def __init__(self,datagen_dict):
+        '''logdir=os.path.join(os.getcwd(),'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername='datagen.log'
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')'''
+      
+        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
+        #self.logger = logging.getLogger(__name__)
+        #self.logger.addHandler(handler)
+        
         try:
             theseed=datagen_dict['seed']
         except:

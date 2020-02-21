@@ -26,11 +26,9 @@ class kNdtool(Ndiff,MyKernHelper):
     def __init__(self,savedir=None,myname=None):
         if savedir==None:
             savedir=os.getcwd()
-            logdir=os.path.join(savedir,'log')
-            if not os.path.exists(logdir):os.mkdir(logdir)
-        else:
-            logdir=os.path.join(savedir,'..','log') #assuming this steps out of the nodedir 1 step
-            if not os.path.exists(logdir):os.mkdir(logdir)
+        logdir=os.path.join(savedir,'log')
+        if not os.path.exists(logdir):os.mkdir(logdir)
+        
         self.savedir=savedir
         self.name=myname
 
@@ -45,14 +43,16 @@ class kNdtool(Ndiff,MyKernHelper):
         handlername=f'mykern-{self.name}.log'
         print(f'handlername:{handlername}')
         #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
-        if not self.name==None:
-            handler=logging.FileHandler(os.path.join(logdir,handlername))
-        else:
-            handler=logging.FileHandler(os.path.join(savedir,'log',handlername))
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
         
         #self.logger = logging.getLogger('mkLogger')
+        
         self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        #self.logger.addHandler(handler)
         
         Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
@@ -133,12 +133,12 @@ class kNdtool(Ndiff,MyKernHelper):
         
         if xbwmaskcount>self.nin:
             self.logger.info(f'xbwmaskcount: {xbwmaskcount}')
-            self.logger.warning(f'np.ma.getmask(xbw): {np.ma.getmask(xbw)}')
+            # self.logger.warning(f'np.ma.getmask(xbw): {np.ma.getmask(xbw)}')
         
         ybwmaskcount=np.ma.count_masked(ybw)
         if ybwmaskcount>0:
             self.logger.info(f'ybwmaskcount: {ybwmaskcount}, ybw.shape: {ybw.shape}')
-            self.logger.info(f'np.ma.getmask(ybw): {np.ma.getmask(ybw)}')
+            # self.logger.info(f'np.ma.getmask(ybw): {np.ma.getmask(ybw)}')
 
         hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
         hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
@@ -606,10 +606,9 @@ class kNdtool(Ndiff,MyKernHelper):
 
             if self.call_iter % self.save_interval == 0:
                 self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
-            '''
-            else:
-                mse_threshold=self.mse_threshold
-            if self.iter>20 and mse>mse_threshold:
+            
+            
+            if self.iter>3 and mse>self.mse_threshold:
                 self.forcefail=mse
                 print(f'forcefail(mse):{self.forcefail}')
         self.success=mse
@@ -827,8 +826,8 @@ class optimize_free_params(kNdtool):
         
         self.naivemse=self.do_naivemse(datagen_obj)
         if type(self.mse_threshold) is str:
-                if self.mse_threshold='naive_mse':
-                    self.mse_threshold=self.naive_mse    
+                if self.mse_threshold=='naive_mse':
+                    self.mse_threshold=self.naivemse    
             
         
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)

@@ -57,14 +57,20 @@ class run_cluster(kernelcompare.KernelCompare):
         logging.config.dictConfig(configfile)
         self.logger = logging.getLogger('myClusterLogger')
         '''
-        logging.basicConfig(level=logging.INFO)
+        #logging.basicConfig(level=logging.INFO)
         
         logdir=os.path.join(self.savedirectory,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=f'mycluster_{myname}.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
+      
+        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
         self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
+        #self.logger.addHandler(handlers)
 
         
         print(f'self.savedirectory{self.savedirectory}')
