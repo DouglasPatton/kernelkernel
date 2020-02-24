@@ -6,7 +6,7 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-#import logging, logging.config
+import logging, logging.config
 import yaml
 from kernelparams import KernelParams
 #import datetime
@@ -20,24 +20,7 @@ class KernelOptModelTools(mk.kNdtool):
         mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         
         self.name=myname
-        '''
-        logging.basicConfig(level=logging.INFO)
-        logdir=os.path.join(self.kc_savedirectory,'log')
-        #if not os.path.exists(logdir): 
-        try:
-            os.mkdir(logdir)
-        except:pass
-        handlername=f'kernelcompare.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
-        '''
-        '''
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('kcLogger')
-        '''
+       
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
         optimizedict['datagen_dict']=datagen_dict
@@ -57,8 +40,9 @@ class KernelOptModelTools(mk.kNdtool):
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             return
             
-        naive_mse=self.do_naivemse(datagen_obj)
-        print('naive_mse:',naive_mse)
+        # naive_mse=self.do_naivemse(datagen_obj)
+        # print('naive_mse:',naive_mse)
+        
         datagen_dict_expanded=datagen_obj.datagen_dict_expanded
         optimizedict['datagen_dict']=datagen_dict_expanded
         print(f'datagen_dict_expanded:{datagen_dict_expanded} for directory,{self.kc_savedirectory}')
@@ -69,7 +53,7 @@ class KernelOptModelTools(mk.kNdtool):
             
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory,myname=self.name)
+        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.nodedirectory,myname=self.name)
         return
         
                                
@@ -537,18 +521,21 @@ class KernelOptModelTools(mk.kNdtool):
         for file_i in model_save_filelist:
             file_i_name=os.path.join(merge_directory,file_i)
             for i in range(10):
-                with open(file_i_name,'rb') as savedfile:
-                    try: 
-                        saved_model_list=pickle.load(savedfile)
-                        if verbose==1:
-                            print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
-                        break
-                    except:
-                        if i==9:
-                            print(f'warning!saved_model_list{file_i_name} could not pickle.load')
-                            self.logger.exception(f'error in {__name__}')
-                            saved_model_list=[]
-
+                try:
+                    with open(file_i_name,'rb') as savedfile:
+                        try: 
+                            saved_model_list=pickle.load(savedfile)
+                            if verbose==1:
+                                print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
+                            break
+                        except:
+                            if i==9:
+                                print(f'warning!saved_model_list{file_i_name} could not pickle.load')
+                                self.logger.exception(f'error in {__name__}')
+                                saved_model_list=[]
+                except:
+                    pass
+                
             if condense==1:
                 list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
             else:
@@ -874,6 +861,27 @@ class KernelOptModelTools(mk.kNdtool):
         
 class KernelCompare(KernelOptModelTools,KernelParams):
     def __init__(self,directory=None,myname=None, source=None):
+        if directory is None:
+            directory=os.getcwd()
+        
+        
+        try:
+            self.logger.info('starting new KernelCompare object')
+        except:
+            if myname is None: _name=''
+            else: _name=f'-{myname}'
+            logdir=os.path.join(directory,'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,'KernelCompare'+_name+'.log')
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=4)],
+                level=logging.DEBUG,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
+
+
+        
         if source is None:
             source='monte'
         self.source=source
