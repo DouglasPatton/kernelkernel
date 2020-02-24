@@ -45,7 +45,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.savedirectory=self.setdirectory(local_run=local_run)
         
         
-        logdir=os.path.join(self.savedirectory,'..','log')
+        logdir=os.path.join(self.savedirectory,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mycluster_{myname}.log')
         logging.basicConfig(
