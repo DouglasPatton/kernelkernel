@@ -1,7 +1,7 @@
 if __name__=="__main__":
     import mycluster
     import psutil
-    cores=int(psutil.cpu_count(logical=False))
+    cores=int(psutil.cpu_count(logical=True))
     print(f'choose a node count between 1 and {cores-2}')
     nodecount=int(input('node count:'))
 
