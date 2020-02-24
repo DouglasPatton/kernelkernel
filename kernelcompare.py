@@ -40,8 +40,9 @@ class KernelOptModelTools(mk.kNdtool):
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             return
             
-        naive_mse=self.do_naivemse(datagen_obj)
-        print('naive_mse:',naive_mse)
+        # naive_mse=self.do_naivemse(datagen_obj)
+        # print('naive_mse:',naive_mse)
+        
         datagen_dict_expanded=datagen_obj.datagen_dict_expanded
         optimizedict['datagen_dict']=datagen_dict_expanded
         print(f'datagen_dict_expanded:{datagen_dict_expanded} for directory,{self.kc_savedirectory}')
@@ -52,7 +53,7 @@ class KernelOptModelTools(mk.kNdtool):
             
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.kc_savedirectory,myname=self.name)
+        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.nodedirectory,myname=self.name)
         return
         
                                
