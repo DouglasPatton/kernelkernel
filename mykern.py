@@ -808,7 +808,7 @@ class optimize_free_params(kNdtool):
         self.source=self.datagen_dict['source']
         self.name=myname
 
-        logdir=os.path.join(savedir,'..','log')
+        logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mykern_{myname}.log')
         logging.basicConfig(
