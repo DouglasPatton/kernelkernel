@@ -43,26 +43,18 @@ class run_cluster(kernelcompare.KernelCompare):
             source='monte'
         self.source=source
         self.savedirectory=self.setdirectory(local_run=local_run)
-        '''
-        with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('myClusterLogger')
-        '''
-        #logging.basicConfig(level=logging.INFO)
+        
         
         logdir=os.path.join(self.savedirectory,'..','log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mycluster_{myname}.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=4)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10000, backupCount=4)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
-      
-        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
         self.logger = logging.getLogger(handlername)
-        #self.logger.addHandler(handlers)
+        
 
 
 
