@@ -4,9 +4,6 @@ dependencies:
   - scipy
   - bokeh
   - python
-  - pandas
-  - ipykernel
-  - jupyter
   - pip:
     - os
     - copy
@@ -17,3 +14,4 @@ dependencies:
     - multiprocessing
     - traceback
     - shutil
+    - psutil
