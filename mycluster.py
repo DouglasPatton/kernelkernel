@@ -431,8 +431,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.update_my_namefile(name,status='ready for job')
                     mergestatus=self.mergethisnode(name)
                     print(f'for node name:{name}, mergestatus:{mergestatus}')
-
-            sleep(log(float(2*i+10)))
+            if i<100:
+                sleep(5)
+            else:
+                sleep(30)
 
             
 
@@ -574,7 +576,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     assert False,f"runnode named {myname} could not check master"
         if masterfile_exists==False:
             for i in range(120):
-                sleep(30)
+                sleep(log(float(2*i+10)))
                 try:
                     masterfile_exists = self.checkmaster()
                     if masterfile_exists:break

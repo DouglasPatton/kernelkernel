@@ -9,33 +9,114 @@ class Ndiff:
         pass
             
         
-
+    def Ndiff_datastacker(self,indiffs,outdiffs,depth):
+        """
+            for x: (x has it's nout dimension (-2) added later on)
+            before:
+            outdiffs is #ninXnpr?
+            indiffs is #ninXnin?
+            after:
+            both are {depth*nin}XninXnpr
+            
+            for y:
+            before:
+            outdiffs is broadcast to dim2 npr times #ninXnoutXnpr?
+            indiffs is broadcast to dim2 npr times #ninXninXnpr?
+            after:
+            outdiffs becomes {depth*nin}XninXnoutXnpr
+        
+        """
+        '''print('indiffs.shape',indiffs.shape)
+        print('outdiffs_shape',outdiffs_shape)
+        print('depth',depth)'''
+        
+        #transposing below removed on 2-25-2020 in favor of switching axis (closer to rhs of dims/shape_tup) to sum over.
+        """if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
+            indifftup=indiffs.shape
+            if len(indifftup)==3:
+                transposeorder=[1,0,2]
+            if len(indifftup)==2:
+                transposeorder=[1,0]
+            #print('indiffshape:',transposeorder)
+            np.transpose(indiffs,transposeorder)
+        """
+        
+        if len(outdiffs.shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
+            #
+            shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
+            if depth>1:
+                #shape_out_tup=tuple([self.nin for _ in range(depth)])+indiffs.shape
+                return np.broadcast_to(np.expand_dims(indiffs,-2),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
+            else:
+                
+                return np.broadcast_to(outdiffs,shape_out_tup)
+        if len(outdiffs.shape)==2:#(ninXnpr)this should only happen if we're working on x
+            shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
+            if depth>1:
+                #shape_out_tup=tuple([self.nin for _ in range(depth)])+indiffs.shape
+                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxnin, expand_dims adds a dimension for npr
+            else:
+                
+                return np.broadcast_to(outdiffs,shape_out_tup)
+            
+            #shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1:]#should result in (depth*ninxninxnoutxnpr)
+            #return np.broadcast_to(np.expand_dims(np.expand_dims(indiffs,-1),-1),shape_out_tup)#expand dims adds a dimension for nout and then npr
+            
         
 
-    def Ndiffsum_then_normalize_bw(self,kernstack,normalization):
+    def Ndiffsum_then_normalize_bw(self,kernstack,normalization,depth,x_or_y):
         '''3 types of Ndiff normalization so far. could extend to normalize by other levels.
         '''
+        # the next 7 lines are the alternative to having transposition in the datastacker.
+        #for sum_axis:
+        # if depth is 1, y:-3 and x:-2 # applied to outdiffs
+        # if depth is 2, y:-4  and x:-3 # these are the applied to indiffs
+        # if depth is 3, y:-3 and x:-2
+        # if depth is 4, y:-4 and x:-3
+        
+        #old: for sum_axis:
+        # if depth is 1, y:-2 and x:-2 # applied to outdiffs
+        # if depth is 2, y:-2  and x:-1 # these are the applied to indiffs
+        # if depth is 3, y:-3 and x:-2
+        if x_or_y=='y':
+            if depth==1:
+                sum_axis=-3
+            elif  depth%2==0:
+                sum_axis=-4
+            else:
+                sum_axis=-3
+        else: 
+            if depth==1:
+                sum_axis=-2
+            elif  depth%2==0:
+                sum_axis=-3
+            else:
+                sum_axis=-2
+            
+            
+        self.logger.info(f'kernstack.shape:{kernstack.shape}, depth: {depth}, x_or_y:{x_or_y}, sum_axis:{sum_axis}')
         if normalization=='none' or normalization==None:
-            return np.ma.sum(kernstack,axis=0)
+            return np.ma.sum(kernstack,axis=sum_axis)
 
         if type(normalization) is int:
             
-            return np.ma.sum(kernstack,axis=0)/float(normalization)
+            return np.ma.sum(kernstack,axis=sum_axis)/float(normalization)
         if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
-            this_depth_sum=np.ma.sum(kernstack,axis=0)
+            this_depth_sum=np.ma.sum(kernstack,axis=sum_axis)
             return this_depth_sum/np.ma.sum(this_depth_sum,axis=0)#dividing by sum across the sums at "this_depth"
+            #need to think about the axis of this normalization
 
         
-    def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
+    def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize,depth,x_or_y):
         return np.ma.power(
                     self.Ndiffsum_then_normalize_bw(
-                        self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize),Ndiff_exp)
+                        self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize,depth,x_or_y),Ndiff_exp)
     
-    def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize):
+    def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize,depth,x_or_y):
         return np.ma.power(
             self.Ndiffsum_then_normalize_bw(
-                self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize),Ndiff_exp)
+                self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize,depth,x_or_y),Ndiff_exp)
     
     def NdiffBWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
         """returns an nin X nout npr np.array of bandwidths if x_or_y=='y'
@@ -82,37 +163,23 @@ class Ndiff:
                 if Ndiff_type=='recursive':this_depth_bw_param=None
                 this_depth_data=self.Ndiff_datastacker(indiffs,outdiffs,depth)
                 this_depth_mask = masklist[depth]
-                '''if x_or_y=='x':
-                    expandedmasktup=this_depth_mask.shape[:-1]+(self.nout,)+this_depth_mask.shape[-1:]
-                    this_depth_mask=np.broadcast_to(np.expand_dims(this_depth_mask,-2),expandedmasktup)#adding the nout axis since it is now added for x by Ndiff datastacker'''
-                '''if depth % 2 == 0:  # every other set of indiffs is transposed
-                    #print(f'this_depth_data.ndim:{this_depth_data.ndim}')
-                    dimcount=this_depth_data.ndim
-                    transposelist=[i for i in range(dimcount)]
-                    #transposelist[dimcount-3]=dimcount-4#make 3rd to last dimension have the dimension number of 4th to last
-                    #transposelist[dimcount - 4] = dimcount - 3#and make 4th to last dimension have dimension number of 3rd to last
-                    transposelist[0]=1#transpose lhs dimensions so sum over lhs dimension is transposed in even depths.
-                    transposelist[1]=0
-                    
-                    this_depth_data = np.transpose(this_depth_data, transposelist)#implement the tranpose of 3rd to last and 2nd to last dimensions
-                    this_depth_mask = np.transpose(this_depth_mask,transposelist)
-'''
+
                 
-                if Ndiff_start>1:# the next few lines collapse the length of Ndiff dimensions before Ndiff start down to lenght 1, but preserves the dimension
+                '''if Ndiff_start>1:# the next few lines collapse the length of Ndiff dimensions before Ndiff start down to lenght 1, but preserves the dimension
                     select_dims=list((slice(None),)*this_depth_mask.ndim)#slice(None) is effectively a colon when the list is turned into a tuple of dimensions
                     for dim in range(Ndiff_start-1,0,-1):
                         shrinkdim=max_bw_Ndiff-dim
                         select_dims[shrinkdim]=[0,]
                     dim_select_tup=tuple(select_dims)
                     this_depth_mask=this_depth_mask[dim_select_tup]
-                    this_depth_data=this_depth_data[dim_select_tup]
+                    this_depth_data=this_depth_data[dim_select_tup]'''
                 this_depth_masked_data=np.ma.array(this_depth_data,mask=this_depth_mask,keep_mask=False)
 
                 if Ndiff_type=='product':
-                    this_depth_bw=self.Ndiff_product(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize)
+                    this_depth_bw=self.Ndiff_product(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
                 if Ndiff_type=='recursive':
                     if depth==max_bw_Ndiff:deeper_depth_bw=Ndiff_depth_bw_params[0]
-                    this_depth_bw=self.Ndiff_recursive(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize)
+                    this_depth_bw=self.Ndiff_recursive(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
                     
                 if depth>0: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             '''if missing_i_dimension==1:
@@ -128,45 +195,7 @@ class Ndiff:
         if Ndiff_bw_kern=='product': #outdiffs parameter column not yet collapsed
             n_depth_masked_sum_kern=self.do_Ndiffbw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
 
-    def Ndiff_datastacker(self,indiffs,outdiffs,depth):
-        """
-            for x: (x has it's nout dimension (-2) added later on)
-            outdiffs is #ninXnpr?
-            indiffs is #ninXnin?
-            for y:
-            outdiffs is broadcast to dim2 npr times #ninXnoutXnpr?
-            indiffs is broadcast to dim2 npr times #ninXninXnpr?
-        
-        """
-        '''print('indiffs.shape',indiffs.shape)
-        print('outdiffs_shape',outdiffs_shape)
-        print('depth',depth)'''
-        if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
-            indifftup=indiffs.shape
-            if len(indifftup)==3:
-                transposeorder=[1,0,2]
-            if len(indifftup)==2:
-                transposeorder=[1,0]
-            #print('indiffshape:',transposeorder)
-            np.transpose(indiffs,transposeorder)
-            
-        outdiffs_shape=outdiffs.shape
-        if len(outdiffs_shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
-            shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape#
-            if depth>1:
-                return np.broadcast_to(np.expand_dims(indiffs,-2),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
-            else:
-                return np.broadcast_to(outdiffs,shape_out_tup)
-        if len(outdiffs_shape)==2:#(ninXnpr)this should only happen if we're working on x
-            shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape
-            if depth>1:
-                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxnin, expand_dims adds a dimension for npr
-            else:
-                return np.broadcast_to(outdiffs,shape_out_tup)
-            
-            #shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1:]#should result in (depth*ninxninxnoutxnpr)
-           
-            #return np.broadcast_to(np.expand_dims(np.expand_dims(indiffs,-1),-1),shape_out_tup)#expand dims adds a dimension for nout and then npr
+    
     
     
     def do_Ndiffbw_kern(self,kern_choice,maskeddata,Ndiff_depth_bw_param,x_bandscale_params=None):

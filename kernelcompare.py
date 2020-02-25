@@ -47,7 +47,7 @@ class KernelOptModelTools(mk.kNdtool):
         optimizedict['datagen_dict']=datagen_dict_expanded
         print(f'datagen_dict_expanded:{datagen_dict_expanded} for directory,{self.kc_savedirectory}')
         
-        if force_start_params==0:
+        if not force_start_params:
             optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
             
             
