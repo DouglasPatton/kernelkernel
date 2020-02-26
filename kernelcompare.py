@@ -517,6 +517,10 @@ class KernelOptModelTools(mk.kNdtool):
         #    return
         
         list_of_saved_models=[]
+        if not saved_condensed_list==[]:
+            if condense==1:
+                saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
+            list_of_saved_models.extend(saved_condensed_list)
 
         for file_i in model_save_filelist:
             file_i_name=os.path.join(merge_directory,file_i)
@@ -540,12 +544,9 @@ class KernelOptModelTools(mk.kNdtool):
                 list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
             else:
                 list_of_saved_models.extend(saved_model_list)
-        if not saved_condensed_list==[]:
-            if condense==1:
-                saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
-            list_of_saved_models.extend(saved_condensed_list)
-        if condense==1:
-            list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
+        
+        #if condense==1:
+        #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
 
 
         condensedfilename=os.path.join(save_directory,'condensed_model_save')
