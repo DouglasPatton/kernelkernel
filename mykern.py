@@ -63,6 +63,12 @@ class kNdtool(Ndiff,MyKernHelper):
     def BWmaker(self, fixed_or_free_paramdict, diffdict, modeldict,xory):
         if self.Ndiff:
             if modeldict['max_bw_Ndiff']==0:
+                if xory=='x':
+                    bwshape=(self.npr)
+                if xory=='y':
+                    bwshape=(self.nout,self.npr)
+                bw=np.array([1])
+                np.broadcast_to(bw,bwshape)    
                 return np.array([1])
             else:
                 return self.NdiffBWmaker(modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
@@ -167,11 +173,10 @@ class kNdtool(Ndiff,MyKernHelper):
             if True:#type(ykern_grid) is int and xkern_grid=='no':
                 xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
                 #print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
-                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,len(xoutdiffs.shape)-1),xoutdifftup)
+                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-2),xoutdifftup)
                 xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
-            newaxis=len(youtdiffs.shape)
             yx_outdiffs_endstack=np.ma.concatenate(
-                (np.expand_dims(xoutdiffs_stack,newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
+                (np.expand_dims(xoutdiffs_stack,axis=-1),np.expand_dims(youtdiffs,newaxis)),axis=-1)
             yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
             #p#rint('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             

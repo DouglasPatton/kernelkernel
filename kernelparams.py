@@ -7,7 +7,7 @@ class KernelParams:
         self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
             
     def getoptdictvariations(self,source='monte'):
-        max_bw_Ndiff=2
+        max_bw_Ndiff=0
         
                
         ''''hyper_param_form_dict':{
@@ -20,10 +20,12 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([.0001,.0001]),1.8*np.array([1,1]),.5*np.array([1,1]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])])
-
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.7]),np.array([.3])])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([.0001,.0001]),1.8*np.array([1,1]),.5*np.array([1,1]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.8*np.array([-1,1])])
+        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
+        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.7]),np.array([.3])])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
@@ -35,13 +37,14 @@ class KernelParams:
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product'])
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','self'])
-        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
+        #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','self'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -114,12 +117,12 @@ class KernelParams:
                 
                 
                 
-            #species_variations=('species',self.specieslist)
-            species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
+            species_variations=('species',self.specieslist)
+            #species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
             # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[4])
+            batchcount_variations=('batchcount',[16])
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -216,6 +219,34 @@ class KernelParams:
             'regression_model':'NW',
             'product_kern_norm':'self',
             'hyper_param_form_dict':{
+                'Ndiff_exponent':'fixed',
+                'x_bandscale':'non-neg',
+                'Ndiff_depth_bw':'fixed',
+                'outer_x_bw':'non-neg',
+                'outer_y_bw':'non-neg',
+                'y_bandscale':'fixed'
+                }
+            }
+        
+        """modeldict1={
+            'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
+            'std_data':'all',
+            'loss_function':'mse',
+            'Ndiff_type':'product',
+            'param_count':param_count,
+            'Ndiff_start':Ndiff_start,
+            'max_bw_Ndiff':max_bw_Ndiff,
+            'normalize_Ndiffwtsum':'own_n',
+            'NWnorm':'across',
+            'xkern_grid':'no',
+            'ykern_grid':33,
+            'maxbatchbatchcount':1,
+            'outer_kern':'gaussian',
+            'Ndiff_bw_kern':'rbfkern',
+            'outer_x_bw_form':'one_for_all',
+            'regression_model':'NW',
+            'product_kern_norm':'self',
+            'hyper_param_form_dict':{
                 'Ndiff_exponent':'free',
                 'x_bandscale':'non-neg',
                 'Ndiff_depth_bw':'non-neg',
@@ -223,7 +254,7 @@ class KernelParams:
                 'outer_y_bw':'non-neg',
                 'y_bandscale':'fixed'
                 }
-            }
+            }"""
         if not species is None:
             modeldict1['species']=species
             modeldict1['spatialtransform']=('divide',1)
@@ -235,7 +266,7 @@ class KernelParams:
             'xatol':0.05,
             'fatol':.01,
             'adaptive':True,
-            'maxiter':5
+            'maxiter':200
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
