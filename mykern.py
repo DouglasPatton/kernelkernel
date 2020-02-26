@@ -62,7 +62,10 @@ class kNdtool(Ndiff,MyKernHelper):
         
     def BWmaker(self, fixed_or_free_paramdict, diffdict, modeldict,xory):
         if self.Ndiff:
-            return self.NdiffBWmaker(modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
+            if modeldict['max_bw_Ndiff']==0:
+                return np.array([1])
+            else:
+                return self.NdiffBWmaker(modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
     
     def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
