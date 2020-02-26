@@ -24,21 +24,6 @@ class Ndiff:
             indiffs is broadcast to dim2 npr times #ninXninXnpr?
             after:
             outdiffs becomes {depth*nin}XninXnoutXnpr
-        
-        """
-        '''print('indiffs.shape',indiffs.shape)
-        print('outdiffs_shape',outdiffs_shape)
-        print('depth',depth)'''
-        
-        #transposing below removed on 2-25-2020 in favor of switching axis (closer to rhs of dims/shape_tup) to sum over.
-        """if (depth)%2==0 and depth>1:#not relevant if depth is not greater than one
-            indifftup=indiffs.shape
-            if len(indifftup)==3:
-                transposeorder=[1,0,2]
-            if len(indifftup)==2:
-                transposeorder=[1,0]
-            #print('indiffshape:',transposeorder)
-            np.transpose(indiffs,transposeorder)
         """
         
         if len(outdiffs.shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
@@ -59,9 +44,6 @@ class Ndiff:
                 
                 return np.broadcast_to(outdiffs,shape_out_tup)
             
-            #shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs_shape[:-1]+(self.nout,)+outdiffs_shape[-1:]#should result in (depth*ninxninxnoutxnpr)
-            #return np.broadcast_to(np.expand_dims(np.expand_dims(indiffs,-1),-1),shape_out_tup)#expand dims adds a dimension for nout and then npr
-            
         
 
     def Ndiffsum_then_normalize_bw(self,kernstack,normalization,depth,x_or_y):
@@ -69,15 +51,11 @@ class Ndiff:
         '''
         # the next 7 lines are the alternative to having transposition in the datastacker.
         #for sum_axis:
-        # if depth is 1, y:-3 and x:-2 # applied to outdiffs
+        # if depth is 1, y:-3 and x:-2 # depth 1 is outdiffs
         # if depth is 2, y:-4  and x:-3 # these are the applied to indiffs
         # if depth is 3, y:-3 and x:-2
         # if depth is 4, y:-4 and x:-3
         
-        #old: for sum_axis:
-        # if depth is 1, y:-2 and x:-2 # applied to outdiffs
-        # if depth is 2, y:-2  and x:-1 # these are the applied to indiffs
-        # if depth is 3, y:-3 and x:-2
         if x_or_y=='y':
             if depth==1:
                 sum_axis=-3
@@ -216,10 +194,6 @@ class Ndiff:
         return kern
         
 
-    
-    
-        
-        
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
         #print('nout:',nout)
         Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
