@@ -42,8 +42,10 @@ class run_cluster(kernelcompare.KernelCompare):
         if source==None:
             source='monte'
         self.source=source
+        
         self.savedirectory=self.setdirectory(local_run=local_run)
-
+        self.trashdirectory=os.path.join(self.getcwd(),'..','trash')
+        if not os.path.exists(self.trashdirectory): os.makedirs(self.trashdirectory)
         
         logdir=os.path.join(os.getcwd(),'log')
         #logdir=os.path.join(self.savedirectory,'log')
@@ -63,7 +65,7 @@ class run_cluster(kernelcompare.KernelCompare):
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
-        self.oldnode_threshold=datetime.timedelta(hours=1,minutes=1,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=10,seconds=1)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
         if myname is None:
             myname='node'
@@ -281,11 +283,11 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 if self.mergethisnode(name):
                     try:
-                        os.remove(os.path.join(self.masterdirectory, name + '.name'))
+                        shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectory)
                     except:
                         pass
                     try:
-                        shutil.rmtree(os.path.join(self.savedirectory, name))
+                        shutil.move(os.path.join(self.savedirectory, name),self.trashdirectory)
                     except:
                         pass
                     break
@@ -791,24 +793,10 @@ class run_cluster(kernelcompare.KernelCompare):
 
 if __name__=="__main__":
 
-    import mycluster
+    #import mycluster
+   
     
-    Ndiff_type_variations=('modeldict:Ndiff_type',['recursive','product'])
-    max_bw_Ndiff_variations=('modeldict:max_bw_Ndiff',[2])
-    Ndiff_start_variations=('modeldict:Ndiff_start',[1,2])
-    ykern_grid_variations=('modeldict:ykern_grid',[33])
-    product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])
-    normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
-    optdict_variation_list=[Ndiff_type_variations,max_bw_Ndiff_variations,Ndiff_start_variations,ykern_grid_variations,product_kern_norm_variations,normalize_Ndiffwtsum_variations]
-    
-    
-    batch_n_variations=('batch_n',[32])
-    batchcount_variations=('batchcount',[40])
-    ftype_variations=('ftype',['linear','quadratic'])
-    param_count_variations=('param_count',[1,2])
-    datagen_variation_list=[batch_n_variations,batchcount_variations,ftype_variations,param_count_variations]
-    
-    mycluster.run_cluster(myname='master',optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+    mycluster.run_cluster(myname='node0',local_run=0)
 
 
 
