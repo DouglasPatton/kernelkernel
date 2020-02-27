@@ -4,8 +4,8 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[2]
+        self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.batchcount_variation_list=[4]
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
         
@@ -20,10 +20,10 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([.0001,.0001]),1.8*np.array([1,1]),.5*np.array([1,1]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.8*np.array([-1,1])])
-        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([.0001,.0001]),1.8*np.array([1,1]),.5*np.array([1,1]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.8*np.array([-1,1])])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.3])])
+        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.7]),np.array([.3])])
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   

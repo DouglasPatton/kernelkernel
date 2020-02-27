@@ -396,7 +396,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             run_dict_status[random_ready_dict_idx] = 'assigned'
                             ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
                             if shutdownnodes:
-                                newjob=None
+                                newjob='shutdown'
                             else:
                                 newjob=list_of_run_dicts[random_ready_dict_idx]
                             
@@ -446,9 +446,9 @@ class run_cluster(kernelcompare.KernelCompare):
                     mergestatus=self.mergethisnode(name)
                     print(f'for node name:{name}, mergestatus:{mergestatus}')
             if i<100:
-                sleep(5)
+                sleep(1)
             else:
-                sleep(30)
+                sleep(10)
         
 
             
@@ -620,11 +620,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 if type(my_opt_job) is dict:
                     break
                 else:
-                    sleep(5)
+                    sleep(2)
 
-            if my_opt_job is None:
+            if type(my_opt_job) is str and my_opt_job=='shutdown':
                 self.update_my_namefile(myname,status='shutting down')
-                return
+                keepgoing=0
+                break
             my_optimizedict=my_opt_job['optimizedict']
             my_datagen_dict=my_opt_job['datagen_dict']
 
@@ -669,6 +670,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 last_node_status=myjob['node_status'][-1][1]
                 if last_node_status=='ready for node':
                     self.update_node_job_status(myname,status='accepted',mydir=mydir)
+                    i=0
                     return myjob
                 else:
                     #print('myjob status:',myjob['node_status'])
@@ -679,7 +681,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
-                if s_since_start>datetime.timedelta(hours=120):#allowing 2 hours instead of using self.oldnode_threshold
+                if s_since_start>datetime.timedelta(hours=2):#allowing 2 hours instead of using self.oldnode_threshold
                     print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready for node')#signal that this node is still active
                     self.logger.exception(f'error in {__name__}')

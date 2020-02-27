@@ -405,8 +405,11 @@ class kNdtool(Ndiff,MyKernHelper):
             yhat=binary_yhat
             
         yhatmaskscount=np.ma.count_masked(yhat)
+        
         if yhatmaskscount>0:
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
+            if self.do_minimize:
+                return 
 
         #p#rint(f'yhat:{yhat}')
         #p#rint("wt_stack.shape",wt_stack.shape)
@@ -841,7 +844,7 @@ class optimize_free_params(kNdtool):
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
         self.mse_threshold=opt_settings_dict['mse_threshold']
-        do_minimize=opt_settings_dict['do_minimize']
+        self.do_minimize=opt_settings_dict['do_minimize']
         
         
         #Extract from optimizedict
@@ -863,18 +866,18 @@ class optimize_free_params(kNdtool):
 
         
 
-        if not do_minimize:
+        if not self.do_minimize:
             try:
                 mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
-                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'predict_model_save')
+                #self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'predict_model_save')
             except:
-                self.sort_then_saveit([[10**290,args_tuple[-1]]],modeldict,'predict_model_save')
+                self.sort_then_saveit([[10**290,args_tuple[-1]]],modeldict,'model_save')
                 self.logger.exception('')
         else:
             try:
                 self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
             except:
-                self.sort_then_saveit([[10**289,args_tuple[-1]]],modeldict,'predict_model_save')
+                self.sort_then_saveit([[10**289,args_tuple[-1]]],modeldict,'model_save')
                 self.logger.exception('')
         
 

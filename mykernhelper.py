@@ -302,7 +302,7 @@ class MyKernHelper:
                 if i==9:
                     self.logger.exception(f'error in {__name__}')
                     modellist=[]
-        #p#rint('---------------success----------')
+        
         if len(modellist)>0:
             lastsavetime=modellist[-1]['when_saved']
             runtime=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsavetime,"%Y%m%d-%H%M%S")
@@ -313,7 +313,9 @@ class MyKernHelper:
             try:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                print(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and mse={minmse}')
+                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and mse={minmse}'
+                print(donestring)
+                self.logger.info(donestring)
                 break
             except:
                 if i==9:
