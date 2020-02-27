@@ -5,7 +5,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[4]
+        self.batchcount_variation_list=[8]
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
         
@@ -21,7 +21,7 @@ class KernelParams:
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.1,.3,.5,.7]])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.2,.5,.9,1.3]])
         
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.8*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.2])])
@@ -43,7 +43,7 @@ class KernelParams:
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
@@ -120,7 +120,7 @@ class KernelParams:
                 
                 
             #species_variations=('species',self.specieslist)
-            species_variations=('species',[self.specieslist[i] for i in [3]])
+            species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist),20)])
             # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])

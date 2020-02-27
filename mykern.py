@@ -406,7 +406,7 @@ class kNdtool(Ndiff,MyKernHelper):
             
         yhatmaskscount=np.ma.count_masked(yhat)
         
-        if yhatmaskscount>0:
+        if yhatmaskscount>self.npr/4:
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
             if not self.do_minimize:
                 assert False, "exiting due to masked yhat"

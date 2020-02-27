@@ -367,8 +367,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 print(f'readynamelist:{readynamelist}')
             if all([status=='finished' for status in run_dict_status])==True:
                 shutdownnodes=1
+            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
             for name in readynamelist:
-                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+                
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
 
@@ -391,10 +392,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     if len(ready_dict_idx) == 0:
                         print('run_dict_status',run_dict_status)
                     if len(ready_dict_idx)>0:
-                        random_ready_dict_idx=ready_dict_idx[randint(0,len(ready_dict_idx)-1)]#-1 b/c random.randint(a,b) includes b
+                        random_ready_dict_idx=ready_dict_idx.pop(randint(0,len(ready_dict_idx)-1))#-1 b/c random.randint(a,b) includes b
                         try:
                             run_dict_status[random_ready_dict_idx] = 'assigned'
-                            ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
+                            #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready for node']
                             if shutdownnodes:
                                 newjob='shutdown'
                             else:
@@ -407,7 +408,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         except:
                             self.logger.exception('setup job for node failed')
                             run_dict_status[random_ready_dict_idx] = 'ready for node'
-                            ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
+                            #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready for node']
 
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')

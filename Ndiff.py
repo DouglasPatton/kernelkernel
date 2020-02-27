@@ -190,7 +190,7 @@ class Ndiff:
         "returns the gaussian kernel at x with bandwidth h"
         
         kern=np.ma.exp(-np.ma.power(x,2)/(np.ma.power(h,2)*2))
-        return kern#np.nan_to_num(kern,copy=False)
+        return np.nan_to_num(kern,copy=False)
         
 
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,ykerngrid):
