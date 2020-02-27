@@ -752,14 +752,14 @@ class run_cluster(kernelcompare.KernelCompare):
                     #print(f"nodesjob_dict['node_status'][-1]:{nodesjob_dict['node_status'][-1]}")
                     return nodesjob_dict['node_status'][-1][0],nodesjob_dict['node_status'][-1][1]#time_status tup
             except(FileNotFoundError):
-                if i==9:
+                if i==0:
 
                     #self.logger.exception(f'error in {__name__}')
                     if time==0:
                         return "no file found"#if the file doesn't exist, then assign the job
                     if time==1:
                         return strftime("%Y%m%d-%H%M%S"), "no file found"
-                sleep(1)
+                sleep(.1)
                     
             
 
