@@ -469,14 +469,14 @@ class run_cluster(kernelcompare.KernelCompare):
         for i in range(10):
             try:
                 print(f'trying merge{i}')
-                self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=0)
+                self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=1,verbose=0)
                 print(f'completed merge{i}')
                 break
             except:
                 if i==9:
                     try:
                         print(f'trying final merge')
-                        self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=1,verbose=1)
+                        self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=1)
                         print('completed final merge')
                     except:
                         print(f'merge this node failed for node named:{name}')
