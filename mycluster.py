@@ -285,12 +285,12 @@ class run_cluster(kernelcompare.KernelCompare):
                     try:
                         shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectory)
                     except:
-                        pass
+                        self.logger.exception('')
                     try:
                         shutil.move(os.path.join(self.savedirectory, name),self.trashdirectory)
                     except:
-                        pass
-                    break
+                        self.logger.exception('')
+                    
             except:
                 print(f'failed to merge node named:{name}')
                 self.logger.exception(f'error in {__name__}')
