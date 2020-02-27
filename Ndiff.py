@@ -189,7 +189,7 @@ class Ndiff:
     def gkernh(self, x, h):
         "returns the gaussian kernel at x with bandwidth h"
         
-        kern=np.ma.exp(-np.ma.power(x,2)/(np.ma.power(h**2)*2)))
+        kern=np.ma.exp(-np.ma.power(x,2)/(np.ma.power(h,2)*2))
         return np.nan_to_num(kern,copy=False)
         
 

@@ -408,7 +408,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         if yhatmaskscount>0:
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
-            if self.do_minimize:
+            if not self.do_minimize:
                 return 
 
         #p#rint(f'yhat:{yhat}')
