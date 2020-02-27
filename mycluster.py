@@ -741,7 +741,7 @@ class run_cluster(kernelcompare.KernelCompare):
             time=1
         nodes_dir=os.path.join(self.savedirectory,name)
         nodes_job_filename=os.path.join(nodes_dir,name+'_job')
-        for i in range(10):
+        for i in range(0):
             try:
                 with open(nodes_job_filename,'rb') as saved_job_file:
                     nodesjob_dict=pickle.load(saved_job_file)
@@ -759,7 +759,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         return "no file found"#if the file doesn't exist, then assign the job
                     if time==1:
                         return strftime("%Y%m%d-%H%M%S"), "no file found"
-            sleep(1)
+                sleep(1)
                     
             
 
