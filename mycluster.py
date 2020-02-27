@@ -44,7 +44,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.source=source
         
         self.savedirectory=self.setdirectory(local_run=local_run)
-        self.trashdirectory=os.path.join(self.getcwd(),'..','trash')
+        self.trashdirectory=os.path.join(os.getcwd(),'..','trash')
         if not os.path.exists(self.trashdirectory): os.makedirs(self.trashdirectory)
         
         logdir=os.path.join(os.getcwd(),'log')
