@@ -64,8 +64,8 @@ class mypool:
             
     def runpool(self,arg_list,workercount):
         if self.includemaster:
-            self.master_proc=mp.Process(target=self.runworker,args=('master'))
-            self.master_proc.start()
+            master_proc=mp.Process(target=self.runworker,args=('master',))
+            master_proc.start()
             
         process_list=[None]*workercount
         for i in range(workercount):
@@ -75,9 +75,9 @@ class mypool:
         for i in range(workercount):
             process_list[i].join()
         if self.includemaster:
-            self.master_proc.join()
+            master_proc.join()
         print('============================================')
-        print('==========multicluster has comleted=========')
+        print('==========multicluster has completed=========')
         print('============================================')
     
         '''     processes = [None] * 4

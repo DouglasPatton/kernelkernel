@@ -698,7 +698,16 @@ class kNdtool(Ndiff,MyKernHelper):
 
         #pre-build list of masks
         if 'max_bw_Ndiff' in modeldict:
-            try: self.Ndiff_list_of_masks_y
+            if self.Ndiff_list_of_masks_y is None:
+                self.logger.warning('need to build masks for y')
+                self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
+                    self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,ykerngrid)
+            if self.Ndiff_list_of_masks_x is None:
+                self.logger.warning('need to build masks for x')
+                self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
+                    self.npr,self.nout,self.nin,self.p,max_bw_Ndiff)
+            
+            '''try: self.Ndiff_list_of_masks_y
             except:
                 self.logger.exception('need to build masks for y')
                 self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
@@ -708,7 +717,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.logger.exception('need to build masks for x')
                 self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
                     self.npr,self.nout,self.nin,self.p,max_bw_Ndiff)
-            
+            '''
        
         args_tuple=(batchdata_dictlist, modeldict, fixed_or_free_paramdict)
         #val_args_tuple=(val_batchdata_dict, modeldict, fixed_or_free_paramdict)
@@ -791,8 +800,17 @@ class optimize_free_params(kNdtool):
         masks to broadcast(views) Ndiff to.
     """
 
-    def __init__(self,datagen_obj,optimizedict,savedir=None,myname=None):
-        kNdtool.__init__(self,savedir=savedir,myname=myname)
+    def __init__(self,kcsavedir=None,myname=None):
+        kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
+        self.name=myname
+        
+    
+    def run_opt(self,datagen_obj,optimizedict,savedir):
+        self.savedir=savedir
+    
+        #self.Ndiff_list_of_masks_x=xmask
+        #self.Ndiff_list_of_masks_y=ymask
+        
         
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.iter=0
@@ -801,11 +819,11 @@ class optimize_free_params(kNdtool):
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
         self.source=self.datagen_dict['source']
-        self.name=myname
+        
 
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'mykern_{myname}.log')
+        handlername=os.path.join(logdir,f'mykern_{self.name}.log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
             level=logging.DEBUG,
@@ -817,12 +835,13 @@ class optimize_free_params(kNdtool):
 
 
         
-        self.logger.info(f'optimizedict for {myname}:{optimizedict}')
+        self.logger.info(f'optimizedict for {self.name}:{optimizedict}')
 
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
         opt_method_options=opt_settings_dict['options']
         self.mse_threshold=opt_settings_dict['mse_threshold']
+        do_minimize=opt_settings_dict['do_minimize']
         
         
         #Extract from optimizedict
@@ -831,8 +850,7 @@ class optimize_free_params(kNdtool):
         param_valdict=optimizedict['hyper_param_dict']
 
         
-        if savedir==None:
-            savedir=os.getcwd()
+        
             
         
         self.naivemse=self.do_naivemse(datagen_obj)
@@ -845,21 +863,21 @@ class optimize_free_params(kNdtool):
 
         
 
-
-        #starting_mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
-        #if not starting_mse>self.mse_threshold:
-        self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-        lastmse=self.mse_param_list[-1][0]
-        lastparamdict=self.mse_param_list[-1][1]
-            #self.sort_then_saveit(self.mse_param_list,modeldict,'final_model_save')
-        #else:
-        #    self.logger.info(f'starting_mse: {starting_mse} > mse_threshold: {self.mse_threshold}')
-        #    lastmse=starting_mse
-        #    lastparamdict=self.fixed_or_free_paramdict
-        self.sort_then_saveit([[lastmse,lastparamdict]],modeldict,'model_save')
-        #self.sort_then_saveit(self.mse_param_list[-self.save_interval*3:],modeldict,'final_model_save')
+        if not do_minimize:
+            try:
+                mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
+                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'predict_model_save')
+            except:
+                self.sort_then_saveit([[10**290,args_tuple[-1]]],modeldict,'predict_model_save')
+                self.logger.exception('')
+        else:
+            try:
+                self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+            except:
+                self.sort_then_saveit([[10**289,args_tuple[-1]]],modeldict,'predict_model_save')
+                self.logger.exception('')
         
-        #self.logger.info(f'after final save, lastparamdict:{lastparamdict}')
+
         
 
 if __name__ == "__main__":

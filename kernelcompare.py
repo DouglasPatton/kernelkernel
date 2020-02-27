@@ -11,14 +11,16 @@ import yaml
 from kernelparams import KernelParams
 #import datetime
 
-class KernelOptModelTools(mk.kNdtool):
+class KernelOptModelTools(mk.optimize_free_params):
     def __init__(self,directory=None,myname=None):
         if directory==None:
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
-        mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
-        
+        #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
+        self.Ndiff_list_of_masks_x=None
+        self.Ndiff_list_of_masks_y=None
+        mk.optimize_free_params.__init__(self,kcsavedir=self.kc_savedirectory,myname=myname)
         self.name=myname
        
                 
@@ -53,7 +55,9 @@ class KernelOptModelTools(mk.kNdtool):
             
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
         
-        mk.optimize_free_params(datagen_obj,optimizedict,savedir=self.nodedirectory,myname=self.name)
+        self.run_opt(datagen_obj,optimizedict,self.nodedirectory)
+        
+        #(datagen_obj,optimizedict,self.nodedirectory,myname=self.name,xmask=self.Ndiff_list_of_masks_x,ymask=self.Ndiff_list_of_masks_y)
         return
         
                                

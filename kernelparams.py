@@ -4,10 +4,10 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-            
+        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.batchcount_variation_list=[2]
     def getoptdictvariations(self,source='monte'):
-        max_bw_Ndiff=0
+        max_bw_Ndiff=2
         
                
         ''''hyper_param_form_dict':{
@@ -117,12 +117,12 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',self.specieslist)
-            #species_variations=('species',[self.specieslist[i] for i in [2,3,4,5,6]])
+            #species_variations=('species',self.specieslist)
+            species_variations=('species',[self.specieslist[i] for i in [3]])
             # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
-            batchcount_variations=('batchcount',[16])
+            batchcount_variations=('batchcount',self.batchcount_variation_list)
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
@@ -177,7 +177,7 @@ class KernelParams:
             datagen_dict={
                 'source':'pisces',
                 'batch_n':self.n,
-                'batchcount':16, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
+                'batchcount':8, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
                 #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
                 'species':'all',
@@ -273,7 +273,8 @@ class KernelParams:
             'options':optiondict_NM,
             'mse_threshold':'naive_mse',
             'help_start':0,
-            'partial_match':0
+            'partial_match':0,
+            'do_minimize':0 # do_minimize=0 means just predict once for mse and don't optimize
             }
         
         optimizedict1={
@@ -281,6 +282,7 @@ class KernelParams:
             'hyper_param_dict':hyper_paramdict1,
             'modeldict':modeldict1
             } 
+        
         
         newoptimizedict1=self.do_dict_override(optimizedict1,opt_dict_override,verbose=0)
         

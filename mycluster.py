@@ -57,11 +57,13 @@ class run_cluster(kernelcompare.KernelCompare):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
 
-
+        '''if not myname=='master':
+            self.Ndiff_list_of_masks_x=None
+            self.Ndiff_list_of_masks_y=None'''
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
-        self.oldnode_threshold=datetime.timedelta(minutes=120,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(hours=1,minutes=1,seconds=1)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
         if myname is None:
             myname='node'
@@ -348,16 +350,23 @@ class run_cluster(kernelcompare.KernelCompare):
         print('model_run_count',model_run_count)
 
         i=0
-        while all([status=='finished' for status in run_dict_status])==False:
+        shutdownnodes=0
+        keepgoing=1
+        while keepgoing:
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
+            
+                
 
             run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
+            if shutdownnodes and len(readynamelist)==0:
+                keepgoing=0
 
             if len(readynamelist)>1:
                 print(f'readynamelist:{readynamelist}')
-            
+            if all([status=='finished' for status in run_dict_status])==True:
+                shutdownnodes=1
             for name in readynamelist:
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                 
@@ -386,7 +395,12 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             run_dict_status[random_ready_dict_idx] = 'assigned'
                             ready_dict_idx = [i for i in range(model_run_count) if run_dict_status[i] == 'ready for node']
-                            self.setup_job_for_node(name,list_of_run_dicts[random_ready_dict_idx])
+                            if shutdownnodes:
+                                newjob=None
+                            else:
+                                newjob=list_of_run_dicts[random_ready_dict_idx]
+                            
+                            self.setup_job_for_node(name,newjob)
                             assignment_tracker[name] = random_ready_dict_idx
                             #print('assignment_tracker', assignment_tracker)
                             i+=1
@@ -435,6 +449,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 sleep(5)
             else:
                 sleep(30)
+        
 
             
 
@@ -591,51 +606,52 @@ class run_cluster(kernelcompare.KernelCompare):
         mydir=self.nodedirectory
         if not os.path.exists(mydir):
             os.mkdir(mydir)
-        self.update_my_namefile(myname,status='ready for job')
-        start_time=strftime("%Y%m%d-%H%M%S")
-        i_have_opt_job=0
-        i=0
-        print(f'{myname} ischecking for jobs')
-        while i_have_opt_job==0:
-            my_opt_job=self.check_for_opt_job(myname,start_time,mydir)
-            if type(my_opt_job) is dict:
-                break
-            else:
-                sleep(5)
+        #self.Ndiff_list_of_masks_x=None
+        #self.Ndiff_list_of_masks_y=None
+        keepgoing=1
+        while keepgoing:
+            self.update_my_namefile(myname,status='ready for job')
+            start_time=strftime("%Y%m%d-%H%M%S")
+            i_have_opt_job=0
+            i=0
+            print(f'{myname} ischecking for jobs')
+            while i_have_opt_job==0:
+                my_opt_job=self.check_for_opt_job(myname,start_time,mydir)
+                if type(my_opt_job) is dict:
+                    break
+                else:
+                    sleep(5)
 
-
-        my_optimizedict=my_opt_job['optimizedict']
-        my_datagen_dict=my_opt_job['datagen_dict']
-
-
-        self.update_node_job_status(myname,status='starting',mydir=mydir)
-        try:
-            #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
-            #    my_optimizedict,my_datagen_dict,force_start_params=0)
-            self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
-            print('----------success!!!!!!-------')
-            success=1
-        except:
-            success=0
-            try:
-                self.update_node_job_status(myname,status='failed',mydir=mydir)
-            except:
-                self.logger.exception(f'error in {__name__}')
-                #self.runnode(myname+'0')#relying on wrapper function restarting the node
+            if my_opt_job is None:
+                self.update_my_namefile(myname,status='shutting down')
                 return
-            self.logger.exception(f'error in {__name__}')
+            my_optimizedict=my_opt_job['optimizedict']
+            my_datagen_dict=my_opt_job['datagen_dict']
 
-        if success==1:
+
+            self.update_node_job_status(myname,status='starting',mydir=mydir)
             try:
-                self.update_node_job_status(myname,status="finished",mydir=mydir)
-            except:
-                print(f'could not update node status for {myname} to finished')
-                self.logger.exception(f'error in {__name__}')
-                #self.runnode(myname+'0')#relying on wrapper function restarting the node
-                return
+                #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
+                #    my_optimizedict,my_datagen_dict,force_start_params=0)
+                self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
 
-        #self.runnode(myname)#relying on wrapper function restarting the node
-        return
+                try:
+                    self.update_node_job_status(myname,status="finished",mydir=mydir)
+                except:
+                    print(f'could not update node status for {myname} to finished')
+                    self.logger.exception(f'error in {__name__}')
+                    #self.runnode(myname+'0')#relying on wrapper function restarting the node
+            except:
+                try:
+                    self.update_node_job_status(myname,status='finished',mydir=mydir)
+                except:
+                    self.logger.exception(f'error in {__name__}')
+                    #self.runnode(myname+'0')#relying on wrapper function restarting the node
+                self.logger.exception(f'error in {__name__}')
+
+
+
+            #self.runnode(myname)#relying on wrapper function restarting the node
 
 
 

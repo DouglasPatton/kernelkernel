@@ -72,7 +72,7 @@ class Ndiff:
                 sum_axis=-2
             
             
-        self.logger.info(f'kernstack.shape:{kernstack.shape}, depth: {depth}, x_or_y:{x_or_y}, sum_axis:{sum_axis}')
+        #self.logger.info(f'kernstack.shape:{kernstack.shape}, depth: {depth}, x_or_y:{x_or_y}, sum_axis:{sum_axis}')
         if normalization=='none' or normalization==None:
             return np.ma.sum(kernstack,axis=sum_axis)
 
