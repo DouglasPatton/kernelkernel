@@ -179,12 +179,14 @@ class run_cluster(kernelcompare.KernelCompare):
 
             
     def getreadynames(self,namelist):
-        readylist=[]
+        readylist=[];sortlist=[]
         for name_i in namelist:
             last_time_status_tup=self.namefile_statuscheck(name_i)
             if last_time_status_tup[1]=='ready for job':
                 readylist.append(name_i)
-        return readylist
+                sortlist.append(last_time_status_tup[0])
+        sorted_readylist=[name_i for _, name_i in sorted(zip(sortlist,readylist), key=lambda pair: pair[0])]
+        return sorted_readylist
     
     def checkmaster(self):
         return os.path.exists(self.masterfilefilename)
