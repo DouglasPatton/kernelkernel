@@ -359,7 +359,7 @@ class kNdtool(Ndiff,MyKernHelper):
             iscrossmse=lossfn[0:8]=='crossmse'
         except: iscrossmse=0
             
-        yout_axis=len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
+        yout_axis=-2#len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         '''print('yout_axis(expected 0): ',yout_axis)
         print('prob_yx.shape',prob_yx.shape)
         print('prob_x.shape',prob_x.shape)'''
@@ -409,7 +409,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if yhatmaskscount>0:
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
             if not self.do_minimize:
-                return 
+                assert False, "exiting due to masked yhat"
 
         #p#rint(f'yhat:{yhat}')
         #p#rint("wt_stack.shape",wt_stack.shape)

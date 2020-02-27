@@ -190,7 +190,7 @@ class Ndiff:
         "returns the gaussian kernel at x with bandwidth h"
         
         kern=np.ma.exp(-np.ma.power(x,2)/(np.ma.power(h,2)*2))
-        return np.nan_to_num(kern,copy=False)
+        return kern#np.nan_to_num(kern,copy=False)
         
 
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,ykerngrid):
@@ -203,18 +203,18 @@ class Ndiff:
         #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
         
         if not self.predict_self_without_self=='yes':
-            ninmask=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
+            ninmask=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr))
         if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
-            ninmask3=np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr))
-            ninmask2=np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin))
-            ninmask1=np.broadcast_to(np.eye(nin)[None,:,:],(nin,nin,nin))
+            ninmask3=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr))
+            ninmask2=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,None,:],(nin,nin,nin))
+            ninmask1=np.broadcast_to(np.eye(nin,dtype=np.bool)[None,:,:],(nin,nin,nin))
             ninmask1=np.ma.make_mask(ninmask1)
             ninmask2=np.ma.make_mask(ninmask2)
             ninmask3=np.ma.make_mask(ninmask3)
             ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
         if self.predict_self_without_self=='yes' and nin==npr and type(ykerngrid) is int:
-            ninmask0=np.ma.make_mask(np.broadcast_to(np.eye(nin)[:,:,None],(nin,nin,npr)))
-            ninmask=np.ma.make_mask(np.broadcast_to(np.eye(nin)[:,None,:],(nin,nin,nin)))
+            ninmask0=np.ma.make_mask(np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr)))
+            ninmask=np.ma.make_mask(np.broadcast_to(np.eye(nin,dtype=np.bool)[:,None,:],(nin,nin,nin)))
             ninmask=np.ma.mask_or(ninmask0,ninmask)
         list_of_masks=[ninmask]
         if max_bw_Ndiff>0:
@@ -224,25 +224,35 @@ class Ndiff:
                 #when 0 dim of ninmask is expanded, masked if i=j for all k.
                 #when 2 dim of nin mask is expanded, masked if k=j for all i, and when 1 dim of nin mask is expanded, masked if k=i for all j. all are for all ii
             if type(ykerngrid) is int:
-                firstdiffmask=np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr)))
+                #firstdiffmask=np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr)))
+                firstdiffmask=np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr))
                 #if yout is a grid and nout not equal to nin, 
             list_of_masks.append(firstdiffmask)# this line is indexed (k,j,i,ii)
                 
         if max_bw_Ndiff>1:
             
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
-                lastmask=list_of_masks[-1] #second masks always based on self.nin
+                lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                list_of_masks.append(np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,0),masktup)))
+                #list_of_masks.append(np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,0),masktup)))
+                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
                     #then this loop maxes at 0,1 from range(2-1+1)
                     iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
+                    #list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
+                    list_of_masks[-1]=list_of_masks[-1]+\
+                        np.broadcast_to(
+                            np.expand_dims(
+                                lastmask,axis=iii),masktup)
                 if ykerngrid=='no':
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=ii+3),masktup)))#this should mask \
+                    list_of_masks[-1]=np.ma.mask_or(
+                        list_of_masks[-1],np.ma.make_mask(
+                            np.broadcast_to(
+                                np.expand_dims(lastmask,axis=ii+3),masktup)))#this should mask \
                     #the yout values from the rest since yout==yin        
         if type(ykerngrid) is int:
-            list_of_masks[0]=np.ma.make_mask(np.zeros([nin,nout,npr]))#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
+            #list_of_masks[0]=np.ma.make_mask(np.zeros([nin,nout,npr]))#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
+            list_of_masks[0]=np.zeros([nin,nout,npr],dtype=np.bool)
         #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
         return list_of_masks
         
