@@ -275,11 +275,10 @@ class MyKernHelper:
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
-        #try:
-        #    self.binary_y_mse_list
-        savedict['binary_y_result']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
-        #except:
-        #    pass
+        try:
+            savedict['binary_y_result']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
+        except:
+            self.logger.exception('')
         savedict['modeldict']=modeldict
         now=strftime("%Y%m%d-%H%M%S")
         savedict['when_saved']=now
@@ -289,6 +288,7 @@ class MyKernHelper:
             savedict['minimize_obj']=self.minimize_obj
         except:
             pass
+        savedict['do_minimize']=self.do_minimize
         for i in range(10):
             try: 
                 with open(fullpath_filename,'rb') as modelfile:

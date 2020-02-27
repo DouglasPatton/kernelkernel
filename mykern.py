@@ -81,9 +81,9 @@ class kNdtool(Ndiff,MyKernHelper):
         if modeldict['Ndiff_bw_kern']=='rbfkern':
 
             #xin_scaled=xin*x_bandscale_params
-            #print('xin_scaled.shape',xin_scaled.shape)
+            #p#rint('xin_scaled.shape',xin_scaled.shape)
             #xpr_scaled=xpr*x_bandscale_params
-            #print('xpr_scaled.shape',xpr_scaled.shape)
+            #p#rint('xpr_scaled.shape',xpr_scaled.shape)
 
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
@@ -151,7 +151,7 @@ class kNdtool(Ndiff,MyKernHelper):
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
                 xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
-                #print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
+                #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
                 xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-2),xoutdifftup)
                 xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
             newaxis=-1
@@ -304,7 +304,7 @@ class kNdtool(Ndiff,MyKernHelper):
             self.binary_y_mse_list=[]
             for threshold in binary_threshold:
                 if type(threshold) is str:
-                    print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
+                    #print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
                     if threshold=='avgavg':
                         avg_phat_0=np.ma.mean(yhat_un_std[all_y==0])
                         avg_phat_1=np.ma.mean(yhat_un_std[all_y==1])
@@ -447,7 +447,7 @@ class kNdtool(Ndiff,MyKernHelper):
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         try:
             self.forcefail
-            #print(f'returning self.forcefail:{self.forcefail}')
+            #p#rint(f'returning self.forcefail:{self.forcefail}')
             return self.forcefail
         except:
             pass
@@ -456,9 +456,9 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.success
                 if not type(self.success) is np.float64:
                     self.forcefail=9.99999*10**295
-                    print(f'self.success:{self.success},type(self.success):{type(self.success)}')
+                    #print(f'self.success:{self.success},type(self.success):{type(self.success)}')
                 if self.success>self.mse_threshold:
-                    print(f'self.success:{self.success},self.mse_threshold:{self.mse_threshold}')
+                    #print(f'self.success:{self.success},self.mse_threshold:{self.mse_threshold}')
                     self.forcefail=9.99999*10**296
             except:
                 self.forcefail=9.99999*10**297
@@ -485,7 +485,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
         batchbatch_all_y_err=[]
-        print('self.batchbatchcount',self.batchbatchcount)
+        #print('self.batchbatchcount',self.batchbatchcount)
         maxbatchbatchcount=modeldict['maxbatchbatchcount']
         batchbatchcount=self.batchbatchcount
         if type(maxbatchbatchcount) is int:
@@ -493,7 +493,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 batchbatchcount=maxbatchbatchcount
             
         for batchbatchidx in range(batchbatchcount):
-            print('batchbatchidx:',batchbatchidx)
+            #print('batchbatchidx:',batchbatchidx)
             if self.source=='pisces':
                 yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
             batchdata_dict_i=batchdata_dictlist[batchbatchidx]
@@ -540,7 +540,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     yhat_unstd,cross_errors=yhat_unstd_outtup_list
 
 
-            #print(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
+            #p#rint(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
 
 
 
@@ -686,15 +686,15 @@ class kNdtool(Ndiff,MyKernHelper):
                 yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
         
-        #print('buildbatcdatadict')
+        #p#rint('buildbatcdatadict')
         batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict)
-        #print('for validation buildbatcdatadict')
+        #p#rint('for validation buildbatcdatadict')
         #val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dictlist[0]['xprtup'][0])
-        print('self.npr',self.npr)
-        #print('=======================')
-        #print(f'batchdata_dict{batchdata_dict}')
-        #print('=======================')
+        #print('self.npr',self.npr)
+        #p#rint('=======================')
+        #p#rint(f'batchdata_dict{batchdata_dict}')
+        #p#rint('=======================')
 
         #self.npr=xpr.shape[0]#probably redundant
         #self.yout=yout
@@ -736,8 +736,8 @@ class kNdtool(Ndiff,MyKernHelper):
         batchdata_dictlist=[]
         for  yxtup_list in yxtup_listlist:
         
-            #print('from buildbatchdatadict: batchcount: ',batchcount)
-            #print('self.batchcount: ',self.batchcount)
+            #p#rint('from buildbatchdatadict: batchcount: ',batchcount)
+            #p#rint('self.batchcount: ',self.batchcount)
             xintup = ()
             yintup = ()
             xprtup = ()
@@ -751,7 +751,7 @@ class kNdtool(Ndiff,MyKernHelper):
                         if not j==i:
                             xpricross_j.append(yxvartup[1])
                     xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
-                        #print('xpri_crossval_array.shape',xpri_crossval_array.shape)
+                        #p#rint('xpri_crossval_array.shape',xpri_crossval_array.shape)
                     xpri.append(xpri_crossval_array)
 
 
@@ -759,21 +759,21 @@ class kNdtool(Ndiff,MyKernHelper):
                 xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
             for i in range(batchcount):
                 xdata_std=yxtup_list[i][1]
-                #print('xdata_std.shape: ',xdata_std.shape)
+                #p#rint('xdata_std.shape: ',xdata_std.shape)
                 ydata_std=yxtup_list[i][0]
-                #print('xprii[i]',xpri[i])
+                #p#rint('xprii[i]',xpri[i])
                 xpr_out_i,youti=self.prep_out_grid(xkerngrid,ykerngrid,xdata_std,ydata_std,modeldict,xpr=xpri[i])
-                #print('xpr_out_i.shape',xpr_out_i.shape)
+                #p#rint('xpr_out_i.shape',xpr_out_i.shape)
                 xintup=xintup+(xdata_std,)
                 yintup=yintup+(ydata_std,)
                 xprtup=xprtup+(xpr_out_i,)
                 youttup=youttup+(youti,)
-                #print('youttup',youttup)
-                #print('xprtup[0].shape:',xprtup[0].shape)
+                #p#rint('youttup',youttup)
+                #p#rint('xprtup[0].shape:',xprtup[0].shape)
 
             batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
             batchdata_dictlist.append(batchdata_dict)
-        #print([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
+        #p#rint([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
         return batchdata_dictlist
 
 
@@ -804,7 +804,7 @@ class optimize_free_params(kNdtool):
     """
 
     def __init__(self,kcsavedir=None,myname=None):
-        np.seterr(all='raise')
+        #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname
         
@@ -872,65 +872,13 @@ class optimize_free_params(kNdtool):
                 mse=self.MY_KDEpredictMSE(free_params,*args_tuple)
                 #self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'predict_model_save')
             except:
-                self.sort_then_saveit([[10**290,args_tuple[-1]]],modeldict,'model_save')
+                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'model_save')
                 self.logger.exception('')
         else:
             try:
                 self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
             except:
-                self.sort_then_saveit([[10**289,args_tuple[-1]]],modeldict,'model_save')
+                self.sort_then_saveit([[10.0**289,args_tuple[-1]]],modeldict,'model_save')
                 self.logger.exception('')
         
 
-        
-
-if __name__ == "__main__":
-
-    import os
-    import kernelcompare as kc
-    import traceback
-    import mykern
-
-    # from importlib import reload
-    networkdir = 'o:/public/dpatton/kernel'
-    mydir = os.getcwd()
-    test = kc.KernelCompare(directory=mydir)
-
-    Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive', 'product'])
-    max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [2])
-    Ndiff_start_variations = ('modeldict:Ndiff_start', [1, 2])
-    ykern_grid_variations = ('ykern_grid', [49])
-    # product_kern_norm_variations=('modeldict:product_kern_norm',['self','own_n'])#include None too?
-    # normalize_Ndiffwtsum_variations=('modeldict:normalize_Ndiffwtsum',['own_n','across'])
-    optdict_variation_list = [Ndiff_type_variations, max_bw_Ndiff_variations,
-                              Ndiff_start_variations]  # ,product_kern_norm_variations,normalize_Ndiffwtsum_variations]
-
-    # the default datagen_dict as of 11/25/2019
-    # datagen_dict={'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
-    batch_n_variations = ('batch_n', [32])
-    batchcount_variations = ('batchcount', [8])
-    ftype_variations = ('ftype', ['linear', 'quadratic'])
-    param_count_variations = ('param_count', [1, 2])
-    datagen_variation_list = [batch_n_variations, batchcount_variations, ftype_variations, param_count_variations]
-    testrun = test.prep_model_list(optdict_variation_list=optdict_variation_list,
-                                   datagen_variation_list=datagen_variation_list, verbose=1)
-
-    from random import shuffle,seed
-    seed(1)
-
-    #shuffle(testrun)
-    # a_rundict=testrun[100]#this produced the Ndiff_exponent error for recursive Ndiff
-    for idx in range(len(testrun)):
-        print(f'~~~~~~~run number:{idx}`~~~~~~~')
-        a_rundict = testrun[idx]
-        print(f'a_rundict{a_rundict}')
-        optimizedict = a_rundict['optimizedict']
-        datagen_dict = a_rundict['datagen_dict']
-
-        try:
-            test.do_monte_opt(optimizedict, datagen_dict, force_start_params=0)
-            test.open_condense_resave('model_save', verbose=0)
-            test.merge_and_condense_saved_models(merge_directory=None, save_directory=None, condense=1, verbose=0)
-        except:
-            print('traceback for run', idx)
-            self.logger.exception(f'error in {__name__}')

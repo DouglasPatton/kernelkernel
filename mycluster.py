@@ -496,17 +496,21 @@ class run_cluster(kernelcompare.KernelCompare):
     
 
     def setup_job_for_node(self,name,rundict):
-        jobdict={}
-        jobdict['optimizedict']=rundict['optimizedict']
-        jobdict['datagen_dict']=rundict['datagen_dict']
-        now=strftime("%Y%m%d-%H%M%S")
-        jobdict['node_status']=[(now,'ready for node')]
+        if type(rundict) is str and rundict=='shutdown':
+            jobdict=rundict
+        else:
+            jobdict={}
+            jobdict['optimizedict']=rundict['optimizedict']
+            jobdict['datagen_dict']=rundict['datagen_dict']
+            now=strftime("%Y%m%d-%H%M%S")
+            jobdict['node_status']=[(now,'ready for node')]
+            
         for _ in range(10):
             try:
-                with open(os.path.join(self.savedirectory,name,name+'_job'),'wb') as newjob:
-                    pickle.dump(jobdict,newjob)
+                with open(os.path.join(self.savedirectory,name,name+'_job'),'wb') as f:
+                    pickle.dump(jobdict,f)
                 print(f'job setup for node:{name}')
-                print(f'newjob has jobdict:{jobdict}')
+                # print(f'newjob has jobdict:{jobdict}')
                 break
             except:
                 self.logger.exception(f'error in {__name__}')
@@ -619,13 +623,14 @@ class run_cluster(kernelcompare.KernelCompare):
                 my_opt_job=self.check_for_opt_job(myname,start_time,mydir)
                 if type(my_opt_job) is dict:
                     break
+                elif type(my_opt_job) is str and my_opt_job=='shutdown':
+                    self.update_my_namefile(myname,status='shutting down')
+                    keepgoing=0
+                    return
                 else:
                     sleep(2)
 
-            if type(my_opt_job) is str and my_opt_job=='shutdown':
-                self.update_my_namefile(myname,status='shutting down')
-                keepgoing=0
-                break
+            
             my_optimizedict=my_opt_job['optimizedict']
             my_datagen_dict=my_opt_job['datagen_dict']
 
@@ -667,6 +672,8 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 with open(my_job_file,'rb') as myjob_save:
                     myjob=pickle.load(myjob_save)
+                if type(myjob) is str and myjob=='shutdown':
+                    return myjob
                 last_node_status=myjob['node_status'][-1][1]
                 if last_node_status=='ready for node':
                     self.update_node_job_status(myname,status='accepted',mydir=mydir)

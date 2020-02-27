@@ -32,7 +32,7 @@ class PiscesDataTool():
     def retrievespeciesdata(self,species_idx=None,species_name=None):
         try: 
             self.specieslist
-            print(type(self.specieslist))
+            #print(type(self.specieslist))
         except: self.buildspecieslist()
         if species_name==None and type(species_idx) is int:
             species_name=self.specieslist[species_idx]
@@ -78,7 +78,7 @@ class PiscesDataTool():
             try: 
                 with open(savefilename, 'rb') as f:
                     (self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist)=pickle.load(f)
-                print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
+                #print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
                 print(self.NHDplus)
 
                 self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())

@@ -47,7 +47,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         
         datagen_dict_expanded=datagen_obj.datagen_dict_expanded
         optimizedict['datagen_dict']=datagen_dict_expanded
-        print(f'datagen_dict_expanded:{datagen_dict_expanded} for directory,{self.kc_savedirectory}')
+        #print(f'datagen_dict_expanded:{datagen_dict_expanded} for directory,{self.kc_savedirectory}')
         
         if not force_start_params:
             optimizedict=self.run_opt_complete_check(optimizedict,replace=1)
@@ -972,6 +972,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         return datagen_variation_list
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
+        force_start_params=1
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
         return
         
