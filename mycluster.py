@@ -450,10 +450,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.update_my_namefile(name,status='ready for job')
                     mergestatus=self.mergethisnode(name)
                     print(f'for node name:{name}, mergestatus:{mergestatus}')
-            if i<100:
+            '''if i<100:
                 sleep(1)
             else:
-                sleep(10)
+                sleep(10)'''
         
 
             
