@@ -194,10 +194,13 @@ class Ndiff:
         return kern
         
 
-    def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
+    def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,ykerngrid):
+        try:
+            self.predict_self_without_self
+        except:
+            self.logger.exception('setting self.predict_self_without_self to "n/a"')
+            self.predict_self_without_self='n/a'
         #print('nout:',nout)
-        Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
-        ykerngrid=modeldict['ykern_grid']
         #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
         
         if not self.predict_self_without_self=='yes':
@@ -244,15 +247,18 @@ class Ndiff:
         #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
         return list_of_masks
         
-    def max_bw_Ndiff_maskstacker_x(self,npr,nout,nin,p,max_bw_Ndiff,modeldict):
+    def max_bw_Ndiff_maskstacker_x(self,npr,nout,nin,p,max_bw_Ndiff):
         '''match the parameter structure of Ndifflist produced by Ndiff_datastacker
         notably, mostly differences (and thus masks) will be between the nin (n in the original dataset) obeservations.
         though would be interesting to make this more flexible in the future.
         when i insert a new dimension between two dimensions, I'm effectively transposing
         '''
-        Ndiff_bw_kern=modeldict['Ndiff_bw_kern']
-        ykerngrid=modeldict['ykern_grid']
-        assert Ndiff_bw_kern=='rbfkern','only rbfkern developed and your kern is {}'.format(Ndiff_bw_kern)
+        try:
+            self.predict_self_without_self
+        except:
+            self.logger.exception('setting self.predict_self_without_self to "n/a"')
+            self.predict_self_without_self='n/a'
+        
             
         ninmask=np.ma.make_mask(np.eye(nin))
         list_of_masks=[ninmask]

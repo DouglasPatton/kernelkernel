@@ -34,27 +34,6 @@ class kNdtool(Ndiff,MyKernHelper):
 
         self.cores=int(psutil.cpu_count(logical=False)-1)
         self.batch_process_count=1#self.cores
-        ''' with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-            configfile=yaml.safe_load(f.read())
-        logging.config.dictConfig(configfile)
-        self.logger = logging.getLogger('myKernLogger')
-        '''
-    
-        #handlername=f'mykern-{self.name}.log'
-        #print(f'handlername:{handlername}')
-        #below assumes it is a node if it has a name, so saving the node's log to the main cluster directory not the node's save directory
-        """try: self.logger.debug('test')
-        except:
-            print('mykern creating a logger')
-            logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
-                level=logging.DEBUG,
-                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                datefmt='%Y-%m-%dT%H:%M:%S')
-            #self.logger = logging.getLogger('mkLogger')
-            self.logger = logging.getLogger(__name__)
-            #self.logger.addHandler(handlers)
-        """
         Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
         
@@ -175,9 +154,13 @@ class kNdtool(Ndiff,MyKernHelper):
                 #print('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
                 xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-2),xoutdifftup)
                 xbw_stack=np.broadcast_to(np.ma.expand_dims(xbw,axis=-2),xoutdifftup)
+            newaxis=-1
             yx_outdiffs_endstack=np.ma.concatenate(
-                (np.expand_dims(xoutdiffs_stack,axis=-1),np.expand_dims(youtdiffs,newaxis)),axis=-1)
-            yx_bw_endstack=np.ma.concatenate((np.ma.expand_dims(xbw_stack,newaxis),np.ma.expand_dims(ybw,newaxis)),axis=newaxis)
+                (np.expand_dims(xoutdiffs_stack,axis=newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
+            yx_bw_endstack=np.ma.concatenate([
+                np.ma.expand_dims(xbw_stack,newaxis),
+                np.ma.expand_dims(ybw,newaxis)]
+                ,axis=newaxis)
             #p#rint('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
             
             prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
@@ -715,17 +698,21 @@ class kNdtool(Ndiff,MyKernHelper):
 
         #pre-build list of masks
         if 'max_bw_Ndiff' in modeldict:
-            #p#rint('---------------starting to make masks----------------')
-            self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
-                self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-            self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
-                self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,modeldict)
-            #p#rint('---------------completed making masks----------------')
-        
-        #setup and run scipy minimize
+            try: self.Ndiff_list_of_masks_y
+            except:
+                self.logger.exception('need to build masks for y')
+                self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
+                    self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,ykerngrid)
+            try: self.Ndiff_list_of_masks_x
+            except:
+                self.logger.exception('need to build masks for x')
+                self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
+                    self.npr,self.nout,self.nin,self.p,max_bw_Ndiff)
+            
+       
         args_tuple=(batchdata_dictlist, modeldict, fixed_or_free_paramdict)
         #val_args_tuple=(val_batchdata_dict, modeldict, fixed_or_free_paramdict)
-        print(f'mykern modeldict:{modeldict}')
+        self.logger.info(f'mykern modeldict:{modeldict}')
         
         return free_params,args_tuple#,val_args_tuple
     
@@ -820,7 +807,7 @@ class optimize_free_params(kNdtool):
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mykern_{myname}.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=4)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')

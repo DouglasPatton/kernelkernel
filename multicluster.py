@@ -16,14 +16,14 @@ class mypool:
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'multicluster.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
+            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=1)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
       
         #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
         self.logger = logging.getLogger(handlername)
-
+        self.includemaster=includemaster
         self.source=source
 
         self.sleepfactor=0.1 #0.2->4min. 0.1->6sec, 0.224 ->10min
@@ -47,11 +47,13 @@ class mypool:
         self.id=randint(0,100000000)
         self.nodecount=nodecount
         self.workercount=nodecount
-        if includemaster==1:
-            self.workercount=nodecount+1
-            self.arg_list=['master']+['node']*(nodecount)
-        else:
-            self.arg_list = ['node'] * (nodecount)
+        
+        #if includemaster==1:
+        #    self.workercount=nodecount+1
+        #    self.arg_list=['master']+['node']*(nodecount)
+        #else:
+        #    self.arg_list = ['node'] * (nodecount)
+        self.arg_list = ['node'] * (nodecount)
         self.runpool(self.arg_list,self.workercount)
         
 
@@ -61,6 +63,10 @@ class mypool:
             
             
     def runpool(self,arg_list,workercount):
+        if self.includemaster:
+            self.master_proc=mp.Process(target=self.runworker,args=('master'))
+            self.master_proc.start()
+            
         process_list=[None]*workercount
         for i in range(workercount):
             self.i+=1
@@ -68,6 +74,11 @@ class mypool:
             process_list[i].start()
         for i in range(workercount):
             process_list[i].join()
+        if self.includemaster:
+            self.master_proc.join()
+        print('============================================')
+        print('==========multicluster has comleted=========')
+        print('============================================')
     
         '''     processes = [None] * 4
         for i in range(4):
