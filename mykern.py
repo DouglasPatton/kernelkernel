@@ -804,6 +804,7 @@ class optimize_free_params(kNdtool):
     """
 
     def __init__(self,kcsavedir=None,myname=None):
+        np.seterr(all='raise')
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname
         
