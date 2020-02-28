@@ -404,7 +404,8 @@ class run_cluster(kernelcompare.KernelCompare):
         shutdownnodes=0
         keepgoing=1
         while keepgoing:
-            self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
+            if i%100==0:
+                self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
 
