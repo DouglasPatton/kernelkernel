@@ -551,22 +551,22 @@ _
     def mergethisnode(self,name,old=0,move=0):
         nodesdir=os.path.join(self.savedirectory,name)
         if not move:
-        for i in range(10):
-            try:
-                print(f'trying merge{i}')
-                self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=0)
-                print(f'completed merge{i}')
-                break
-            except:
-                if i==0:
-                    try:
-                        print(f'trying final merge')
-                        self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=1)
-                        print('completed final merge')
-                    except:
-                        print(f'merge this node failed for node named:{name}')
-                        self.logger.exception(f'error in {__name__}')
-                        return False
+            for i in range(10):
+                try:
+                    print(f'trying merge{i}')
+                    self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=0)
+                    print(f'completed merge{i}')
+                    break
+                except:
+                    if i==0:
+                        try:
+                            print(f'trying final merge')
+                            self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=1)
+                            print('completed final merge')
+                        except:
+                            print(f'merge this node failed for node named:{name}')
+                            self.logger.exception(f'error in {__name__}')
+                            return False
         if move:
             try:
                 nodedir=os.path.join(self.savedirectory, name)
