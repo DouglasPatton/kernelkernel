@@ -294,6 +294,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         if not type(save_idx[0]) is str:
                             try:
                                 shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectorylist[save_idx[0]])
+                                save_idx[0]='saved'
                             except:
                                 self.logger.exception(f'save failed for namefile, idx:{save_idx[0]}')
                                 try:
@@ -306,12 +307,10 @@ class run_cluster(kernelcompare.KernelCompare):
                                         os.mkdir(self.trashdirectorylist[-1])
                                         
                                 except:self.logger.exception('')
-                        else:
-                            save_idx[0]='saved'
-
                         if not type(save_idx[1]) is str:
                             try:
                                 shutil.move(os.path.join(self.savedirectory, name),self.trashdirectorylist[save_idx[1]])
+                                save_idx[1]='saved'
                             except:
                                 self.logger.exception(f'save failed for namefile, idx:{save_idx[1]}')
                                 try:
@@ -323,10 +322,6 @@ class run_cluster(kernelcompare.KernelCompare):
                                         os.mkdir(self.trashdirectorylist[-1])
                                 except:self.logger.exception('')
                             
-                        else:
-                            save_idx[1]='saved'
-                                
-                    
             except:
                 print(f'failed to merge node named:{name}')
                 self.logger.exception(f'error in {__name__}')
