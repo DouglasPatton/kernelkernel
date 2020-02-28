@@ -511,7 +511,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.update_my_namefile(name,status='ready for job')
                     except:
                         self.logger.exception(f'could not update_my_namefile: name:{name}')
-                    #_=self.mergethisnode(name)
+                    mergestatus=self.mergethisnode(name,move=1)
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
                     try:job_idx=assignment_tracker[name]
@@ -587,14 +587,9 @@ class run_cluster(kernelcompare.KernelCompare):
                             shutil.move(model_save_path,newpath)
                         except:
                             self.logger.exception(f'newpath:{newpath}')
+            except:
+                self.logger.exception('move error in mergethisnode')
                             
-                        
-                            
-                        
-                
-                    
-                        
-        
         if old:    
             return True
         else:
