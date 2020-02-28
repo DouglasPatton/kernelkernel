@@ -11,6 +11,7 @@ from random import randint,seed
 import logging
 import logging.config
 import yaml
+from helpers import Helper
 #from pisces_data_huc12 import PiscesDataTool
 
 '''to do:
@@ -37,6 +38,7 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
+    helper=Helper()
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
         seed(1)
         if source==None:
@@ -44,8 +46,8 @@ class run_cluster(kernelcompare.KernelCompare):
         self.source=source
         
         self.savedirectory=self.setdirectory(local_run=local_run)
-        self.trashdirectory=os.path.join(os.getcwd(),'..','trash')
-        if not os.path.exists(self.trashdirectory): os.makedirs(self.trashdirectory)
+        self.trashdirectorylist=[os.path.join(os.getcwd(),'..','trash')]
+        if not os.path.exists(self.trashdirectorylist[-1]): os.makedirs(self.trashdirectorylist[-1])
         
         logdir=os.path.join(os.getcwd(),'log')
         #logdir=os.path.join(self.savedirectory,'log')
@@ -284,14 +286,34 @@ class run_cluster(kernelcompare.KernelCompare):
             
             try:
                 if self.mergethisnode(name):
-                    try:
-                        shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectory)
-                    except:
-                        self.logger.exception('')
-                    try:
-                        shutil.move(os.path.join(self.savedirectory, name),self.trashdirectory)
-                    except:
-                        self.logger.exception('')
+                    
+                    save_idx=[0,0]
+                    
+                    while not all([idx=='saved' for idx in save_idx]):
+                        if not type(save_idx[0]) is str:
+                            try:
+                                shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectorylist[save_idx[0]])
+                            except:
+                                self.logger.exception('')
+                                save_idx[0]+=1
+                                if len(self.trashdirectorylist)-1<save_idx[0]:
+                                    self.trashdirectorylist.append(helper.getname(self.trashdirectorylist[-1]))
+                                    os.makedir(self.trashdirectorylist[-1])
+                        else:
+                            save_idx[0]='saved'
+
+                        if not type(save_idx[1]) is str:
+                            try:
+                                shutil.move(os.path.join(self.savedirectory, name),self.trashdirectorylist[savelist[1]])
+                            except:
+                                self.logger.exception('')
+                                savelist[1]+=1
+                                if len(self.trashdirectorylist)-1<savelist[1]:
+                                    self.trashdirectorylist.append(helper.getname(self.trashdirectorylist[-1]))
+                                    os.makedir(self.trashdirectorylist[-1])
+                        else:
+                            save_idx[1]='saved'
+                                
                     
             except:
                 print(f'failed to merge node named:{name}')

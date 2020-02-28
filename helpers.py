@@ -2,7 +2,7 @@ import traceback
 from copy import deepcopy
 import os
 
-class helpers:
+class Helper:
     def __init__(self,):
         pass
 
@@ -80,12 +80,15 @@ class helpers:
             if os.path.exists(filename):
                 countstr=''
                 dotpos=[]#dot position for identifying extensions and 
-                for i,char in enumerate(filename):
-                    if char=='.':
-                        dotpos.append(i)
-                        break
+                splitlist=filename.split('.')
+                #for i,char in enumerate(filename):
+                #    if char=='.':
+                #        dotpos.append(i)
+                #        break
                 try: 
-                    lastdot=dotpos.pop(-1)
+                    #lastdot=dotpos.pop(-1)
+                    prefix=''.join(splitlist[:-1])
+                    suffix=splitlist[-1]
                     prefix=filename[:lastdot]
                     suffix=filename[lastdot:]
                 except:
