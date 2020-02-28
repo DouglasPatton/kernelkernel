@@ -260,7 +260,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==9:
                     self.logger.exception(f'error in {__name__}')
                     assert False, 'masterfile problem'
-_
+
     def rebuild_namefiles(self, run_dict_status, assignment_tracker):
         namelist = self.getnamelist()  # get a new copy just in case
         namefile_tuplist = [self.namefile_statuscheck(name) for name in namelist]
