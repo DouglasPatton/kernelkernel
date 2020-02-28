@@ -414,7 +414,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
-                    print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
+                    #print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
                 except:
                     print(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
@@ -425,10 +425,14 @@ class run_cluster(kernelcompare.KernelCompare):
                     now=strftime("%Y%m%d-%H%M%S")
                     
                     elapsed=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(job_time,"%Y%m%d-%H%M%S")
-                    islate=elapsed>datetime.timedelta(seconds=60)
+                    islate=elapsed>self.oldnode_threshold
+                    
                 except:
                     self.logger.exception('')
                     islate=0
+                if islate:
+                    self.logger.info(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
+                    print(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
 
                 if job_status=="no file found" or islate:
                     print(f'about to setup the job for node:{name}')
