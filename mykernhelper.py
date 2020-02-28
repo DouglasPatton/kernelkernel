@@ -3,7 +3,7 @@ import os
 from time import strftime,sleep
 import pickle
 import datetime
-
+from helpers import Helper
 
 class MyKernHelper:
     def __init__(self,):
@@ -262,9 +262,13 @@ class MyKernHelper:
             broadcasted_array=np.broadcast_to(maskedarray,tup)
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
-    def sort_then_saveit(self,mse_param_list,modeldict,filename):
+    def sort_then_saveit(self,mse_param_list,modeldict,filename,getname=None):
         
         fullpath_filename=os.path.join(self.savedir,filename)
+        if getname:
+            fullpath_filename=Helper().getname(fullpath_filename)
+            
+        
         mse_list=[i[0] for i in mse_param_list]
         minmse=min(mse_list)
         fof_param_dict_list=[i[1] for i in mse_param_list]

@@ -1,3 +1,4 @@
+import traceback
 from copy import deepcopy
 from time import strftime
 import numpy as np
@@ -226,6 +227,37 @@ class KernelOptModelTools(mk.optimize_free_params):
                     self.add_dict(
                         os.path.join(startdirectory,dir_i,file_i),add_tuple_list,overwrite=overwrite,verbose=verbose)
         return
+    
+    def remove_model_fromsavedict(self,filename,flatdictstring,overwrite=0,verbose=0):
+        if overwrite == 0 or overwrite==None:
+            writefilename = filename + '-overwrite_dict'
+        else:
+            writefilename = filename
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_savedirectory,filename),'rb') as modelsavefile:
+                    modelsave_list=pickle.load(modelsavefile)
+                break
+            except:
+                if j==9:
+                    self.logger.exception(f'error in {__name__}')
+                    return
+                
+        match_dict=self.build_override_dict_from_str(flatdictstring,None)
+        new_modelsave_list=[]
+        for savedict in modelsave_list:
+            if not self.do_dict_override(savedict,match_dict,verbose=verbose,justfind=1):
+                # returns true or false if justfind=1
+                new_modelsave_list.append(savedict)
+        for j in range(10):
+            try:
+                with open(os.path.join(self.kc_savedirectory,writefilename),'wb') as modelsavefile:
+                    pickle.dump(new_modelsave_list,modelsavefile)
+                return
+            except:
+                if j==9:
+                    self.logger.exception(f'error in {__name__}')
+                    return
     
     
     def deletefromsavedict(self,filename,flatdictstring,overwrite=0,verbose=0):
@@ -798,7 +830,7 @@ class KernelOptModelTools(mk.optimize_free_params):
             
                 
                   
-    def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,replace=None,deletekey=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
+    def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,replace=None,deletekey=None,justfind=None):#key:values in old_dict replaced by any matching keys in new_dict, otherwise old_dict is left the same and returned.
         old_dict_copy=deepcopy(old_dict)
         if replace==None or replace=='yes':
             replace=1
@@ -810,7 +842,7 @@ class KernelOptModelTools(mk.optimize_free_params):
 
         if deletekey=='yes':deletekey=1
         if deletekey==None:deletekey=='no'
-
+        
         vstring=''
         if new_dict==None or new_dict=={}:
             if verbose==1:
@@ -832,7 +864,8 @@ class KernelOptModelTools(mk.optimize_free_params):
                 except KeyError:
                     if verbose==1:
                           vstring = vstring + f"delete could not find key:{key}"
-                        
+                    if justfind:
+                        return False
             
             elif replace==0 and (key in old_dict_copy):
                 if verbose == 1:
@@ -846,6 +879,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                         oldval=old_dict_copy[key]
                     else:
                         oldval=f'{key} not in old_dict'
+                        if justfind:return False
                     old_dict_copy[key]=val
                     if verbose==1:
                         print(f":val({new_dict[key]}) replaces val({oldval})\n")
@@ -859,6 +893,7 @@ class KernelOptModelTools(mk.optimize_free_params):
             return old_dict_copy, vstring
 
         else:
+            if justfind:return True
             #p#rint(f'old_dict_copy{old_dict_copy}')
             return old_dict_copy
     

@@ -406,11 +406,11 @@ class kNdtool(Ndiff,MyKernHelper):
             
         yhatmaskscount=np.ma.count_masked(yhat)
         self.yhatmaskscount=yhatmaskscount
-        if yhatmaskscount>self.npr/4:
+        '''if yhatmaskscount>self.npr/4:
             self.yhatmaskscount=yhatmaskscount
             self.logger.info(f'in my_NW_KDEreg, yhatmaskscount: {yhatmaskscount}')
             if not self.do_minimize:
-                assert False, "exiting due to masked yhat"
+                assert False, "exiting due to masked yhat"'''
 
         #p#rint(f'yhat:{yhat}')
         #p#rint("wt_stack.shape",wt_stack.shape)
@@ -576,6 +576,7 @@ class kNdtool(Ndiff,MyKernHelper):
         batchbatch_all_y_err=np.ma.concatenate([batchbatch_all_y_err],axis=0)
         mse = np.ma.mean(np.ma.power(batchbatch_all_y_err, 2))
         maskcount=np.ma.count_masked(batchbatch_all_y_err)
+        
 
         if maskcount>1:
             self.logger.warning(f'all_y_err maskcount:{maskcount}')
@@ -806,6 +807,7 @@ class optimize_free_params(kNdtool):
 
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
+        
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname
         
@@ -871,9 +873,9 @@ class optimize_free_params(kNdtool):
         if not self.do_minimize:
             try:
                 mse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
-                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'model_save')
+                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
             except:
-                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'model_save')
+                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
                 self.logger.exception('')
         else:
             try:

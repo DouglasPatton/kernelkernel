@@ -76,9 +76,9 @@ class Ndiff:
         if normalization=='none' or normalization==None:
             return np.ma.sum(kernstack,axis=sum_axis)
 
-        if type(normalization) is int:
+        if normalization=='own_n':
             
-            return np.ma.sum(kernstack,axis=sum_axis)/float(normalization)
+            return np.ma.mean(kernstack,axis=sum_axis)
         if normalization=='across':
             #return np.ma.sum(kernstack/np.ma.mean(kernstack,axis=0),axis=0)
             this_depth_sum=np.ma.sum(kernstack,axis=sum_axis)
@@ -128,7 +128,7 @@ class Ndiff:
             deeper_depth_bw=np.array([1])
             for depth in range(max_bw_Ndiff,0,-1):
                 if normalization == 'own_n':
-                    normalize=self.nin-(depth)
+                    normalize='own_n'
                 else:normalize=normalization
                 if depth<Ndiff_start:
                     this_depth_bw_param=1

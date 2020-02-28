@@ -527,7 +527,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         del assignment_tracker[name]
                         run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready for job')
-                        #mergestatus=self.mergethisnode(name)
+                        mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #print(f'for node name:{name}, mergestatus:{mergestatus}')
                     except:
@@ -548,7 +548,7 @@ class run_cluster(kernelcompare.KernelCompare):
     
 
     
-    def mergethisnode(self,name,old=0):
+    def mergethisnode(self,name,old=0,move=0):
         nodesdir=os.path.join(self.savedirectory,name)
         for i in range(10):
             try:
@@ -566,6 +566,35 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'merge this node failed for node named:{name}')
                         self.logger.exception(f'error in {__name__}')
                         return False
+        if move:
+            try:
+                nodedir=os.path.join(self.savedirectory, name)
+                model_save_pathlist=[name_i for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
+                renamelist=[]
+                helper=Helper()
+                for model_save_path in model_save_pathlist:
+                    try:
+                        shutil.move(model_save_path,self.trashdirectorylist[0])
+                    except:  
+                        try:
+                            newpath=os.path.join(self.trashdirectorylist[0],os.split(model_save_path)[-1])
+                            newpath=helper.getname(newpath)
+                            #newstem=os.split(newstem)[-1]
+                            #os.rename(model_save_path,newstem)
+                        except:
+                            self.logger.exception(f'model_save_path:{model_save_path}')
+                        try:
+                            shutil.move(model_save_path,newpath)
+                        except:
+                            self.logger.exception(f'newpath:{newpath}')
+                            
+                        
+                            
+                        
+                
+                    
+                        
+        
         if old:    
             return True
         else:
