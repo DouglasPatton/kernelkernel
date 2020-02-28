@@ -643,8 +643,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     namefile=pickle.load(savednamefile)
                 break
             except:
-                sleep(0.25)
-                if i==9:
+                #sleep(0.25)
+                if i==1:
                     self.logger.exception(f'error in {__name__}')
                     namefile=[(None,None)]
         return namefile[-1]
@@ -677,7 +677,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 print(f'activitycheck for name:{name}, time:{sincelastsave},timetype:{type(sincelastsave)}')
                 return sincelastsave
             except:
-                if i==9:
+                if i==1:
                     self.logger.info(f'error in {__name__} could not find{filename}')
                     if not filename=='final_model_save':
                         self.model_save_activitycheck(name,filename='final_model_save')
