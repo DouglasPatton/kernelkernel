@@ -12,6 +12,7 @@ import logging
 import logging.config
 import yaml
 from helpers import Helper
+import multiprocessing as mp
 
 #from pisces_data_huc12 import PiscesDataTool
 
@@ -45,7 +46,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if source==None:
             source='monte'
         self.source=source
-        
+        self.oldnodequeue=mp.Queue
         self.savedirectory=self.setdirectory(local_run=local_run)
         self.trashdirectorylist=[os.path.join(os.getcwd(),'..','trash')]
         if not os.path.exists(self.trashdirectorylist[-1]): os.makedirs(self.trashdirectorylist[-1])
@@ -510,7 +511,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.update_my_namefile(name,status='ready for job')
                     except:
                         self.logger.exception(f'could not update_my_namefile: name:{name}')
-                    _=self.mergethisnode(name)
+                    #_=self.mergethisnode(name)
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
                     try:job_idx=assignment_tracker[name]
@@ -526,9 +527,9 @@ class run_cluster(kernelcompare.KernelCompare):
                         del assignment_tracker[name]
                         run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready for job')
-                        mergestatus=self.mergethisnode(name)
-                        self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
-                        print(f'for node name:{name}, mergestatus:{mergestatus}')
+                        #mergestatus=self.mergethisnode(name)
+                        #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
+                        #print(f'for node name:{name}, mergestatus:{mergestatus}')
                     except:
                         self.logger.exception('')
             '''if i<100:
