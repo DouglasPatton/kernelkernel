@@ -423,7 +423,8 @@ class run_cluster(kernelcompare.KernelCompare):
                 #print(f"job_time:{job_time},job_status:{job_status}")
                 try:
                     now=strftime("%Y%m%d-%H%M%S")
-                    elapsed=now-job_time
+                    
+                    elapsed=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(job_time,"%Y%m%d-%H%M%S")
                     islate=elapsed>datetime.timedelta(seconds=60)
                 except:
                     self.logger.exception('')
