@@ -407,6 +407,7 @@ class run_cluster(kernelcompare.KernelCompare):
             if all([status=='finished' for status in run_dict_status])==True:
                 shutdownnodes=1
             ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+            notanewjob_list=[]
             for name in readynamelist:
                 
                 
@@ -434,7 +435,9 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.logger.info(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
                     print(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
 
-                if job_status=="no file found" or islate:
+                if not(job_status=="no file found" or islate):
+                    notanewjob_list.append([name,job_status])
+                else:
                     print(f'about to setup the job for node:{name}')
                     #print('len(ready_dict_idx)',len(ready_dict_idx))
                     if len(ready_dict_idx) == 0:
@@ -461,9 +464,11 @@ class run_cluster(kernelcompare.KernelCompare):
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
 
+                for arglist in notanewjob_list:
+                    name=arglist[0]
+                    job_status=arglist[1]
 
-
-                elif job_status=='failed':
+                if job_status=='failed':
                     try:
                         job_idx=assignment_tracker[name]
                         tracked=1
@@ -519,7 +524,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 print(f'completed merge{i}')
                 break
             except:
-                if i==9:
+                if i==0:
                     try:
                         print(f'trying final merge')
                         self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=1)
