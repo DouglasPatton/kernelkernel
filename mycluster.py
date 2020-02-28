@@ -306,6 +306,8 @@ class run_cluster(kernelcompare.KernelCompare):
                                         self.trashdirectorylist.append(newtrashdir)
                                         os.mkdir(self.trashdirectorylist[-1])
                                 except:self.logger.exception('')
+                            except FileNotFoundError:
+                                save_idx[0]='FileNotFoundError'
                             except: self.logger.exception('')
                         if not type(save_idx[1]) is str:
                             try:
@@ -321,6 +323,8 @@ class run_cluster(kernelcompare.KernelCompare):
                                         self.trashdirectorylist.append(newtrashdir)
                                         os.mkdir(self.trashdirectorylist[-1])
                                 except:self.logger.exception('')
+                            except FileNotFoundError:
+                                save_idx[0]='FileNotFoundError'
                             except: self.logger.exception('')
                         assert all([idx<100 for idx in save_idx if not type(idx) is str]), f'too many trash directories. save_idx:{save_idx}'
                             
