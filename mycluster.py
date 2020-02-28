@@ -437,7 +437,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 if not(job_status=="no file found" or islate):
                     notanewjob_list.append([name,job_status])
-                    nonewjob_namelist=[i[0] for i in notanewjob_list]
+                    #nonewjob_namelist=[i[0] for i in notanewjob_list]
                 else:
                     print(f'about to setup the job for node:{name}')
                     #print('len(ready_dict_idx)',len(ready_dict_idx))
@@ -477,15 +477,17 @@ class run_cluster(kernelcompare.KernelCompare):
                         tracked=0
                     try:
                         self.discard_job_for_node(name)
-                    except:pass
-                    print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                    except:
+                        self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                     if tracked==1: 
                         del assignment_tracker[name]
                         run_dict_status[job_idx]='ready for node'
                         
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
-                    try:self.update_my_namefile(name,status='ready for job')
-                    except:pass
+                    try:
+                        self.update_my_namefile(name,status='ready for job')
+                    except:
+                        self.logger.exception(f'could not update_my_namefile: name:{name}')
                     _=self.mergethisnode(name)
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
@@ -493,12 +495,16 @@ class run_cluster(kernelcompare.KernelCompare):
                     except:
                         print(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
                         print(f'assignment_tracker:{assignment_tracker}')
+                        self.logger.exception(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
+                        self.logger.info(f'assignment_tracker:{assignment_tracker}')
                     self.discard_job_for_node(name)
                     print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                    self.logger.info(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                     del assignment_tracker[name]
                     run_dict_status[job_idx]='finished'
                     self.update_my_namefile(name,status='ready for job')
                     mergestatus=self.mergethisnode(name)
+                    self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                     print(f'for node name:{name}, mergestatus:{mergestatus}')
             '''if i<100:
                 sleep(1)
