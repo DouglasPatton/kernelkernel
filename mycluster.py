@@ -386,6 +386,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 dorestart=0
             except:
+                self.logger.exception('restarting master')
                 dorestart=1
         
         if dorestart==1:
@@ -518,15 +519,18 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'assignment_tracker:{assignment_tracker}')
                         self.logger.exception(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
                         self.logger.info(f'assignment_tracker:{assignment_tracker}')
-                    self.discard_job_for_node(name)
-                    print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                    self.logger.info(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                    del assignment_tracker[name]
-                    run_dict_status[job_idx]='finished'
-                    self.update_my_namefile(name,status='ready for job')
-                    mergestatus=self.mergethisnode(name)
-                    self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
-                    print(f'for node name:{name}, mergestatus:{mergestatus}')
+                    try:
+                        self.discard_job_for_node(name)
+                        print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                        self.logger.info(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                        del assignment_tracker[name]
+                        run_dict_status[job_idx]='finished'
+                        self.update_my_namefile(name,status='ready for job')
+                        mergestatus=self.mergethisnode(name)
+                        self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
+                        print(f'for node name:{name}, mergestatus:{mergestatus}')
+                    except:
+                        self.logger.exception('')
             '''if i<100:
                 sleep(1)
             else:
