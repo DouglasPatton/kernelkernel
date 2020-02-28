@@ -12,6 +12,7 @@ import logging
 import logging.config
 import yaml
 from helpers import Helper
+
 #from pisces_data_huc12 import PiscesDataTool
 
 '''to do:
@@ -38,7 +39,7 @@ class run_cluster(kernelcompare.KernelCompare):
     When the master is started, it checks the namelist for anynodes that have not posted for awhile (need to add this next bit)
     and that are not working on a job. The master can also check the nodes model_save file
     '''
-    helper=Helper()
+    
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
         seed(1)
         if source==None:
@@ -285,7 +286,7 @@ class run_cluster(kernelcompare.KernelCompare):
         for j, name in enumerate(old_name_list):
             
             try:
-                if self.mergethisnode(name):
+                if self.mergethisnode(name,old=1):
                     
                     save_idx=[0,0]
                     
@@ -294,23 +295,34 @@ class run_cluster(kernelcompare.KernelCompare):
                             try:
                                 shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectorylist[save_idx[0]])
                             except:
-                                self.logger.exception('')
-                                save_idx[0]+=1
-                                if len(self.trashdirectorylist)-1<save_idx[0]:
-                                    self.trashdirectorylist.append(helper.getname(self.trashdirectorylist[-1]))
-                                    os.makedir(self.trashdirectorylist[-1])
+                                self.logger.exception(f'save failed for namefile, idx:{save_idx[0]}')
+                                try:
+                                    self.logger.exception('')
+                                    save_idx[0]+=1
+                                    if len(self.trashdirectorylist)-1<save_idx[0]:
+                                        newtrashdir=Helper().getname(self.trashdirectorylist[-1])
+                                        self.logger.debug(f'newtrashdir:{newtrashdir}')
+                                        self.trashdirectorylist.append(newtrashdir)
+                                        os.mkdir(self.trashdirectorylist[-1])
+                                        
+                                except:self.logger.exception('')
                         else:
                             save_idx[0]='saved'
 
                         if not type(save_idx[1]) is str:
                             try:
-                                shutil.move(os.path.join(self.savedirectory, name),self.trashdirectorylist[savelist[1]])
+                                shutil.move(os.path.join(self.savedirectory, name),self.trashdirectorylist[save_idx[1]])
                             except:
-                                self.logger.exception('')
-                                savelist[1]+=1
-                                if len(self.trashdirectorylist)-1<savelist[1]:
-                                    self.trashdirectorylist.append(helper.getname(self.trashdirectorylist[-1]))
-                                    os.makedir(self.trashdirectorylist[-1])
+                                self.logger.exception(f'save failed for namefile, idx:{save_idx[1]}')
+                                try:
+                                    save_idx[1]+=1
+                                    if len(self.trashdirectorylist)-1<save_idx[1]:
+                                        newtrashdir=Helper().getname(self.trashdirectorylist[-1])
+                                        self.logger.debug(f'newtrashdir:{newtrashdir}')
+                                        self.trashdirectorylist.append(newtrashdir)
+                                        os.mkdir(self.trashdirectorylist[-1])
+                                except:self.logger.exception('')
+                            
                         else:
                             save_idx[1]='saved'
                                 
@@ -488,7 +500,7 @@ class run_cluster(kernelcompare.KernelCompare):
     
 
     
-    def mergethisnode(self,name):
+    def mergethisnode(self,name,old=0):
         nodesdir=os.path.join(self.savedirectory,name)
         for i in range(10):
             try:
@@ -506,7 +518,10 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'merge this node failed for node named:{name}')
                         self.logger.exception(f'error in {__name__}')
                         return False
-        return True
+        if old:    
+            return True
+        else:
+            return False
                 
                 
         
