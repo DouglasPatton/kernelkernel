@@ -295,7 +295,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             try:
                                 shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectorylist[save_idx[0]])
                                 save_idx[0]='saved'
-                            except:
+                            except shutil.Error:
                                 self.logger.exception(f'save failed for namefile, idx:{save_idx[0]}')
                                 try:
                                     self.logger.exception('')
@@ -305,13 +305,13 @@ class run_cluster(kernelcompare.KernelCompare):
                                         self.logger.debug(f'newtrashdir:{newtrashdir}')
                                         self.trashdirectorylist.append(newtrashdir)
                                         os.mkdir(self.trashdirectorylist[-1])
-                                        
                                 except:self.logger.exception('')
+                            except: self.logger.exception('')
                         if not type(save_idx[1]) is str:
                             try:
                                 shutil.move(os.path.join(self.savedirectory, name),self.trashdirectorylist[save_idx[1]])
                                 save_idx[1]='saved'
-                            except:
+                            except shutil.Error:
                                 self.logger.exception(f'save failed for namefile, idx:{save_idx[1]}')
                                 try:
                                     save_idx[1]+=1
@@ -321,6 +321,8 @@ class run_cluster(kernelcompare.KernelCompare):
                                         self.trashdirectorylist.append(newtrashdir)
                                         os.mkdir(self.trashdirectorylist[-1])
                                 except:self.logger.exception('')
+                            except: self.logger.exception('')
+                        assert all([idx<100 for idx in save_idx if not type(idx) is str]), f'too many trash directories. save_idx:{save_idx}'
                             
             except:
                 print(f'failed to merge node named:{name}')
