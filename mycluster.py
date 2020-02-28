@@ -196,7 +196,7 @@ class run_cluster(kernelcompare.KernelCompare):
         return os.path.exists(self.masterfilefilename)
     
     def getmaster(self):
-        for i in range(10):
+        for i in range(3):
             try:
                 with open(self.masterfilefilename,'rb') as themasterfile:
                     masterfile=pickle.load(themasterfile)
@@ -217,7 +217,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 masterfile={}
                 return masterfile
             except:
-                if i==9:
+                if i==2:
                     sleep(.5)
                     assert False, "getmaster can't open masterfile"
         return
@@ -225,22 +225,22 @@ class run_cluster(kernelcompare.KernelCompare):
     
     def archivemaster(self):
         masterfile=self.getmaster()
-        for i in range(10):
+        for i in range(3):
             try:
                 with open('masterfile_archive','wb') as savefile:
                     pickle.dump(masterfile,savefile)
                 break
             except:
-                if i==9:
+                if i==2:
                     self.logger.exception(f'error in {__name__}')
                     print('arechivemaster has failed')
                     return
-        for i in range(10): 
+        for i in range(3): 
             try:
                 os.remove(self.masterfilefilename)
                 return
             except:
-                if i==9:
+                if i==2:
                     print('masterfile_archive created, but removal of old file has failed')
                     self.logger.exception(f'error in {__name__}')
                     return
@@ -248,7 +248,7 @@ class run_cluster(kernelcompare.KernelCompare):
     
     def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts):
         savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
-        for i in range(10):
+        for i in range(3):
             try:
                 with open(self.masterfilefilename,'wb') as themasterfile:
                     pickle.dump(savedict,themasterfile)
@@ -257,7 +257,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 sleep(.2)
-                if i==9:
+                if i==2:
                     self.logger.exception(f'error in {__name__}')
                     assert False, 'masterfile problem'
 
@@ -288,7 +288,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'2-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
                     break
                 except:
-                    if j == 9:
+                    if j == 1:
                         print(f'-----rebuild namefiles timeout for name_i:{name_i} with time_i:{time_i}', traceback.format_exc())
                         old_name_list.append(name_i)
 
@@ -551,7 +551,7 @@ class run_cluster(kernelcompare.KernelCompare):
     def mergethisnode(self,name,old=0,move=0):
         nodesdir=os.path.join(self.savedirectory,name)
         if not move:
-            for i in range(10):
+            for i in range(1):
                 try:
                     print(f'trying merge{i}')
                     self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=0)
@@ -601,12 +601,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 
         
     def discard_job_for_node(self,name):
-        for i in range(10):
+        for i in range(2):
             try:
                 os.remove(os.path.join(self.savedirectory,name,name+'_job'))
                 break
             except:
-                if i==9:
+                if i==1:
                     self.logger.exception(f'error in {__name__}')
         return
     
@@ -637,7 +637,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
     def namefile_statuscheck(self,name):
         nodesnamefilefilename=os.path.join(self.masterdirectory,name+'.name')
-        for i in range(10):
+        for i in range(2):
             try:
                 with open(nodesnamefilefilename,'rb') as savednamefile:
                     namefile=pickle.load(savednamefile)
@@ -665,7 +665,7 @@ class run_cluster(kernelcompare.KernelCompare):
         node_job=os.path.join(nodedir,name+'_job')
         node_model_save=os.path.join(nodedir,filename)
         #print(node_model_save)
-        for i in range(10):
+        for i in range(2):
             try:
                 with open(node_model_save,'rb') as saved_model_save:
                     model_save=pickle.load(saved_model_save)
@@ -686,7 +686,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
     def getnamelist(self):
         
-        for i in range(20):
+        for i in range(3):
             try:
                 name_regex=r'\.'+re.escape('name')+r'$'#matches anything ending with .name
                 allfiles=os.listdir(self.masterdirectory)
@@ -694,7 +694,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 namelist=[name[:-5] for name in namefilelist]
                 return namelist
             except:
-                if i==19:
+                if i==2:
                     print('getnamelist failed')
                     self.logger.exception(f'error in {__name__}')
                 sleep(0.25)
@@ -829,7 +829,7 @@ class run_cluster(kernelcompare.KernelCompare):
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,status)
         namefilename=os.path.join(self.masterdirectory,myname+'.name')
-        for i in range(10):
+        for i in range(3):
             try:
                 with open(namefilename,'rb') as namefile:
                     listoftups=pickle.load(namefile)
@@ -838,7 +838,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     pickle.dump(listoftups,namefile)
                 break
             except:
-                if i==9:
+                if i==2:
                     self.logger.exception(f'error in {__name__}')
                 sleep(.15)
 
