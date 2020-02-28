@@ -49,7 +49,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.oldnodequeue=mp.Queue
         self.savedirectory=self.setdirectory(local_run=local_run)
         self.trashdirectorylist=[os.path.join(os.getcwd(),'..','trash')]
-        if not os.path.exists(self.trashdirectorylist[-1]): os.makedirs(self.trashdirectorylist[-1])
+        if not os.path.exists(self.trashdirectorylist[-1]): os.mkdir(self.trashdirectorylist[-1])
         
         logdir=os.path.join(os.getcwd(),'log')
         #logdir=os.path.join(self.savedirectory,'log')
@@ -569,7 +569,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if move:
             try:
                 nodedir=os.path.join(self.savedirectory, name)
-                model_save_pathlist=[name_i for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
+                model_save_pathlist=[os.path.join(nodedir,name_i) for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
                 renamelist=[]
                 helper=Helper()
                 for model_save_path in model_save_pathlist:
@@ -577,14 +577,16 @@ class run_cluster(kernelcompare.KernelCompare):
                         shutil.move(model_save_path,self.trashdirectorylist[0])
                     except:  
                         try:
-                            newpath=os.path.join(self.trashdirectorylist[0],os.split(model_save_path)[-1])
+                            newpath=os.path.join(self.trashdirectorylist[0],os.path.split(model_save_path)[-1])
                             newpath=helper.getname(newpath)
-                            #newstem=os.split(newstem)[-1]
-                            #os.rename(model_save_path,newstem)
+                            newstem=os.path.split(newpath)[-1]
+                            newoldpath=os.path.join(os.path.split(model_save_path)[0],newstem)
+                            os.rename(model_save_path,newoldpath)
+                            
                         except:
                             self.logger.exception(f'model_save_path:{model_save_path}')
                         try:
-                            shutil.move(model_save_path,newpath)
+                            shutil.move(newoldpath,newpath)
                         except:
                             self.logger.exception(f'newpath:{newpath}')
             except:
