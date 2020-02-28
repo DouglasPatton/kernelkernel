@@ -205,6 +205,14 @@ class run_cluster(kernelcompare.KernelCompare):
                 return False
             except EOFError:
                 self.logger.exception('masterfile is corrupt')
+                try:
+                    with open(self.masterfilefilename+'_backup','rb') as themasterfile:
+                        masterfile=pickle.load(themasterfile)
+                    return masterfile
+                except:
+                    self.logger.exception('could not open masterfile backup either')
+                
+                
                 masterfile={}
                 return masterfile
             except:
@@ -242,6 +250,8 @@ class run_cluster(kernelcompare.KernelCompare):
         for i in range(10):
             try:
                 with open(self.masterfilefilename,'wb') as themasterfile:
+                    pickle.dump(savedict,themasterfile)
+                with open(self.masterfilefilename+'_backup','wb') as themasterfile:
                     pickle.dump(savedict,themasterfile)
                 break
             except:
@@ -426,7 +436,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     now=strftime("%Y%m%d-%H%M%S")
                     
                     elapsed=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(job_time,"%Y%m%d-%H%M%S")
-                    islate=elapsed>self.oldnode_threshold
+                    islate=elapsed>self.oldnode_threshold/2
                     
                 except:
                     self.logger.exception('')
@@ -454,6 +464,15 @@ class run_cluster(kernelcompare.KernelCompare):
                                 newjob=list_of_run_dicts[random_ready_dict_idx]
                             #if not name in nonewjob_namelist:
                             self.setup_job_for_node(name,newjob)
+                            if islate:
+                                try:
+                                    job_idx=assignment_tracker[name]
+                                    run_dict_status[job_idx]='ready for node'
+                                    del assignment_tracker[name]
+                                except:
+                                    print(traceback.format_exc())
+                                    
+                            
                             assignment_tracker[name] = random_ready_dict_idx
                             #print('assignment_tracker', assignment_tracker)
                             i+=1
@@ -480,11 +499,13 @@ class run_cluster(kernelcompare.KernelCompare):
                     except:
                         self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                     if tracked==1: 
+                        self.logger.info(f'about to delte assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
                         del assignment_tracker[name]
                         run_dict_status[job_idx]='ready for node'
                         
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                     try:
+                        self.logger.info(f'namefile for name:{name} is being updated: ready for job')
                         self.update_my_namefile(name,status='ready for job')
                     except:
                         self.logger.exception(f'could not update_my_namefile: name:{name}')
