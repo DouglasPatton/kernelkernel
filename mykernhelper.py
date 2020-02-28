@@ -283,6 +283,10 @@ class MyKernHelper:
         now=strftime("%Y%m%d-%H%M%S")
         savedict['when_saved']=now
         savedict['datagen_dict']=self.datagen_dict
+        try:
+            savedict['yhatmaskscount']=self.yhatmaskscount
+        except:
+            self.logger.exception('problem saving yhatmaskscount to savedict')
         
         try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
