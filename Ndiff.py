@@ -13,8 +13,8 @@ class Ndiff:
         """
             for x: (x has it's nout dimension (-2) added later on)
             before:
-            outdiffs is #ninXnpr?
-            indiffs is #ninXnin?
+            outdiffs is #ninXnpr
+            indiffs is #ninXnin
             after:
             both are {depth*nin}XninXnpr
             
@@ -269,33 +269,33 @@ class Ndiff:
             self.predict_self_without_self='n/a'
         
             
-        ninmask=np.ma.make_mask(np.eye(nin))
+        ninmask=np.ma.make_mask(np.eye(nin,dtype=np.bool))
         list_of_masks=[ninmask]
         if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
-            list_of_masks.append(np.ma.make_mask(np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
+            list_of_masks.append((np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
         if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
 
                 ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
                 ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
                 ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
-                ninmask1=np.ma.make_mask(ninmask1)
+                '''ninmask1=np.ma.make_mask(ninmask1)
                 ninmask2=np.ma.make_mask(ninmask2)
-                ninmask3=np.ma.make_mask(ninmask3)
+                ninmask3=np.ma.make_mask(ninmask3)'''
 
-                list_of_masks.append(np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3)))
+                list_of_masks.append(ninmask1+ninmask2+ninmask3)
                         
         if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
-                lastmask=list_of_masks[-1] #second masks always based on self.nin
+                lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                list_of_masks.append(np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,0),masktup)))
-                for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
-                    #then this loop maxes at 0,1 from range(2-1+1)
+                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
+                for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at ii=0,
+                    #then this loop has iii=  0,1 from range(0+2)
                     iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
-            lastmask=list_of_masks[-1]#copy the last item to lastmask
+                    list_of_masks[-1]=list_of_masks[-1]+np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)
+            #lastmask=list_of_masks[-1]#copy the last item to lastmask
         if not self.predict_self_without_self=='yes':
-            list_of_masks[0]=np.ma.make_mask(np.zeros([nin,npr]))
+            list_of_masks[0]=np.zeros([nin,npr],dtype=np.bool)
         return list_of_masks
     
 

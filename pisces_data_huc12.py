@@ -45,7 +45,7 @@ class PiscesDataTool():
             return species_data
         else:
             try:
-                with open(os.path.join(datadir,'sitedatakeylist'),'rb')as f:
+                with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
                     sitevarlist=pickle.load(f)
                 return sitevarlist   
             except: 
