@@ -437,6 +437,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 if not(job_status=="no file found" or islate):
                     notanewjob_list.append([name,job_status])
+                    nonewjob_namelist=[i[0] for i in notanewjob_list]
                 else:
                     print(f'about to setup the job for node:{name}')
                     #print('len(ready_dict_idx)',len(ready_dict_idx))
@@ -451,7 +452,7 @@ class run_cluster(kernelcompare.KernelCompare):
                                 newjob='shutdown'
                             else:
                                 newjob=list_of_run_dicts[random_ready_dict_idx]
-                            
+                            #if not name in nonewjob_namelist:
                             self.setup_job_for_node(name,newjob)
                             assignment_tracker[name] = random_ready_dict_idx
                             #print('assignment_tracker', assignment_tracker)
@@ -464,9 +465,9 @@ class run_cluster(kernelcompare.KernelCompare):
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
 
-                for arglist in notanewjob_list:
-                    name=arglist[0]
-                    job_status=arglist[1]
+            for arglist in notanewjob_list:
+                name=arglist[0]
+                job_status=arglist[1]
 
                 if job_status=='failed':
                     try:
