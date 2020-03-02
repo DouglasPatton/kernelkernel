@@ -69,7 +69,7 @@ class run_cluster(kernelcompare.KernelCompare):
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
         
         self.masterdirectory=self.setmasterdir(self.savedirectory)
-        self.oldnode_threshold=datetime.timedelta(minutes=45,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=65,seconds=1)
         self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
         if myname is None:
             myname='node'
@@ -111,7 +111,8 @@ class run_cluster(kernelcompare.KernelCompare):
     
     
     def setmasterdir(self,savedirectory):
-        masterdir=os.path.join(savedirectory,'master')
+        #masterdir=os.path.join(savedirectory,'master')
+        masterdir=os.path.join(os.getcwd(),'master')
         if not os.path.exists(masterdir):
             for i in range(10):
                 try:
@@ -703,7 +704,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
     def runnode(self,myname):
-        for i in range(10):
+        """for i in range(10):
             try:
                 masterfile_exists=self.checkmaster()
                 break
@@ -720,7 +721,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 except:
                     if i == 119:
                         self.logger.exception(f'error in {__name__}')
-                        assert False, f"runnode named {myname} could not check master"
+                        assert False, f"runnode named {myname} could not check master""""
 
         #mydir=os.path.join(self.savedirectory,myname)
         #my_job_file=os.path.join(mydir,myname+'_job')
