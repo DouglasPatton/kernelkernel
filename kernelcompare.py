@@ -533,7 +533,9 @@ class KernelOptModelTools(mk.optimize_free_params):
         if verbose=='yes':
             verbose=1
         pathlist=os.listdir(merge_directory)
-        model_save_filelist,model_save_filelist_idx=zip(*[(name_i,idx) for idx,name_i in enumerate(pathlist) if re.search('model_save',name_i)])
+        tuplist_or_empty=[(name_i,idx) for idx,name_i in enumerate(pathlist) if re.search('model_save',name_i)])
+        if tuplist_or_empty:
+            model_save_filelist,model_save_filelist_idx=zip(*tuplist_or_empty)
         
                 
                 
