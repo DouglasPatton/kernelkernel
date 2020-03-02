@@ -11,7 +11,7 @@ class MyKernHelper:
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
         params={}
-        paramlist=[key for key,val in modeldict['hyper_param_form_dict'].items()]
+        paramlist=[key for key in modeldict['hyper_param_form_dict']]
         for param in paramlist:
             paramdict=fixed_or_free_paramdict[param]
             form=paramdict['fixed_or_free']
@@ -263,8 +263,21 @@ class MyKernHelper:
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
     def sort_then_saveit(self,mse_param_list,modeldict,filename,getname=None):
-        
-        fullpath_filename=os.path.join(self.savedir,filename)
+        try:
+            species='species-'+self.datagen_dict['species']+'_'
+        except AttributeError:
+            self.logger.exception('self.datagen_dict not found in object')
+            
+        except KeyError:
+            self.logger.Warning(f'no species found in self.datagen_dict', exc_info=True)
+            species=''
+        except:
+            self.logger.exception('something happened when pulling species from self.datagen_dict')
+        fullpath_filename=os.path.join(self.savedir,species+speciesfilename)
+        savedir=os.path.split(fullpath_filename)[0]
+        if not os.path.exists(savedir): 
+            os.mkdir(savedir)
+            self.logger.info(f'sort_then_save_it is creating savedir:{savedir}')
         if getname:
             fullpath_filename=Helper().getname(fullpath_filename)
             

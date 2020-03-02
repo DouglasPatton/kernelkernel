@@ -495,9 +495,22 @@ class KernelOptModelTools(mk.optimize_free_params):
                 flatdict[f'{key}:{key2}'] = [val2]
 
         return flatdict
+    
+    
+    def split_pisces_species_model_save(self,filename):
+        
+    
+        if not species_fit_dict:
+            species_fit_dict={}
+        for path in model_save_filelist:
+            spec_name_start=re.search('species-',path).end()
+            if spec_name_start:
+                spec_name_end=re.search('_',path).start()
+                spec_name=path[spec_name_start:spec_name_end]
+                if not spec_name in species_fit_dict:
+                    species_fit_dict[spec_name]={}
 
-
-    def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,verbose=None):
+    def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,recondense=None,verbose=None):
         if not merge_directory==None:
             if not os.path.exists(merge_directory):
                 print(f'could not find merge_directory:{merge_directory}')
@@ -519,16 +532,21 @@ class KernelOptModelTools(mk.optimize_free_params):
             verbose=0
         if verbose=='yes':
             verbose=1
-        model_save_filelist=[name_i for name_i in os.listdir(merge_directory) if re.search('model_save',name_i)]
+        pathlist=os.listdir(merge_directory)
+        model_save_filelist,model_save_filelist_idx=zip(*[(name_i,idx) for idx,name_i in enumerate(pathlist) if re.search('model_save',name_i)])
+        
+                
+                
+                
         #p#rint('here',model_save_filelist)
         
-
+            
         condensedfilename=os.path.join(save_directory,'condensed_model_save')
         try:
             with open(condensedfilename,'rb') as savedfile:
                 saved_condensed_list=pickle.load(savedfile)
         except: 
-            if verbose==1:
+            if verbose:
                 self.logger.info("couldn't open condensed_model_save in save_directory, trying self.kc_savedirectory")
 
             condensedfilename=os.path.join(self.kc_savedirectory,'condensed_model_save')
@@ -576,7 +594,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                 except:
                     pass
                 
-            if condense==1:
+            if recondense:
                 list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
             else:
                 list_of_saved_models.extend(saved_model_list)
