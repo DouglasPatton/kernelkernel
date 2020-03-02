@@ -574,7 +574,7 @@ class KernelOptModelTools(mk.optimize_free_params):
 
         if len(model_save_filelist)==0:
             self.logger.warning(f'0 models found in save_directory:{merge_directory} when merging')
-            return
+            
                          
         #if len(model_save_filelist)==1 and saved_condensed_list==[]:
         #    print('only 1 model_save file found, and saved_condensed_list is empty, so no merge completed')
