@@ -1,3 +1,4 @@
+from helpers import Helper
 import traceback
 from copy import deepcopy
 from time import strftime
@@ -515,6 +516,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         return model_save_pathlist
 
     def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
+        
         if not merge_directory==None:
             if not os.path.exists(merge_directory):
                 print(f'could not find merge_directory:{merge_directory}')
@@ -526,7 +528,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         if not save_directory==None:
             assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
         else:
-            save_directory=self.kc_savedirectory
+            save_directory=merge_directory
                 #os.makedirs(save_directory)
         if condense==None or condense=='no':
             condense=0
@@ -539,19 +541,21 @@ class KernelOptModelTools(mk.optimize_free_params):
             
         if recursive:
             model_save_filelist=self.recursive_build_model_save_pathlist(merge_directory)
-            print(len(model_save_filelist))
+            modelfile_count=len(model_save_filelist)
+            print(f'len(model_save_filelist):{len(model_save_filelist)}')
+            print(f'model_save_filelist[0:5]:{model_save_filelist[0:5]}')
         else:
             pathlist=os.listdir(merge_directory)
             
             model_save_filelist=[os.path.join(merge_directory,name_i) for name_i in pathlist if re.search('model_save',name_i)]
-            
+            modelfile_count=len(model_save_filelist)
                 
                 
                 
         #p#rint('here',model_save_filelist)
         
             
-        condensedfilename=os.path.join(save_directory,'condensed_model_save')
+        '''condensedfilename=os.path.join(save_directory,'condensed_model_save')
         try:
             with open(condensedfilename,'rb') as savedfile:
                 saved_condensed_list=pickle.load(savedfile)
@@ -568,7 +572,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                 if verbose==1:
                     self.logger.info("---------no existing files named condensed_model_save could be found. "
                         "if it is in merge_directory, it will be picked up and merged anyways--------")
-        
+        '''
 
 
 
@@ -581,25 +585,22 @@ class KernelOptModelTools(mk.optimize_free_params):
         #    return
         
         list_of_saved_models=[]
-        if not saved_condensed_list==[]:
+        '''if not saved_condensed_list==[]:
             if condense==1:
                 saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
-            list_of_saved_models.extend(saved_condensed_list)
-        modelfile_count=len(model_save_filelist)
+            list_of_saved_models.extend(saved_condensed_list)'''
+        
         for file_i in model_save_filelist:
             #file_i_name=os.path.join(merge_directory,file_i)
             try:
-                with open(file_i_name,'rb') as savedfile:
+                with open(file_i,'rb') as savedfile:
                     try: 
                         saved_model_list=pickle.load(savedfile)
-                        if verbose==1:
-                            print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
-                        break
+                        print(f'file_i:{file_i} has {len(saved_model_list)} saved model(s)')
                     except:
-                        if i==9:
-                            print(f'warning!saved_model_list{file_i_name} could not pickle.load')
-                            self.logger.exception(f'error in {__name__}')
-                            saved_model_list=[]
+                        print(f'warning!saved_model_list{file_i} could not pickle.load')
+                        self.logger.exception(f'error in {__name__}')
+                        saved_model_list=None
             
             except:
                 saved_model_list=None
@@ -616,6 +617,9 @@ class KernelOptModelTools(mk.optimize_free_params):
 
 
         condensedfilename=os.path.join(save_directory,'condensed_model_save')
+        if os.path.exists(condensedfilename):
+            condensedfilename=Helper().getname(condensedfilename)
+            
         with open(condensedfilename,'wb') as newfile:
             print(f'writing new_model_list length:{len(list_of_saved_models)} to newfile:{newfile}')
             pickle.dump(list_of_saved_models,newfile)
