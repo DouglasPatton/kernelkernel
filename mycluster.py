@@ -68,9 +68,9 @@ class run_cluster(kernelcompare.KernelCompare):
             self.Ndiff_list_of_masks_y=None'''
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
         
-        self.masterdirectory=self.setmasterdir(self.savedirectory)
+        self.masterdirectory, self.masterfiledirectory=self.setmasterdir(self.savedirectory)
         self.oldnode_threshold=datetime.timedelta(minutes=65,seconds=1)
-        self.masterfilefilename=os.path.join(self.masterdirectory, 'masterfile')
+        self.masterfilefilename=os.path.join(self.masterfiledirectory, 'masterfile')
         if myname is None:
             myname='node'
         
@@ -111,18 +111,13 @@ class run_cluster(kernelcompare.KernelCompare):
     
     
     def setmasterdir(self,savedirectory):
-        #masterdir=os.path.join(savedirectory,'master')
-        masterdir=os.path.join(os.getcwd(),'master')
-        if not os.path.exists(masterdir):
-            for i in range(10):
-                try:
-                    print(f'could not find master directory, so creating it at {masterdir}')
-                    os.mkdir(masterdir)
-                    break
-                except:
-                    if i==9:
-                        self.logger.exception(f'error in {__name__}')
-        return masterdir
+        masterdir=os.path.join(savedirectory,'master')
+        masterfiledir=os.path.join(os.getcwd(),'master')
+        if not os.path.exists(masterdir): os.mkdir(masterdir)
+        if not os.path.exists(masterfiledir): os.mkdir(masterfiledir)
+            
+                
+        return masterdir,masterfiledir
         
     def setdirectory(self,local_run='yes'):
         if local_run==0:
@@ -721,7 +716,8 @@ class run_cluster(kernelcompare.KernelCompare):
                 except:
                     if i == 119:
                         self.logger.exception(f'error in {__name__}')
-                        assert False, f"runnode named {myname} could not check master""""
+                        assert False, f"runnode named {myname} could not check master" 
+        """
 
         #mydir=os.path.join(self.savedirectory,myname)
         #my_job_file=os.path.join(mydir,myname+'_job')
