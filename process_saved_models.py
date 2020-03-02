@@ -20,6 +20,7 @@ if __name__=='__main__':
         thedir=whichdir
     print(f'thedir:{thedir}')
     test=kc.KernelCompare(directory=thedir)
-    test.recursive_merge(thedir,overwrite=0,verbose=1,condense=condensechoice)    
+    test.merge_and_condense_saved_models(merge_directory=thedir,save_directory=None,condense=condensechoice,recondense=None,verbose=None,recursive=1)
+    #test.recursive_merge(thedir,overwrite=0,verbose=1,condense=condensechoice)    
     if wantprint==str(1):
         test.print_model_save(filename=os.path.join(thedir,'mergedfiles',"condensed_model_save"))

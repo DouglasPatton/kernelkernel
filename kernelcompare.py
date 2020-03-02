@@ -189,22 +189,9 @@ class KernelOptModelTools(mk.optimize_free_params):
         return new_opt_dict
 
 
-    def recursive_merge(self,startdirectory,overwrite=0,verbose=0,condense=0):
-        if verbose==1:
-            print(f'startdirectory:{startdirectory}')
-        if not os.path.exists(startdirectory):
-            startdirectory=os.path.join(os.getcwd,startdirectory)
-        if overwrite==0:
-            save_directory=os.path.join(startdirectory,'mergedfiles')
-            if not os.path.exists(save_directory):
-                os.mkdir(save_directory)
-        else:save_directory=startdirectory
-
-        dirlist=[diri[0] for diri in os.walk(startdirectory)]
-        dirlist=[startdirectory]+dirlist
-        for diri in dirlist:
-            if verbose==1:print('diri',diri)
-            self.merge_and_condense_saved_models(merge_directory=diri, save_directory=save_directory, condense=condense,verbose=verbose)
+            
+            
+    
 
     def recursive_add_dict(self,startdirectory,add_tuple_list,overwrite=0,verbose=0):
         if not type(add_tuple_list) is list:
@@ -495,10 +482,12 @@ class KernelOptModelTools(mk.optimize_free_params):
                 flatdict[f'{key}:{key2}'] = [val2]
 
         return flatdict
-    
-    
-    def split_pisces_species_model_save(self,filename):
+   
+
         
+    def split_pisces_species_model_save(self,filename):
+        with open(filename,'rb') as f:
+            model_save_filelist=pickle.load(f)
     
         if not species_fit_dict:
             species_fit_dict={}
@@ -509,8 +498,23 @@ class KernelOptModelTools(mk.optimize_free_params):
                 spec_name=path[spec_name_start:spec_name_end]
                 if not spec_name in species_fit_dict:
                     species_fit_dict[spec_name]={}
+    
+    
 
-    def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,recondense=None,verbose=None):
+
+
+    def recursive_build_model_save_pathlist(self,startdirectory):
+        
+        model_save_pathlist=[]
+        for rootpath,subdirs,files in os.walk(startdirectory):
+            for newroot in subdirs:
+                model_save_pathlist.append(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))
+            for file in files:
+                if re.search('model_save',file):
+                    model_save_pathlist.append(os.path.join(rootpath,file))
+        return model_save_pathlist
+
+    def merge_and_condense_saved_models(self,merge_directory=None,save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
         if not merge_directory==None:
             if not os.path.exists(merge_directory):
                 print(f'could not find merge_directory:{merge_directory}')
@@ -532,13 +536,15 @@ class KernelOptModelTools(mk.optimize_free_params):
             verbose=0
         if verbose=='yes':
             verbose=1
-        pathlist=os.listdir(merge_directory)
-        tuplist_or_empty=[(name_i,idx) for idx,name_i in enumerate(pathlist) if re.search('model_save',name_i)]
-        if tuplist_or_empty:
-            model_save_filelist,model_save_filelist_idx=zip(*tuplist_or_empty)
+            
+        if recursive:
+            model_save_filelist=self.recursive_build_model_save_pathlist(merge_directory)
+            print(len(model_save_filelist))
         else:
-            model_save_filelist=[]
-        
+            pathlist=os.listdir(merge_directory)
+            
+            model_save_filelist=[os.path.join(merge_directory,name_i) for name_i in pathlist if re.search('model_save',name_i)]
+            
                 
                 
                 
@@ -579,29 +585,31 @@ class KernelOptModelTools(mk.optimize_free_params):
             if condense==1:
                 saved_condensed_list=self.condense_saved_model_list(saved_condensed_list,help_start=0,strict=1,verbose=verbose)
             list_of_saved_models.extend(saved_condensed_list)
-
+        modelfile_count=len(model_save_filelist)
         for file_i in model_save_filelist:
-            file_i_name=os.path.join(merge_directory,file_i)
-            for i in range(10):
-                try:
-                    with open(file_i_name,'rb') as savedfile:
-                        try: 
-                            saved_model_list=pickle.load(savedfile)
-                            if verbose==1:
-                                print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
-                            break
-                        except:
-                            if i==9:
-                                print(f'warning!saved_model_list{file_i_name} could not pickle.load')
-                                self.logger.exception(f'error in {__name__}')
-                                saved_model_list=[]
-                except:
-                    pass
+            #file_i_name=os.path.join(merge_directory,file_i)
+            try:
+                with open(file_i_name,'rb') as savedfile:
+                    try: 
+                        saved_model_list=pickle.load(savedfile)
+                        if verbose==1:
+                            print(f'file_i:{file_i_name} has {len(saved_model_list)} saved model(s)')
+                        break
+                    except:
+                        if i==9:
+                            print(f'warning!saved_model_list{file_i_name} could not pickle.load')
+                            self.logger.exception(f'error in {__name__}')
+                            saved_model_list=[]
+            
+            except:
+                saved_model_list=None
+                self.logger.exception('')
                 
-            if recondense:
-                list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
-            else:
-                list_of_saved_models.extend(saved_model_list)
+            if saved_model_list:    
+                if recondense:
+                    list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
+                else:
+                    list_of_saved_models.extend(saved_model_list)
         
         #if condense==1:
         #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
