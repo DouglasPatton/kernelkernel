@@ -293,7 +293,7 @@ class run_cluster(kernelcompare.KernelCompare):
         for j, name in enumerate(old_name_list):
             
             try:
-                if self.mergethisnode(name,old=1):
+                if self.mergethisnode(name,old=1,move=1):
                     
                     save_idx=[0,0]
                     
@@ -404,7 +404,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
-
+            
             run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
@@ -827,7 +827,7 @@ class run_cluster(kernelcompare.KernelCompare):
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,status)
         namefilename=os.path.join(self.masterdirectory,myname+'.name')
-        for i in range(3):
+        for i in range(1):
             try:
                 with open(namefilename,'rb') as namefile:
                     listoftups=pickle.load(namefile)
@@ -836,9 +836,9 @@ class run_cluster(kernelcompare.KernelCompare):
                     pickle.dump(listoftups,namefile)
                 break
             except:
-                if i==2:
+                if i==0:
                     self.logger.exception(f'error in {__name__}')
-                sleep(.15)
+                #sleep(.15)
 
         return
 
