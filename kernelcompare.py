@@ -509,7 +509,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         model_save_pathlist=[]
         for rootpath,subdirs,files in os.walk(startdirectory):
             for newroot in subdirs:
-                model_save_pathlist.append(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))
+                model_save_pathlist.extend(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))
             for file in files:
                 if re.search('model_save',file):
                     model_save_pathlist.append(os.path.join(rootpath,file))
@@ -596,7 +596,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                 with open(file_i,'rb') as savedfile:
                     try: 
                         saved_model_list=pickle.load(savedfile)
-                        print(f'file_i:{file_i} has {len(saved_model_list)} saved model(s)')
+                        #print(f'file_i:{file_i} has {len(saved_model_list)} saved model(s)')
                     except:
                         print(f'warning!saved_model_list{file_i} could not pickle.load')
                         self.logger.exception(f'error in {__name__}')
