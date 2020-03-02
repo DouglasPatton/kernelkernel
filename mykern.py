@@ -871,7 +871,7 @@ class optimize_free_params(kNdtool):
         
         #if 'species' in self.datagen_dict:
  
-            self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
+            #self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
         if not self.do_minimize:
             try:
                 mse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
