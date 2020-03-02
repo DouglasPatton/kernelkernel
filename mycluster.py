@@ -48,8 +48,8 @@ class run_cluster(kernelcompare.KernelCompare):
         self.source=source
         self.oldnodequeue=mp.Queue
         self.savedirectory=self.setdirectory(local_run=local_run)
-        self.trashdirectorylist=[os.path.join(os.getcwd(),'..','trash')]
-        if not os.path.exists(self.trashdirectorylist[-1]): os.mkdir(self.trashdirectorylist[-1])
+        self.model_collection_directorylist=[os.path.join(os.getcwd(),'..','model_collection')]
+        if not os.path.exists(self.model_collection_directorylist[-1]): os.mkdir(self.model_collection_directorylist[-1])
         
         logdir=os.path.join(os.getcwd(),'log')
         #logdir=os.path.join(self.savedirectory,'log')
@@ -300,40 +300,40 @@ class run_cluster(kernelcompare.KernelCompare):
                     while not all([idx=='saved' for idx in save_idx]):
                         if not type(save_idx[0]) is str:
                             try:
-                                shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.trashdirectorylist[save_idx[0]])
+                                shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.model_collection_directorylist[save_idx[0]])
                                 save_idx[0]='saved'
                             except shutil.Error:
                                 self.logger.exception(f'save failed for namefile, idx:{save_idx[0]}')
                                 try:
                                     self.logger.exception('')
                                     save_idx[0]+=1
-                                    if len(self.trashdirectorylist)-1<save_idx[0]:
-                                        newtrashdir=Helper().getname(self.trashdirectorylist[-1])
-                                        self.logger.debug(f'newtrashdir:{newtrashdir}')
-                                        self.trashdirectorylist.append(newtrashdir)
-                                        os.mkdir(self.trashdirectorylist[-1])
+                                    if len(self.model_collection_directorylist)-1<save_idx[0]:
+                                        new_model_collection_dir=Helper().getname(self.model_collection_directorylist[-1])
+                                        self.logger.debug(f'new_model_collection_dir:{new_model_collection_dir}')
+                                        self.model_collection_directorylist.append(new_model_collection_dir)
+                                        os.mkdir(self.model_collection_directorylist[-1])
                                 except:self.logger.exception('')
                             except FileNotFoundError:
                                 save_idx[0]='FileNotFoundError'
                             except: self.logger.exception('')
                         if not type(save_idx[1]) is str:
                             try:
-                                shutil.move(os.path.join(self.savedirectory, name),self.trashdirectorylist[save_idx[1]])
+                                shutil.move(os.path.join(self.savedirectory, name),self.model_collection_directorylist[save_idx[1]])
                                 save_idx[1]='saved'
                             except shutil.Error:
                                 self.logger.exception(f'save failed for namefile, idx:{save_idx[1]}')
                                 try:
                                     save_idx[1]+=1
-                                    if len(self.trashdirectorylist)-1<save_idx[1]:
-                                        newtrashdir=Helper().getname(self.trashdirectorylist[-1])
-                                        self.logger.debug(f'newtrashdir:{newtrashdir}')
-                                        self.trashdirectorylist.append(newtrashdir)
-                                        os.mkdir(self.trashdirectorylist[-1])
+                                    if len(self.model_collection_directorylist)-1<save_idx[1]:
+                                        new_model_collection_dir=Helper().getname(self.model_collection_directorylist[-1])
+                                        self.logger.debug(f'new_model_collection_dir:{new_model_collection_dir}')
+                                        self.model_collection_directorylist.append(new_model_collection_dir)
+                                        os.mkdir(self.model_collection_directorylist[-1])
                                 except:self.logger.exception('')
                             except FileNotFoundError:
                                 save_idx[0]='FileNotFoundError'
                             except: self.logger.exception('')
-                        assert all([idx<100 for idx in save_idx if not type(idx) is str]), f'too many trash directories. save_idx:{save_idx}'
+                        #assert all([idx<100 for idx in save_idx if not type(idx) is str]), f'too many _model_collection_ directories. save_idx:{save_idx}'
                             
             except:
                 print(f'failed to merge node named:{name}')
@@ -572,10 +572,10 @@ class run_cluster(kernelcompare.KernelCompare):
                 helper=Helper()
                 for model_save_path in model_save_pathlist:
                     try:
-                        shutil.move(model_save_path,self.trashdirectorylist[0])
+                        shutil.move(model_save_path,self.model_collection_directorylist[0])
                     except:  
                         try:
-                            newpath=os.path.join(self.trashdirectorylist[0],os.path.split(model_save_path)[-1])
+                            newpath=os.path.join(self.model_collection_directorylist[0],os.path.split(model_save_path)[-1])
                             newpath=helper.getname(newpath)
                             newstem=os.path.split(newpath)[-1]
                             newoldpath=os.path.join(os.path.split(model_save_path)[0],newstem)
