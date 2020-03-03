@@ -396,17 +396,20 @@ class run_cluster(kernelcompare.KernelCompare):
             run_dict_status=['ready for node' for _ in range(model_run_count)]
         print('model_run_count',model_run_count)
 
-        i=0
+        i=0;loopcount=0
         shutdownnodes=0
         keepgoing=1
         readynamelist=[]
+        nextreadynamelist=[]
         while keepgoing:
             if i%100==0:
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
-                readynamelist=[]
             
                 
-            if not readynamelist:
+            if loopcount%100==0:
+                nextreadynamelist=[]
+                
+            if not nextreadynamelist:
                 run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
                 namelist=self.getnamelist()
                 readynamelist=self.getreadynames(namelist)
@@ -419,11 +422,13 @@ class run_cluster(kernelcompare.KernelCompare):
                     shutdownnodes=1
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
                 notanewjob_list=[]
+            else:
+                readynamelist=nextreadynamelist
             sleep(1)
-            while len(readynamelist)>0:
-            #for name in readynamelist:
-                
-                name=readynamelist.pop(0)
+            
+            for name in readynamelist:
+                loopcount+=1
+                #name=readynamelist.pop(0)
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
 
@@ -491,7 +496,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
-                            readynamelist.append(name)
+                            nextreadynamelist.append(name)
 
             for arglist in notanewjob_list:
                 name=arglist[0]
