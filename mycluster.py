@@ -406,8 +406,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
-            if loopcount%100==0:
+            if loopcount>100:
                 nextreadynamelist=[]
+                loopcount=0
                 
             if not nextreadynamelist:
                 run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
