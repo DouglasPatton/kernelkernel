@@ -403,6 +403,7 @@ class run_cluster(kernelcompare.KernelCompare):
         while keepgoing:
             if i%100==0:
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
+                readynamelist=[]
             
                 
             if not readynamelist:
