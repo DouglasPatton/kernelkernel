@@ -16,6 +16,7 @@ class PiscesDataTool():
         #logging.basicConfig(level=logging.INFO)
         logging.basicConfig(level=logging.INFO)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
+        
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
         self.processcount=6
@@ -26,32 +27,7 @@ class PiscesDataTool():
         self.logger1 = logging.getLogger(__name__)
         self.logger1.addHandler(handler)
 
-    
-    def preprocess_xgboost_csv(self,filename):
-        boostdatadict=self.getcsvfile(filename)
-        try:self.specieslist
-        except:
-            self.returnspecieslist()
-            
-        spec_idx_dict={spec_name:[] for spec_name in self.specieslist}
-        spec_row_dict=spec_idx_dict.copy() 
-        mismatchlist=[]
-        for idx,spec in enumerate(boostdatadict['species_name']):
-            if spec_name not in spec_idx_dict:
-                self.logger.critical(f'spec_name:{spec_name} not found in spec_idx_dict')
-                mismatchlist.append((spec_name,idx))
-                spec_row_dict[spec_name]=[]
-                spec_idx_dict[spec_name]=[]
-            spec_row_dict[spec_name].append([boostdatadict['presence'][idx],boostdatadict['p_hat'][idx]])
-            spec_idx_dict[spec_name].append(idx)
-            if len(mismatchlist):
-                self.logger.critical(f'mismatchlist(name,idx):{mismatchlist})
-        with open(os.path.join(self.savedir,'xgboost_data.pickle'),'wb') as f:
-            pickle.dump((spec_row_dict,spec_idx_dict,mismatchlist),f)
-                                
-                                     
-        
-        
+                
             
         
     def retrievespeciesdata(self,species_idx=None,species_name=None):
