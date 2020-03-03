@@ -273,7 +273,7 @@ class MyKernHelper:
             species=''
         except:
             self.logger.exception('something happened when pulling species from self.datagen_dict')
-        fullpath_filename=os.path.join(self.savedir,species+speciesfilename)
+        fullpath_filename=os.path.join(self.savedir,species+filename)
         savedir=os.path.split(fullpath_filename)[0]
         if not os.path.exists(savedir): 
             os.mkdir(savedir)

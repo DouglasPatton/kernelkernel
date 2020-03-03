@@ -484,22 +484,29 @@ class KernelOptModelTools(mk.optimize_free_params):
 
         return flatdict
    
-
+    def process_pisces_models(self,startpath):
+        species_fit_dict=self.split_pisces_species_model_save(startpath)
+        
         
     def split_pisces_species_model_save(self,filename):
-        with open(filename,'rb') as f:
-            model_save_filelist=pickle.load(f)
-    
-        if not species_fit_dict:
-            species_fit_dict={}
-        for path in model_save_filelist:
-            spec_name_start=re.search('species-',path).end()
+        model_save_pathlist=self.recursive_build_model_save_pathlist(filename)
+        
+        #if not species_fit_dict:
+        species_fit_dict={}
+        for path in model_save_pathlist:
+            spec_name_start=re.search(r'species\-',path).end()
             if spec_name_start:
-                spec_name_end=re.search('_',path).start()
-                spec_name=path[spec_name_start:spec_name_end]
-                if not spec_name in species_fit_dict:
-                    species_fit_dict[spec_name]={}
-    
+                regex_genus_species=r'species-[(a-z)]+\s[a-z]+_'
+                searchresult=re.search(regex_genus_species,path)
+                if searchresult:
+                    select_regex_genus_species_tup=(searchresult.start()+1,searchresult.end()-1)
+
+                    spec_name=path[select_regex_genus_species_tup]
+                    if not spec_name in species_fit_dict:
+                        self.logger.debug('adding spec_name:{spec_name} to species_fit_dict with len:{len(species_fit_dict}')
+                        species_fit_dict[spec_name]={path}
+        return species_fit_dict
+
     
 
 

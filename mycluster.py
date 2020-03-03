@@ -417,8 +417,10 @@ class run_cluster(kernelcompare.KernelCompare):
                 shutdownnodes=1
             ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
             notanewjob_list=[]
-            for name in readynamelist:
-                
+            sleep(1)
+            while len(readynamelist)>0:
+            #for name in readynamelist:
+                name=readynamelist.pop(0)
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
 
@@ -445,7 +447,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     print(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
 
                 if not(job_status=="no file found" or islate):
-                    notanewjob_list.append([name,job_status])
+                    if not job_status=='finished':
+                        notanewjob_list.append([name,job_status])
+                    else:
+                        readynamelist.append(name)
                     #nonewjob_namelist=[i[0] for i in notanewjob_list]
                 else:
                     print(f'about to setup the job for node:{name}')
@@ -482,6 +487,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
+                            readynamelist.append(name)
 
             for arglist in notanewjob_list:
                 name=arglist[0]
@@ -851,7 +857,7 @@ class run_cluster(kernelcompare.KernelCompare):
             time=1
         nodes_dir=os.path.join(self.savedirectory,name)
         nodes_job_filename=os.path.join(nodes_dir,name+'_job')
-        for i in range(1):
+        for i in range(3):
             try:
                 with open(nodes_job_filename,'rb') as saved_job_file:
                     nodesjob_dict=pickle.load(saved_job_file)
@@ -862,7 +868,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     #print(f"nodesjob_dict['node_status'][-1]:{nodesjob_dict['node_status'][-1]}")
                     return nodesjob_dict['node_status'][-1][0],nodesjob_dict['node_status'][-1][1]#time_status tup
             except FileNotFoundError:
-                if i==0:
+                if i==2:
 
                     #self.logger.exception(f'error in {__name__}')
                     if time==0:
