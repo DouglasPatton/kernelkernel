@@ -22,10 +22,13 @@ class PiscesDataTool():
         self.processcount=6
         logdir=os.path.join(self.savedir,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername='Datatool.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger1 = logging.getLogger(__name__)
-        self.logger1.addHandler(handler)
+        
+        try: logging.getlogger(__name__)
+        except:
+            handlername='Datatool.log'
+            handler=logging.FileHandler(os.path.join(logdir,handlername))
+            self.logger1 = logging.getLogger(__name__)
+            self.logger1.addHandler(handler)
 
                 
             
