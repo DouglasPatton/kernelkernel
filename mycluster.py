@@ -406,7 +406,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
-            if loopcount>100:
+            if loopcount>1:
                 nextreadynamelist=[]
                 loopcount=0
                 
