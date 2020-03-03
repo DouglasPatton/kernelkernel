@@ -901,7 +901,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 if i==9:
                     self.logger.exception(f'error in {__name__}')
-                    job_save_dict={}
+                    job_save_dict={'node_status':[]}
         if type(status) is str:
             now=strftime("%Y%m%d-%H%M%S")
             job_save_dict['node_status'].append((now,status))
