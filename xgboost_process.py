@@ -91,23 +91,28 @@ class XgboostProcessTool(PiscesDataTool):
                 avgmed=(med_threshold0+med_threshold1)/2
                 wtavgavg=np.mean(spec_data_array[:,1])
                 
-                thresholds=np.array([45,50,55,avgavg,wtavgavg,avgmed])
+                thresholds=np.array([45,50,55,avgavg,wtavgavg,avgmed,1,0])
                 yhat_to_01_threshold=spec_data_array[None,:,1]#new lhs dim for each threshold
                 mse_array=self.threshold_mse(spec_data_array,thresholds)
-                mse_spec_dict[spec_name]=mse_array
+                mse_spec_dict[spec_name]={str(thresholds[i]):mse_array[i] for i in range(len(thresholds))}
+                self.logger.debug(f'for spec_name:{spec_name}, after applying threshold_array with shape:{thresholds.shape}, mse_array has shape:{mse_array.shape}, and mse_array:{mse_array}')
         with open(self.species_mse_array_dict_path,'w') as f:
             json.dump(mse_spec_dict,f)
                 
     
     def threshold_mse(self,data,threshold_array):
-        newshape=(threshold_array.shape[0],)+data.shape[:-1] # add a dimension for each thrshold on lhs and drop dep var dim on rhs
-        ydata=np.broadcast_to(data[None,:,0],newshape)
+        newshape=(threshold_array.size,data.shape[0]) # add a dimension for each thrshold on lhs and drop dep var dim on rhs
+        ydata=np.broadcast_to(data[None,:,0].astype(np.bool),newshape)
         yhatdata=np.broadcast_to(data[None,:,1],newshape)
         brdcst_threshold_array=np.broadcast_to(threshold_array[:,None],newshape)
-        yhatdata_01=np.zeros(data.shape,dtype=np.bool)
-        yhatdata_01[yhatdata>brdcst_threshold_array]=1[yhatdata>brdcst_threshold_array]
-        mse_array=np.mean(np.power((ydata-yhatdata_01),2),axis=1)
-        self.logger.debug(f'for spec_name:{spec_name}, after applying threshold_array with shape:{threshold_array.shape}, mse_array has shape:{mse_array.shape}')
+        yhatdata_01=np.zeros(newshape,dtype=np.bool)
+        yhatdata_01[yhatdata>brdcst_threshold_array]=1
+        lossarray=np.not_equal(ydata,yhatdata_01)
+        mse_array=np.mean(lossarray,axis=1)
+        #mse_array=np.zeros(lossarray.shape, dtype=np.bool)
+        #mse_array[lossarray]=lossarray[lossarray].size/ydata.size
+        #mse_array=np.mean(np.power((ydata-yhatdata_01),2),axis=1)
+        
         return mse_array
         
             
