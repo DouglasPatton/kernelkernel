@@ -399,27 +399,29 @@ class run_cluster(kernelcompare.KernelCompare):
         i=0
         shutdownnodes=0
         keepgoing=1
+        readynamelist=[]
         while keepgoing:
             if i%100==0:
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
-            
-            run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
-            namelist=self.getnamelist()
-            readynamelist=self.getreadynames(namelist)
-            if shutdownnodes and len(readynamelist)==0:
-                keepgoing=0
+            if not readynamelist:
+                run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
+                namelist=self.getnamelist()
+                readynamelist=self.getreadynames(namelist)
+                if shutdownnodes and len(readynamelist)==0:
+                    keepgoing=0
 
-            if len(readynamelist)>1:
-                print(f'readynamelist:{readynamelist}')
-            if all([status=='finished' for status in run_dict_status])==True:
-                shutdownnodes=1
-            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
-            notanewjob_list=[]
+                if len(readynamelist)>1:
+                    print(f'readynamelist:{readynamelist}')
+                if all([status=='finished' for status in run_dict_status])==True:
+                    shutdownnodes=1
+                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+                notanewjob_list=[]
             sleep(1)
             while len(readynamelist)>0:
             #for name in readynamelist:
+                
                 name=readynamelist.pop(0)
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready for node']
@@ -450,7 +452,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     if not job_status=='finished':
                         notanewjob_list.append([name,job_status])
                     else:
-                        readynamelist.append(name)
+                        notanewjob_list.append([name,job_status])
+                        
                     #nonewjob_namelist=[i[0] for i in notanewjob_list]
                 else:
                     print(f'about to setup the job for node:{name}')
@@ -474,7 +477,7 @@ class run_cluster(kernelcompare.KernelCompare):
                                     run_dict_status[job_idx]='ready for node'
                                     del assignment_tracker[name]
                                 except:
-                                    print(traceback.format_exc())
+                                    self.logger.debuf('',exc_info=True)
                                     
                             
                             assignment_tracker[name] = random_ready_dict_idx
@@ -533,6 +536,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #print(f'for node name:{name}, mergestatus:{mergestatus}')
+                        readynamelist.append(name)
                     except:
                         self.logger.exception('')
             '''if i<100:
