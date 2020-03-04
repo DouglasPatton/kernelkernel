@@ -28,7 +28,7 @@ class kNdtool(Ndiff,MyKernHelper):
             savedir=os.getcwd()
         #logdir=os.path.join(savedir,'log')
         #if not os.path.exists(logdir):os.mkdir(logdir)
-        
+        self.logger=logging.getLogger(__name__)
         self.savedir=savedir
         self.name=myname
 
@@ -827,18 +827,21 @@ class optimize_free_params(kNdtool):
         self.datagen_dict=optimizedict['datagen_dict']
         self.source=self.datagen_dict['source']
         
+        try:
+            self.logger=logging.getLogger(__name__)
+            self.logger.info('started optimize_free_params object')
+        except:
+            logdir=os.path.join(os.getcwd(),'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,f'optimize_free_params-{self.name}.log')
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+                level=logging.DEBUG,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
 
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'mykern_{self.name}.log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-            level=logging.DEBUG,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-      
-        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
-        self.logger = logging.getLogger(handlername)
+            #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
+            self.logger = logging.getLogger(handlername)
 
 
         

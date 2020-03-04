@@ -1,10 +1,11 @@
-import traceback
+import traceback,logging
 from copy import deepcopy
 import os
 
 class Helper:
     def __init__(self,):
-        pass
+        self.logger=logging.getLogger(__name__)
+        self.logger.debug('Helper object started')
 
     def do_dict_override(self,old_dict,new_dict,verbose=None,recursive=None,inplace=None):
         '''

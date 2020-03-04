@@ -8,7 +8,7 @@ import os
 import datagen as dg
 import mykern as mk
 import re
-import logging, logging.config
+import logging,traceback
 import yaml
 from kernelparams import KernelParams
 #import datetime
@@ -22,6 +22,27 @@ class KernelOptModelTools(mk.optimize_free_params):
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.Ndiff_list_of_masks_x=None
         self.Ndiff_list_of_masks_y=None
+        
+        try:
+            self.logger=logging.getLogger(__name__)
+            self.logger.info('starting new KernelOptModelTools object')
+        except:
+            print(traceback.format_exc())
+            if myname is None: _name=''
+            else: _name=f'-{myname}'
+            logdir=os.path.join(directory,'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,__name__)
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+                level=logging.DEBUG,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
+            self.logger.info('starting new KernelOptModelTools log')
+            print(traceback.format_exc())
+        
+        
         mk.optimize_free_params.__init__(self,kcsavedir=self.kc_savedirectory,myname=myname)
         self.name=myname
        
@@ -489,7 +510,11 @@ class KernelOptModelTools(mk.optimize_free_params):
         for species in species_model_save_path_dict:
             pathlist=species_model_save_path_dict[species]
             self.merge_and_condense_saved_models(
-                merge_directory=thedir,save_directory=None,condense=condensechoice,recondense=None,verbose=None,recursive=0)
+                species_name=species,
+                pathlist=pathlist,
+                condense=condense,
+                recondense=recondense,
+                )
         
     def split_pisces_species_model_save(self,filename):
         model_save_pathlist=self.recursive_build_model_save_pathlist(filename)
@@ -506,22 +531,26 @@ class KernelOptModelTools(mk.optimize_free_params):
                     self.logger.debug('adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict}')
                     species_model_save_path_dict[spec_name]=[path]
                 else:species_model_save_path_dict[spec_name].append(path)
+                    
         return species_model_save_path_dict
 
-    def getpickle(path):
+    def getpickle(self,path):
         with open(path,'rb') as f:
             result=pickle.load(f)
         return result
     
-    def savepickle(thing,path):
+    def savepickle(self,thing,path):
         with open(path,'wb') as f:
-            pickle.dump(thing,path)
+            pickle.dump(thing,f)
         return
         
     
 
     def addspecies_name_and_resave(self,startdir):
-        model_save_pathlist=self.recursive_build_model_save_pathlist
+        model_save_pathlist=self.recursive_build_model_save_pathlist(startdir)
+        #self.logger.debug(f'model_save_pathlist:{model_save_pathlist}')
+        helper=Helper()
+        self.logger.debug('Helper() initialized')
         for path in model_save_pathlist:
             try:
                 model_save_list=self.getpickle(path)
@@ -542,12 +571,16 @@ class KernelOptModelTools(mk.optimize_free_params):
                         if prior_spec_name and spec_name==prior_spec_name:
                             new_model_save_list.append(model_save)
                         if prior_spec_name and spec_name!=prior_spec_name:
-                            self.savepickle(new_model_save,species_save_path_toformat.format(prior_spec_name))
+                            newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
+                            self.savepickle(new_model_save_list,newpath)
                             new_model_save_list=[model_save]
                     except:
                         self.logger.exception('')
+                    prior_spec_name=spec_name
                 try:
-                    self.savepickle(new_model_save,species_save_path_toformat.format(prior_spec_name))
+                    species_save_path_toformat.format(prior_spec_name)
+                    newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
+                    self.savepickle(new_model_save_list,newpath)
                 except:
                     self.logger.exception('problem saving pickle at end of model_save_list loop')
 
@@ -992,22 +1025,29 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         if directory is None:
             directory=os.getcwd()
         
-        
-        try:
-            self.logger.info('starting new KernelCompare object')
-        except:
-            if myname is None: _name=''
-            else: _name=f'-{myname}'
+        print('working')
+        if myname:
+            try:
+                self.logger=logging.getLogger(__name__)
+                self.logger.info('starting new KernelCompare object')
+                print('here2')
+            except:
+                print('here')
+                print(traceback.format_exc())
+        else:     
+            _name=''
             logdir=os.path.join(directory,'log')
             if not os.path.exists(logdir): os.mkdir(logdir)
             handlername=os.path.join(logdir,'KernelCompare'+_name+'.log')
             logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=4)],
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
                 level=logging.DEBUG,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
-
+            self.logger.info('starting new KernelCompare log')
+            print('here3')
+            
 
         
         if source is None:
