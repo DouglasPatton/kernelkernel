@@ -640,11 +640,11 @@ class run_cluster(kernelcompare.KernelCompare):
     def setupalljobs(self,rundictlist):
         rundictpathlist=[]
         for idx,rundict in enumerate(rundictlist):
-                jobdict={}
-                jobdict['optimizedict']=rundict['optimizedict']
-                jobdict['datagen_dict']=rundict['datagen_dict']
-                now=strftime("%Y%m%d-%H%M%S")
-                jobdict['node_status']=[(now,'ready for node')]
+            jobdict={}
+            jobdict['optimizedict']=rundict['optimizedict']
+            jobdict['datagen_dict']=rundict['datagen_dict']
+            now=strftime("%Y%m%d-%H%M%S")
+            jobdict['node_status']=[(now,'ready for node')]
             
             for i in range(2):
                 try:
