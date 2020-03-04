@@ -499,13 +499,13 @@ class KernelOptModelTools(mk.optimize_free_params):
         for path in model_save_pathlist:
             regex_genus_species=r'species-[(a-z)]+\s[a-z]+_'
             searchresult=re.search(regex_genus_species,path)
-                if searchresult:
-                    species_genus_slicer=slice(searchresult.start()+8,searchresult.end()-1)
-                    spec_name=path[species_genus_slicer]
-                    if not spec_name in species_model_save_path_dict:
-                        self.logger.debug('adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict}')
-                        species_model_save_path_dict[spec_name]=[path]
-                    else:species_model_save_path_dict[spec_name].append(path)
+            if searchresult:
+                species_genus_slicer=slice(searchresult.start()+8,searchresult.end()-1)
+                spec_name=path[species_genus_slicer]
+                if not spec_name in species_model_save_path_dict:
+                    self.logger.debug('adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict}')
+                    species_model_save_path_dict[spec_name]=[path]
+                else:species_model_save_path_dict[spec_name].append(path)
         return species_model_save_path_dict
 
     def getpickle(path):
