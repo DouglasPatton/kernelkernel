@@ -281,7 +281,11 @@ class run_cluster(kernelcompare.KernelCompare):
         for name_i in old_name_list1:
             for j in range(10):
                 try:
-                    time_i = self.model_save_activitycheck(name_i)
+                    idx=assignment_tracker[name_i]
+                except:
+                    idx=None
+                try:
+                    time_i = self.model_save_activitycheck(name_i,idx=idx)
                     
                     if not type(time_i) is datetime.timedelta:
                         old_name_list.append(name_i)
@@ -400,7 +404,8 @@ class run_cluster(kernelcompare.KernelCompare):
             list_of_run_dicts=self.prep_model_list(
                 optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
             #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-            print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
+            self.setupalljobs(list_of_run_dicts)
+            #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready for node' for _ in range(model_run_count)]
         print('model_run_count',model_run_count)
@@ -633,20 +638,20 @@ class run_cluster(kernelcompare.KernelCompare):
         return
     
     def setupalljobs(self,rundictlist):
-        self.jobcount=len(rundictlist)
-        
+        rundictpathlist=[]
         for idx,rundict in enumerate(rundictlist):
                 jobdict={}
                 jobdict['optimizedict']=rundict['optimizedict']
                 jobdict['datagen_dict']=rundict['datagen_dict']
                 now=strftime("%Y%m%d-%H%M%S")
                 jobdict['node_status']=[(now,'ready for node')]
-        
+            
             for i in range(2):
                 try:
-                    with open(os.path.join(self.jobdirectory,'idx_job'),'wb') as f:
+                    jobpath=os.path.join(self.jobdirectory,idx+'_job')
+                    with open(jobpath,'wb') as f:
                         pickle.dump(jobdict,f)
-                    print(f'job setup for node:{name}')
+                    rundictpathlist.append(jobpath)
                     # print(f'newjob has jobdict:{jobdict}')
                     break
                 except:
@@ -654,22 +659,14 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.logger.exception(f'error in {__name__}')
                     sleep(0.35)
                 
-        return
+        return rundictpathlist
 
-    def setup_job_for_node(self,name,rundict):
-        if type(rundict) is str and rundict=='shutdown':
-            jobdict=rundict
-        else:
-            jobdict={}
-            jobdict['optimizedict']=rundict['optimizedict']
-            jobdict['datagen_dict']=rundict['datagen_dict']
-            now=strftime("%Y%m%d-%H%M%S")
-            jobdict['node_status']=[(now,'ready for node')]
+    def setup_job_for_node(self,name,rundictpath):
             
         for _ in range(10):
             try:
                 with open(os.path.join(self.savedirectory,name,name+'_job'),'wb') as f:
-                    pickle.dump(jobdict,f)
+                    pickle.dump(rundictpath,f)
                 print(f'job setup for node:{name}')
                 # print(f'newjob has jobdict:{jobdict}')
                 break
@@ -703,13 +700,40 @@ class run_cluster(kernelcompare.KernelCompare):
             return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
                         
     
-    def model_save_activitycheck(self,name,filename=None):
-        if filename==None: filename='model_save'
-        nodedir=os.path.join(self.savedirectory,name)
-        node_job=os.path.join(nodedir,name+'_job')
+    def getspeciesfromjobfile(self,idx):
+        jobfilepath=os.path.join(self.jobdirector,idx+'_job')
+        with open(jobfilepath,'rb') as f:
+            jobdict=pickle.load(f)
+        try:
+            species=jobdict['datagen_dict']['species']
+        except:
+            self.logger.exception(f'getspeciesfromjobfile could not find species for idx:{idx} at jobfilepath:{jobfilepath}')
+            species=None
+        return species
+    
+    def model_save_activitycheck(self,name,idx=None):
+        nodedir=os.path.join(self.savedirectory,name) 
+        if idx==None: 
+            assert False,'not developed'
+            '''node_model_save_list=[]
+            for rootpath,subdirs,files in os.walk(nodedir):
+                for filepath in files:
+                    if filepath[-10:]=='model_save':
+                        node_model_save_list.append(os.path.join(rootpath,filepath))'''
+
+        else:
+            species=self.getspeciesfromjobfile(idx)
+        filename='species-'species+'_final_model_save'
+        
         node_model_save=os.path.join(nodedir,filename)
+        if not os.path.exists(node_model_save):
+            filename='species-'species+'_model_save'
+            node_model_save=os.path.join(nodedir,filename)
+            if not os.path.exists(nod_model_save):
+                self.logger.info(f'could not find model save file for name:{name},idx:{idx}')
+                return None
         #print(node_model_save)
-        for i in range(2):
+        for  in range(2):
             try:
                 with open(node_model_save,'rb') as saved_model_save:
                     model_save=pickle.load(saved_model_save)
