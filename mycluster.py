@@ -484,7 +484,7 @@ class run_cluster(kernelcompare.KernelCompare):
                                     run_dict_status[job_idx]='ready for node'
                                     del assignment_tracker[name]
                                 except:
-                                    self.logger.debuf('',exc_info=True)
+                                    self.logger.debug('',exc_info=True)
                                     
                             
                             assignment_tracker[name] = random_ready_dict_idx
