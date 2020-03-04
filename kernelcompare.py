@@ -497,10 +497,8 @@ class KernelOptModelTools(mk.optimize_free_params):
         #if not species_model_save_path_dict:
         species_model_save_path_dict={}
         for path in model_save_pathlist:
-            spec_name_start=re.search(r'species\-',path).end()
-            if spec_name_start:
-                regex_genus_species=r'species-[(a-z)]+\s[a-z]+_'
-                searchresult=re.search(regex_genus_species,path)
+            regex_genus_species=r'species-[(a-z)]+\s[a-z]+_'
+            searchresult=re.search(regex_genus_species,path)
                 if searchresult:
                     species_genus_slicer=slice(searchresult.start()+8,searchresult.end()-1)
                     spec_name=path[species_genus_slicer]
