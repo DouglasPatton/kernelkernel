@@ -400,31 +400,26 @@ class run_cluster(kernelcompare.KernelCompare):
         shutdownnodes=0
         keepgoing=1
         readynamelist=[]
-        nextreadynamelist=[]
         while keepgoing:
             if i%100==0:
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
-            if loopcount>1:
-                nextreadynamelist=[]
-                loopcount=0
-                
-            if not nextreadynamelist:
-                run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
-                namelist=self.getnamelist()
-                readynamelist=self.getreadynames(namelist)
-                if shutdownnodes and len(readynamelist)==0:
-                    keepgoing=0
+        if loopcount>1:
+            loopcount=0
 
-                if len(readynamelist)>1:
-                    print(f'readynamelist:{readynamelist}')
-                if all([status=='finished' for status in run_dict_status])==True:
-                    shutdownnodes=1
-                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
-                notanewjob_list=[]
-            else:
-                readynamelist=nextreadynamelist
+            run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
+            namelist=self.getnamelist()
+            readynamelist=self.getreadynames(namelist)
+            if shutdownnodes and len(readynamelist)==0:
+                keepgoing=0
+
+            if len(readynamelist)>1:
+                print(f'readynamelist:{readynamelist}')
+            if all([status=='finished' for status in run_dict_status])==True:
+                shutdownnodes=1
+            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
+            notanewjob_list=[]
             sleep(1)
             
             for name in readynamelist:
@@ -497,7 +492,6 @@ class run_cluster(kernelcompare.KernelCompare):
 
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
-                            nextreadynamelist.append(name)
 
             for arglist in notanewjob_list:
                 name=arglist[0]
@@ -515,7 +509,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                     if tracked==1: 
                         self.logger.info(f'about to delte assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
-                        del assignment_tracker[name]
+                        assignment_tracker[name]=None
                         run_dict_status[job_idx]='ready for node'
                         
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
@@ -528,7 +522,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
                     try:job_idx=assignment_tracker[name]
+                        tracked=1
                     except:
+                        tracked=0
                         print(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
                         print(f'assignment_tracker:{assignment_tracker}')
                         self.logger.exception(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
@@ -538,7 +534,8 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                         self.logger.info(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                         del assignment_tracker[name]
-                        run_dict_status[job_idx]='finished'
+                        if job_idx:
+                            run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready for job')
                         mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
@@ -846,11 +843,13 @@ class run_cluster(kernelcompare.KernelCompare):
         namefilename=os.path.join(self.masterdirectory,myname+'.name')
         for i in range(1):
             try:
-                with open(namefilename,'rb') as namefile:
+                '''with open(namefilename,'rb') as namefile:
                     listoftups=pickle.load(namefile)
-                    listoftups.append(time_status_tup)
+                    last5tups=listoftups[-4:]
+                    last5tups.append((time_status_tup))'''
+                last5tups=[time_status_tup]
                 with open(namefilename,'wb') as namefile:
-                    pickle.dump(listoftups,namefile)
+                    pickle.dump(last5tups,namefile)
                 break
             except:
                 if i==0:
