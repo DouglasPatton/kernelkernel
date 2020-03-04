@@ -142,13 +142,19 @@ class run_cluster(kernelcompare.KernelCompare):
     def initialize(self,myname,optdict_variation_list=None,datagen_variation_list=None):
         
         if myname=="master":
-            self.runmaster(optdict_variation_list,datagen_variation_list)
+            try:
+                self.runmaster(optdict_variation_list,datagen_variation_list)
+            except:
+                self.logger.exception('master failed')
         else:
             myname=self.createnamefile(myname)
             self.nodedirectory = os.path.join(self.savedirectory, myname)
             self.nodenamefilename=os.path.join(self.masterdirectory,myname+'.name')
             self.nodejobfilename=os.path.join(self.nodedirectory,myname+'_job')
-            self.runnode(myname)
+            try:
+                self.runnode(myname)
+            except:
+                self.logger.exception('node with myname:{myname} has failed')
 
 
     def createnamefile(self,name):
@@ -405,15 +411,15 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
                 
-        if loopcount>1:
-            loopcount=0
+            if loopcount>1:
+                loopcount=0
 
             run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
             namelist=self.getnamelist()
             readynamelist=self.getreadynames(namelist)
             if shutdownnodes and len(readynamelist)==0:
                 keepgoing=0
-
+            self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
             if len(readynamelist)>1:
                 print(f'readynamelist:{readynamelist}')
             if all([status=='finished' for status in run_dict_status])==True:
@@ -510,6 +516,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     if tracked==1: 
                         self.logger.info(f'about to delte assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
                         assignment_tracker[name]=None
+                        
                         run_dict_status[job_idx]='ready for node'
                         
                     ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready for node']
@@ -521,7 +528,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     mergestatus=self.mergethisnode(name,move=1)
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
-                    try:job_idx=assignment_tracker[name]
+                    try:
+                        job_idx=assignment_tracker[name]
                         tracked=1
                     except:
                         tracked=0
@@ -533,8 +541,8 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.discard_job_for_node(name)
                         print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                         self.logger.info(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                        del assignment_tracker[name]
-                        if job_idx:
+                        assignment_tracker[name]=None
+                        if tracked:
                             run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready for job')
                         mergestatus=self.mergethisnode(name,move=1)
