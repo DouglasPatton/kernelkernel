@@ -648,14 +648,14 @@ class run_cluster(kernelcompare.KernelCompare):
             
             for i in range(2):
                 try:
-                    jobpath=os.path.join(self.jobdirectory,idx+'_job')
+                    jobpath=os.path.join(self.jobdirectory,str(idx)+'_job')
                     with open(jobpath,'wb') as f:
                         pickle.dump(jobdict,f)
                     rundictpathlist.append(jobpath)
                     # print(f'newjob has jobdict:{jobdict}')
                     break
                 except:
-                    if i=1:
+                    if i==1:
                         self.logger.exception(f'error in {__name__}')
                     sleep(0.35)
                 
@@ -701,7 +701,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         
     
     def getspeciesfromjobfile(self,idx):
-        jobfilepath=os.path.join(self.jobdirector,idx+'_job')
+        jobfilepath=os.path.join(self.jobdirector,str(idx)+'_job')
         with open(jobfilepath,'rb') as f:
             jobdict=pickle.load(f)
         try:
@@ -723,17 +723,17 @@ class run_cluster(kernelcompare.KernelCompare):
 
         else:
             species=self.getspeciesfromjobfile(idx)
-        filename='species-'species+'_final_model_save'
+        filename='species-'+species+'_final_model_save'
         
         node_model_save=os.path.join(nodedir,filename)
         if not os.path.exists(node_model_save):
-            filename='species-'species+'_model_save'
+            filename='species-'+species+'_model_save'
             node_model_save=os.path.join(nodedir,filename)
             if not os.path.exists(nod_model_save):
                 self.logger.info(f'could not find model save file for name:{name},idx:{idx}')
                 return None
         #print(node_model_save)
-        for  in range(2):
+        for i in range(2):
             try:
                 with open(node_model_save,'rb') as saved_model_save:
                     model_save=pickle.load(saved_model_save)
