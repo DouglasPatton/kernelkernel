@@ -7,7 +7,7 @@ import kernelcompare
 import traceback
 import shutil
 from numpy import log
-from random import randint,seed
+from random import randint,seed,shuffle
 import logging
 import logging.config
 import yaml
@@ -190,9 +190,10 @@ class run_cluster(kernelcompare.KernelCompare):
             last_time_status_tup=self.namefile_statuscheck(name_i)
             if last_time_status_tup[1]=='ready for job':
                 readylist.append(name_i)
-                sortlist.append(last_time_status_tup[0])
-        sorted_readylist=[name_i for _, name_i in sorted(zip(sortlist,readylist), key=lambda pair: pair[0])]
-        return sorted_readylist
+                #sortlist.append(last_time_status_tup[0])
+        shuffle(readylist)
+        #sorted_readylist=[name_i for _, name_i in sorted(zip(sortlist,readylist), key=lambda pair: pair[0])]
+        return readylist
     
     def checkmaster(self):
         return os.path.exists(self.masterfilefilename)
