@@ -513,7 +513,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     except:
                         self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                     if tracked==1: 
-                        self.logger.info(f'about to delte assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
+                        self.logger.info(f'about to delete assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
                         assignment_tracker[name]=None
                         
                         run_dict_status[job_idx]='ready for node'
@@ -544,7 +544,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         if tracked:
                             run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready for job')
-                        mergestatus=self.mergethisnode(name,move=1)
+                        #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #print(f'for node name:{name}, mergestatus:{mergestatus}')
                         readynamelist.append(name)
@@ -625,7 +625,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 break
             except:
                 if i==1:
-                    self.logger.exception(f'error in {__name__}')
+                    self.logger.exception(f'error discarding job for name:{name}')
         return
     
     
