@@ -69,8 +69,11 @@ class run_cluster(kernelcompare.KernelCompare):
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
         
         self.masterdirectory, self.masterfiledirectory=self.setmasterdir(self.savedirectory)
+        self.jobdirectory=os.path.join(self.savedirectory,'jobs')
+        
         self.oldnode_threshold=datetime.timedelta(minutes=65,seconds=1)
         self.masterfilefilename=os.path.join(self.masterfiledirectory, 'masterfile')
+        
         if myname is None:
             myname='node'
         
@@ -483,7 +486,7 @@ class run_cluster(kernelcompare.KernelCompare):
                                 try:
                                     job_idx=assignment_tracker[name]
                                     run_dict_status[job_idx]='ready for node'
-                                    del assignment_tracker[name]
+                                    assignment_tracker[name]=None
                                 except:
                                     self.logger.debug('',exc_info=True)
                                     
@@ -629,7 +632,29 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.logger.exception(f'error discarding job for name:{name}')
         return
     
-    
+    def setupalljobs(self,rundictlist):
+        self.jobcount=len(rundictlist)
+        
+        for idx,rundict in enumerate(rundictlist):
+                jobdict={}
+                jobdict['optimizedict']=rundict['optimizedict']
+                jobdict['datagen_dict']=rundict['datagen_dict']
+                now=strftime("%Y%m%d-%H%M%S")
+                jobdict['node_status']=[(now,'ready for node')]
+        
+            for i in range(2):
+                try:
+                    with open(os.path.join(self.jobdirectory,'idx_job'),'wb') as f:
+                        pickle.dump(jobdict,f)
+                    print(f'job setup for node:{name}')
+                    # print(f'newjob has jobdict:{jobdict}')
+                    break
+                except:
+                    if i=1:
+                        self.logger.exception(f'error in {__name__}')
+                    sleep(0.35)
+                
+        return
 
     def setup_job_for_node(self,name,rundict):
         if type(rundict) is str and rundict=='shutdown':
