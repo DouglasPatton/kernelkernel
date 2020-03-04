@@ -371,8 +371,7 @@ class run_cluster(kernelcompare.KernelCompare):
         for idx in release_status_idx:
             run_dict_status[idx]='ready for node'
         return run_dict_status, assignment_tracker
-
-
+  
         
 
     def runmaster(self,optdict_variation_list,datagen_variation_list):
@@ -419,7 +418,7 @@ class run_cluster(kernelcompare.KernelCompare):
             readynamelist=self.getreadynames(namelist)
             if shutdownnodes and len(readynamelist)==0:
                 keepgoing=0
-            self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
+            #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
             if len(readynamelist)>1:
                 print(f'readynamelist:{readynamelist}')
             if all([status=='finished' for status in run_dict_status])==True:
