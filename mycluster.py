@@ -50,8 +50,9 @@ class run_cluster(kernelcompare.KernelCompare):
         self.source=source
         self.oldnodequeue=mp.Queue
         self.savedirectory=self.setdirectory(local_run=local_run)
-        self.model_collection_directorylist=[os.path.join(os.getcwd(),'..','model_collection')]
-        if not os.path.exists(self.model_collection_directorylist[-1]): os.mkdir(self.model_collection_directorylist[-1])
+        self.model_collection_directory=Helper().getname(os.path.join(os.getcwd(),'..','model_collection'))#
+        self.logger.info(f'self.model_collection_directory:{self.model_collection_directory}')
+        if not os.path.exists(self.model_collection_directory): os.mkdir(self.model_collection_directory)
         
         logdir=os.path.join(os.getcwd(),'log')
         #logdir=os.path.join(self.savedirectory,'log')
@@ -311,16 +312,36 @@ class run_cluster(kernelcompare.KernelCompare):
             
             try:
                 if self.mergethisnode(name,old=1,move=1):
+                    namefilesuffix=name + '.name'
+                    namefilepath=os.path.join(self.masterdirectory,namefilesuffix)
+                    destination_namefilepath=self.helper.getname(os.path.join(self.model_collection_directory,namefilesuffiix))
+                    try:
+                        shutil.move(namfilepath,destination_namefilepath)
+                    except:
+                        self.logger.exception(f'could not move namefilepath:{namefilepath} to destination_namefilepath:{destination_namefilepath}')
                     
+                    nodedir=os.path.join(self.savedirectory,name)
+                    destination_nodedir=self.helper.getname(os.path.join(self.model_collection_directory,name))
+                    try:
+                        shutil.move(nodedir,destination_nodedir)
+                    except:
+                        self.logger.exception(f'could not move nodedir:{nodedir} to destination_nodedir:{destination_nodedir}')
+                    
+                    
+                    
+                    
+                    
+                    
+                    '''
                     save_idx=[0,0]
                     
                     while not all([idx=='saved' for idx in save_idx]):
                         if not type(save_idx[0]) is str:
                             try:
-                                shutil.move(os.path.join(self.masterdirectory, name + '.name'),self.model_collection_directorylist[save_idx[0]])
+                                shutil.move(os.path.join(self.masterdirectory, name + '.name'),)
                                 save_idx[0]='saved'
                             except shutil.Error:
-                                self.logger.exception(f'save failed for namefile, idx:{save_idx[0]}')
+                                self.logger.exception(f'move failed for namefile, idx:{save_idx[0]}')
                                 try:
                                     self.logger.exception('')
                                     save_idx[0]+=1
@@ -349,7 +370,7 @@ class run_cluster(kernelcompare.KernelCompare):
                                 except:self.logger.exception('')
                             except FileNotFoundError:
                                 save_idx[0]='FileNotFoundError'
-                            except: self.logger.exception('')
+                            except: self.logger.exception('')'''
                         #assert all([idx<100 for idx in save_idx if not type(idx) is str]), f'too many _model_collection_ directories. save_idx:{save_idx}'
                             
             except:
@@ -599,30 +620,20 @@ class run_cluster(kernelcompare.KernelCompare):
                             self.logger.exception(f'error in {__name__}')
                             return False
         if move:
-            try:
-                nodedir=os.path.join(self.savedirectory, name)
-                model_save_pathlist=[os.path.join(nodedir,name_i) for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
-                renamelist=[]
-                helper=Helper()
-                for model_save_path in model_save_pathlist:
-                    try:
-                        shutil.move(model_save_path,self.model_collection_directorylist[0])
-                    except:  
-                        try:
-                            newpath=os.path.join(self.model_collection_directorylist[0],os.path.split(model_save_path)[-1])
-                            newpath=helper.getname(newpath)
-                            newstem=os.path.split(newpath)[-1]
-                            newoldpath=os.path.join(os.path.split(model_save_path)[0],newstem)
-                            os.rename(model_save_path,newoldpath)
-                            
-                        except:
-                            self.logger.exception(f'model_save_path:{model_save_path}')
-                        try:
-                            shutil.move(newoldpath,newpath)
-                        except:
-                            self.logger.exception(f'newpath:{newpath}')
-            except:
-                self.logger.exception('move error in mergethisnode')
+            
+            nodedir=os.path.join(self.savedirectory, name)
+            model_save_pathlist=[name_i for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
+            renamelist=[]
+            helper=Helper()
+            for model_save_path in model_save_pathlist:
+                try:
+                    newdir=self.model_collection_directory
+                    newpath=os.path.join(newdir,model_save_path)
+                    unique_newpath=helper.getname(newpath)
+                    shutil.move(os.path.join(nodedir,model_save_path),unique_newpath)
+                    
+                except:
+                    self.logger.exception(f'move error in mergethisnode name:{name}, model_save_path:{model_save_path}')
                             
         if old:    
             return True
