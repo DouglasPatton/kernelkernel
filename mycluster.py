@@ -50,9 +50,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.source=source
         self.oldnodequeue=mp.Queue
         self.savedirectory=self.setdirectory(local_run=local_run)
-        self.model_collection_directory=Helper().getname(os.path.join(os.getcwd(),'..','model_collection'))#
-        self.logger.info(f'self.model_collection_directory:{self.model_collection_directory}')
-        if not os.path.exists(self.model_collection_directory): os.mkdir(self.model_collection_directory)
+        
         
         logdir=os.path.join(os.getcwd(),'log')
         #logdir=os.path.join(self.savedirectory,'log')
@@ -65,6 +63,10 @@ class run_cluster(kernelcompare.KernelCompare):
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
+        self.helper=Helper()
+        self.model_collection_directory=self.helper.getname(os.path.join(os.getcwd(),'..','model_collection'))#
+        self.logger.info(f'self.model_collection_directory:{self.model_collection_directory}')
+        if not os.path.exists(self.model_collection_directory): os.mkdir(self.model_collection_directory)
 
         '''if not myname=='master':
             self.Ndiff_list_of_masks_x=None
@@ -624,12 +626,12 @@ class run_cluster(kernelcompare.KernelCompare):
             nodedir=os.path.join(self.savedirectory, name)
             model_save_pathlist=[name_i for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
             renamelist=[]
-            helper=Helper()
+            
             for model_save_path in model_save_pathlist:
                 try:
                     newdir=self.model_collection_directory
                     newpath=os.path.join(newdir,model_save_path)
-                    unique_newpath=helper.getname(newpath)
+                    unique_newpath=self.helper.getname(newpath)
                     shutil.move(os.path.join(nodedir,model_save_path),unique_newpath)
                     
                 except:
