@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=3,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=65,seconds=1)
 
         seed(1)
         if source==None:
