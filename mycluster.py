@@ -683,8 +683,9 @@ class run_cluster(kernelcompare.KernelCompare):
         try:
             with open(job_file_path,'rb') as f:
                 myjobfile=pickle.load(f)
+        except FileNotFoundError:
+            myjobfile={'status':[]}
         except:
-            
             self.logger.exception('')
             myjobfile={'status':[]}
         myjobfile['link']=rundictpath
