@@ -316,9 +316,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 if self.mergethisnode(name,old=1,move=1):
                     namefilesuffix=name + '.name'
                     namefilepath=os.path.join(self.masterdirectory,namefilesuffix)
-                    destination_namefilepath=self.helper.getname(os.path.join(self.model_collection_directory,namefilesuffiix))
+                    destination_namefilepath=self.helper.getname(os.path.join(self.model_collection_directory,namefilesuffix))
                     try:
-                        shutil.move(namfilepath,destination_namefilepath)
+                        shutil.move(namefilepath,destination_namefilepath)
                     except:
                         self.logger.exception(f'could not move namefilepath:{namefilepath} to destination_namefilepath:{destination_namefilepath}')
                     
@@ -684,6 +684,7 @@ class run_cluster(kernelcompare.KernelCompare):
             with open(job_file_path,'rb') as f:
                 myjobfile=pickle.load(f)
         except:
+            
             self.logger.exception('')
             myjobfile={'status':[]}
         myjobfile['link']=rundictpath
