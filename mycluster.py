@@ -431,7 +431,7 @@ class run_cluster(kernelcompare.KernelCompare):
             list_of_run_dicts=self.prep_model_list(
                 optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
             #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-            rundictpathlist=self.setupalljobs(list_of_run_dicts)
+            rundictpathlist=self.setupalljob_paths(list_of_run_dicts)
             #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
             model_run_count=len(list_of_run_dicts)
             run_dict_status=['ready' for _ in range(model_run_count)]
@@ -518,11 +518,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             else:
                                 newjobpath=rundictpathlist[next_ready_dict_idx]
                             #if not name in nonewjob_namelist:
-                            setup=self.setup_job_for_node(name,newjobpath)
-                            
-                            
-                                    
-                            
+                            setup=self.setup_job_for_node(name,newjobpath,list_of_run_dicts[next_ready_dict_idx])
                             assignment_tracker[name] = next_ready_dict_idx
                             #print('assignment_tracker', assignment_tracker)
                             i+=1
@@ -583,7 +579,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #print(f'for node name:{name}, mergestatus:{mergestatus}')
-                        readynamelist.append(name)
+                        #readynamelist.append(name)
                     except:
                         self.logger.exception('')
             '''if i<100:
@@ -654,16 +650,12 @@ class run_cluster(kernelcompare.KernelCompare):
                     self.logger.exception(f'error discarding job for name:{name}')
         return
     
-    def setupalljobs(self,rundictlist):
+    def setupalljob_paths(self,rundictlist):
         rundictpathlist=[]
         for idx,rundict in enumerate(rundictlist):
-            jobdict={}
-            jobdict['optimizedict']=rundict['optimizedict']
-            jobdict['datagen_dict']=rundict['datagen_dict']
-            now=strftime("%Y%m%d-%H%M%S")
-            jobdict['status']=[(now,'ready')]
-            
-            for i in range(2):
+            jobpath=os.path.join(self.jobdirectory,str(idx)+'_jobdict')
+            rundictpathlist.append(jobpath)
+            '''for i in range(2):
                 try:
                     jobpath=os.path.join(self.jobdirectory,str(idx)+'_jobdict')
                     with open(jobpath,'wb') as f:
@@ -675,10 +667,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     if i==1:
                         self.logger.exception(f'error in {__name__}')
                     sleep(0.35)
-                
+                '''
         return rundictpathlist
 
-    def setup_job_for_node(self,name,rundictpath):
+    def setup_job_for_node(self,name,rundictpath,rundict):
         job_file_path=os.path.join(self.savedirectory,name,name+'_job')
         try:
             with open(job_file_path,'rb') as f:
@@ -697,11 +689,22 @@ class run_cluster(kernelcompare.KernelCompare):
                 pickle.dump(myjobfile,f)
             print(f'job setup for node:{name}')
             # print(f'newjob has jobdict:{jobdict}')
-            
         except:
             self.logger.exception(f'error in {__name__}')
             sleep(0.35)
             return 0
+        if not os.path.exists(rundictpath):
+            jobdict={}
+            jobdict['optimizedict']=rundict['optimizedict']
+            jobdict['datagen_dict']=rundict['datagen_dict']
+            now=strftime("%Y%m%d-%H%M%S")
+            jobdict['status']=[(now,'ready')]
+            
+            self.savepickle(jobdict,rundictpath)
+            self.logger.debug(f'setting up jobdict:{jobdict} at rundictpath:{rundictpath}')
+        
+        
+
                 
         return 1
 
