@@ -288,7 +288,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 except:
                     idx=None
                 try:
-                    time_i = self.model_save_activitycheck(name_i,idx=idx)
+                    time_i = self.model_save_activitycheck(name_i)
                     
                     if not type(time_i) is datetime.timedelta:
                         old_name_list.append(name_i)
@@ -729,10 +729,10 @@ class run_cluster(kernelcompare.KernelCompare):
         try:
             nodedir=os.path.join(self.savedirectory,name) 
             node_model_save_pathlist=self.recursive_build_model_save_pathlist(nodedir) #inherited from kernelcompare
-            nodejobfilepath=os.path.join(nodedir,name+'_job')
+            #=os.path.join(nodedir,name+'_job')
             modtimelist=[]
             
-            for path in nodejobfilepath:
+            for path in node_model_save_pathlist:
                 try:
                     modtime=os.path.getmtime(path)
                     modtimelist.append(modtime)
