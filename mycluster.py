@@ -9,7 +9,7 @@ import shutil
 from numpy import log
 from random import randint,seed,shuffle
 import logging
-import logging.config
+#import logging.config
 import yaml
 from helpers import Helper
 import multiprocessing as mp
@@ -712,57 +712,39 @@ class run_cluster(kernelcompare.KernelCompare):
             return now_s-datetime.datetime.strptime(then,"%Y%m%d-%H%M%S")                   
                         
     
-    def getspeciesfromjobfile(self,idx):
-        jobfilepath=os.path.join(self.jobdirector,str(idx)+'_job')
+    def getspeciesfrom_idxjobdict_file(self,idx):
+        jobfilepath=os.path.join(self.jobdirector,str(idx)+'_jobdict')
         with open(jobfilepath,'rb') as f:
             jobdict=pickle.load(f)
         try:
             species=jobdict['datagen_dict']['species']
         except:
-            self.logger.exception(f'getspeciesfromjobfile could not find species for idx:{idx} at jobfilepath:{jobfilepath}')
+            self.logger.exception(f'getspeciesfrom_idxjobdict_file could not find species for idx:{idx} at jobfilepath:{jobfilepath}')
             species=None
         return species
     
-    def model_save_activitycheck(self,name,idx=None):
-        nodedir=os.path.join(self.savedirectory,name) 
-        nodejobfilepath=os.path.join(nodedir,name+'_job')
-        if idx==None: 
-            assert False,'not developed'
-            '''node_model_save_list=[]
-            for rootpath,subdirs,files in os.walk(nodedir):
-                for filepath in files:
-                    if filepath[-10:]=='model_save':
-                        node_model_save_list.append(os.path.join(rootpath,filepath))'''
-
-        else:
-            species=self.getspeciesfromjobfile(idx)
-        filename='species-'+species+'_final_model_save'
+    def model_save_activitycheck(self,name):
+        try:
+            nodedir=os.path.join(self.savedirectory,name) 
+            node_model_save_pathlist=self.recursive_build_model_save_pathlist(nodedir) #inherited from kernelcompare
+            nodejobfilepath=os.path.join(nodedir,name+'_job')
+            modtimelist=[]
+            
+            for path in nodejobfilepath:
+                try:
+                    modtime=os.path.getmtime(path)
+                    modtimelist.append(modtime)
+                except:
+                    self.logger.exception(f'problem for name:{name},path:{path}')
+            last_model_save=modtimelist.index(max(modtimelist))
+            now=strftime("%Y%m%d-%H%M%S")
+            sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.fromtimestamp(modtime)
+            return sincelastsave
+        except:
+            self.logger.exception(f'problem with name:{name}')
+            return None
         
-        node_model_save=os.path.join(nodedir,filename)
-        if not os.path.exists(node_model_save):
-            filename='species-'+species+'_model_save'
-            node_model_save=os.path.join(nodedir,filename)
-            if not os.path.exists(nod_model_save):
-                self.logger.info(f'could not find model save file for name:{name},idx:{idx}')
-                return None
-        #print(node_model_save)
-        for i in range(2):
-            try:
-                with open(node_model_save,'rb') as saved_model_save:
-                    model_save=pickle.load(saved_model_save)
-                lastsave=model_save[-1]['when_saved']
-                
-                now=strftime("%Y%m%d-%H%M%S")
-                
-                sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsave,"%Y%m%d-%H%M%S")
-                print(f'activitycheck for name:{name}, time:{sincelastsave},timetype:{type(sincelastsave)}')
-                return sincelastsave
-            except:
-                if i==1:
-                    self.logger.info(f'error in {__name__} could not find{filename}')
-                    if not filename=='final_model_save':
-                        self.model_save_activitycheck(name,filename='final_model_save')
-        return None
+        
 
 
     def getnamelist(self):

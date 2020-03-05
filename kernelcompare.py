@@ -19,6 +19,7 @@ class KernelOptModelTools(mk.optimize_free_params):
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
+        self.species_model_save_path_dict_directory=os.path.join(directory,'species_model_save_path_dict.pickle')
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.Ndiff_list_of_masks_x=None
         self.Ndiff_list_of_masks_y=None
@@ -481,18 +482,14 @@ class KernelOptModelTools(mk.optimize_free_params):
                     self.logger.exception(f'error in {__name__}')
                     return
 
-    '''def getmodelrunmse(self,modelrundict):
-        return modelrundict['mse']'''
                 
     def myflatdict(self, complexdict, keys=None):
         thistype = type(complexdict)
         if not thistype is dict:
             return {'val': complexdict}
-
         if keys == None and thistype is dict:
             keys = [key for key, val in complexdict.items()]
         flatdict = {}
-
         for key in keys:
             try:
                 val = complexdict[key]
@@ -500,14 +497,45 @@ class KernelOptModelTools(mk.optimize_free_params):
                 val = 'no val found'
             newdict = self.myflatdict(val)
             for key2, val2 in newdict.items():
-
                 flatdict[f'{key}:{key2}'] = [val2]
-
         return flatdict
-   
+
+    
+    def update_species_model_save_path_dict(self,species_model_save_path_dict):
+        savedir=self.species_model_save_path_dict_directory
+        if os.path.exists(savedir):
+            existing_species_model_save_path_dict=self.getpickle(savedir)
+            new_species_model_save_path_dict=self.merge_list_of_listdicts([existing_species_model_save_path_dict,species_model_save_path_dict])
+        else:
+            self.logger.info('savedir:{savedir} does not exist, so species_model_save_path_dict is the first one to be saved')
+            new_species_model_save_path_dict=species_model_save_path_dict
+        self.savepickle(new_species_model_save_path_dict,savedir)
+        return new_species_model_save_path_dict
+        
+    def merge_list_of_listdicts(self,listoflistdicts):#a listdict is a dict with each val an unordered list
+        merged_listdict={}
+        for listdict in listoflistdicts:
+            for key in listdict:
+                if not key in merged_listdict:
+                    merged_listdict[key]=listdict[key]
+                else:
+                    merged_listdict[key].append(listdict[key])
+        return merged_listdict
+            
+
+
     def process_pisces_models(self,startpath,condense=0,recondense=0):
-        species_model_save_path_dict=self.split_pisces_species_model_save(startpath)
-        for species in species_model_save_path_dict:
+        if not type(startpath) is list:
+            startpathlist=[startpath]
+        else:
+            startpathlist=startpath
+        species_model_save_path_dict_list=[]
+        for start_path in startpathlist:
+            species_model_save_path_dict=self.split_pisces_species_model_save(start_path)
+            species_model_save_path_dict_list.append(species_model_save_path_dict)
+        species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
+        full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
+        for species in full_species_model_save_path_dict:
             pathlist=species_model_save_path_dict[species]
             self.merge_and_condense_saved_models(
                 species_name=species,
@@ -527,13 +555,16 @@ class KernelOptModelTools(mk.optimize_free_params):
             if searchresult:
                 species_genus_slicer=slice(searchresult.start()+8,searchresult.end()-1)
                 spec_name=path[species_genus_slicer]
+            else:
+                spec_name=self.getspecies_name_from_model_save(path)
+            if spec_name:
                 if not spec_name in species_model_save_path_dict:
-                    self.logger.debug('adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict}')
+                    self.logger.debug(f'adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict)}')
                     species_model_save_path_dict[spec_name]=[path]
-                else:species_model_save_path_dict[spec_name].append(path)
-                    
+                species_model_save_path_dict[spec_name].append(path)
         return species_model_save_path_dict
 
+    
     def getpickle(self,path):
         with open(path,'rb') as f:
             result=pickle.load(f)
@@ -544,7 +575,14 @@ class KernelOptModelTools(mk.optimize_free_params):
             pickle.dump(thing,f)
         return
         
-    
+        
+    def getspecies_name_from_model_save(self,path):
+        try:
+            model_save=self.getpickle(path)
+            return model_save['datagen_dict']['species']
+        except:
+            self.logger.exception(f'error when retrieving species name form model_save path:{path}')
+            return []
 
     def addspecies_name_and_resave(self,startdir):
         model_save_pathlist=self.recursive_build_model_save_pathlist(startdir)
@@ -600,7 +638,8 @@ class KernelOptModelTools(mk.optimize_free_params):
                     model_save_pathlist.append(os.path.join(rootpath,file))
         return model_save_pathlist
 
-    def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
+    def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',
+                                        save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
         if pathlist is None:
             if not merge_directory==None:
                 if not os.path.exists(merge_directory):
@@ -1060,6 +1099,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         else: 
             self.kc_savedirectory=directory
             merge_directory=os.path.join(self.kc_savedirectory,'..')
+        
 
         KernelOptModelTools.__init__(self,directory=self.kc_savedirectory,myname=myname)
         KernelParams.__init__(self,)
