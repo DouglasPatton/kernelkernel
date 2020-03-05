@@ -192,7 +192,7 @@ class run_cluster(kernelcompare.KernelCompare):
         readylist=[];sortlist=[]
         for name_i in namelist:
             last_time_status_tup=self.namefile_statuscheck(name_i)
-            if last_time_status_tup[1]=='ready'
+            if last_time_status_tup[1]=='ready':
                 readylist.append(name_i)
                 #sortlist.append(last_time_status_tup[0])
         shuffle(readylist)
@@ -465,13 +465,17 @@ class run_cluster(kernelcompare.KernelCompare):
                 if islate:
                     self.logger.info(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
                     print(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
-
-                if not(job_status=="no file found" or islate):
+                    try:
+                        job_idx=assignment_tracker[name]
+                        run_dict_status[job_idx]='ready'
+                        assignment_tracker[name]=None
+                    except:
+                        self.logger.debug('',exc_info=True) 
+                elif not job_status=="ready" :
                     if not job_status=='finished':
                         notanewjob_list.append([name,job_status])
                     else:
                         notanewjob_list.append([name,job_status])
-                        
                     #nonewjob_namelist=[i[0] for i in notanewjob_list]
                 else:
                     print(f'about to setup the job for node:{name}')
@@ -491,13 +495,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             #if not name in nonewjob_namelist:
                             setup=self.setup_job_for_node(name,newjob)
                             
-                            if islate:
-                                try:
-                                    job_idx=assignment_tracker[name]
-                                    run_dict_status[job_idx]='ready
-                                    assignment_tracker[name]=None
-                                except:
-                                    self.logger.debug('',exc_info=True)
+                            
                                     
                             
                             assignment_tracker[name] = next_ready_dict_idx
@@ -514,7 +512,7 @@ class run_cluster(kernelcompare.KernelCompare):
             for arglist in notanewjob_list:
                 name=arglist[0]
                 job_status=arglist[1]
-
+                
                 if job_status=='failed':
                     try:
                         job_idx=assignment_tracker[name]
@@ -672,7 +670,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 myjobfile=pickle.load(f)
         except:
             self.logger.exception('')
-            myjobfile={'status'}
+            myjobfile={'status':[]}
         myjobfile['link']=rundictpath
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,'ready')
@@ -822,15 +820,15 @@ class run_cluster(kernelcompare.KernelCompare):
             print(f'{myname} ischecking for jobs')
             while i_have_opt_job==0:
                 jobfile_dict=self.check_for_opt_job(myname,start_time,mydir)
-                if type(my_opt_job) is dict:
+                if type(jobfile_dict) is dict:
                     break
-                elif type(my_opt_job) is str and my_opt_job=='shutdown':
+                elif type(jobfile_dict) is str and my_opt_job=='shutdown':
                     self.update_my_namefile(myname,status='shutting down')
                     keepgoing=0
                     return
                 else:
                     sleep(2)
-
+            rundictpath=jobfile_dict['link']
             my_opt_job=self.getpickle(jobfile_dict['link'])
             my_optimizedict=my_opt_job['optimizedict']
             my_datagen_dict=my_opt_job['datagen_dict']
@@ -954,9 +952,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
                     #self.logger.exception(f'error in {__name__}')
                     if time==0:
-                        return "no file found"#if the file doesn't exist, then assign the job
+                        return 'ready' #if the file doesn't exist, then assign the job
                     if time==1:
-                        return strftime("%Y%m%d-%H%M%S"), "no file found"
+                        return strftime("%Y%m%d-%H%M%S"), 'ready'
                 sleep(1)
                     
             
@@ -970,7 +968,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
         for i in range(10):
             try:
-                with open(my_job_file,'rb') as f:
+                with open(jobpath,'rb') as f:
                     job_save_dict=pickle.load(f)
                 break
             except:
@@ -984,7 +982,7 @@ class run_cluster(kernelcompare.KernelCompare):
             job_save_dict['status'].append((now,status))
         for _ in range(10):
             try:
-                with open(my_job_file,'wb') as f:
+                with open(jobpath,'wb') as f:
                     pickle.dump(job_save_dict,f)
                 break
             except:pass
