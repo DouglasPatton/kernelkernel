@@ -42,6 +42,8 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
+        self.oldnode_threshold=datetime.timedelta(minutes=3,seconds=1)
+
         seed(1)
         if source==None:
             source='monte'
@@ -72,7 +74,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
         if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
         
-        self.oldnode_threshold=datetime.timedelta(minutes=65,seconds=1)
+        
         self.masterfilefilename=os.path.join(self.masterfiledirectory, 'masterfile')
         
         if myname is None:
