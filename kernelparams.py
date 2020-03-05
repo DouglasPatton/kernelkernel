@@ -4,7 +4,7 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.n=16 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
         self.batchcount_variation_list=[8]
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
@@ -21,9 +21,9 @@ class KernelParams:
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.2,.5,.9,1.3]])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.2,.5,.9,1.3]])
         
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[1.8*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.2])])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.7]),np.array([.3])])
@@ -119,8 +119,8 @@ class KernelParams:
                 
                 
                 
-            #species_variations=('species',self.specieslist)
-            species_variations=('species',[self.specieslist[i+1] for i in range(0,len(self.specieslist)-1,4)])
+            species_variations=('species',self.specieslist[3])
+            #species_variations=('species',[self.specieslist[i+1] for i in range(0,len(self.specieslist)-1,4)])
             # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
