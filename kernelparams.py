@@ -119,7 +119,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',self.specieslist[3])
+            species_variations=('species',[self.specieslist[3]])
             #species_variations=('species',[self.specieslist[i+1] for i in range(0,len(self.specieslist)-1,4)])
             # print('species_variations',species_variations)
             

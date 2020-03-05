@@ -491,9 +491,9 @@ class run_cluster(kernelcompare.KernelCompare):
                             if shutdownnodes:
                                 newjob='shutdown'
                             else:
-                                newjob=list_of_run_dicts[next_ready_dict_idx]
+                                newjobpath=rundictpathlist[next_ready_dict_idx]
                             #if not name in nonewjob_namelist:
-                            setup=self.setup_job_for_node(name,newjob)
+                            setup=self.setup_job_for_node(name,newjobpath)
                             
                             
                                     
@@ -829,7 +829,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 else:
                     sleep(2)
             rundictpath=jobfile_dict['link']
-            my_opt_job=self.getpickle(jobfile_dict['link'])
+            my_opt_job=self.getpickle(rundictpath)
             my_optimizedict=my_opt_job['optimizedict']
             my_datagen_dict=my_opt_job['datagen_dict']
 
