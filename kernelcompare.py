@@ -545,6 +545,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                 )
         
     def split_pisces_species_model_save(self,filename):
+        self.addspecies_name_and_resave(filename)
         model_save_pathlist=self.recursive_build_model_save_pathlist(filename)
         
         #if not species_model_save_path_dict:
@@ -555,9 +556,7 @@ class KernelOptModelTools(mk.optimize_free_params):
             if searchresult:
                 species_genus_slicer=slice(searchresult.start()+8,searchresult.end()-1)
                 spec_name=path[species_genus_slicer]
-            else:
-                spec_name=self.getspecies_name_from_model_save(path)
-            if spec_name:
+            
                 if not spec_name in species_model_save_path_dict:
                     self.logger.debug(f'adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict)}')
                     species_model_save_path_dict[spec_name]=[path]
@@ -578,8 +577,10 @@ class KernelOptModelTools(mk.optimize_free_params):
         
     def getspecies_name_from_model_save(self,path):
         try:
-            model_save=self.getpickle(path)
-            return model_save['datagen_dict']['species']
+            model_save_list=self.getpickle(path)
+            for model_save in model_save_list:
+                    model_save['datagen_dict']['species']
+                    
         except:
             self.logger.exception(f'error when retrieving species name form model_save path:{path}')
             return []
@@ -590,37 +591,38 @@ class KernelOptModelTools(mk.optimize_free_params):
         helper=Helper()
         self.logger.debug('Helper() initialized')
         for path in model_save_pathlist:
-            try:
-                model_save_list=self.getpickle(path)
-            except:
-                model_save_list=[]
-                self.logger.exception(f'problem retrieving path:{path}')
-            species_save_path_toformat=os.path.join(os.path.split(path)[0],'species-{}_model_save')
-            prior_spec_name=''
-            new_model_save_list=[]
-            if model_save_list:
-                for model_save in model_save_list:
-                    try:
-                        spec_name=model_save['datagen_dict']['species']
-                    except:
-                        self.logger.exception('no species name found')
-                        spec_name=''
-                    try:
-                        if prior_spec_name and spec_name==prior_spec_name:
-                            new_model_save_list.append(model_save)
-                        if prior_spec_name and spec_name!=prior_spec_name:
-                            newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
-                            self.savepickle(new_model_save_list,newpath)
-                            new_model_save_list=[model_save]
-                    except:
-                        self.logger.exception('')
-                    prior_spec_name=spec_name
+            if not os.split(path)[1][:8]=='species-'
                 try:
-                    species_save_path_toformat.format(prior_spec_name)
-                    newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
-                    self.savepickle(new_model_save_list,newpath)
+                    model_save_list=self.getpickle(path)
                 except:
-                    self.logger.exception('problem saving pickle at end of model_save_list loop')
+                    model_save_list=[]
+                    self.logger.exception(f'problem retrieving path:{path}')
+                species_save_path_toformat=os.path.join(os.path.split(path)[0],'species-{}_model_save')
+                prior_spec_name=''
+                new_model_save_list=[]
+                if model_save_list:
+                    for model_save in model_save_list:
+                        try:
+                            spec_name=model_save['datagen_dict']['species']
+                        except:
+                            self.logger.exception('no species name found')
+                            spec_name=''
+                        try:
+                            if prior_spec_name and spec_name==prior_spec_name:
+                                new_model_save_list.append(model_save)
+                            if prior_spec_name and spec_name!=prior_spec_name:
+                                newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
+                                self.savepickle(new_model_save_list,newpath)
+                                new_model_save_list=[model_save]
+                        except:
+                            self.logger.exception('')
+                        prior_spec_name=spec_name
+                    try:
+                        species_save_path_toformat.format(prior_spec_name)
+                        newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
+                        self.savepickle(new_model_save_list,newpath)
+                    except:
+                        self.logger.exception('problem saving pickle at end of model_save_list loop')
 
 
 
@@ -742,7 +744,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
 
 
-        merged_path=os.path.join(save_directory,'species-'+species_name+'_mergedmodel_save')
+        merged_path=os.path.join(save_directory,'species-'+species_name+'_model_merge_save')
         if os.path.exists(merged_path):
             merged_path=Helper().getname(merged_path)
             
