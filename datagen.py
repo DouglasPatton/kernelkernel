@@ -1,3 +1,4 @@
+import logging
 import random
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
@@ -17,7 +18,7 @@ class datagen(PiscesDataTool):
             datefmt='%Y-%m-%dT%H:%M:%S')'''
       
         #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
-        #self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
         #self.logger.addHandler(handler)
         
         try:
@@ -117,7 +118,7 @@ class datagen(PiscesDataTool):
         
         
         n=speciesdata.shape[0]
-        print('species_n:',n)
+        self.logger.info(f'species_n:{n}')
         self.species_n=n
         self.expand_datagen_dict('species_n',self.species_n)
         #floatselecttup=(0,1,2,3)#5 is bmmi, which is left out for now
@@ -127,14 +128,16 @@ class datagen(PiscesDataTool):
         self.xvarname_list=[self.fullvarlist[i] for i in floatselecttup]
         self.xvarname_list.extend([self.fullvarlist[i]+'(spatial)' for i in spatialselecttup])
         self.expand_datagen_dict('xvarnamelist',self.xvarname_list)
-        print(f'self.xvarname_list: {self.xvarname_list}')
+        self.logger.info(f'self.xvarname_list: {self.xvarname_list}')
         try: self.xdataarray=np.array(speciesdata[:,1:],dtype=float)
         except ValueError:
             k=speciesdata.shape[1]
             for row in range(n):
                 for col in range(k):
                     try: float(speciesdata[row,col])
-                    except: print(speciesdata[row,:],row,col,sep=',',end='.  ')
+                    except: 
+                        self.loger.exception('')
+                        self.logger.info(f'speciesdata[row,:],row,col:{[speciesdata[row,:],row,col]}')
             
         #self.xdataarray=np.array(self.fullxdataarray[:,floatselecttup+spatialselecttup],dtype=float)
         
@@ -210,7 +213,7 @@ class datagen(PiscesDataTool):
                 xdataarrayselect=xdataarray[selectionlist,:]
                 batchbatchlist[i][j]=(ydataarrayselect,xdataarrayselect)
                 #print('ydatashape:',batchbatchlist[i][j][0].shape,'xdatashape:',batchbatchlist[i][j][1].shape)
-        print('end',end,'fullbatchbatch_n',fullbatchbatch_n)
+        #print('end',end,'fullbatchbatch_n',fullbatchbatch_n)
         self.yxtup_batchbatch=batchbatchlist
         
         '''all_y=[ii for i in yxtup_list for ii in i[0]]

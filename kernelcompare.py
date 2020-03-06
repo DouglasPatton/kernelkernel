@@ -1160,11 +1160,11 @@ class KernelCompare(KernelOptModelTools,KernelParams):
     
     
     
-    def restruture_small_n_species(self,model_run_dict_list):
+    def restructure_small_n_species(self,model_run_dict_list):
         newmodelrundictlist=[]
-        species_datashapedict={}
-        species_datagendict={}
+        species_n_dict={}
         for model_run_dict in model_run_dict_list:
+            toosmall=0
             datagen_dict=model_run_dict['datagen_dict']
             spec=datagen_dict['species']
             
@@ -1173,46 +1173,52 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             
             batchcount=datagen_dict['batchcount']
             batch_n=datagen_dict['batch_n']
-            if type(modeldict['maxbatchbatchcount']) is int:
-                batchbatchcount=min([modeldict['maxbatchbatchcount'],datagen_dict['batchbatchcount']])
-            else:batchbatchcount=datagen_dict['batchbatchcount']
+            min_n=batchcount*batch_n
             
-            
-            
-            
-            datashape=(batch_n,batchcount,batchbatchcount)
+            if spec in species_n_dict:
+                spec_n=species_n_dict[spec]
+            else:
+                datagen_obj=dg.datagen(datagen_dict)
+                spec_n=datagen_obj.species_n
+                species_n_dict[spec]=spec_n
+            if spec_n<min_n:
+                newbatchcount=spec_n//batch_n
+                self.logger.info(f'for species:{spec_n}, newbatccount:{newbatchcount}')
+                if newbatchcount:
+                    datagen_dict['batchcount']=newbatchcount
+                    
+                else:
+                    toosmall=1
+            if not toosmall:
+                newmodelrundictlist.append(model_run_dict)
+            else:
+                self.logger.info(f'for species:{spec_n} is too small!')
+            '''datashape=(batchcount,batch_n)
             newdatagen=1
             if not spec in species_datashapedict:
                 species_datashapedict[spec]=[datashape]
                 datagen_obj=dg.datagen(datagen_dict)
-                species_datagendict[spec]=[datagen_obj]
+                species_n=datagen_obj.species_n
+                species_n_dict[spec]=species_n
                 newdatagen=0
-                
             else:
                 for h,old_datashape in enumerate(species_datashapedict[spec]):
-                    for i in range(3):
+                    for i in range(2):
                         if old_datashape[i]!=datashape[i]:
                             break
-                    datagen_obj=species_datagendict[spec][h]
+                    species_n=species_n_dict[spec][h]
                     newdatagen=0
                     break
-                    
                 if newdatagen:
                     datagen_obj=dg.datagen(datagen_dict)
-                    species_datagendict[spec].append(datagen_obj)
+                    species_n_dict[spec].append(datagen_obj)
                     species_datashapedict[spec].append(datashape)
-                
-                    
-            
-            
             thisbatchbatchcount=batchbatchcount*datagen_obj.batch_n
-            
-            
             if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
                 print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < datagen_obj.batch_n*datagen_obj.batchcount:{datagen_obj.batch_n*datagen_obj.batchcount}')
                 self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             else:
-                newmodelrundictlist.append(model_run_dict)
+                newmodelrundictlist.append(model_run_dict)'''
         return newmodelrundictlist
     
     
