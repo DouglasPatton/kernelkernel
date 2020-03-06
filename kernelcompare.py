@@ -1183,8 +1183,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 species_n_dict[spec]=spec_n
             if spec_n<min_n:
                 newbatchcount=spec_n//batch_n
-                self.logger.info(f'for species:{spec_n}, newbatccount:{newbatchcount}')
-                if newbatchcount:
+                self.logger.info(f'for species:{spec}, newbatccount:{newbatchcount}')
+                if newbatchcount>1:
                     datagen_dict['batchcount']=newbatchcount
                     
                 else:

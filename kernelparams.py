@@ -276,7 +276,7 @@ class KernelParams:
             'mse_threshold':'naive_mse',
             'help_start':0,
             'partial_match':0,
-            'do_minimize':1 # do_minimize=0 means just predict once for mse and don't optimize
+            'do_minimize':0 # do_minimize=0 means just predict once for mse and don't optimize
             }
         
         optimizedict1={
