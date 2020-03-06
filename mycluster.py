@@ -784,6 +784,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #self.Ndiff_list_of_masks_y=None
         keepgoing=1
         while keepgoing:
+            
             self.update_my_namefile(myname,status='ready')
             start_time=strftime("%Y%m%d-%H%M%S")
             i_have_opt_job=0
@@ -809,7 +810,7 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
                 #    my_optimizedict,my_datagen_dict,force_start_params=0)
-                self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
+                self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
 
                 try:
                     self.update_node_job_status(myname,status="finished",mydir=mydir)
@@ -837,6 +838,7 @@ class run_cluster(kernelcompare.KernelCompare):
         my_job_file=os.path.join(mydir,myname+'_job')
         waiting=0
         i=0
+        updated=0
         while waiting==0:
             
             try:
@@ -858,10 +860,11 @@ class run_cluster(kernelcompare.KernelCompare):
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
-                if s_since_start>datetime.timedelta(hours=2):#allowing 2 hours instead of using self.oldnode_threshold
+                if s_since_start>self.oldnode_threshold/2 and not updated:# :datetime.timedelta(hours=2):#allowing 2 hours instead of using self.oldnode_threshold
                     print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready')#signal that this node is still active
-                    self.logger.exception(f'error in {__name__}')
+                    self.logger.info(f'halfway to time out in {myname}')
+                    updated=1
                 
                 
                 if s_since_start>self.oldnode_threshold:

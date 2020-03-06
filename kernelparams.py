@@ -172,8 +172,8 @@ class KernelParams:
                                 }
         elif source=='pisces':
             #floatselecttup=(2,3,5,6)
-            #floatselecttup=()
-            floatselecttup=(3,5,6)
+            floatselecttup=()
+            #floatselecttup=(3,5,6)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
@@ -268,7 +268,7 @@ class KernelParams:
             'xatol':0.05,
             'fatol':.01,
             'adaptive':True,
-            'maxiter':200
+            'maxiter':5
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
@@ -276,7 +276,7 @@ class KernelParams:
             'mse_threshold':'naive_mse',
             'help_start':0,
             'partial_match':0,
-            'do_minimize':0 # do_minimize=0 means just predict once for mse and don't optimize
+            'do_minimize':1 # do_minimize=0 means just predict once for mse and don't optimize
             }
         
         optimizedict1={

@@ -1175,7 +1175,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         return datagen_variation_list
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
-        force_start_params=1
+        #force_start_params=1 #in mycluster instead
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
         return
         
