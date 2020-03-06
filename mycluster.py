@@ -538,6 +538,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     try:
                         job_idx=assignment_tracker[name]
                     except:
+                        pass
                     try:
                         self.discard_job_for_node(name)
                     
