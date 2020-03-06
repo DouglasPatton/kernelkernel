@@ -538,12 +538,14 @@ class KernelOptModelTools(mk.optimize_free_params):
         for species in full_species_model_save_path_dict:
             pathlist=species_model_save_path_dict[species]
             
-            self.merge_and_condense_saved_models(
+            merged_path=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
                 condense=condense,
                 recondense=recondense,
                 )
+            print_model_save(filename=merged_path)
+            
         
     def split_pisces_species_model_save(self,filename):
         self.addspecies_name_and_resave(filename)
@@ -562,6 +564,8 @@ class KernelOptModelTools(mk.optimize_free_params):
                     self.logger.debug(f'adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict)}')
                     species_model_save_path_dict[spec_name]=[path]
                 species_model_save_path_dict[spec_name].append(path)
+            else:
+                self.logger.debug('split_pisces_speices_model_save ignoring path:{path}')
         return species_model_save_path_dict
 
     
@@ -591,6 +595,8 @@ class KernelOptModelTools(mk.optimize_free_params):
         #self.logger.debug(f'model_save_pathlist:{model_save_pathlist}')
         helper=Helper()
         self.logger.debug('Helper() initialized')
+        species_model_dictlist={}
+        species_save_path_toformat=os.path.join(os.path.split(startdir)[0],'species-{}_model_save')
         for path in model_save_pathlist:
             if not os.path.split(path)[1][:8]=='species-':
                 try:
@@ -598,9 +604,6 @@ class KernelOptModelTools(mk.optimize_free_params):
                 except:
                     model_save_list=[]
                     self.logger.exception(f'problem retrieving path:{path}')
-                species_save_path_toformat=os.path.join(os.path.split(path)[0],'species-{}_model_save')
-                prior_spec_name=''
-                new_model_save_list=[]
                 if model_save_list:
                     for model_save in model_save_list:
                         try:
@@ -608,24 +611,15 @@ class KernelOptModelTools(mk.optimize_free_params):
                         except:
                             self.logger.exception('no species name found')
                             spec_name=''
-                        try:
-                            if prior_spec_name and spec_name==prior_spec_name:
-                                new_model_save_list.append(model_save)
-                            if prior_spec_name and spec_name!=prior_spec_name:
-                                newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
-                                self.savepickle(new_model_save_list,newpath)
-                                new_model_save_list=[model_save]
-                        except:
-                            self.logger.exception('')
-                        prior_spec_name=spec_name
-                    try:
-                        species_save_path_toformat.format(prior_spec_name)
-                        newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
-                        self.savepickle(new_model_save_list,newpath)
-                    except:
-                        self.logger.exception('problem saving pickle at end of model_save_list loop')
-
-
+                        if spec_name:
+                            if not spec_name in species_model_dictlist:
+                                species_model_dictlist[spec_name]=[model_save]
+                            else:
+                                species_model_dictlist[spec_name].append(model_save)
+        for spec in species_model_dictlist:
+            newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
+            spec_model_list=species_model_dictlist[spec]
+            self.savepickle(spec_model_list,newpath)
 
                     
 
@@ -753,6 +747,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         with open(merged_path,'wb') as newfile:
             print(f'writing new_model_list length:{len(list_of_saved_models)} to newfile:{newfile}')
             pickle.dump(list_of_saved_models,newfile)
+        return merged_path
 
                                               
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
