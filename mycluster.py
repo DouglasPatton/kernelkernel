@@ -273,76 +273,81 @@ class run_cluster(kernelcompare.KernelCompare):
                     assert False, 'masterfile problem'
 
     def rebuild_namefiles(self, run_dict_status, assignment_tracker):
-        namelist = self.getnamelist()  # get a new copy just in case
-        namefile_tuplist = [self.namefile_statuscheck(name) for name in namelist]
-        # print(f'namefile_tuplist:{namefile_tuplist}')
-        s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
+        try:
+            
+            namelist = self.getnamelist()  # get a new copy just in case
+            namefile_tuplist = [self.namefile_statuscheck(name) for name in namelist]
+            # print(f'namefile_tuplist:{namefile_tuplist}')
+            s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
 
-        current_name_list = [name for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold]
-        old_name_list1 = [name for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
-                          not s_since_update_list[i] < self.oldnode_threshold]
+            current_name_list = [name for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold]
+            old_name_list1 = [name for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
+                              not s_since_update_list[i] < self.oldnode_threshold]
 
-        old_name_list = []
-        for name_i in old_name_list1:
-            for j in range(10):
+            old_name_list = []
+            for name_i in old_name_list1:
+                for j in range(10):
+                    try:
+                        idx=assignment_tracker[name_i]
+                    except:
+                        idx=None
+                    try:
+                        time_i = self.model_save_activitycheck(name_i)
+                        
+                        if not type(time_i) is datetime.timedelta:
+                            old_name_list.append(name_i)
+                            self.logger.info(f'1-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
+                        elif time_i < self.oldnode_threshold:
+                            current_name_list.append(name_i)
+                            self.update_my_namefile(name_i,status='working')
+                        else: 
+                            old_name_list.append(name_i)
+                            self.logger.info(f'2-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
+                        break
+                    except:
+                        if j == 1:
+                            self.logger.info(f'-----rebuild namefiles timeout for name_i:{name_i} with time_i:{time_i}', traceback.format_exc())
+                            old_name_list.append(name_i)
+
+            if len(old_name_list) > 0:
+                print(f'old_name_list:{old_name_list}')
+            for j, name in enumerate(old_name_list):
+                
                 try:
-                    idx=assignment_tracker[name_i]
+                    self.mergethisnode(name,old=1,move=1)
+                
                 except:
-                    idx=None
-                try:
-                    time_i = self.model_save_activitycheck(name_i)
-                    
-                    if not type(time_i) is datetime.timedelta:
-                        old_name_list.append(name_i)
-                        self.logger.info(f'1-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
-                    elif time_i < self.oldnode_threshold:
-                        current_name_list.append(name_i)
-                        self.update_my_namefile(name_i,status='working')
-                    else: 
-                        old_name_list.append(name_i)
-                        self.logger.info(f'2-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
-                    break
-                except:
-                    if j == 1:
-                        self.logger.info(f'-----rebuild namefiles timeout for name_i:{name_i} with time_i:{time_i}', traceback.format_exc())
-                        old_name_list.append(name_i)
+                    self.logger.exception('')
+                    self.logger.debug(f'failed to merge node named:{name}')
+                
+            assigned_to_not_current_name_idx=[]
+            #ignment_tracker',assignment_tracker)
+            for name_i,idx in assignment_tracker.items():
+                for name_j in old_name_list:
+                    if name_i==name_j:
+                        assigned_to_not_current_name_idx.append(idx)
+                        break
 
-        if len(old_name_list) > 0:
-            print(f'old_name_list:{old_name_list}')
-        for j, name in enumerate(old_name_list):
-            
-            try:
-                self.mergethisnode(name,old=1,move=1)
-            
-            except:
-                self.logger.exception('')
-                self.logger.debug(f'failed to merge node named:{name}')
-            
-        assigned_to_not_current_name_idx=[]
-        #ignment_tracker',assignment_tracker)
-        for name_i,idx in assignment_tracker.items():
-            for name_j in old_name_list:
-                if name_i==name_j:
-                    assigned_to_not_current_name_idx.append(idx)
-                    break
+            the_not_current_names=[name_i for name_i,idx in assignment_tracker.items() if not any([name_j==name_i for name_j in current_name_list])]
+            for idx in assigned_to_not_current_name_idx:
+                run_dict_status[idx]='ready'
+            for name_i in the_not_current_names:
+                try:del assignment_tracker[name_i]
+                except:pass
+            '''print('assignment_tracker',assignment_tracker)
+            print('current_name_list',current_name_list)
+            print('the_not_current_names',the_not_current_names)'''
+            #assigned_names = [name_i for name_i in current_name_list if name_i in assignment_tracker]
+            assigned_names_idx = [assignment_tracker[name_i] for name_i in current_name_list if
+                                  name_i in assignment_tracker]
+            status_assigned_idx = [i for i, status in enumerate(run_dict_status) if status == 'assigned']
 
-        the_not_current_names=[name_i for name_i,idx in assignment_tracker.items() if not any([name_j==name_i for name_j in current_name_list])]
-        for idx in assigned_to_not_current_name_idx:
-            run_dict_status[idx]='ready'
-        for name_i in the_not_current_names:
-            try:del assignment_tracker[name_i]
-            except:pass
-        '''print('assignment_tracker',assignment_tracker)
-        print('current_name_list',current_name_list)
-        print('the_not_current_names',the_not_current_names)'''
-        #assigned_names = [name_i for name_i in current_name_list if name_i in assignment_tracker]
-        assigned_names_idx = [assignment_tracker[name_i] for name_i in current_name_list if
-                              name_i in assignment_tracker]
-        status_assigned_idx = [i for i, status in enumerate(run_dict_status) if status == 'assigned']
+            release_status_idx = [idx for idx in status_assigned_idx if not any([idx == j for j in assigned_names_idx])]
+            for idx in release_status_idx:
+                run_dict_status[idx]='ready'
 
-        release_status_idx = [idx for idx in status_assigned_idx if not any([idx == j for j in assigned_names_idx])]
-        for idx in release_status_idx:
-            run_dict_status[idx]='ready'
+        except:
+            self.logger.exception('')
         return run_dict_status, assignment_tracker
   
         
