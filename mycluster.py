@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=1,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=71,seconds=1)
 
         seed(1)
         if source==None:
@@ -756,14 +756,13 @@ class run_cluster(kernelcompare.KernelCompare):
                     modtimelist.append(modtime)
                 except:
                     self.logger.exception(f'problem for name:{name},path:{path}')
-            if modtimelist:
-                last_model_save=modtimelist.index(max(modtimelist))
-                now=strftime("%Y%m%d-%H%M%S")
-                sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.fromtimestamp(modtime)
-                return sincelastsave
+            last_model_save=modtimelist.index(max(modtimelist))
+            now=strftime("%Y%m%d-%H%M%S")
+            sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.fromtimestamp(modtime)
+            return sincelastsave
         except:
             self.logger.exception(f'problem with name:{name}')
-        return None
+            return None
         
         
 
