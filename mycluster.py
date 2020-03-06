@@ -537,33 +537,32 @@ class run_cluster(kernelcompare.KernelCompare):
                 if job_status=='failed':
                     try:
                         job_idx=assignment_tracker[name]
-                        tracked=1
                     except:
-                        tracked=0
                     try:
                         self.discard_job_for_node(name)
-                    except:
-                        self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                    if tracked==1: 
-                        self.logger.info(f'about to delete assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
-                        assignment_tracker[name]=None
+                    
+                            self.logger.info(f'about to delete assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
+                            assignment_tracker[name]=None
+                        if job_idx:
+                            run_dict_status[job_idx]='ready'
+                            ready_dict_idx.append(job_idx)
+                        try:
+                            self.logger.info(f'namefile for name:{name} is being updated: ready for job')
+                            self.update_my_namefile(name,status='ready')
+                        except:
+                            self.logger.exception(f'could not update_my_namefile: name:{name}')
+                        mergestatus=self.mergethisnode(name,move=1)
                         
-                        run_dict_status[job_idx]='ready'
-                        
-                    ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
-                    try:
-                        self.logger.info(f'namefile for name:{name} is being updated: ready for job')
-                        self.update_my_namefile(name,status='ready')
                     except:
-                        self.logger.exception(f'could not update_my_namefile: name:{name}')
-                    mergestatus=self.mergethisnode(name,move=1)
+                    self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                        
+                    #ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
+                    
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
                     try:
                         job_idx=assignment_tracker[name]
-                        tracked=1
                     except:
-                        tracked=0
                         print(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
                         print(f'assignment_tracker:{assignment_tracker}')
                         self.logger.exception(f'assignment_tracker failed for key:{name}, job_status:{job_status} ')
@@ -573,8 +572,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                         self.logger.info(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
                         assignment_tracker[name]=None
-                        if tracked:
-                            run_dict_status[job_idx]='finished'
+                        run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready')
                         #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
@@ -641,13 +639,15 @@ class run_cluster(kernelcompare.KernelCompare):
                 
         
     def discard_job_for_node(self,name):
-        for i in range(2):
+        for i in range(5):
             try:
                 os.remove(os.path.join(self.savedirectory,name,name+'_job'))
                 break
-            except:
-                if i==1:
+            except PermissionError:
+                sleep(1)
+                if i==4:
                     self.logger.exception(f'error discarding job for name:{name}')
+                    
         return
     
     def setupalljob_paths(self,rundictlist):
@@ -756,13 +756,14 @@ class run_cluster(kernelcompare.KernelCompare):
                     modtimelist.append(modtime)
                 except:
                     self.logger.exception(f'problem for name:{name},path:{path}')
-            last_model_save=modtimelist.index(max(modtimelist))
-            now=strftime("%Y%m%d-%H%M%S")
-            sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.fromtimestamp(modtime)
-            return sincelastsave
+            if modtimelist:
+                last_model_save=modtimelist.index(max(modtimelist))
+                now=strftime("%Y%m%d-%H%M%S")
+                sincelastsave=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.fromtimestamp(modtime)
+                return sincelastsave
         except:
             self.logger.exception(f'problem with name:{name}')
-            return None
+        return None
         
         
 
