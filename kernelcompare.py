@@ -1190,7 +1190,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 
             else:
                 for h,old_datashape in enumerate(species_datashapedict[spec]):
-                    for i in range(3)
+                    for i in range(3):
                         if old_datashape[i]!=datashape[i]:
                             break
                     datagen_obj=species_datagendict[spec][h]
