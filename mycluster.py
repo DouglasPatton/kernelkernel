@@ -415,9 +415,11 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
-                    #print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
+                    print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
+                    
                 except:
                     print(f'check_node_job_status failed for node:{name}')
+                    self.logger.info(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
                     job_time='failed'
 
@@ -440,13 +442,13 @@ class run_cluster(kernelcompare.KernelCompare):
                         assignment_tracker[name]=None
                     except:
                         self.logger.debug('',exc_info=True) 
-                elif not job_status=="ready" :
+                '''if job_status "filenotfound" :
                     if not job_status=='finished':
                         notanewjob_list.append([name,job_status])
                     else:
                         notanewjob_list.append([name,job_status])
-                    #nonewjob_namelist=[i[0] for i in notanewjob_list]
-                else:
+                    #nonewjob_namelist=[i[0] for i in notanewjob_list]'''
+                if job_status=='filenotfound':
                     print(f'about to setup the job for node:{name}')
                     #print('len(ready_dict_idx)',len(ready_dict_idx))
                     if len(ready_dict_idx) == 0:
@@ -473,12 +475,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
                             self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
-
-            for arglist in notanewjob_list:
-                name=arglist[0]
-                job_status=arglist[1]
                 
-                if job_status=='failed':
+
+                elif job_status=='failed':
                     try:
                         job_idx=assignment_tracker[name]
                     except:
@@ -497,12 +496,12 @@ class run_cluster(kernelcompare.KernelCompare):
                         except:
                             self.logger.exception(f'could not update_my_namefile: name:{name}')
                         mergestatus=self.mergethisnode(name,move=1)
-                        
+
                     except:
                         self.logger.exception(f'error deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                    
+
                     #ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
-                    
+
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
                     try:
@@ -526,6 +525,8 @@ class run_cluster(kernelcompare.KernelCompare):
                         #readynamelist.append(name)
                     except:
                         self.logger.exception('')
+                else:
+                    self.logger.critical(f'for name:{name} job_status not recognized:{job_status}')
             '''if i<100:
                 sleep(1)
             else:
@@ -611,10 +612,11 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 os.remove(os.path.join(self.savedirectory,name,name+'_job'))
                 break
-            except PermissionError:
+            except:
                 sleep(1)
                 if i==4:
                     self.logger.exception(f'error discarding job for name:{name}')
+                    
                     
         return
     
@@ -926,9 +928,9 @@ class run_cluster(kernelcompare.KernelCompare):
 
                     #self.logger.exception(f'error in {__name__}')
                     if time==0:
-                        return 'ready' #if the file doesn't exist, then assign the job
+                        return 'filenotfound' #if the file doesn't exist, then assign the job
                     if time==1:
-                        return strftime("%Y%m%d-%H%M%S"), 'ready'
+                        return strftime("%Y%m%d-%H%M%S"), 'filenotfound'
                 sleep(1)
                     
             
