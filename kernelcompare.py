@@ -544,7 +544,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                 condense=condense,
                 recondense=recondense,
                 )
-            print_model_save(filename=merged_path)
+            self.print_model_save(filename=merged_path)
             
         
     def split_pisces_species_model_save(self,filename):
@@ -617,7 +617,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                             else:
                                 species_model_dictlist[spec_name].append(model_save)
         for spec in species_model_dictlist:
-            newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
+            newpath=helper.getname(species_save_path_toformat.format(spec))
             spec_model_list=species_model_dictlist[spec]
             self.savepickle(spec_model_list,newpath)
 
