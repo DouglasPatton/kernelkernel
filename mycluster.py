@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=71,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=41,seconds=1)
 
         seed(1)
         if source==None:
@@ -380,28 +380,33 @@ class run_cluster(kernelcompare.KernelCompare):
         shutdownnodes=0
         keepgoing=1
         readynamelist=[]
+        next_readynamelist=[]
         while keepgoing:
-            if i%100==0:
-                self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist)
             
-                
-            if loopcount>1:
+            self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist)
+            
+            loopmax=5*len(readynamelist)
+            if loopcount>loopmax or len(next_readynamelist)==0:
                 loopcount=0
+                
 
-            run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
-            namelist=self.getnamelist()
-            readynamelist=self.getreadynames(namelist)
-            if shutdownnodes and len(readynamelist)==0:
-                keepgoing=0
-            #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
-            if len(readynamelist)>1:
-                print(f'readynamelist:{readynamelist}')
-            if all([status=='finished' for status in run_dict_status])==True:
-                shutdownnodes=1
-            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
-            notanewjob_list=[]
-            sleep(1)
-            
+                run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
+                namelist=self.getnamelist()
+                readynamelist=self.getreadynames(namelist)
+                if shutdownnodes and len(readynamelist)==0:
+                    keepgoing=0
+                #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
+                if len(readynamelist)>1:
+                    print(f'readynamelist:{readynamelist}')
+                if all([status=='finished' for status in run_dict_status])==True:
+                    shutdownnodes=1
+                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
+                notanewjob_list=[]
+                
+                
+            else:
+                readynamelist=next_readynamelist
+            next_readynamelist=[]
             for name in readynamelist:
                 loopcount+=1
                 #name=readynamelist.pop(0)
@@ -488,13 +493,14 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             self.logger.info(f'namefile for name:{name} is being updated: ready for job')
                             self.update_my_namefile(name,status='ready')
+                            next_readynamelist.append(name)    
                         except:
                             self.logger.exception(f'could not update_my_namefile: name:{name}')
                         mergestatus=self.mergethisnode(name,move=1)
                         
                     except:
                         self.logger.exception(f'error deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                        
+                    
                     #ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
                     
                 elif job_status=='finished':
@@ -513,6 +519,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         assignment_tracker[name]=None
                         run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready')
+                        next_readynamelist.append(name)
                         #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #print(f'for node name:{name}, mergestatus:{mergestatus}')
@@ -777,6 +784,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #self.Ndiff_list_of_masks_y=None
         keepgoing=1
         while keepgoing:
+            
             self.update_my_namefile(myname,status='ready')
             start_time=strftime("%Y%m%d-%H%M%S")
             i_have_opt_job=0
@@ -802,7 +810,7 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
                 #    my_optimizedict,my_datagen_dict,force_start_params=0)
-                self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=0)
+                self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
 
                 try:
                     self.update_node_job_status(myname,status="finished",mydir=mydir)
@@ -830,6 +838,7 @@ class run_cluster(kernelcompare.KernelCompare):
         my_job_file=os.path.join(mydir,myname+'_job')
         waiting=0
         i=0
+        updated=0
         while waiting==0:
             
             try:
@@ -851,10 +860,11 @@ class run_cluster(kernelcompare.KernelCompare):
                 i+=1
                 now=strftime("%Y%m%d-%H%M%S")
                 s_since_start=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(start_time,"%Y%m%d-%H%M%S")
-                if s_since_start>datetime.timedelta(hours=2):#allowing 2 hours instead of using self.oldnode_threshold
+                if s_since_start>self.oldnode_threshold/2 and not updated:# :datetime.timedelta(hours=2):#allowing 2 hours instead of using self.oldnode_threshold
                     print(f'node:{myname} checking for job s_since_start="{s_since_start}')
                     self.update_my_namefile(myname,'ready')#signal that this node is still active
-                    self.logger.exception(f'error in {__name__}')
+                    self.logger.info(f'halfway to time out in {myname}')
+                    updated=1
                 
                 
                 if s_since_start>self.oldnode_threshold:

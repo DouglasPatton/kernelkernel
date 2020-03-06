@@ -1153,7 +1153,68 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 optmodel_run_dict={'optimizedict':optdict_i,'datagen_dict':alt_datagen_dict}    
                 model_run_dict_list.append(optmodel_run_dict)
                 #p#rint('model_run_dict_list:',model_run_dict_list)
+        model_run_dict_list=self.restructure_small_n_species(model_run_dict_list)
         return model_run_dict_list
+    
+    
+    
+    
+    def restruture_small_n_species(self,model_run_dict_list):
+        newmodelrundictlist=[]
+        species_datashapedict={}
+        species_datagendict={}
+        for model_run_dict in model_run_dict_list:
+            datagen_dict=model_run_dict['datagen_dict']
+            spec=datagen_dict['species']
+            
+            optdict=model_run_dict['optimizedict']
+            modeldict=optdict['modeldict']         
+            
+            batchcount=datagen_dict['batchcount']
+            batch_n=datagen_dict['batch_n']
+            if type(modeldict['maxbatchbatchcount']) is int:
+                batchbatchcount=min([modeldict['maxbatchbatchcount'],datagen_dict['batchbatchcount']])
+            else:batchbatchcount=datagen_dict['batchbatchcount']
+            
+            
+            
+            
+            datashape=(batch_n,batchcount,batchbatchcount)
+            newdatagen=1
+            if not spec in species_datashapedict:
+                species_datashapedict[spec]=[datashape]
+                datagen_obj=dg.datagen(datagen_dict)
+                species_datagendict[spec]=[datagen_obj]
+                newdatagen=0
+                
+            else:
+                for h,old_datashape in enumerate(species_datashapedict[spec]):
+                    for i in range(3)
+                        if old_datashape[i]!=datashape[i]:
+                            break
+                    datagen_obj=species_datagendict[spec][h]
+                    newdatagen=0
+                    break
+                    
+                if newdatagen:
+                    datagen_obj=dg.datagen(datagen_dict)
+                    species_datagendict[spec].append(datagen_obj)
+                    species_datashapedict[spec].append(datashape)
+                
+                    
+            
+            
+            thisbatchbatchcount=batchbatchcount*datagen_obj.batch_n
+            
+            
+            if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
+                print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < datagen_obj.batch_n*datagen_obj.batchcount:{datagen_obj.batch_n*datagen_obj.batchcount}')
+                self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
+            else:
+                newmodelrundictlist.append(model_run_dict)
+        return newmodelrundictlist
+    
+    
     
     def addspeciesvariations(self,datagen_variation_list):
         #remove existing species variations in case species:all is included in the list
@@ -1174,7 +1235,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         return datagen_variation_list
                          
     def run_model_as_node(self,optimizedict,datagen_dict,force_start_params=None):
-        force_start_params=1
+        #force_start_params=1 #in mycluster instead
         self.do_monte_opt(optimizedict,datagen_dict,force_start_params=force_start_params)
         return
         

@@ -21,7 +21,7 @@ class KernelParams:
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.2,.5,.9,1.3]])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.01,.2,.5,1.3]])
         
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.2])])
@@ -32,7 +32,7 @@ class KernelParams:
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
         #binary_y_variations=('modeldict:binary_y',[0.5])
-        binary_y_variations=('modeldict:binary_y',[(.5, .25, .125, 'avgavg', 'avgmedian')]) # if binary_y is a tuple,
+        binary_y_variations=('modeldict:binary_y',[(.5, .45, .55)]) # if binary_y is a tuple,
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
@@ -120,7 +120,7 @@ class KernelParams:
                 
                 
             #species_variations=('species',[self.specieslist[3]])
-            species_variations=('species',[self.specieslist[i+2] for i in range(0,len(self.specieslist)-2,4)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist),2)])
             # print('species_variations',species_variations)
             
             batch_n_variations=('batch_n',[self.n])
@@ -172,8 +172,8 @@ class KernelParams:
                                 }
         elif source=='pisces':
             #floatselecttup=(2,3,5,6)
-            #floatselecttup=()
-            floatselecttup=(3,5,6)
+            floatselecttup=()
+            #floatselecttup=(3,5,6)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
@@ -268,7 +268,7 @@ class KernelParams:
             'xatol':0.05,
             'fatol':.01,
             'adaptive':True,
-            'maxiter':200
+            'maxiter':5
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
@@ -276,7 +276,7 @@ class KernelParams:
             'mse_threshold':'naive_mse',
             'help_start':0,
             'partial_match':0,
-            'do_minimize':0 # do_minimize=0 means just predict once for mse and don't optimize
+            'do_minimize':1 # do_minimize=0 means just predict once for mse and don't optimize
             }
         
         optimizedict1={
