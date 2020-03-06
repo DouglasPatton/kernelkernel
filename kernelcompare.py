@@ -537,11 +537,13 @@ class KernelOptModelTools(mk.optimize_free_params):
         full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
         for species in full_species_model_save_path_dict:
             pathlist=species_model_save_path_dict[species]
+            
             self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
                 condense=condense,
                 recondense=recondense,
+                savedirectory=
                 )
         
     def split_pisces_species_model_save(self,filename):
@@ -591,7 +593,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         helper=Helper()
         self.logger.debug('Helper() initialized')
         for path in model_save_pathlist:
-            if not os.split(path)[1][:8]=='species-'
+            if not os.path.split(path)[1][:8]=='species-':
                 try:
                     model_save_list=self.getpickle(path)
                 except:
@@ -642,29 +644,30 @@ class KernelOptModelTools(mk.optimize_free_params):
 
     def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',
                                         save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
+        
+        if not merge_directory==None:
+            if not os.path.exists(merge_directory):
+                print(f'could not find merge_directory:{merge_directory}')
+                self.logger.error(f'could not find merge_directory:{merge_directory}')
+                return
+        else:
+            merge_directory=self.kc_savedirectory
+
+        if not save_directory==None:
+            assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
+        else:
+            save_directory=merge_directory
+                #os.makedirs(save_directory)
+        if condense==None or condense=='no':
+            condense=0
+        if condense=='yes':
+            condense=1
+        if verbose==None or verbose=='no':
+            verbose=0
+        if verbose=='yes':
+            verbose=1
         if pathlist is None:
-            if not merge_directory==None:
-                if not os.path.exists(merge_directory):
-                    print(f'could not find merge_directory:{merge_directory}')
-                    self.logger.error(f'could not find merge_directory:{merge_directory}')
-                    return
-            else:
-                merge_directory=self.kc_savedirectory
-
-            if not save_directory==None:
-                assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
-            else:
-                save_directory=merge_directory
-                    #os.makedirs(save_directory)
-            if condense==None or condense=='no':
-                condense=0
-            if condense=='yes':
-                condense=1
-            if verbose==None or verbose=='no':
-                verbose=0
-            if verbose=='yes':
-                verbose=1
-
+                
             if recursive:
                 model_save_filelist=self.recursive_build_model_save_pathlist(merge_directory)
                 modelfile_count=len(model_save_filelist)
@@ -743,7 +746,7 @@ class KernelOptModelTools(mk.optimize_free_params):
         #if condense==1:
         #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
 
-
+        self.logger.debug(f'save_directory:{save_directory},species_name:{species_name}')
         merged_path=os.path.join(save_directory,'species-'+species_name+'_model_merge_save')
         if os.path.exists(merged_path):
             merged_path=Helper().getname(merged_path)
