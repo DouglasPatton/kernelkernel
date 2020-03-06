@@ -538,12 +538,11 @@ class run_cluster(kernelcompare.KernelCompare):
                     try:
                         job_idx=assignment_tracker[name]
                     except:
-                        pass
+                        job_idx=None
                     try:
                         self.discard_job_for_node(name)
-                    
-                            self.logger.info(f'about to delete assignment_tracker[name]:{assignment_tracker[name]} witj job_idx:{job_idx}')
-                            assignment_tracker[name]=None
+                        self.logger.info(f'for name:{name}, about to delete assignment_tracker[name]:{assignment_tracker[name]} with job_idx:{job_idx}')
+                        assignment_tracker[name]=None
                         if job_idx:
                             run_dict_status[job_idx]='ready'
                             ready_dict_idx.append(job_idx)
@@ -555,7 +554,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         mergestatus=self.mergethisnode(name,move=1)
                         
                     except:
-                    self.logger.exception(f'deleting assignment_tracker for key:{name} with job_status:{job_status}')
+                        self.logger.exception(f'error deleting assignment_tracker for key:{name} with job_status:{job_status}')
                         
                     #ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
                     
