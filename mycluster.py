@@ -42,7 +42,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=71,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=41,seconds=1)
 
         seed(1)
         if source==None:
@@ -380,28 +380,33 @@ class run_cluster(kernelcompare.KernelCompare):
         shutdownnodes=0
         keepgoing=1
         readynamelist=[]
+        next_readynamelist=[]
         while keepgoing:
-            if i%100==0:
-                self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist)
             
-                
-            if loopcount>1:
+            self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist)
+            
+            loopmax=5*len(readynamelist)
+            if loopcount>loopmax or len(next_readynamelist)==0:
                 loopcount=0
+                
 
-            run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
-            namelist=self.getnamelist()
-            readynamelist=self.getreadynames(namelist)
-            if shutdownnodes and len(readynamelist)==0:
-                keepgoing=0
-            #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
-            if len(readynamelist)>1:
-                print(f'readynamelist:{readynamelist}')
-            if all([status=='finished' for status in run_dict_status])==True:
-                shutdownnodes=1
-            ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
-            notanewjob_list=[]
-            sleep(1)
-            
+                run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
+                namelist=self.getnamelist()
+                readynamelist=self.getreadynames(namelist)
+                if shutdownnodes and len(readynamelist)==0:
+                    keepgoing=0
+                #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
+                if len(readynamelist)>1:
+                    print(f'readynamelist:{readynamelist}')
+                if all([status=='finished' for status in run_dict_status])==True:
+                    shutdownnodes=1
+                ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
+                notanewjob_list=[]
+                
+                
+            else:
+                readynamelist=next_readynamelist
+            next_readynamelist=[]
             for name in readynamelist:
                 loopcount+=1
                 #name=readynamelist.pop(0)
@@ -488,13 +493,14 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             self.logger.info(f'namefile for name:{name} is being updated: ready for job')
                             self.update_my_namefile(name,status='ready')
+                            next_readynamelist.append(name)    
                         except:
                             self.logger.exception(f'could not update_my_namefile: name:{name}')
                         mergestatus=self.mergethisnode(name,move=1)
                         
                     except:
                         self.logger.exception(f'error deleting assignment_tracker for key:{name} with job_status:{job_status}')
-                        
+                    
                     #ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
                     
                 elif job_status=='finished':
@@ -513,6 +519,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         assignment_tracker[name]=None
                         run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready')
+                        next_readynamelist.append(name)
                         #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #print(f'for node name:{name}, mergestatus:{mergestatus}')
