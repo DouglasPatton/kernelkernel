@@ -543,7 +543,6 @@ class KernelOptModelTools(mk.optimize_free_params):
                 pathlist=pathlist,
                 condense=condense,
                 recondense=recondense,
-                savedirectory=
                 )
         
     def split_pisces_species_model_save(self,filename):
