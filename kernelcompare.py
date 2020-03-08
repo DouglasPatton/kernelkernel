@@ -537,14 +537,18 @@ class KernelOptModelTools(mk.optimize_free_params):
         full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
         for species in full_species_model_save_path_dict:
             pathlist=species_model_save_path_dict[species]
-            self.merge_and_condense_saved_models(
+            
+            merged_path=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
                 condense=condense,
                 recondense=recondense,
                 )
+            self.print_model_save(filename=merged_path)
+            
         
     def split_pisces_species_model_save(self,filename):
+        self.addspecies_name_and_resave(filename)
         model_save_pathlist=self.recursive_build_model_save_pathlist(filename)
         
         #if not species_model_save_path_dict:
@@ -555,13 +559,13 @@ class KernelOptModelTools(mk.optimize_free_params):
             if searchresult:
                 species_genus_slicer=slice(searchresult.start()+8,searchresult.end()-1)
                 spec_name=path[species_genus_slicer]
-            else:
-                spec_name=self.getspecies_name_from_model_save(path)
-            if spec_name:
+            
                 if not spec_name in species_model_save_path_dict:
                     self.logger.debug(f'adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict)}')
                     species_model_save_path_dict[spec_name]=[path]
                 species_model_save_path_dict[spec_name].append(path)
+            else:
+                self.logger.debug('split_pisces_speices_model_save ignoring path:{path}')
         return species_model_save_path_dict
 
     
@@ -578,8 +582,10 @@ class KernelOptModelTools(mk.optimize_free_params):
         
     def getspecies_name_from_model_save(self,path):
         try:
-            model_save=self.getpickle(path)
-            return model_save['datagen_dict']['species']
+            model_save_list=self.getpickle(path)
+            for model_save in model_save_list:
+                    model_save['datagen_dict']['species']
+                    
         except:
             self.logger.exception(f'error when retrieving species name form model_save path:{path}')
             return []
@@ -589,40 +595,31 @@ class KernelOptModelTools(mk.optimize_free_params):
         #self.logger.debug(f'model_save_pathlist:{model_save_pathlist}')
         helper=Helper()
         self.logger.debug('Helper() initialized')
+        species_model_dictlist={}
+        species_save_path_toformat=os.path.join(os.path.split(startdir)[0],'species-{}_model_save')
         for path in model_save_pathlist:
-            try:
-                model_save_list=self.getpickle(path)
-            except:
-                model_save_list=[]
-                self.logger.exception(f'problem retrieving path:{path}')
-            species_save_path_toformat=os.path.join(os.path.split(path)[0],'species-{}_model_save')
-            prior_spec_name=''
-            new_model_save_list=[]
-            if model_save_list:
-                for model_save in model_save_list:
-                    try:
-                        spec_name=model_save['datagen_dict']['species']
-                    except:
-                        self.logger.exception('no species name found')
-                        spec_name=''
-                    try:
-                        if prior_spec_name and spec_name==prior_spec_name:
-                            new_model_save_list.append(model_save)
-                        if prior_spec_name and spec_name!=prior_spec_name:
-                            newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
-                            self.savepickle(new_model_save_list,newpath)
-                            new_model_save_list=[model_save]
-                    except:
-                        self.logger.exception('')
-                    prior_spec_name=spec_name
+            if not os.path.split(path)[1][:8]=='species-':
                 try:
-                    species_save_path_toformat.format(prior_spec_name)
-                    newpath=helper.getname(species_save_path_toformat.format(prior_spec_name))
-                    self.savepickle(new_model_save_list,newpath)
+                    model_save_list=self.getpickle(path)
                 except:
-                    self.logger.exception('problem saving pickle at end of model_save_list loop')
-
-
+                    model_save_list=[]
+                    self.logger.exception(f'problem retrieving path:{path}')
+                if model_save_list:
+                    for model_save in model_save_list:
+                        try:
+                            spec_name=model_save['datagen_dict']['species']
+                        except:
+                            self.logger.exception('no species name found')
+                            spec_name=''
+                        if spec_name:
+                            if not spec_name in species_model_dictlist:
+                                species_model_dictlist[spec_name]=[model_save]
+                            else:
+                                species_model_dictlist[spec_name].append(model_save)
+        for spec in species_model_dictlist:
+            newpath=helper.getname(species_save_path_toformat.format(spec))
+            spec_model_list=species_model_dictlist[spec]
+            self.savepickle(spec_model_list,newpath)
 
                     
 
@@ -640,29 +637,30 @@ class KernelOptModelTools(mk.optimize_free_params):
 
     def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',
                                         save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
+        
+        if not merge_directory==None:
+            if not os.path.exists(merge_directory):
+                print(f'could not find merge_directory:{merge_directory}')
+                self.logger.error(f'could not find merge_directory:{merge_directory}')
+                return
+        else:
+            merge_directory=self.kc_savedirectory
+
+        if not save_directory==None:
+            assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
+        else:
+            save_directory=merge_directory
+                #os.makedirs(save_directory)
+        if condense==None or condense=='no':
+            condense=0
+        if condense=='yes':
+            condense=1
+        if verbose==None or verbose=='no':
+            verbose=0
+        if verbose=='yes':
+            verbose=1
         if pathlist is None:
-            if not merge_directory==None:
-                if not os.path.exists(merge_directory):
-                    print(f'could not find merge_directory:{merge_directory}')
-                    self.logger.error(f'could not find merge_directory:{merge_directory}')
-                    return
-            else:
-                merge_directory=self.kc_savedirectory
-
-            if not save_directory==None:
-                assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
-            else:
-                save_directory=merge_directory
-                    #os.makedirs(save_directory)
-            if condense==None or condense=='no':
-                condense=0
-            if condense=='yes':
-                condense=1
-            if verbose==None or verbose=='no':
-                verbose=0
-            if verbose=='yes':
-                verbose=1
-
+                
             if recursive:
                 model_save_filelist=self.recursive_build_model_save_pathlist(merge_directory)
                 modelfile_count=len(model_save_filelist)
@@ -741,14 +739,15 @@ class KernelOptModelTools(mk.optimize_free_params):
         #if condense==1:
         #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
 
-
-        merged_path=os.path.join(save_directory,'species-'+species_name+'_mergedmodel_save')
+        self.logger.debug(f'save_directory:{save_directory},species_name:{species_name}')
+        merged_path=os.path.join(save_directory,'species-'+species_name+'_model_merge_save')
         if os.path.exists(merged_path):
             merged_path=Helper().getname(merged_path)
             
         with open(merged_path,'wb') as newfile:
             print(f'writing new_model_list length:{len(list_of_saved_models)} to newfile:{newfile}')
             pickle.dump(list_of_saved_models,newfile)
+        return merged_path
 
                                               
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
