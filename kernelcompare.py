@@ -19,7 +19,7 @@ class KernelOptModelTools(mk.optimize_free_params):
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
-        self.species_model_save_path_dict_directory=os.path.join(directory,'species_model_save_path_dict.pickle')
+        self.species_model_save_path_dict=os.path.join(directory,'species_model_save_path_dict.pickle')
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.Ndiff_list_of_masks_x=None
         self.Ndiff_list_of_masks_y=None
@@ -499,17 +499,18 @@ class KernelOptModelTools(mk.optimize_free_params):
             for key2, val2 in newdict.items():
                 flatdict[f'{key}:{key2}'] = [val2]
         return flatdict
-
+    
+    
     
     def update_species_model_save_path_dict(self,species_model_save_path_dict):
-        savedir=self.species_model_save_path_dict_directory
-        if os.path.exists(savedir):
-            existing_species_model_save_path_dict=self.getpickle(savedir)
+        path=self.species_model_save_path_dict
+        if os.path.exists(path):
+            existing_species_model_save_path_dict=self.getpickle(path)
             new_species_model_save_path_dict=self.merge_list_of_listdicts([existing_species_model_save_path_dict,species_model_save_path_dict])
         else:
             self.logger.info('savedir:{savedir} does not exist, so species_model_save_path_dict is the first one to be saved')
             new_species_model_save_path_dict=species_model_save_path_dict
-        self.savepickle(new_species_model_save_path_dict,savedir)
+        self.savepickle(new_species_model_save_path_dict,path)
         return new_species_model_save_path_dict
         
     def merge_list_of_listdicts(self,listoflistdicts):#a listdict is a dict with each val an unordered list
@@ -522,7 +523,7 @@ class KernelOptModelTools(mk.optimize_free_params):
                     merged_listdict[key].append(listdict[key])
         return merged_listdict
             
-
+    def sort_by_species()
 
     def process_pisces_models(self,startpath,condense=0,recondense=0):
         if not type(startpath) is list:
