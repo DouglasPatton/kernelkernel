@@ -1,4 +1,6 @@
+import pandas as pd
 import pickle
+import logging
 import os
 
 class KCHelper():
@@ -232,27 +234,29 @@ class KCHelper():
         return
         
     
-    def print_model_save(self,filename=None,directory=None):
-        import pandas as pd
-        if directory==None:
-            directory=os.getcwd()
-        if filename==None:
-            filename='model_save'
+    def print_model_save(self,filename=None,directory=None,model_save_list=None,shortlist=[],species=''):
         pd.set_option('display.max_colwidth', -1)
-        file_loc=os.path.join(directory,filename)
-        for i in range(10):
-            try:
-                exists=os.path.exists(file_loc)
-                if not exists:
-                    print(f'file:{file_loc} has os.path.exists value:{exists}')
-                    return
-                with open(file_loc,'rb') as model_save:
-                    model_save_list=pickle.load(model_save)
-            except:
-                if i==9:
-                    self.logger.info(f'could not open{file_loc}')
-                    self.logger.exception(f'error in {__name__}')
-                    return
+        if model_save_list is None:
+            
+            if directory is None:
+                directory=os.getcwd()
+            if filename==None:
+                filename='model_save'
+            
+            file_loc=os.path.join(directory,filename)
+            for i in range(10):
+                try:
+                    exists=os.path.exists(file_loc)
+                    if not exists:
+                        print(f'file:{file_loc} has os.path.exists value:{exists}')
+                        return
+                    with open(file_loc,'rb') as model_save:
+                        model_save_list=pickle.load(model_save)
+                except:
+                    if i==9:
+                        self.logger.info(f'could not open{file_loc}')
+                        self.logger.exception(f'error in {__name__}')
+                        return
         if len(model_save_list)==0:
             self.logger.info(f'no models in model_save_list for printing')
             return
@@ -260,7 +264,7 @@ class KCHelper():
             model_save_list.sort(key=lambda savedicti: savedicti['mse']/savedicti['naivemse'])
             
         except:
-            print(traceback.format_exc())
+            self.logger.exception('')
             model_save_list.sort(key=lambda savedicti: savedicti['mse'])
               #sorts by mse
 
@@ -269,7 +273,8 @@ class KCHelper():
             os.mkdir(output_loc)
 
         filecount=len(os.listdir(output_loc))
-        output_filename = os.path.join(output_loc,f'models{filecount}'+'.html')
+        output_filename = os.path.join(output_loc,f'species'+'.html')
+        output_filename=self.helper.getname(output_filename)
 
         modeltablehtml=''
         #keylist = ['mse','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
@@ -278,7 +283,13 @@ class KCHelper():
         for j,model in enumerate(model_save_list):
             keylistj=[key for key in model]
             simpledicti=self.myflatdict(model,keys=keylistj)
-            this_model_html_string=pd.DataFrame(simpledicti).T.to_html()
+            this_model_df=pd.DataFrame(simpledicti).T
+            if shortlist:
+                print_this_model_df=this_model_df.loc[:, df.columns.isin(shortlist)]
+            else:
+                print_this_model_df=this_model_df
+            
+            this_model_html_string=print_this_model_df.to_html()
             modeltablehtml=modeltablehtml+f'model:{j+1}<br>'+this_model_html_string+"<br>"
         for i in range(10):
             try:
