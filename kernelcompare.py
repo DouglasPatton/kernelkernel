@@ -20,7 +20,8 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
-        self.species_model_save_path_dict=os.path.join(directory,'species_model_save_path_dict.pickle')
+        self.species_model_save_path_dict=os.path.join(self.kc_savedirectory,'species_model_save_path_dict.pickle')
+        self.all_species_model_merge_path=os.path.join(self.kc_savedirectory,'all_species_model_merge.pickle')
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.Ndiff_list_of_masks_x=None
         self.Ndiff_list_of_masks_y=None
@@ -234,7 +235,8 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
                     merged_listdict[key].append(listdict[key])
         return merged_listdict
             
-    def sort_by_species()
+    def sort_by_species():
+        pass
 
     def process_pisces_models(self,startpath,condense=0,recondense=0):
         if not type(startpath) is list:
@@ -247,16 +249,22 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
             species_model_save_path_dict_list.append(species_model_save_path_dict)
         species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
         full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
+        all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_path)
+        
         for species in full_species_model_save_path_dict:
             pathlist=species_model_save_path_dict[species]
             
-            merged_path=self.merge_and_condense_saved_models(
+            mergedlist=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
                 condense=condense,
-                recondense=recondense,
+                recondense=recondense,returnlist=1
                 )
-            self.print_model_save(filename=merged_path)
+            if species not in all_species_model_merge_dict:
+                all_species_model_merge_dict[species]=[]
+            all_species_model_merge_dict[species].append(mergedlist)
+        self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)
+            
             
         
     def split_pisces_species_model_save(self,filename):
@@ -277,7 +285,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
                     species_model_save_path_dict[spec_name]=[path]
                 species_model_save_path_dict[spec_name].append(path)
             else:
-                self.logger.debug('split_pisces_speices_model_save ignoring path:{path}')
+                self.logger.debug(f'split_pisces_speices_model_save ignoring path:{path}')
         return species_model_save_path_dict
 
     
@@ -339,7 +347,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
         return model_save_pathlist
 
     def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',
-                                        save_directory=None,condense=None,recondense=None,verbose=None,recursive=None):
+                                        save_directory=None,condense=None,recondense=None,verbose=None,recursive=None,returnlist=0):
         
         if not merge_directory==None:
             if not os.path.exists(merge_directory):
@@ -442,6 +450,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
         #if condense==1:
         #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
 
+        if returnlist=1:
+            return list_of_saved_models
+        
         self.logger.debug(f'save_directory:{save_directory},species_name:{species_name}')
         merged_path=os.path.join(save_directory,'species-'+species_name+'_model_merge_save')
         if os.path.exists(merged_path):
