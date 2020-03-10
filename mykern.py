@@ -703,11 +703,11 @@ class kNdtool(Ndiff,MyKernHelper):
 
         #pre-build list of masks
         if 'max_bw_Ndiff' in modeldict:
-            if self.Ndiff_list_of_masks_y is None:
+            if self.Ndiff_list_of_masks_y is None or self.Ndiff_list_of_masks_y[0].shape[-2:]!=(self.nin,self.npr):
                 self.logger.warning('need to build masks for y')
                 self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
                     self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,ykerngrid)
-            if self.Ndiff_list_of_masks_x is None:
+            if self.Ndiff_list_of_masks_x is None or self.Ndiff_list_of_masks_x[0].shape[-2:]!=(self.nin,self.npr):
                 self.logger.warning('need to build masks for x')
                 self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
                     self.npr,self.nout,self.nin,self.p,max_bw_Ndiff)
