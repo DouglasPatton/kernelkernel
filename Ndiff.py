@@ -72,7 +72,8 @@ class Ndiff:
         # if depth is 2, y:-4  and x:-3 # these are the applied to indiffs
         # if depth is 3, y:-3 and x:-2
         # if depth is 4, y:-4 and x:-3
-        
+        """dropping these because moving transposition back to the datastacker to keep variation in dims 0,1 where we will sum
+        This approach would have worked, but it seems would have required a de transpose
         if x_or_y=='y':
             if depth==1:
                 sum_axis=-3
@@ -87,8 +88,8 @@ class Ndiff:
                 sum_axis=-3
             else:
                 sum_axis=-2
-        
-            
+        """
+        sum_axis=0    
         #self.logger.info(f'kernstack.shape:{kernstack.shape}, depth: {depth}, x_or_y:{x_or_y}, sum_axis:{sum_axis}')
         if normalization=='none' or normalization==None:
             return np.ma.sum(kernstack,axis=sum_axis)
