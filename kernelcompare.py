@@ -30,9 +30,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
             self.logger=logging.getLogger(__name__)
             self.logger.info('starting new KernelOptModelTools object')
         except:
-            print(traceback.format_exc())
-            if myname is None: _name=''
-            else: _name=f'-{myname}'
+            #print(traceback.format_exc())
+            #if myname is None: _name=''
+            #else: _name=f'-{myname}'
             logdir=os.path.join(directory,'log')
             if not os.path.exists(logdir): os.mkdir(logdir)
             handlername=os.path.join(logdir,__name__)

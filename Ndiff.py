@@ -70,7 +70,7 @@ class Ndiff:
                 sum_axis=-3
             else:
                 sum_axis=-2
-            
+        
             
         #self.logger.info(f'kernstack.shape:{kernstack.shape}, depth: {depth}, x_or_y:{x_or_y}, sum_axis:{sum_axis}')
         if normalization=='none' or normalization==None:
@@ -152,13 +152,20 @@ class Ndiff:
                     this_depth_mask=this_depth_mask[dim_select_tup]
                     this_depth_data=this_depth_data[dim_select_tup]'''
                 this_depth_masked_data=np.ma.array(this_depth_data,mask=this_depth_mask,keep_mask=False)
-                self.logger.debug(f'before- depth:{depth}, x_or_y:{x_or_y}, this_depth_masked_data maskcount/shape:{np.ma.count_masked(this_depth_masked_data)} of {this_depth_masked_data.shape}')
+                sumtolastdim_tup=tuple(range(this_depth_masked_data.ndim))[:-1]
+                self.logger.debug(f'before- depth:{depth}, x_or_y:{x_or_y}, this_depth_masked_data maskcount(axis=upto-1):{np.ma.count_masked(this_depth_masked_data,axis=sumtolastdim_tup)} vs. np.sum(this_depth_mask,axis=upto-1):{np.sum(this_depth_mask,axis=sumtolastdim_tup)}, with shape:{this_depth_masked_data.shape}')
+                #if depth==1:
+                if x_or_y=='x':
+                    self.logger.debug(f'depth:{depth}, x_or_y:{x_or_y},this_depth_mask:{this_depth_mask}')
+                
                 if Ndiff_type=='product':
                     this_depth_bw=self.Ndiff_product(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
                 if Ndiff_type=='recursive':
                     if depth==max_bw_Ndiff:deeper_depth_bw=Ndiff_depth_bw_params[0]
                     this_depth_bw=self.Ndiff_recursive(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
-                self.logger.debug(f'after- depth:{depth}, x_or_y:{x_or_y}, this_depth_bw maskcount/shape:{np.ma.count_masked(this_depth_bw)} of {this_depth_bw.shape}')    
+                sumtolastdim_tup=tuple(range(this_depth_bw.ndim))[:-1]
+                self.logger.debug(f'after- depth:{depth}, x_or_y:{x_or_y}, this_depth_bw maskcount(axis=upto-1)/shape:{np.ma.count_masked(this_depth_bw,axis=sumtolastdim_tup)} of {this_depth_bw.shape}')    
+                
                 if depth>0: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             '''if missing_i_dimension==1:
                 dimcount=len(this_depth_bw.shape)
@@ -188,9 +195,10 @@ class Ndiff:
     
     def gkernh(self, x, h):
         "returns the rbf/gaussian kernel at x with bandwidth h"
-        
+        amask=np.ma.getmask(x)
         kern=np.ma.exp(-np.ma.power(x,2)/(np.ma.power(h,2)*2))
-        return np.nan_to_num(kern,copy=False)
+        kern=np.ma.masked_array(np.nan_to_num(kern,copy=False),mask=amask)
+        return kern#
         
 
     def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,ykerngrid):
@@ -257,10 +265,11 @@ class Ndiff:
         return list_of_masks
         
     def max_bw_Ndiff_maskstacker_x(self,npr,nout,nin,p,max_bw_Ndiff):
-        '''match the parameter structure of Ndifflist produced by Ndiff_datastacker
+        '''match the parameter structure of data produced by Ndiff_datastacker at each depth
         notably, mostly differences (and thus masks) will be between the nin (n in the original dataset) obeservations.
         though would be interesting to make this more flexible in the future.
         when i insert a new dimension between two dimensions, I'm effectively transposing
+        -Ndiff_datastacker does not have the 'out dimension at position, -1 added yet.'
         '''
         try:
             self.predict_self_without_self
@@ -278,9 +287,7 @@ class Ndiff:
                 ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
                 ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
                 ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
-                '''ninmask1=np.ma.make_mask(ninmask1)
-                ninmask2=np.ma.make_mask(ninmask2)
-                ninmask3=np.ma.make_mask(ninmask3)'''
+            
 
                 list_of_masks.append(ninmask1+ninmask2+ninmask3)
                         

@@ -527,7 +527,8 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.logger.exception('')
                 else:
                     self.logger.critical(f'for name:{name} job_status not recognized:{job_status}')
-                
+            sleeptime=max([0,5-len(next_readynamelist)])
+            sleep(sleeptime)
             '''if i<100:
                 sleep(1)
             else:
