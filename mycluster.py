@@ -196,7 +196,7 @@ class run_cluster(kernelcompare.KernelCompare):
         readylist=[];sortlist=[]
         for name_i in namelist:
             last_time_status_tup=self.namefile_statuscheck(name_i)
-            if last_time_status_tup[1]=='ready':
+            if last_time_status_tup[1] in ['ready','failed','finished']:
                 readylist.append(name_i)
                 #sortlist.append(last_time_status_tup[0])
         shuffle(readylist)
@@ -283,7 +283,7 @@ class run_cluster(kernelcompare.KernelCompare):
             current_name_list = [name for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold]
             old_name_list1 = [name for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
                               not s_since_update_list[i] < self.oldnode_threshold]
-
+            readynamelist=[name for i,name in enumerate(namelist) if namefile_tuplist[i][1] in ['ready','failed','finished']]
             old_name_list = []
             for name_i in old_name_list1:
                 for j in range(10):
@@ -348,7 +348,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
         except:
             self.logger.exception('')
-        return run_dict_status, assignment_tracker
+        return run_dict_status, assignment_tracker, readynamelist
   
         
 
@@ -395,9 +395,9 @@ class run_cluster(kernelcompare.KernelCompare):
                 loopcount=0
                 
 
-                run_dict_status, assignment_tracker=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
-                namelist=self.getnamelist()
-                readynamelist=self.getreadynames(namelist)
+                run_dict_status, assignment_tracker, readynamelist=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
+                #namelist=self.getnamelist()
+                #readynamelist=self.getreadynames(namelist)
                 if shutdownnodes and len(readynamelist)==0:
                     keepgoing=0
                 #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
@@ -448,7 +448,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     else:
                         notanewjob_list.append([name,job_status])
                     #nonewjob_namelist=[i[0] for i in notanewjob_list]'''
-                if job_status=='filenotfound':
+                if job_status in ['filenotfound','ready']:
                     print(f'about to setup the job for node:{name}')
                     #print('len(ready_dict_idx)',len(ready_dict_idx))
                     if len(ready_dict_idx) == 0:
@@ -527,6 +527,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         self.logger.exception('')
                 else:
                     self.logger.critical(f'for name:{name} job_status not recognized:{job_status}')
+                
             '''if i<100:
                 sleep(1)
             else:

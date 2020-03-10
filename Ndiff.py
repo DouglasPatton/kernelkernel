@@ -152,13 +152,13 @@ class Ndiff:
                     this_depth_mask=this_depth_mask[dim_select_tup]
                     this_depth_data=this_depth_data[dim_select_tup]'''
                 this_depth_masked_data=np.ma.array(this_depth_data,mask=this_depth_mask,keep_mask=False)
-
+                self.logger.debug(f'before- depth:{depth}, x_or_y:{x_or_y}, this_depth_masked_data maskcount/shape:{np.ma.count_masked(this_depth_masked_data)} of {this_depth_masked_data.shape}')
                 if Ndiff_type=='product':
                     this_depth_bw=self.Ndiff_product(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
                 if Ndiff_type=='recursive':
                     if depth==max_bw_Ndiff:deeper_depth_bw=Ndiff_depth_bw_params[0]
                     this_depth_bw=self.Ndiff_recursive(this_depth_masked_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
-                    
+                self.logger.debug(f'after- depth:{depth}, x_or_y:{x_or_y}, this_depth_bw maskcount/shape:{np.ma.count_masked(this_depth_bw)} of {this_depth_bw.shape}')    
                 if depth>0: deeper_depth_bw=this_depth_bw#setup deeper_depth_bw for next iteration if there is another
             '''if missing_i_dimension==1:
                 dimcount=len(this_depth_bw.shape)
@@ -187,7 +187,7 @@ class Ndiff:
             return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
     
     def gkernh(self, x, h):
-        "returns the gaussian kernel at x with bandwidth h"
+        "returns the rbf/gaussian kernel at x with bandwidth h"
         
         kern=np.ma.exp(-np.ma.power(x,2)/(np.ma.power(h,2)*2))
         return np.nan_to_num(kern,copy=False)
