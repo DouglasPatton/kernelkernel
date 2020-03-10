@@ -254,7 +254,8 @@ class Ndiff:
                 list_of_masks.append(nextblankmask)
                 for iii in range(ii+2):
                     list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii) 
-        '''if max_bw_Ndiff>1:
+                    '''
+        if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
