@@ -4,9 +4,11 @@ from time import strftime,sleep
 import pickle
 import datetime
 from helpers import Helper
+import logging
 
 class MyKernHelper:
     def __init__(self,):
+        self.logger=logging.getLogger(__name__)
         pass
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
@@ -262,8 +264,9 @@ class MyKernHelper:
             broadcasted_array=np.broadcast_to(maskedarray,tup)
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
-    def sort_then_saveit(self,mse_param_list,modeldict,filename,getname=None):
+    def sort_then_saveit(self,mse_param_list,modeldict,filename,getname=0):
         try:
+            
             species='species-'+self.datagen_dict['species']+'_'
         except AttributeError:
             self.logger.exception('self.datagen_dict not found in object')
@@ -293,7 +296,10 @@ class MyKernHelper:
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
         try:
-            savedict['binary_y_result']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
+            if modeldict['binary_y'] is None:
+                savedict['binary_y_result']=[]
+            else:
+                savedict['binary_y_result']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
         except:
             self.logger.exception('')
         savedict['modeldict']=modeldict

@@ -7,7 +7,7 @@ class KernelParams:
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
         self.batchcount_variation_list=[4]
         self.do_minimize=1
-        self.maxiter=10
+        self.maxiter=20
         
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2

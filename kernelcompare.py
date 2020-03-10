@@ -80,8 +80,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
             
             
         start_msg=f'starting at {strftime("%Y%m%d-%H%M%S")}'
-        
-        self.run_opt(datagen_obj,optimizedict,self.nodedirectory)
+        try: nodedir=self.nodedirectory
+        except: nodedir=self.kc_savedirectory
+        self.run_opt(datagen_obj,optimizedict,nodedir)
         
         #(datagen_obj,optimizedict,self.nodedirectory,myname=self.name,xmask=self.Ndiff_list_of_masks_x,ymask=self.Ndiff_list_of_masks_y)
         return

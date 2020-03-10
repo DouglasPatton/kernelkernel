@@ -447,9 +447,10 @@ class kNdtool(Ndiff,MyKernHelper):
         
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         try:
-            self.forcefail
+            if self.forcefail:
+                self.logger.warning('forcefail activated')
             #p#rint(f'returning self.forcefail:{self.forcefail}')
-            return self.forcefail
+                return self.forcefail
         except:
             pass
         if self.iter>0:
@@ -586,7 +587,7 @@ class kNdtool(Ndiff,MyKernHelper):
             mse=-mse*100000
         #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
         
-        if predict==0:
+        if not predict:
             self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
             # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
             
@@ -703,12 +704,16 @@ class kNdtool(Ndiff,MyKernHelper):
 
         #pre-build list of masks
         if 'max_bw_Ndiff' in modeldict:
-            if self.Ndiff_list_of_masks_y is None or self.Ndiff_list_of_masks_y[0].shape[-2:]!=(self.nin,self.npr):
+            if self.Ndiff_list_of_masks_y is None or self.Ndiff_list_of_masks_y[0].shape[-3:]!=(self.nin,self.nout,self.npr):
                 self.logger.warning('need to build masks for y')
+                if self.Ndiff_list_of_masks_y:
+                    self.logger.debug(f'self.Ndiff_list_of_masks_y[0].shape(just last 2 used):{self.Ndiff_list_of_masks_y[0].shape},(self.nin,self.nout,self.npr):{(self.nin,self.nout,self.npr)}')
                 self.Ndiff_list_of_masks_y=self.max_bw_Ndiff_maskstacker_y(
                     self.npr,self.nout,self.nin,self.p,max_bw_Ndiff,ykerngrid)
             if self.Ndiff_list_of_masks_x is None or self.Ndiff_list_of_masks_x[0].shape[-2:]!=(self.nin,self.npr):
                 self.logger.warning('need to build masks for x')
+                if self.Ndiff_list_of_masks_x:
+                    self.logger.debug(f'self.Ndiff_list_of_masks_y[0].shape(just last 2 used):{self.Ndiff_list_of_masks_y[0].shape},(self.nin,self.npr):{(self.nin,self.npr)}')
                 self.Ndiff_list_of_masks_x=self.max_bw_Ndiff_maskstacker_x(
                     self.npr,self.nout,self.nin,self.p,max_bw_Ndiff)
             
@@ -807,6 +812,7 @@ class optimize_free_params(kNdtool):
 
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
+        self.datagen_dict=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname
@@ -870,7 +876,9 @@ class optimize_free_params(kNdtool):
             
         
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
-
+        self.forcefail=None
+        self.success=None
+        self.iter=0
         
         #if 'species' in self.datagen_dict:
  
@@ -884,6 +892,7 @@ class optimize_free_params(kNdtool):
                 self.logger.exception('')
         else:
             try:
+                self.logger.info('-------------starting optimization-------------')
                 self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
                 #self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
             except:
