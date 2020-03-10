@@ -1,5 +1,5 @@
 from multicluster import mypool
-import psutil,sys
+import psutil,sys,os
 if __name__=="__main__":
 
     cores=int(psutil.cpu_count(logical=True))
