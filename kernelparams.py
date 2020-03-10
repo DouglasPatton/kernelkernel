@@ -5,7 +5,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[8]
+        self.batchcount_variation_list=[16]
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
         
@@ -45,8 +45,8 @@ class KernelParams:
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
-        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])

@@ -37,7 +37,7 @@ class Ndiff:
                 if depth%2==0:
                     indiffs=np.transpose(indiffs,[1,0,2])
                 expanded_indiffs=indiffs
-                for _ in range(depth) 
+                for _ in range(depth): 
                     expanded_indiffs=np.expand_dims(expanded_indiffs,axis=2)    # there is variation over dims 0,1 for all dims to the rhs of them
                     
                 #shape_out_tup=tuple([self.nin for _ in range(depth)])+indiffs.shape
@@ -53,7 +53,7 @@ class Ndiff:
                 if depth%2==0:
                     indiffs=np.transpose(indiffs,[1,0])
                 expanded_indiffs=indiffs
-                for _ in range(depth) 
+                for _ in range(depth): 
                     expanded_indiffs=np.expand_dims(expanded_indiffs,axis=2)   
                 #shape_out_tup=tuple([self.nin for _ in range(depth)])+indiffs.shape
                 return np.broadcast_to(expanded_indiffs,shape_out_tup)#indiffs starts as ninxnin, expand_dims adds a dimension for npr
@@ -262,7 +262,7 @@ class Ndiff:
                 
                 
                 
-        if max_bw_Ndiff>1:
+        '''if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):
                 ninmask_3d=list_of_masks[1]
                 preshape=ii*(nin,)+ninmask_3d.shape # if max_bw_ndiff=2, at depth=2, ii is [0]
@@ -271,7 +271,22 @@ class Ndiff:
                 nextblankmask=np.zeros(nextshape,dtype=np.bool)
                 list_of_masks.append(nextblankmask)
                 for iii in range(ii+2):
-                    list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii) 
+                    list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii) '''
+                    
+                    
+        if max_bw_Ndiff>1:
+            for ii in range(max_bw_Ndiff-1):
+                ninmask_4d=list_of_masks[1]
+                nextshape=(ii+1)*(nin,)+ninmask_4d.shape
+                nextblankmask=np.zeros(nextshape,dtype=np.bool)
+                list_of_masks.append(nextblankmask)
+                for iii in range(ii+1):
+                    a_condition_mask=ninmask_4d.copy()
+                    exp_dim_list=[1]*(iii+1)+[-3]*(ii-iii) 
+                    for dim in exp_dim_list:
+                        a_condition_mask=np.expand_dims(a_condition_mask,axis=dim)
+                    list_of_masks[-1]+=a_condition_mask             
+                    
                     '''
         if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
@@ -318,24 +333,30 @@ class Ndiff:
         list_of_masks=[ninmask]
         if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
             list_of_masks.append((np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
-        if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
+        '''if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
                 assert False, 'needs logic rewrite'
                 ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
                 ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
                 ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
             
 
-                list_of_masks.append(ninmask1+ninmask2+ninmask3)
+                list_of_masks.append(ninmask1+ninmask2+ninmask3)'''
         if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):
                 ninmask_3d=list_of_masks[1]
-                preshape=ii*(nin,)+ninmask_3d.shape # if max_bw_ndiff=2, at depth=2, ii is [0]
-                nextshape=(nin,)+preshape
-                ninmask_pre=np.broadcast_to(ninmask_3d,preshape)
+                nextshape=(ii+1)*(nin,)+ninmask_3d.shape
                 nextblankmask=np.zeros(nextshape,dtype=np.bool)
                 list_of_masks.append(nextblankmask)
-                for iii in range(ii+2):
-                    list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii)
+                for iii in range(ii+1):
+                    a_condition_mask=ninmask_3d.copy()
+                    exp_dim_list=[1]*(iii+1)+[-2]*(ii-iii) # if depth=2, ii=1, dimensio added to ninmask_3d at dim1 for l!=jVi,i,j and at 
+                    for dim in exp_dim_list:
+                        a_condition_mask=np.expand_dims(a_condition_mask,axis=dim)
+                    list_of_masks[-1]+=a_condition_mask
+                    
+                    
+                    
+                    
         '''if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
