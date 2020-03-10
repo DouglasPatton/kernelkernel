@@ -1,3 +1,8 @@
+import pickle
+import os
+import logging
+import pandas as pd
+
 
 class KCHelper():
     def __init__(self):
@@ -231,24 +236,24 @@ class KCHelper():
         
     
     def print_model_save(self,filename=None,directory=None):
-        import pandas as pd
+
         if directory==None:
             directory=os.getcwd()
         if filename==None:
             filename='model_save'
         pd.set_option('display.max_colwidth', -1)
-        file_loc=os.path.join(directory,filename)
+        path=os.path.join(directory,filename)
         for i in range(10):
             try:
-                exists=os.path.exists(file_loc)
+                exists=os.path.exists(path)
                 if not exists:
-                    print(f'file:{file_loc} has os.path.exists value:{exists}')
+                    print(f'file:{path} has os.path.exists value:{exists}')
                     return
-                with open(file_loc,'rb') as model_save:
+                with open(path,'rb') as model_save:
                     model_save_list=pickle.load(model_save)
             except:
                 if i==9:
-                    self.logger.info(f'could not open{file_loc}')
+                    self.logger.info(f'could not open{path}')
                     self.logger.exception(f'error in {__name__}')
                     return
         if len(model_save_list)==0:

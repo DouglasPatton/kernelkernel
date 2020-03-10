@@ -234,7 +234,8 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
                     merged_listdict[key].append(listdict[key])
         return merged_listdict
             
-    def sort_by_species()
+    def sort_by_species():
+        pass
 
     def process_pisces_models(self,startpath,condense=0,recondense=0):
         if not type(startpath) is list:

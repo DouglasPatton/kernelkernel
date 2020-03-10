@@ -21,7 +21,7 @@ class KernelParams:
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.01,.2,.5,1.3]])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.01,.2,.5,1.3,1.5]])
         
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.2])])
@@ -120,9 +120,9 @@ class KernelParams:
                 
                 
             #species_variations=('species',[self.specieslist[3]])
-            #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist),2)])
+            species_variations=('species',[self.specieslist[i] for i in [3,4]])
             # print('species_variations',species_variations)
-            species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist),1)])
+            #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist),1)])
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',self.batchcount_variation_list)
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
@@ -173,7 +173,7 @@ class KernelParams:
         elif source=='pisces':
             #floatselecttup=(2,3,5,6)
             floatselecttup=()
-            #floatselecttup=(3,5,6)
+            floatselecttup=(3,5,6)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={
@@ -221,12 +221,12 @@ class KernelParams:
             'regression_model':'NW',
             'product_kern_norm':'self',
             'hyper_param_form_dict':{
-                'Ndiff_exponent':'free',
+                'Ndiff_exponent':'fixed',#'free',
                 'x_bandscale':'non-neg',
-                'Ndiff_depth_bw':'non-neg',
-                'outer_x_bw':'non-neg',
-                'outer_y_bw':'non-neg',
-                'y_bandscale':'fixed'
+                'Ndiff_depth_bw':'fixed',#'non-neg',
+                'outer_x_bw':'fixed',#'non-neg',
+                'outer_y_bw':'fixed',#'non-neg',
+                'y_bandscale':'fixed',#'fixed'
                 }
             }
         
@@ -268,7 +268,7 @@ class KernelParams:
             'xatol':0.05,
             'fatol':.01,
             'adaptive':True,
-            'maxiter':5
+            'maxiter':10
             }
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
@@ -276,7 +276,7 @@ class KernelParams:
             'mse_threshold':'naive_mse',
             'help_start':0,
             'partial_match':0,
-            'do_minimize':0 # do_minimize=0 means just predict once for mse and don't optimize
+            'do_minimize':1 # do_minimize=0 means just predict once for mse and don't optimize
             }
         
         optimizedict1={
