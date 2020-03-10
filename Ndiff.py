@@ -213,6 +213,7 @@ class Ndiff:
         if not self.predict_self_without_self=='yes':
             ninmask=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr))
         if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
+            assert False, 'needs logic rewrite'
             ninmask3=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr))
             ninmask2=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,None,:],(nin,nin,nin))
             ninmask1=np.broadcast_to(np.eye(nin,dtype=np.bool)[None,:,:],(nin,nin,nin))
@@ -221,24 +222,39 @@ class Ndiff:
             ninmask3=np.ma.make_mask(ninmask3)
             ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
         if self.predict_self_without_self=='yes' and nin==npr and type(ykerngrid) is int:
+            assert False, 'needs logic rewrite'
             ninmask0=np.ma.make_mask(np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr)))
             ninmask=np.ma.make_mask(np.broadcast_to(np.eye(nin,dtype=np.bool)[:,None,:],(nin,nin,nin)))
             ninmask=np.ma.mask_or(ninmask0,ninmask)
-        list_of_masks=[ninmask]
+            
+            
+        list_of_masks=[ninmask] # nout dimensionality fixed at end of needed
         if max_bw_Ndiff>0:
             if ykerngrid=='no':
+                assert False, 'needs reconfigure to bool and logic rewrite'
                 firstdiffmask=np.ma.mask_or(np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,0),(nin,nin,nin,npr))),np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nin,npr))))
                 firstdiffmask=np.ma.mask_or(np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,1),(nin,nin,nin,npr))),firstdiffmask)
                 #when 0 dim of ninmask is expanded, masked if i=j for all k.
                 #when 2 dim of nin mask is expanded, masked if k=j for all i, and when 1 dim of nin mask is expanded, masked if k=i for all j. all are for all ii
             if type(ykerngrid) is int:
                 #firstdiffmask=np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr)))
-                firstdiffmask=np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr))
+                firstdiffmask=np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr))#k!=j Vi,ii (V : `for all')
                 #if yout is a grid and nout not equal to nin, 
             list_of_masks.append(firstdiffmask)# this line is indexed (k,j,i,ii)
                 
+                
+                
         if max_bw_Ndiff>1:
-            
+            for ii in range(max_bw_Ndiff-1):
+                ninmask_3d=list_of_masks[1]
+                preshape=ii*(nin,)+ninmask_3d.shape # if max_bw_ndiff=2, at depth=2, ii is [0]
+                nextshape=(nin,)+preshape
+                ninmask_pre=np.broadcast_to(ninmask_3d,preshape)
+                nextblankmask=np.zeros(nextshape,dtype=np.bool)
+                list_of_masks.append(nextblankmask)
+                for iii in range(ii+2):
+                    list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii) 
+        '''if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
@@ -251,8 +267,9 @@ class Ndiff:
                     list_of_masks[-1]=list_of_masks[-1]+\
                         np.broadcast_to(
                             np.expand_dims(
-                                lastmask,axis=iii),masktup)
+                                lastmask,axis=iii),masktup)'''
                 if ykerngrid=='no':
+                    assert False, 'needs logic rewrite'
                     list_of_masks[-1]=np.ma.mask_or(
                         list_of_masks[-1],np.ma.make_mask(
                             np.broadcast_to(
@@ -283,15 +300,24 @@ class Ndiff:
         if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
             list_of_masks.append((np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
         if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
-
+                assert False, 'needs logic rewrite'
                 ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
                 ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
                 ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
             
 
                 list_of_masks.append(ninmask1+ninmask2+ninmask3)
-                        
         if max_bw_Ndiff>1:
+            for ii in range(max_bw_Ndiff-1):
+                ninmask_3d=list_of_masks[1]
+                preshape=ii*(nin,)+ninmask_3d.shape # if max_bw_ndiff=2, at depth=2, ii is [0]
+                nextshape=(nin,)+preshape
+                ninmask_pre=np.broadcast_to(ninmask_3d,preshape)
+                nextblankmask=np.zeros(nextshape,dtype=np.bool)
+                list_of_masks.append(nextblankmask)
+                for iii in range(ii+2):
+                    list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii)
+        '''if max_bw_Ndiff>1:
             for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
                 lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
                 masktup=(nin,)+lastmask.shape#expand dimensions on lhs
@@ -299,7 +325,7 @@ class Ndiff:
                 for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at ii=0,
                     #then this loop has iii=  0,1 from range(0+2)
                     iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=list_of_masks[-1]+np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)
+                    list_of_masks[-1]=list_of_masks[-1]+np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)'''
             #lastmask=list_of_masks[-1]#copy the last item to lastmask
         if not self.predict_self_without_self=='yes':
             list_of_masks[0]=np.zeros([nin,npr],dtype=np.bool)
