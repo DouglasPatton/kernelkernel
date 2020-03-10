@@ -4,9 +4,9 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=16 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[8]
-        self.do_minimize=0
+        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.batchcount_variation_list=[4]
+        self.do_minimize=1
         self.maxiter=10
         
     def getoptdictvariations(self,source='monte'):
@@ -25,13 +25,13 @@ class KernelParams:
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
         
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.01,.2,.5,1.3,1.5]])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.01,.2,.5,1.3,1.5,2]])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
         
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.7]),np.array([.2])])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
+        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.7]),np.array([.3])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
+        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
@@ -44,14 +44,14 @@ class KernelParams:
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
+        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','self'])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
+        #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
-        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n','across'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -125,9 +125,9 @@ class KernelParams:
                 
                 
             #species_variations=('species',[self.specieslist[3]])
-            species_variations=('species',[self.specieslist[i] for i in [11,12]])
+            species_variations=('species',[self.specieslist[i] for i in range(10)])
             # print('species_variations',species_variations)
-            #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist),1)])
+            #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
             batch_n_variations=('batch_n',[self.n])
             batchcount_variations=('batchcount',self.batchcount_variation_list)
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
