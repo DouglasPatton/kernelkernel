@@ -26,20 +26,37 @@ class Ndiff:
             outdiffs becomes {depth*nin}XninXnoutXnpr
         """
         
+        
+        
+        
         if len(outdiffs.shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
             #
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
+            #expand_tup=tuple(range(depth)+2)
             if depth>1:
+                if depth%2==0:
+                    indiffs=np.transpose(indiffs,[1,0,2])
+                expanded_indiffs=indiffs
+                for _ in range(depth) 
+                    expanded_indiffs=np.expand_dims(expanded_indiffs,axis=2)    # there is variation over dims 0,1 for all dims to the rhs of them
+                    
                 #shape_out_tup=tuple([self.nin for _ in range(depth)])+indiffs.shape
-                return np.broadcast_to(np.expand_dims(indiffs,-2),shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
+                return np.broadcast_to(expanded_indiffs,shape_out_tup)#indiffs starts as ninxninxnpr, expand_dims adds a dimension for nout
             else:
+                
+                
                 
                 return np.broadcast_to(outdiffs,shape_out_tup)
         if len(outdiffs.shape)==2:#(ninXnpr)this should only happen if we're working on x
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
             if depth>1:
+                if depth%2==0:
+                    indiffs=np.transpose(indiffs,[1,0])
+                expanded_indiffs=indiffs
+                for _ in range(depth) 
+                    expanded_indiffs=np.expand_dims(expanded_indiffs,axis=2)   
                 #shape_out_tup=tuple([self.nin for _ in range(depth)])+indiffs.shape
-                return np.broadcast_to(np.expand_dims(indiffs,-1),shape_out_tup)#indiffs starts as ninxnin, expand_dims adds a dimension for npr
+                return np.broadcast_to(expanded_indiffs,shape_out_tup)#indiffs starts as ninxnin, expand_dims adds a dimension for npr
             else:
                 
                 return np.broadcast_to(outdiffs,shape_out_tup)
