@@ -1,6 +1,7 @@
+from multicluster import mypool
+import psutil,sys
 if __name__=="__main__":
-    from multicluster import mypool
-    import psutil
+
     cores=int(psutil.cpu_count(logical=True))
     platform=sys.platform
     p=psutil.Process(os.getpid())
