@@ -9,10 +9,7 @@ import shutil
 from numpy import log
 from random import randint,seed,shuffle
 import logging
-#import logging.config
-import yaml
 from helpers import Helper
-import multiprocessing as mp
 
 #from pisces_data_huc12 import PiscesDataTool
 
@@ -42,13 +39,12 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=41,seconds=1)
+        self.oldnode_threshold=datetime.timedelta(minutes=81)
 
         seed(1)
         if source==None:
             source='monte'
         self.source=source
-        self.oldnodequeue=mp.Queue
         self.savedirectory=self.setdirectory(local_run=local_run)
         
         
