@@ -419,10 +419,10 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
-                    print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
+                    #print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
                     
                 except:
-                    print(f'check_node_job_status failed for node:{name}')
+                    #print(f'check_node_job_status failed for node:{name}')
                     self.logger.exception(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
                     job_time='failed'
