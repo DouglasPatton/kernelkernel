@@ -113,12 +113,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
         merged_path=os.path.join(self.kc_savedirectory,'..','condensed_model_save')
         same_modelxy_dict_list1=self.open_and_compare_optdict(
             merged_path,optimizedict,help_start=help_start,partial_match=partial_match)
-        #print('here1')
         if len(same_modelxy_dict_list1)==0:
             merged_path=os.path.join(self.kc_savedirectory,'condensed_model_save')
             same_modelxy_dict_list2=self.open_and_compare_optdict(
                 merged_path,optimizedict,help_start=help_start,partial_match=partial_match)
-            #print('here2')
             if len(same_modelxy_dict_list2)==0:
                 same_modelxy_dict_list3=self.open_and_compare_optdict(
                     'model_save',optimizedict,help_start=help_start,partial_match=partial_match)
@@ -269,7 +267,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
                 )
             if species not in all_species_model_merge_dict:
                 all_species_model_merge_dict[species]=[]
-            all_species_model_merge_dict[species].append(mergedlist)
+            all_species_model_merge_dict[species].extend(mergedlist)
             if recondense2:
                 all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=verbose)
         self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)
@@ -283,8 +281,8 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
             model_list=all_species_model_merge_dict[species]
             
             self.logger.debug(f'printing {species}; ({i}/{speciescount}), with {len(model_list)} models.')
-            self.print_model_save(model_save_list=model_list,shortlist=shortlist,species=species)
-            
+            self.print_model_save(model_save_list=model_list,shortlist=shortlist,species=species,directory=self.kc_savedirectory)
+            #print_model_save(self,filename=None,directory=None,model_save_list=None,shortlist=[],species='')
     
         
     def split_pisces_model_save_path_dict(self,startdir):
@@ -592,11 +590,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper):
         if len(doubledict_match_list)==0 and help_start==1 and partial_match==1:
             print('--------------help_start with partial match triggered----------------')
             tryagain= self.condense_saved_model_list(self.do_partial_match(saved_dict_list,optimizedict,help_start=1,strict=0))
-            print('here3')
             if not tryagain==None:
                 return tryagain
         else:
-            print('here4')
             #same_doubledict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
             #                      self.pull2dicts(optdict_i)==this_2dicts]
                                 # optdict['modeldict']==optimizedict['modeldict'] and\
@@ -793,7 +789,6 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
             self.logger.info('starting new KernelCompare log')
-            print('here3')
             
 
         

@@ -259,11 +259,14 @@ class KCHelper():
         if len(model_save_list)==0:
             self.logger.info(f'no models in model_save_list for printing')
             return
+        for model_save in model_save_list:
+            if type(model_save['mse']) is str:
+                self.logger.warning(f'model_save has string mse: {model_save}')
+        
         try:
             model_save_list.sort(key=lambda savedicti: savedicti['mse']/savedicti['naivemse'])
             
         except:
-            self.logger.exception('')
             model_save_list.sort(key=lambda savedicti: savedicti['mse'])
               #sorts by mse
 
@@ -272,7 +275,7 @@ class KCHelper():
             os.mkdir(output_loc)
 
         filecount=len(os.listdir(output_loc))
-        output_filename = os.path.join(output_loc,f'species'+'.html')
+        output_filename = os.path.join(output_loc,f'{species}'+'.html')
         output_filename=self.helper.getname(output_filename)
 
         modeltablehtml=''
@@ -282,11 +285,11 @@ class KCHelper():
         for j,model in enumerate(model_save_list):
             keylistj=[key for key in model]
             simpledicti=self.myflatdict(model,keys=keylistj)
-            this_model_df=pd.DataFrame(simpledicti).T
+            this_model_df=pd.DataFrame(simpledicti)
             if shortlist:
-                print_this_model_df=this_model_df.loc[:, df.columns.isin(shortlist)]
+                print_this_model_df=this_model_df.loc[:, this_model_df.columns.isin(shortlist)].T
             else:
-                print_this_model_df=this_model_df
+                print_this_model_df=this_model_df.T
             
             this_model_html_string=print_this_model_df.to_html()
             modeltablehtml=modeltablehtml+f'model:{j+1}<br>'+this_model_html_string+"<br>"
