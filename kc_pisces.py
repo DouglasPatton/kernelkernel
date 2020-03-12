@@ -49,12 +49,12 @@ class KCPisces():
             mergedlist=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
-                condense=condense,
+                condense=1,#first condensing addreses iterations
                 recondense=recondense,returnlist=1
                 )
             if species not in all_species_model_merge_dict:
                 all_species_model_merge_dict[species]=[]
-            all_species_model_merge_dict[species].append(mergedlist)
+            all_species_model_merge_dict[species].extend(mergedlist)
             if recondense2:
                 all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=verbose)
         self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)

@@ -306,13 +306,13 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                 self.logger.exception('')
                 
             if saved_model_list:    
-                if recondense:
+                if condense:
                     list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
                 else:
                     list_of_saved_models.extend(saved_model_list)
         
-        #if condense==1:
-        #    list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
+        if recondense:
+            list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
 
         if returnlist:
             return list_of_saved_models
