@@ -819,6 +819,7 @@ class optimize_free_params(kNdtool):
         
     
     def run_opt(self,datagen_obj,optimizedict,savedir):
+        
         self.savedir=savedir
     
         #self.Ndiff_list_of_masks_x=xmask
@@ -872,7 +873,8 @@ class optimize_free_params(kNdtool):
         self.naivemse=self.do_naivemse(datagen_obj)
         if type(self.mse_threshold) is str:
                 if self.mse_threshold=='naive_mse':
-                    self.mse_threshold=self.naivemse    
+                    self.mse_threshold=self.naivemse
+        
             
         
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
@@ -892,9 +894,12 @@ class optimize_free_params(kNdtool):
                 self.logger.exception('')
         else:
             try:
-                self.logger.info('-------------starting optimization-------------')
-                self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-                #self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
+                startingmse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
+                if startingmse<self.mse_threshold:
+                    logger.info('-------------starting optimization-------------')
+                    self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
+                else:
+                    sort_then_saveit([[startingmse,args_tuple[-1]]],modeldict,'model_save',getname=1)
             except:
                 self.sort_then_saveit([[10.0**289,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
                 self.logger.exception('')

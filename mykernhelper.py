@@ -212,12 +212,10 @@ class MyKernHelper:
         p=yxtup_list[0][1].shape[1]
         modelstd=modeldict['std_data']
 
-        try: self.xmean,self.ymean,self.xstd,self.ystd
-        except:
-            self.xmean=self.datagen_obj.summary_stats_dict['xmean']
-            self.ymean=self.datagen_obj.summary_stats_dict['ymean']
-            self.xstd=self.datagen_obj.summary_stats_dict['xstd']
-            self.ystd=self.datagen_obj.summary_stats_dict['ystd']
+        self.xmean=self.datagen_obj.summary_stats_dict['xmean']
+        self.ymean=self.datagen_obj.summary_stats_dict['ymean']
+        self.xstd=self.datagen_obj.summary_stats_dict['xstd']
+        self.ystd=self.datagen_obj.summary_stats_dict['ystd']
 
         
         if type(modelstd) is str: 

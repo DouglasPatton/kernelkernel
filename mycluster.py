@@ -423,7 +423,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     
                 except:
                     print(f'check_node_job_status failed for node:{name}')
-                    self.logger.info(f'check_node_job_status failed for node:{name}')
+                    self.logger.exception(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
                     job_time='failed'
 
@@ -435,7 +435,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     islate=elapsed>self.oldnode_threshold
                     
                 except:
-                    self.logger.exception('')
+                    self.logger.exception(f'now:{now},job_time:{job_time}')
                     islate=0
                 if islate:
                     self.logger.info(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
@@ -453,8 +453,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     if len(ready_dict_idx) == 0:
                         print('run_dict_status',run_dict_status)
                     if len(ready_dict_idx)>0:
-                        next_ready_dict_idx=ready_dict_idx.pop()
-                        #next_ready_dict_idx=ready_dict_idx.pop(randint(0,len(ready_dict_idx)-1))#-1 b/c random.randint(a,b) includes b
+                        #next_ready_dict_idx=ready_dict_idx.pop()
+                        next_ready_dict_idx=ready_dict_idx.pop(randint(0,len(ready_dict_idx)-1))#-1 b/c random.randint(a,b) includes b
                         try:
                             run_dict_status[next_ready_dict_idx] = 'assigned'
                             #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready']
@@ -524,6 +524,9 @@ class run_cluster(kernelcompare.KernelCompare):
                         #readynamelist.append(name)
                     except:
                         self.logger.exception('')
+                elif job_status=='starting':
+                    next_readynamelist.append(name)   
+                    
                 else:
                     self.logger.critical(f'for name:{name} job_status not recognized:{job_status}')
             sleeptime=max([0,5-len(next_readynamelist)])
