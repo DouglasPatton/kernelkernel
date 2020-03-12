@@ -1,7 +1,11 @@
-
-
-class KCPisces:
-
+from kc_helpers import KCHelper
+from helpers import Helper
+class KCPisces(KCHelper):
+    def __init__(self):
+        Helper.__init__(self)
+        KCHelper.__init__(self)
+        
+        
     def update_species_model_save_path_dict(self,species_model_save_path_dict):
         path=self.species_model_save_path_dict
         if os.path.exists(path):
