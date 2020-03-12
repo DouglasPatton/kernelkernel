@@ -896,7 +896,7 @@ class optimize_free_params(kNdtool):
             try:
                 startingmse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
                 if startingmse<self.mse_threshold:
-                    logger.info('-------------starting optimization-------------')
+                    self.logger.info(f'-------------starting optimization with mse:{startingmse}-------------')
                     self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
                 else:
                     self.sort_then_saveit([[startingmse,args_tuple[-1]]],modeldict,'model_save',getname=1)

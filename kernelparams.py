@@ -5,7 +5,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[4]
+        self.batchcount_variation_list=[2]
         self.do_minimize=1
         self.maxiter=20
         
@@ -25,13 +25,13 @@ class KernelParams:
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
         
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in np.linspace(.3,1,10)])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in np.linspace(.3,1,10)])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
         
-        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.2,1,5)])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.2,1,5)])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.2,1,5)])
+        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.2,1,5)])
+        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
         NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
@@ -50,7 +50,7 @@ class KernelParams:
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['across','own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['across','own_n','none'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
