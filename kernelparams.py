@@ -178,7 +178,7 @@ class KernelParams:
         elif source=='pisces':
             #floatselecttup=(2,3,5,6)
             floatselecttup=()
-            #floatselecttup=(3,5,6)
+            floatselecttup=(3,5,6)
             spatialselecttup=(8,)
             param_count=len(floatselecttup)+len(spatialselecttup)
             datagen_dict={

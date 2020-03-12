@@ -68,7 +68,7 @@ class KCPisces():
             model_list=all_species_model_merge_dict[species]
             
             self.logger.debug(f'printing {species}; ({i}/{speciescount}), with {len(model_list)} models.')
-            self.print_model_save(model_save_list=model_list,shortlist=shortlist,species=species)
+            self.print_model_save(directory=self.kc_savedirectory,model_save_list=model_list,shortlist=shortlist,species=species)
             
     
         
