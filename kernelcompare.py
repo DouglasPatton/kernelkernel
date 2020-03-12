@@ -27,7 +27,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.Ndiff_list_of_masks_x=None
         self.Ndiff_list_of_masks_y=None
-        self.helper=Helper()
+        
         try:
             self.logger=logging.getLogger(__name__)
             self.logger.info('starting new KernelOptModelTools object')
@@ -46,6 +46,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             self.logger = logging.getLogger(handlername)
             self.logger.info('starting new KernelOptModelTools log')
             print(traceback.format_exc())
+        self.helper=Helper()
+        KCHelper.__init__(self)
+        KCPisces.__init__(self)
         
         
         mk.optimize_free_params.__init__(self,kcsavedir=self.kc_savedirectory,myname=myname)
