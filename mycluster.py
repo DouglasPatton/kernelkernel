@@ -645,7 +645,12 @@ class run_cluster(kernelcompare.KernelCompare):
         return rundictpathlist
 
     def setup_job_for_node(self,name,rundictpath,rundict):
-        job_file_path=os.path.join(self.savedirectory,name,name+'_job')
+        nodedir=os.path.join(self.savedirectory,name)
+        if not os.path.exists(nodedir):
+            self.logger.warning(f'fornode:{name}, adding missing nodedir:{nodedir}')
+            os.mkdir(nodedir)
+        
+        job_file_path=os.path.join(nodedir,name+'_job')
         try:
             with open(job_file_path,'rb') as f:
                 myjobfile=pickle.load(f)
