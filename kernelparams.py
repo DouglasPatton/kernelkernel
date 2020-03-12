@@ -25,7 +25,7 @@ class KernelParams:
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
         
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.01,.2,.5,1.3,1.5,2]])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in [.2,.5,1.3,1.5,2,2.5,3]],[factor*np.array([1,1]) for factor in [.2,.5,1.3,1.5,2,2.5,3]])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[0.5*np.array([-1,1])])
         
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in [.1, .25, .5, .75, 1]])
@@ -125,7 +125,7 @@ class KernelParams:
                 
                 
             #species_variations=('species',[self.specieslist[3]])
-            species_variations=('species',[self.specieslist[i] for i in range(10,20,1)])
+            species_variations=('species',[self.specieslist[i] for i in range(10,20,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
             batch_n_variations=('batch_n',[self.n])

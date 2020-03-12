@@ -39,7 +39,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=81)
+        self.oldnode_threshold=datetime.timedelta(minutes=180)
 
         seed(1)
         if source==None:
@@ -279,7 +279,7 @@ class run_cluster(kernelcompare.KernelCompare):
             current_name_list = [name for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold]
             old_name_list1 = [name for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
                               not s_since_update_list[i] < self.oldnode_threshold]
-            readynamelist=[name for i,name in enumerate(namelist) if namefile_tuplist[i][1] in ['ready','failed','finished']]
+            
             old_name_list = []
             for name_i in old_name_list1:
                 for j in range(10):
@@ -344,6 +344,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
         except:
             self.logger.exception('')
+        readynamelist=current_name_list
         return run_dict_status, assignment_tracker, readynamelist
   
         
@@ -394,6 +395,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 run_dict_status, assignment_tracker, readynamelist=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
                 #namelist=self.getnamelist()
                 #readynamelist=self.getreadynames(namelist)
+                
                 if shutdownnodes and len(readynamelist)==0:
                     keepgoing=0
                 #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
@@ -408,6 +410,7 @@ class run_cluster(kernelcompare.KernelCompare):
             else:
                 readynamelist=next_readynamelist
             next_readynamelist=[]
+            shuffle(readynamelist)
             for name in readynamelist:
                 loopcount+=1
                 #name=readynamelist.pop(0)
