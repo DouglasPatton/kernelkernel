@@ -5,9 +5,9 @@ class KernelParams:
     
     def __init__(self,):
         self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[4]
+        self.batchcount_variation_list=[2]
         self.do_minimize=1
-        self.maxiter=10
+        self.maxiter=20
         
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
@@ -28,9 +28,9 @@ class KernelParams:
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([-1,1]) for factor in np.linspace(.3,1,10)])
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
         
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(1,100,4)])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.2,1.5,10)])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(1,100,4)])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.2,1.5,10)])
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
@@ -134,6 +134,7 @@ class KernelParams:
         return datagen_variation_list
     
     def build_hyper_param_start_values(self,modeldict):
+        depthfactor=0.3
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
@@ -145,7 +146,7 @@ class KernelParams:
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
-                'Ndiff_depth_bw':.3*np.ones([Ndiff_param_count,]),
+                'Ndiff_depth_bw':depthfactor*np.ones([Ndiff_param_count,]),
                 'y_bandscale':1.0*np.ones([1,])
                     }
 
@@ -155,7 +156,7 @@ class KernelParams:
                 'x_bandscale':1*np.ones([p,]),
                 'outer_x_bw':np.array([0.3,]),
                 'outer_y_bw':np.array([0.3,]),
-                'Ndiff_depth_bw':np.array([0.3]),
+                'Ndiff_depth_bw':depthfactor*np.ones([1,]),
                 'y_bandscale':1.0*np.ones([1,])
                 }
         return hyper_paramdict1

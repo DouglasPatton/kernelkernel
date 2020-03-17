@@ -502,7 +502,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         new_dict_list=[]
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
         string_list=[('modeldict','ykern_grid'),('modeldict','maxbatchbatchcount'),('datagen_dict','batchbatchcount'),('datagen_dict','batchcount'),('datagen_dict','seed'),('datagen_dict','batch_n'),
-                     ('modeldict','species_n'),('modeldict','spatialtransform'),('modeldict','species'),('modeldict','ykern_grid'),
+                     ('modeldict','spatialtransform'),('modeldict','ykern_grid'),
                      ('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),
                      ('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form'),('modeldict','logic_date')]
         for string_tup in string_list:
@@ -724,9 +724,24 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 model_run_dict_list.append(optmodel_run_dict)
                 #p#rint('model_run_dict_list:',model_run_dict_list)
         model_run_dict_list=self.restructure_small_n_species(model_run_dict_list)
+        model_run_dict_list=self.build_Ndiff_depth_bw(model_run_dict_list)
         return model_run_dict_list
     
-    
+    def build_Ndiff_depth_bw(self,model_run_dict_list):
+        for model_run_dict in model_run_dict_list:
+            Ndiff_depth_bw=model_run_dict['hyper_param_dict']['Ndiff_depth_bw']
+            if not type(Ndiff_depth_bw) is np.ndarray:
+                Ndiff_type=model_run_dict['modeldict']['Ndiff_type']
+                if Ndiff_type=='recursive':
+                    depth_p=1
+                elif Ndiff_type=='product':
+                    depth_p=model_run_dict['modeldict']['max_bw_Ndiff']
+                else:
+                    assert False,f'not expecting Ndiff_type:{Ndiff_type}'
+                model_run_dict['hyper_param_dict']['Ndiff_depth_bw']=Ndiff_depth_bw*np.ones([depth_p,],dtype=np.float64)
+                
+                
+            
     
     
     def restructure_small_n_species(self,model_run_dict_list):
