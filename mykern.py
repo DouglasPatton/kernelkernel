@@ -1,3 +1,6 @@
+from Ndiff import Ndiff
+from mykernhelper import MyKernHelper
+
 import multiprocessing
 #import traceback
 from copy import deepcopy
@@ -15,8 +18,7 @@ import logging
 #import logging.config
 import yaml
 import psutil
-from Ndiff import Ndiff
-from mykernhelper import MyKernHelper
+
 
 class kNdtool(Ndiff,MyKernHelper):
     """kNd refers to the fact that there will be kernels in kernels in these estimators

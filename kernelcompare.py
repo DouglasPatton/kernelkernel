@@ -9,7 +9,8 @@ import numpy as np
 import pickle
 import os
 import datagen as dg
-import mykern as mk
+import mykern-nomask as mk
+
 import re
 import logging,traceback
 import yaml
