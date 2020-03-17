@@ -43,9 +43,9 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.Ndiff:
             if modeldict['max_bw_Ndiff']==0:
                 if xory=='x':
-                    bwshape=(self.npr)
+                    bwshape=(self.nin,self.npr)
                 if xory=='y':
-                    bwshape=(self.nout,self.npr)
+                    bwshape=(self.nin,self.nout,self.npr)
                 bw=np.array([1])
                 np.broadcast_to(bw,bwshape)    
                 return np.array([1])
