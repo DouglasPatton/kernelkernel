@@ -453,8 +453,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     if len(ready_dict_idx) == 0:
                         print('run_dict_status',run_dict_status)
                     if len(ready_dict_idx)>0:
-                        next_ready_dict_idx=ready_dict_idx.pop()
-                        #next_ready_dict_idx=ready_dict_idx.pop(randint(0,len(ready_dict_idx)-1))#-1 b/c random.randint(a,b) includes b
+                        #next_ready_dict_idx=ready_dict_idx.pop()
+                        next_ready_dict_idx=ready_dict_idx.pop(randint(0,len(ready_dict_idx)-1))#-1 b/c random.randint(a,b) includes b
                         try:
                             run_dict_status[next_ready_dict_idx] = 'assigned'
                             #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready']

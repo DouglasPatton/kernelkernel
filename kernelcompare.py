@@ -724,21 +724,25 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 model_run_dict_list.append(optmodel_run_dict)
                 #p#rint('model_run_dict_list:',model_run_dict_list)
         model_run_dict_list=self.restructure_small_n_species(model_run_dict_list)
-        model_run_dict_list=self.build_Ndiff_depth_bw(model_run_dict_list)
+        self.rebuild_Ndiff_depth_bw(model_run_dict_list)
         return model_run_dict_list
     
-    def build_Ndiff_depth_bw(self,model_run_dict_list):
+    def rebuild_Ndiff_depth_bw(self,model_run_dict_list):
+        
         for model_run_dict in model_run_dict_list:
-            Ndiff_depth_bw=model_run_dict['hyper_param_dict']['Ndiff_depth_bw']
+            optdict=model_run_dict['optimizedict']
+            modeldict=optdict['modeldict'] 
+            Ndiff_depth_bw=optdict['hyper_param_dict']['Ndiff_depth_bw']
             if not type(Ndiff_depth_bw) is np.ndarray:
-                Ndiff_type=model_run_dict['modeldict']['Ndiff_type']
+                Ndiff_type=modeldict['Ndiff_type']
                 if Ndiff_type=='recursive':
                     depth_p=1
                 elif Ndiff_type=='product':
-                    depth_p=model_run_dict['modeldict']['max_bw_Ndiff']
+                    depth_p=modeldict['max_bw_Ndiff']
                 else:
                     assert False,f'not expecting Ndiff_type:{Ndiff_type}'
-                model_run_dict['hyper_param_dict']['Ndiff_depth_bw']=Ndiff_depth_bw*np.ones([depth_p,],dtype=np.float64)
+                optdict['hyper_param_dict']['Ndiff_depth_bw']=Ndiff_depth_bw*np.ones([depth_p,],dtype=np.float64)
+        #return model_run_dict_list
                 
                 
             
