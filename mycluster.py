@@ -388,7 +388,8 @@ class run_cluster(kernelcompare.KernelCompare):
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist)
             
             loopmax=5*len(readynamelist)
-            if loopcount>loopmax or len(next_readynamelist)==0:
+	
+            if True:#loopcount>loopmax or len(next_readynamelist)==0:
                 loopcount=0
                 
 
