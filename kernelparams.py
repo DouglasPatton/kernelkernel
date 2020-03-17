@@ -4,8 +4,8 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[4]
+        self.n=64 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.batchcount_variation_list=[2]
         self.do_minimize=1
         self.maxiter=20
         
@@ -35,7 +35,7 @@ class KernelParams:
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         #NWnorm_variations=('modeldict:NWnorm',['across','none'])
-        NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm'])
+        NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm','none'])
         #binary_y_variations=('modeldict:binary_y',[0.5])
         binary_y_variations=('modeldict:binary_y',[(.5, .45, .55)]) # if binary_y is a tuple,
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
@@ -48,9 +48,9 @@ class KernelParams:
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
+        #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
-        #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['across','own_n','none'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
