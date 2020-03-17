@@ -730,6 +730,10 @@ class KernelCompare(KernelOptModelTools,KernelParams):
     
     
     def restructure_small_n_species(self,model_run_dict_list):
+        '''
+        checks each model in the model_run_dict_list to make sure the associated species has enough observations. 
+        if not, batchcount reduced as low as 2 and if species still don't have enough observations, they are dropped.
+        '''
         newmodelrundictlist=[]
         species_n_dict={}
         for model_run_dict in model_run_dict_list:
