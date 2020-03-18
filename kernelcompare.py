@@ -326,8 +326,28 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             pickle.dump(list_of_saved_models,newfile)
         return merged_path
 
-                                              
-    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None):
+
+    def get_nwt_mse(self,saved_model_list):
+        nwt_list=[]
+        for full_model_i in saved_model_list:
+            i_mse=full_model_i['mse']
+            try:
+                i_naivemse=full_model_i['naivemse']
+            except:
+                i_naivemse=1
+            i_n=full_model_i['datagen_dict']['batch_n']
+            i_batchcount=full_model_i['datagen_dict']['batchcount']
+            try:
+                i_batchbatch1=full_model_i['datagen_dict']['batchbatchcount']
+                i_batchbatch2=full_model_i['modeldict']['maxbatchbatchcount']
+                if i_batchbatch1<i_batchbatch2:
+                    i_batchbatchcount=i_batchbatch1
+                else: i_batchbatchcount=i_batchbatch2
+            except: i_batchbatchcount=1
+            nwt_list.append(self.do_nwt_mse(i_mse,i_n,i_batchcount,naivemse=i_naivemse,batchbatchcount=i_batchbatchcount))
+        return nwt_list
+    
+    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0):
         if saved_model_list==None:
             return []
         if verbose=='yes': verbose=1
@@ -335,57 +355,26 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         assert type(verbose)==int, f'type(verbose) should be int but :{type(verbose)}'
         if strict=='yes':strict=1
         if strict=='no':strict=0
-        modelcount=len(saved_model_list)
+
+        nwt_list=self.get_nwt_mse(saved_model_list)
+        
+        
+        modelcount=len(saved_model_list)        
         keep_model=[1 for _ in range(modelcount)]
-        for i,full_model_i in enumerate(saved_model_list):
+        for i in range(modelcount):
             if verbose>0:
                 print(f'{100*i/modelcount}%',end=',')
                 
-            if keep_model[i]==1:
-                for j,full_model_j in enumerate(saved_model_list[i+1:]):
+            if keep_model[i]:
+                for j in range(modelcount-(i+1)):
+                #for j,full_model_j in enumerate(saved_model_list[i+1:]):
                     j=j+i+1
-                    if keep_model[j]==1:
-                        matchlist=self.do_partial_match([full_model_i],full_model_j,help_start=help_start,strict=strict)
+                    if keep_model[j]:
+                        matchlist=self.do_partial_match([saved_model_list[i]],saved_model_list[j],help_start=help_start,strict=strict)
                         #if full_model_i['modeldict']==full_model_j['modeldict']:
                         if len(matchlist)>0:
-                            i_mse=full_model_i['mse']
-                            j_mse=full_model_j['mse']
-                            try:
-                                i_naivemse=full_model_i['naivemse']
-                                j_naivemse=full_model_j['naivemse']
-                            except:
-                                i_naivemse=1
-                                j_naivemse=1
-                            try:
-                                i_n=full_model_i['datagen_dict']['train_n']
-                                i_batchcount=1                               
-                            except:
-                                i_n=full_model_i['datagen_dict']['batch_n']
-                                i_batchcount=full_model_i['datagen_dict']['batchcount']
-                            try:
-                                j_n=full_model_j['datagen_dict']['train_n']
-                                j_batchcount=1                                  
-                            except:
-                                j_n=full_model_j['datagen_dict']['batch_n']
-                                j_batchcount=full_model_j['datagen_dict']['batchcount']
-
-                            try:
-                                j_batchbatch1=full_model_j['datagen_dict']['batchbatchcount']
-                                j_batchbatch2=full_model_j['modeldict']['maxbatchbatchcount']
-                                if j_batchbatch1<j_batchbatch2:
-                                    j_batchbatchcount=j_batchbatch1
-                                else: j_batchbatchcount=j_batchbatch2
-                            except: j_batchbatchcount=1
-                            try:
-                                i_batchbatch1=full_model_i['datagen_dict']['batchbatchcount']
-                                i_batchbatch2=full_model_i['modeldict']['maxbatchbatchcount']
-                                if i_batchbatch1<i_batchbatch2:
-                                    i_batchbatchcount=i_batchbatch1
-                                else: i_batchbatchcount=i_batchbatch2
-                            except: i_batchbatchcount=1
-                                                                
-                            iwt=self.do_nwt_mse(i_mse,i_n,i_batchcount,naivemse=i_naivemse,batchbatchcount=i_batchbatchcount)
-                            jwt=self.do_nwt_mse(j_mse,j_n,j_batchcount,naivemse=j_naivemse,batchbatchcount=j_batchbatchcount)
+                            iwt=nwt_list[i]
+                            jwt=nwt_list[j]
                             if verbose>1:
                                 print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
@@ -399,9 +388,15 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                                 keep_model[i]=0
                                 break
                     
-        final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]==1]
+        final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]]
+        
         if verbose>0:
             print(f'len(final_keep_list):{len(final_keep_list)}')
+        if endsort:
+            final_nwt_list=[nwt_list[i] for i in range(modelcount) if keep_model[i]]
+            final_keep_list=[item for _,item in sorted(zip(final_nwt_list,final_keep_list))]
+            #condensed_model_list.sort(key=lambda savedicti: savedicti['mse'])
+            
         return final_keep_list
 
     def do_nwt_mse(self,mse,n,batch_count=1,naivemse=1,batchbatchcount=1):
@@ -502,10 +497,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         print('-----partial match is looking for a partial match------')
         new_dict_list=[]
         #datagen_dict={'train_n':60,'n':200, 'param_count':2,'seed':1, 'ftype':'linear', 'evar':1}
-        string_list=[('modeldict','ykern_grid'),('modeldict','maxbatchbatchcount'),('datagen_dict','batchbatchcount'),('datagen_dict','batchcount'),('datagen_dict','seed'),('datagen_dict','batch_n'),
+        string_list=[('modeldict','hyper_param_form_dict'),('modeldict','ykern_grid'),('modeldict','maxbatchbatchcount'),('datagen_dict','batchbatchcount'),('datagen_dict','batchcount'),('datagen_dict','seed'),('datagen_dict','batch_n'),
                      ('modeldict','spatialtransform'),('modeldict','ykern_grid'),
-                     ('modeldict','xkern_grid'),('datagen_dict','batchcount'),('datagen_dict','evar'),('modeldict','hyper_param_form_dict'),('modeldict','regression_model'),
-                     ('modeldict','loss_function'),('modeldict','NWnorm'),('modeldict','ykerngrid_form'),('modeldict','logic_date')]
+                     ('modeldict','xkern_grid'),('datagen_dict','batchcount')]
         for string_tup in string_list:
             try:
                 sub_value=adoubledict[string_tup[0]][string_tup[1]]

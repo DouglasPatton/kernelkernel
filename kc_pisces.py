@@ -21,12 +21,15 @@ class KCPisces():
         return new_species_model_save_path_dict
         
         
-    def model_run_filter():
+    def model_run_filter(self,):
         all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
+        model_run_list=[]
         for spec in all_species_model_merge_dict:
             model_run_list=all_species_model_merge_dict[spec]
+            self.logger.debug('model_run_filter starting spec:{spec} with len(model_run_list):{len(model_run_list)}')
+            model_run_list=all_species_model_merge_dict[spec]
+            condensed_model_list=self.condense_saved_model_list(model_run_list, help_start=0, strict=1,verbose=0,endsort=1)
             
-            self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
             
             
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):
