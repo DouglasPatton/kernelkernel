@@ -1,5 +1,5 @@
 import pickle
-import os
+import os,sys,psutil
 import re
 from time import strftime,sleep
 import datetime
@@ -83,14 +83,15 @@ class run_cluster(kernelcompare.KernelCompare):
         print(f'self.savedirectory{self.savedirectory}')
         
         if not myname=='master':
-            self.initialize(myname)
-        else:
             platform=sys.platform
             p=psutil.Process(os.getpid())
             if platform=='win32':
                 p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
             else:
-                p.nice(-5)
+                p.nice(6)
+            return self.initialize(myname)
+        
+            
 
         
         self.datagen_dict=self.setdata(source)#creates the initial datagen_dict

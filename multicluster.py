@@ -34,12 +34,12 @@ class mypool:
         #logging.config.dictConfig(configfile)
         #self.logger = logging.getLogger('multiClusterLogger')
 
-        platform=sys.platform
+        ''' platform=sys.platform
         p=psutil.Process(os.getpid())
         if platform=='win32':
             p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
         else:
-            p.nice(6)
+            p.nice(6)'''
         #seed(1)
         #seed(datetime.now())
         self.local_run=local_run
