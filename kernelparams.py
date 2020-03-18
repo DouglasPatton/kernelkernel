@@ -5,12 +5,12 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[3]
+        self.batchcount_variation_list=[8]
         self.do_minimize=1
         self.maxiter=20
         
     def getoptdictvariations(self,source='monte'):
-        max_bw_Ndiff=3
+        max_bw_Ndiff=2
         
                
         ''''hyper_param_form_dict':{
@@ -25,7 +25,13 @@ class KernelParams:
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
         
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1,-1]) for factor in np.linspace(.3,.9,3)])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
+            [
+                *[factor*np.array([1,-1]) for factor in np.linspace(.3,.9,3)],
+                *[factor*np.array([1,1]) for factor in np.linspace(.3,.9,3)],
+                *[factor*np.array([-1,1]) for factor in np.linspace(.3,.9,3)],
+                *[factor*np.array([-1,-1]) for factor in np.linspace(.3,.9,3)]
+            ])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
         Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.arange(0.15,.9,.3)))
         
@@ -48,10 +54,10 @@ class KernelParams:
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
-        #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
+        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
-        product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['across','own_n','none'])
+        #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
@@ -126,7 +132,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in [3]])
+            species_variations=('species',[self.specieslist[i] for i in range(100,105)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
