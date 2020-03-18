@@ -44,7 +44,7 @@ class KCPisces():
             modeldict=model_save['modeldict']
             datagen_dict=model_save['modeldict']
             modeldict_datagen_dict_dict=self.pull2dicts(model_save)
-            optimizedict=self.build_optdict(opt_dict_override=modeldict_datagen_dict_dict,param_count=None,species=None):
+            optimizedict=self.build_optdict(opt_dict_override=modeldict_datagen_dict_dict,param_count=None,species=None)
             best_fof_paramdict=model_save['params']
             self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
             
