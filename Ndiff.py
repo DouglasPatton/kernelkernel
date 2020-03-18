@@ -73,7 +73,7 @@ class Ndiff:
         # if depth is 3, y:-3 and x:-2
         # if depth is 4, y:-4 and x:-3
         """dropping these because moving transposition back to the datastacker to keep variation in dims 0,1 where we will sum
-        This approach would have worked, but it seems would have required a de transpose
+        This approach would have worked, but it seems would have required an additional transpose at the end
         if x_or_y=='y':
             if depth==1:
                 sum_axis=-3
