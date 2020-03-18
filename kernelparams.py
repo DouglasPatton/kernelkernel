@@ -273,8 +273,8 @@ class KernelParams:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.05,
-            'fatol':.01,
+            'xatol':0.005,
+            'fatol':.001,
             'adaptive':True,
             'maxiter':self.maxiter
             }

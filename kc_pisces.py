@@ -1,4 +1,3 @@
-from kc_helpers import KCHelper
 from helpers import Helper
 import logging
 import os
@@ -19,18 +18,35 @@ class KCPisces():
             new_species_model_save_path_dict=species_model_save_path_dict
         self.savepickle(new_species_model_save_path_dict,path)
         return new_species_model_save_path_dict
+    
+    
+    
         
-        
-    def model_run_filter(self,):
+    def merge_dict_model_filter(self,threshold=None,bestshare=0.1):
         all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
-        model_run_list=[]
+        new_model_save_list=[]
         for spec in all_species_model_merge_dict:
-            model_run_list=all_species_model_merge_dict[spec]
-            self.logger.debug('model_run_filter starting spec:{spec} with len(model_run_list):{len(model_run_list)}')
-            model_run_list=all_species_model_merge_dict[spec]
-            condensed_model_list=self.condense_saved_model_list(model_run_list, help_start=0, strict=1,verbose=0,endsort=1)
-            
-            
+            model_save_list=all_species_model_merge_dict[spec]
+            self.logger.debug('model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
+            model_save_list=all_species_model_merge_dict[spec]
+            sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=1, strict=1,verbose=0,endsort=1,threshold=threshold)
+            #help_start applies do_partial_match and will eliminate models with higher nwtmse and only a partial match of parameters.
+        if bestshare:
+            fullcount=len(sorted_condensed_model_list)
+            bestcount=int(fullcount*bestshare)
+            new_model_save_list.extend(sorted_condensed_model_list[:bestcount])
+        else:new_model_save_list.extend(sorted_condensed_model_list)
+        return new_model_save_list
+        
+        
+    def opt_job_builder(self,model_save_list,maxiter=None,):
+        for model_save in model_save_list:
+            modeldict=model_save['modeldict']
+            datagen_dict=model_save['modeldict']
+            modeldict_datagen_dict_dict=self.pull2dicts(model_save)
+            optimizedict=self.build_optdict(opt_dict_override=modeldict_datagen_dict_dict,param_count=None,species=None):
+            best_fof_paramdict=model_save['params']
+            self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
             
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):
         

@@ -347,7 +347,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             nwt_list.append(self.do_nwt_mse(i_mse,i_n,i_batchcount,naivemse=i_naivemse,batchbatchcount=i_batchbatchcount))
         return nwt_list
     
-    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0):
+    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0,threshold=None):
         if saved_model_list==None:
             return []
         if verbose=='yes': verbose=1
@@ -394,7 +394,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             print(f'len(final_keep_list):{len(final_keep_list)}')
         if endsort:
             final_nwt_list=[nwt_list[i] for i in range(modelcount) if keep_model[i]]
-            final_keep_list=[item for _,item in sorted(zip(final_nwt_list,final_keep_list))]
+            final_keep_list,final_nwt_list=zip(*[(nwt_mse,model) for nwt_mse,model in sorted(zip(final_nwt_list,final_keep_list))])
+        if threshold:
+            if final_nwt_list=='naivemse':
+                final_keep_list=[model for model in final_keep_list if model['mse']<model['naivemse']]
             #condensed_model_list.sort(key=lambda savedicti: savedicti['mse'])
             
         return final_keep_list
