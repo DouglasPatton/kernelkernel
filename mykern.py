@@ -823,6 +823,7 @@ class optimize_free_params(kNdtool):
     def run_opt(self,datagen_obj,optimizedict,savedir):
         
         self.savedir=savedir
+        self.savepath=optimizedict.pop('savepath')#so it's not saved
     
         #self.Ndiff_list_of_masks_x=xmask
         #self.Ndiff_list_of_masks_y=ymask

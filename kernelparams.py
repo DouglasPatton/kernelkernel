@@ -209,12 +209,25 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,):
+    def build_stepdict_list(self,sharecutcount=2,threshcutcount=2):
+        stepcount=1+sharecutcount+threshcutcount
+        
         stepdict_list=[]
         optdict_variation_list=self.getoptdictvariations(source=source)
         datagen_variation_list=self.getdatagenvariations(source=source)
-        step0={'variations':{'optdictvariations':optdict_variation_list, }}
-        
+        step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+        stepdictlist.append(step0)
+        threshold_list=[None]*sharecutcount+['naivemse']*threshcutcount
+        bestshare_list=[.25,.1,.1,.1]
+        for step in range(sharecutcount):
+            filter_kwargs={'threshold'=None,'bestshare'=0.1}
+            startpath=os.path.join(self.modelsavedirectory,'step'+str(step))
+            if not os.path.exists(startpath); os.mkdir(startpath)
+            ppm_kwargs={'condense':0,'recondense':0,'recondense2':1}
+            stepdict={'functions':[(self.process_piscesmodels,[startpath],ppm_kwargs),(self.merge_dict_model_filter,[],filter_kwargs)]}
+            
+            merge_dict_model_filter(self,threshold=None,bestshare=0.1)
+            
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
         if opt_dict_override==None:

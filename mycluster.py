@@ -66,7 +66,9 @@ class run_cluster(kernelcompare.KernelCompare):
         
         self.masterdirectory, self.masterfiledirectory=self.setmasterdir(self.savedirectory,myname)
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
+        self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
         if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
+            if not os.path.exists(self.modelsavedirectory): os.mkdir(self.modelsavedirectory)
         self.masterfilefilename=os.path.join(self.masterfiledirectory, 'masterfile')
         
         if myname is None:
@@ -100,9 +102,9 @@ class run_cluster(kernelcompare.KernelCompare):
         list_of_run_dicts=self.prep_model_list(
         optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=initial_datagen_dict)
         #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-        rundictpathlist=self.setupalljob_paths(list_of_run_dicts)
+        self.setupalljob_paths(list_of_run_dicts)
         #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
-        return list_of_run_dicts,rundictpathlist
+        return list_of_run_dicts
     
     
     def setmasterdir(self,savedirectory,myname):
@@ -138,9 +140,33 @@ class run_cluster(kernelcompare.KernelCompare):
         if not self.dosteps:
             return self.runmaster()
         model_run_stepdict_list=self.build_stepdict_list()
-        for stepdict in model_run_stepdict_list:
+        for i,stepdict in enumerate(model_run_stepdict_list):
             if 'variations' in stepdict:
+                list_of_run_dicts=self.generate_rundicts_from_variations()
+                self.runmaster(list_of_run_dicts)
+                self.logger.info(f'step#:{i} completed')
+            else:
+                resultslist=[]
+                for func_tup in stepdict['functions']
+                    args=functup[1]
+                    kwargs=functup[2]
+                    resultslist.append(functup[0](*args,**kwargs))
+                next_list_of_run_dicts=resultslist[-1]
+                self.rundict_advance_path(next_list_of_run_dicts,i)
                 
+                
+    def rundict_advance_path(self,next_list_of_rundicts,i):
+        for rundict in list_of_rundicts
+            jobpath=rundict['jobpath']
+            savepath=rundict['savepath']
+            savefolderpath,savepathstem=os.path.split(savepath)
+            jobfolderpath,jobpathstem=os.path.split(jobpath)
+            charcount=len(str(i))+4 # 4 for 'step'
+            newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
+            newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+            rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
+            rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
+            
             
         
     def initialize(self,myname):
@@ -349,7 +375,7 @@ class run_cluster(kernelcompare.KernelCompare):
   
 
 
-    def runmaster(self):
+    def runmaster(self,list_of_run_dicts):
         dorestart=1
         if self.checkmaster(): 
             masterfile=self.getmaster()
@@ -358,7 +384,6 @@ class run_cluster(kernelcompare.KernelCompare):
             try: 
                 assignment_tracker=masterfile['assignment_tracker']
                 list_of_run_dicts=masterfile['list_of_run_dicts']
-                rundictpathlist=masterfile['rundictpathlist']
                 run_dict_status=masterfile['run_dict_status']
                 model_run_count=len(list_of_run_dicts)
                 
@@ -369,7 +394,7 @@ class run_cluster(kernelcompare.KernelCompare):
         
         if dorestart:
             assignment_tracker={}
-            list_of_run_dicts,rundictpathlist=self.generate_rundicts_from_variations()
+            list_of_run_dicts=self.generate_rundicts_from_variations()
             model_run_count=len(list_of_run_dicts)
             if run_dict
             run_dict_status=['ready' for status in range(model_run_count)]
@@ -381,7 +406,7 @@ class run_cluster(kernelcompare.KernelCompare):
         next_readynamelist=[]
         while keepgoing:
             
-            self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist)
+            self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
             loopmax=5*len(readynamelist)
 	
@@ -453,7 +478,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             run_dict_status[next_ready_dict_idx] = 'assigned'
                             #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready']
-                            newjobpath=rundictpathlist[next_ready_dict_idx]
+                            newjobpath=list_of_run_dicts[next_ready_dict_idx]['jobpath']
                             #if not name in nonewjob_namelist:
                             setup=self.setup_job_for_node(name,newjobpath,list_of_run_dicts[next_ready_dict_idx])
                             assignment_tracker[name] = next_ready_dict_idx
@@ -619,27 +644,18 @@ class run_cluster(kernelcompare.KernelCompare):
                     
         return
     
-    def setupalljob_paths(self,rundictlist):
+    def setupalljob_paths(self,rundictlist,step):
         rundictpathlist=[]
         for idx,rundict in enumerate(rundictlist):
-            jobpath=os.path.join(self.jobdirectory,str(idx)+'_jobdict')
-            rundictpathlist.append(jobpath)
-            '''for i in range(2):
-                try:
-                    jobpath=os.path.join(self.jobdirectory,str(idx)+'_jobdict')
-                    with open(jobpath,'wb') as f:
-                        pickle.dump(jobdict,f)
-                    rundictpathlist.append(jobpath)
-                    # print(f'newjob has jobdict:{jobdict}')
-                    break
-                except:
-                    if i==1:
-                        self.logger.exception(f'error in {__name__}')
-                    sleep(0.35)
-                '''
-        return rundictpathlist
+            jobpath=os.path.join(self.jobdirectory,'step'+str(step),str(idx)+'_jobdict')
+            try: species=rundict['datagen_dict']['species']
+            except: species=''
+            savepath=os.path.join(self.modelsavedirectory,'step'+str(step),'species-'+species+'_model_save_'+str(idx)')
+            rundict['jobpath']=jobpath
+            rundict['savepath']=savepath
 
-    def setup_job_for_node(self,name,rundictpath,rundict):
+                                  
+    def setup_job_for_node(self,name,rundict):
         nodedir=os.path.join(self.savedirectory,name)
         if not os.path.exists(nodedir):
             self.logger.warning(f'fornode:{name}, adding missing nodedir:{nodedir}')
@@ -654,7 +670,7 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             self.logger.exception('')
             myjobfile={'status':[]}
-        myjobfile['link']=rundictpath
+        myjobfile['jobpath']=rundict['jobpath']
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,'ready')
         myjobfile['status'].append(time_status_tup)
@@ -806,9 +822,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     return
                 else:
                     sleep(2)
-            rundictpath=jobfile_dict['link']
+            rundictpath=jobfile_dict['jobpath']
             my_opt_job=self.getpickle(rundictpath)
             my_optimizedict=my_opt_job['optimizedict']
+            my_optimizedict['savepath']=my_opt_job['savepath']
             my_datagen_dict=my_opt_job['datagen_dict']
 
 
