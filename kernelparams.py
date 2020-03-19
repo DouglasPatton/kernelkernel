@@ -5,9 +5,9 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[8]
-        self.do_minimize=1
-        self.maxiter=20
+        self.batchcount_variation_list=[4]
+        self.do_minimize=0
+        self.maxiter=3
         
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
@@ -207,8 +207,13 @@ class KernelParams:
             assert False, f"error, source not recognized. source:{source}"
             
         self.datagen_dict=datagen_dict
-        return datagen_dict    
-
+        return datagen_dict   
+    
+    def build_stepdict_list(self,):
+        stepdict_list=[]
+        optdict_variation_list=self.getoptdictvariations(source=source)
+        datagen_variation_list=self.getdatagenvariations(source=source)
+        
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
         if opt_dict_override==None:

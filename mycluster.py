@@ -38,19 +38,16 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     
-    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,local_run=None):
-        self.oldnode_threshold=datetime.timedelta(minutes=180)
-
-        seed(1)
-        if source==None:
-            source='monte'
+    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=None,local_run=None):
+        seed(1)        
+        self.oldnode_threshold=datetime.timedelta(minutes=60)
+        self.dosteps=dosteps
+        self.optdict_variation_list=optdict_variation_list
+        self.datagen_variation_list=datagen_variation_list
+        if source is None: source='monte'
         self.source=source
         self.savedirectory=self.setdirectory(local_run=local_run)
-        
-        
         logdir=os.path.join(os.getcwd(),'log')
-        #logdir=os.path.join(self.savedirectory,'log')
-
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mycluster_{myname}.log')
         logging.basicConfig(
@@ -61,7 +58,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.logger = logging.getLogger(handlername)
         self.helper=Helper()
         if myname=='master':
-            self.model_collection_directory=self.helper.getname(os.path.join(os.getcwd(),'..','model_collection'))#
+            self.model_collection_directory=self.helper.getname(os.path.join(os.getcwd(),'model_collection'))#
             self.logger.info(f'self.model_collection_directory:{self.model_collection_directory}')
             if not os.path.exists(self.model_collection_directory): os.mkdir(self.model_collection_directory)
 
@@ -70,17 +67,10 @@ class run_cluster(kernelcompare.KernelCompare):
         self.masterdirectory, self.masterfiledirectory=self.setmasterdir(self.savedirectory,myname)
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
         if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
-        
-        
         self.masterfilefilename=os.path.join(self.masterfiledirectory, 'masterfile')
         
         if myname is None:
             myname='node'
-        
-        
-
-        
-        print(f'self.savedirectory{self.savedirectory}')
         
         if not myname=='master':
             platform=sys.platform
@@ -92,33 +82,27 @@ class run_cluster(kernelcompare.KernelCompare):
             return self.initialize(myname)
         
             
-
-        
-        self.datagen_dict=self.setdata(source)#creates the initial datagen_dict
-        
-        
         if local_run==None or local_run=='yes' or local_run=='Yes':
             local_run=1
         if local_run=='no' or local_run=='No':
             local_run=0
 
-        #self.n=32 #must be even if ykerngrid is 1 higher and ykerngrid_form:exp is used
-
-                    
-        
-        if optdict_variation_list==None:
-            
-            optdict_variation_list=self.getoptdictvariations(source=source)
-        if datagen_variation_list==None:
-            datagen_variation_list=self.getdatagenvariations(source=source)
-        
-
-
         #print(f'datagen_variation_list:{datagen_variation_list}')
         self.initialize(
             myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
 
-    
+    def generate_rundicts_from_variations(self,source,optdict_variation_list,datagen_variation_list):
+        if optdict_variation_list is None:
+            optdict_variation_list=self.getoptdictvariations(source=source)
+        if datagen_variation_list is None:
+            datagen_variation_list=self.getdatagenvariations(source=source)
+        initial_datagen_dict=self.setdata(source)
+        list_of_run_dicts=self.prep_model_list(
+        optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=initial_datagen_dict)
+        #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
+        rundictpathlist=self.setupalljob_paths(list_of_run_dicts)
+        #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
+        return list_of_run_dicts,rundictpathlist
     
     
     def setmasterdir(self,savedirectory,myname):
@@ -150,14 +134,21 @@ class run_cluster(kernelcompare.KernelCompare):
                                 self.logger.exception(f'error in {__name__} attempting mkdir({savedirectory})')
         return savedirectory
 
+    def mastermaster(self,):
+        if not self.dosteps:
+            return self.runmaster()
+        model_run_stepdict_list=self.build_stepdict_list()
+        for stepdict in model_run_stepdict_list:
+            if 'variations' in stepdict
+            
         
-    def initialize(self,myname,optdict_variation_list=None,datagen_variation_list=None):
+    def initialize(self,myname):
         
         if myname=="master":
             try:
-                self.runmaster(optdict_variation_list,datagen_variation_list)
+                self.mastermaster()
             except:
-                self.logger.exception('master failed')
+                self.logger.exception('mastermaster failed')
         else:
             myname=self.createnamefile(myname)
             self.nodedirectory = os.path.join(self.savedirectory, myname)
@@ -355,9 +346,9 @@ class run_cluster(kernelcompare.KernelCompare):
         readynamelist=current_name_list
         return run_dict_status, assignment_tracker, readynamelist
   
-        
 
-    def runmaster(self,optdict_variation_list,datagen_variation_list):
+
+    def runmaster(self):
         dorestart=1
         if self.checkmaster(): 
             masterfile=self.getmaster()
@@ -375,19 +366,15 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.logger.exception('restarting master')
                 dorestart=1
         
-        if dorestart==1:
+        if dorestart:
             assignment_tracker={}
-            list_of_run_dicts=self.prep_model_list(
-                optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=self.datagen_dict)
-            #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-            rundictpathlist=self.setupalljob_paths(list_of_run_dicts)
-            #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
+            list_of_run_dicts,rundictpathlist=self.generate_rundicts_from_variations()
             model_run_count=len(list_of_run_dicts)
-            run_dict_status=['ready' for _ in range(model_run_count)]
+            if run_dict
+            run_dict_status=['ready' for status in range(model_run_count)]
         print('model_run_count',model_run_count)
 
         i=0;loopcount=0
-        shutdownnodes=0
         keepgoing=1
         readynamelist=[]
         next_readynamelist=[]
@@ -405,13 +392,11 @@ class run_cluster(kernelcompare.KernelCompare):
                 #namelist=self.getnamelist()
                 #readynamelist=self.getreadynames(namelist)
                 
-                if shutdownnodes and len(readynamelist)==0:
-                    keepgoing=0
                 #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
                 if len(readynamelist)>1:
                     print(f'readynamelist:{readynamelist}')
-                if all([status=='finished' for status in run_dict_status])==True:
-                    shutdownnodes=1
+                if all([status=='finished' for status in run_dict_status]):
+                    return 1
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
                 notanewjob_list=[]
                 
@@ -467,10 +452,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             run_dict_status[next_ready_dict_idx] = 'assigned'
                             #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready']
-                            if shutdownnodes:
-                                newjob='shutdown'
-                            else:
-                                newjobpath=rundictpathlist[next_ready_dict_idx]
+                            newjobpath=rundictpathlist[next_ready_dict_idx]
                             #if not name in nonewjob_namelist:
                             setup=self.setup_job_for_node(name,newjobpath,list_of_run_dicts[next_ready_dict_idx])
                             assignment_tracker[name] = next_ready_dict_idx

@@ -39,11 +39,18 @@ class KCPisces():
         return new_model_save_list
         
         
-    def opt_job_builder(self,model_save_list,maxiter=None,):
+    def opt_job_builder(self,model_save_list,maxiter=None,do_minimize=None):
         for model_save in model_save_list:
             modeldict=model_save['modeldict']
-            datagen_dict=model_save['modeldict']
-            modeldict_datagen_dict_dict=self.pull2dicts(model_save)
+            opt_settings_dict=model_save['opt_settings_dict']
+            expanded_datagen_dict=model_save['datagen_dict']
+            if not maxiter is None:
+                opt_settings_dict['options']['maxiter']=maxiter
+            
+            if not do_minimize is None:
+                opt_settings_dict['do_minimize']=do_minimize
+               
+            modeldict_datagen_dict_dict['opt_settings_dict']=opt_settings_dict
             optimizedict=self.build_optdict(opt_dict_override=modeldict_datagen_dict_dict,param_count=None,species=None)
             best_fof_paramdict=model_save['params']
             self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
