@@ -86,13 +86,14 @@ class Helper:
                 #    if char=='.':
                 #        dotpos.append(i)
                 #        break
-                try: 
+                #try: 
                     #lastdot=dotpos.pop(-1)
+                if len(splitlist)>1:
                     prefix=''.join(splitlist[:-1])
                     suffix=splitlist[-1]
                     prefix=filename[:lastdot]
                     suffix=filename[lastdot:]
-                except:
+                else:
                     prefix=filename
                     suffix=''
                 _pos=[]

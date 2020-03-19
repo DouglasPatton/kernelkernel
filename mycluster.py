@@ -139,7 +139,8 @@ class run_cluster(kernelcompare.KernelCompare):
             return self.runmaster()
         model_run_stepdict_list=self.build_stepdict_list()
         for stepdict in model_run_stepdict_list:
-            if 'variations' in stepdict
+            if 'variations' in stepdict:
+                
             
         
     def initialize(self,myname):

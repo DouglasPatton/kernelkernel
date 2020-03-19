@@ -213,6 +213,7 @@ class KernelParams:
         stepdict_list=[]
         optdict_variation_list=self.getoptdictvariations(source=source)
         datagen_variation_list=self.getdatagenvariations(source=source)
+        step0={'variations':{'optdictvariations':optdict_variation_list, }}
         
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
