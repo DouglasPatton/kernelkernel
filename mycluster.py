@@ -68,7 +68,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
         self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
         if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
-            if not os.path.exists(self.modelsavedirectory): os.mkdir(self.modelsavedirectory)
+        if not os.path.exists(self.modelsavedirectory): os.mkdir(self.modelsavedirectory)
         self.masterfilefilename=os.path.join(self.masterfiledirectory, 'masterfile')
         
         if myname is None:
@@ -113,7 +113,7 @@ class run_cluster(kernelcompare.KernelCompare):
             jobpath=os.path.join(self.jobdirectory,'step'+str(step),str(idx)+'_jobdict')
             try: species=rundict['datagen_dict']['species']
             except: species=''
-            savepath=os.path.join(self.modelsavedirectory,'step'+str(step),'species-'+species+'_model_save_'+str(idx)')
+            savepath=os.path.join(self.modelsavedirectory,'step'+str(step),'species-'+species+'_model_save_'+str(idx))
             rundict['jobpath']=jobpath
             rundict['savepath']=savepath
 
@@ -158,7 +158,7 @@ class run_cluster(kernelcompare.KernelCompare):
             else:
                 resultslist=[]
                 
-                for func_tup in stepdict['functions']
+                for func_tup in stepdict['functions']:
                     args=functup[1]
                     if args==[]:
                         args=resultslist[-1]
@@ -261,25 +261,27 @@ class run_cluster(kernelcompare.KernelCompare):
     
     def archivemaster(self):
         masterfile=self.getmaster()
-        for i in range(3):
+        masterfile_archive_path=os.path.join(self.masterdirectory,'mastefile_archive')
+        masterfile_archive_path=self.helper.getname(masterfile_archive_path)
+        try:
+            with open(masterfile_archive_path,'wb') as f:
+                pickle.dump(masterfile,f)
+        except:
+            self.logger.exception('archivemaster has failed')
+            print('archivemaster has failed')
+            return
+        try:
+            os.remove(self.masterfilefilename)
             try:
-                with open('masterfile_archive','wb') as savefile:
-                    pickle.dump(masterfile,savefile)
-                break
+                os.remove(self.masterfilefilename+'_backup')
             except:
-                if i==2:
-                    self.logger.exception(f'error in {__name__}')
-                    print('arechivemaster has failed')
-                    return
-        for i in range(3): 
-            try:
-                os.remove(self.masterfilefilename)
-                return
-            except:
-                if i==2:
-                    print('masterfile_archive created, but removal of old file has failed')
-                    self.logger.exception(f'error in {__name__}')
-                    return
+                self.logger.exception(f'error removing mastefilebackup at:{self.masterfilefilename+'_backup'} ')
+                
+            return
+        except:
+            print('masterfile_archive created, but removal of old file has failed')
+            self.logger.exception(f'error in {__name__}')
+            return
                     
     
     def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist):
@@ -379,7 +381,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
     def runmaster(self,list_of_run_dicts):
-        '''dorestart=1
+        dorestart=1
         if self.checkmaster(): 
             masterfile=self.getmaster()
             
@@ -395,13 +397,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.logger.exception('restarting master')
                 dorestart=1
         
-        if dorestart:'''
-        assignment_tracker={}
-        list_of_run_dicts=self.generate_rundicts_from_variations()
-        model_run_count=len(list_of_run_dicts)
-        if run_dict
-        run_dict_status=['ready' for status in range(model_run_count)]
-        print('model_run_count',model_run_count)
+        if dorestart:
+            assignment_tracker={}
+            #list_of_run_dicts=self.generate_rundicts_from_variations()
+            model_run_count=len(list_of_run_dicts)
+            run_dict_status=['ready' for status in range(model_run_count)]
+            print('model_run_count',model_run_count)
 
         i=0;loopcount=0
         keepgoing=1
@@ -425,7 +426,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 if len(readynamelist)>1:
                     print(f'readynamelist:{readynamelist}')
                 if all([status=='finished' for status in run_dict_status]):
-                    return 1
+                    break
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
                 notanewjob_list=[]
                 
@@ -434,6 +435,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 readynamelist=next_readynamelist
             next_readynamelist=[]
             shuffle(readynamelist)
+            readysleepcount=0
             for name in readynamelist:
                 loopcount+=1
                 #name=readynamelist.pop(0)
@@ -477,6 +479,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         print('run_dict_status',run_dict_status)
                     if len(ready_dict_idx)>0:
                         #next_ready_dict_idx=ready_dict_idx.pop()
+                        readysleepcount+=1
                         next_ready_dict_idx=ready_dict_idx.pop(randint(0,len(ready_dict_idx)-1))#-1 b/c random.randint(a,b) includes b
                         try:
                             run_dict_status[next_ready_dict_idx] = 'assigned'
@@ -549,20 +552,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     
                 else:
                     self.logger.critical(f'for name:{name} job_status not recognized:{job_status}')
-            sleeptime=max([0,5-len(next_readynamelist)])
-            sleep(sleeptime)
-            '''if i<100:
-                sleep(1)
-            else:
-                sleep(10)'''
-        
-
-            
-
-        #assert i==model_run_count, f"i={i}but model_run_count={model_run_count}"
+            if readysleepcount==0:
+                sleep(5)
         self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
         self.archivemaster()
-        print('all jobs finished')
         return
     
 
