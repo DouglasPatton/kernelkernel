@@ -38,7 +38,7 @@ class run_cluster(kernelcompare.KernelCompare):
     and that are not working on a job. The master can also check the nodes model_save file
     '''
     
-    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=None,local_run=None):
+    def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None):
         seed(1)        
         self.oldnode_threshold=datetime.timedelta(minutes=60)
         self.dosteps=dosteps
@@ -108,16 +108,19 @@ class run_cluster(kernelcompare.KernelCompare):
     
     
     def setupalljob_paths(self,rundictlist,step=None):
-        rundictpathlist=[]
+        if step is None:
+            step=0
         for idx,rundict in enumerate(rundictlist):
-            if step is None:
-                step='step0'
-            else:
-                step='step'+str(step)
-            jobpath=os.path.join(self.jobdirectory,step,str(idx)+'_jobdict')
+            jobstepdir=os.path.join(self.jobdirectory,'step'+str(step))
+            if not os.path.exists(jobstepdir): os.mkdir(jobstepdir)
+            jobpath=os.path.join(jobstepdir,str(idx)+'_jobdict')
             try: species=rundict['datagen_dict']['species']
-            except: species=''
-            savepath=os.path.join(self.modelsavedirectory,step,'species-'+species+'_model_save_'+str(idx))
+            except: 
+                self.logger.exception('')
+                species=''
+            savestepdir=os.path.join(self.modelsavedirectory,'step'+str(step))
+            if not os.path.exists(savestepdir): os.mkdir(savestepdir)
+            savepath=os.path.join(savestepdir,'species-'+species+'_model_save_'+str(idx))
             rundict['jobpath']=jobpath
             rundict['savepath']=savepath
 
@@ -289,8 +292,8 @@ class run_cluster(kernelcompare.KernelCompare):
             return
                     
     
-    def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts,rundictpathlist):
-        savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts,'rundictpathlist':rundictpathlist}
+    def savemasterstatus(self,assignment_tracker,run_dict_status,list_of_run_dicts):
+        savedict={'assignment_tracker':assignment_tracker,'run_dict_status':run_dict_status,'list_of_run_dicts':list_of_run_dicts}
         for i in range(3):
             try:
                 with open(self.masterfilefilename,'wb') as themasterfile:
@@ -489,9 +492,8 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             run_dict_status[next_ready_dict_idx] = 'assigned'
                             #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready']
-                            newjobpath=list_of_run_dicts[next_ready_dict_idx]['jobpath']
                             #if not name in nonewjob_namelist:
-                            setup=self.setup_job_for_node(name,newjobpath,list_of_run_dicts[next_ready_dict_idx])
+                            setup=self.setup_job_for_node(name,list_of_run_dicts[next_ready_dict_idx])
                             assignment_tracker[name] = next_ready_dict_idx
                             #print('assignment_tracker', assignment_tracker)
                             i+=1
@@ -634,7 +636,8 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             self.logger.exception('')
             myjobfile={'status':[]}
-        myjobfile['jobpath']=rundict['jobpath']
+        rundictpath=rundict['jobpath']
+        myjobfile['jobpath']=rundictpath
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,'ready')
         myjobfile['status'].append(time_status_tup)
@@ -656,10 +659,6 @@ class run_cluster(kernelcompare.KernelCompare):
             
             self.savepickle(jobdict,rundictpath)
             self.logger.debug(f'setting up jobdict:{jobdict} at rundictpath:{rundictpath}')
-        
-        
-
-                
         return 1
 
     def namefile_statuscheck(self,name):
