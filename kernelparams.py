@@ -209,25 +209,64 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,sharecutcount=2,threshcutcount=2):
-        stepcount=1+sharecutcount+threshcutcount
+    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=None):
+        '''
+        even if step0 is skipped, include it in the step count
+        '''
         
         stepdict_list=[]
-        optdict_variation_list=self.getoptdictvariations(source=source)
-        datagen_variation_list=self.getdatagenvariations(source=source)
-        step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
-        stepdictlist.append(step0)
-        threshold_list=[None]*sharecutcount+['naivemse']*threshcutcount
-        bestshare_list=[.25,.1,.1,.1]
-        for step in range(sharecutcount):
-            filter_kwargs={'threshold'=None,'bestshare'=0.1}
+        optdict_variation_list=self.getoptdictvariations(source=self.source)
+        datagen_variation_list=self.getdatagenvariations(source=self.source)
+        if not skipstep0:
+            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+            stepdictlist.append(step0)
+            
+        if bestshare_list is None:
+            bestshare_list=[.25,.25,.25,.25]
+        filterthreshold_list=[None]*(stepcount-1)
+        if type(threshcutstep) is int:
+            threshold_list[threshcutstep]='naivemse'
+        mse_threshold_list=[None]*stepcount # 
+        maxiter_list=[1,5,20,100]
+        maxbatchbatchcount_list=[1,2,4,8]
+        do_minimize_list=[0,1,1,1]
+        for step in range(stepcount-1):
+            filter_kwargs={'filterthreshold':threshold_list[step],'bestshare':bestshare_list[step]}
             startpath=os.path.join(self.modelsavedirectory,'step'+str(step))
-            if not os.path.exists(startpath); os.mkdir(startpath)
-            ppm_kwargs={'condense':0,'recondense':0,'recondense2':1}
-            stepdict={'functions':[(self.process_piscesmodels,[startpath],ppm_kwargs),(self.merge_dict_model_filter,[],filter_kwargs)]}
+            savepath=startpath
+            jobpath=os.path.join(self.jobdirectory,'step'+str(step))
+            stepfolders={'saves':savepath,'jobs':jobpath}
+            if not os.path.exists(startpath): os.mkdir(startpath)
+            ppm_kwargs={'condense':1,'recondense':0,'recondense2':1}
+            opt_job_kwargs={
+                'mse_threshold':mse_threshold_list[step],
+                'maxiter':maxiter_list[step],
+                'do_minimize':do_minimize_list[step],
+                'maxbatchbatchcount'=maxbatchbatchcount_list[step]
+            }
+            advance_path_kwargs={'i':step,'stepfolders':stepfolders}
+            stepdict={'functions':[
+                (self.process_piscesmodels,[startpath],ppm_kwargs),
+                (self.merge_dict_model_filter,[],filter_kwargs),
+                (self.opt_job_builder,[],opt_job_kwargs),
+                (self.rundict_advance_path,[],advance_path_kwargs)
+            ]}
             
-            merge_dict_model_filter(self,threshold=None,bestshare=0.1)
-            
+               
+    def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
+        savefolderpath=stepfolders['saves']
+        jobfolderpath=stepfolders['jobs']
+        charcount=len(str(i))+4 # 4 for 'step'
+        newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
+        newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+        for rundict in list_of_rundicts
+            jobpath=rundict['jobpath']
+            savepath=rundict['savepath']
+            _,savepathstem=os.path.split(savepath)
+            _,jobpathstem=os.path.split(jobpath)
+            rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
+            rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
+        return list_of_rundicts        
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
         if opt_dict_override==None:

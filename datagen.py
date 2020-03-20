@@ -219,23 +219,8 @@ class datagen(PiscesDataTool):
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         '''
-        
         return
-                
             
-            
-    
-        
-        
-        
-        
-            
-        
-            
-            
-
-        
-        
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if ftype==None:

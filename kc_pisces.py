@@ -22,8 +22,13 @@ class KCPisces():
     
     
         
-    def merge_dict_model_filter(self,threshold=None,bestshare=0.1):
-        all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
+    def merge_dict_model_filter(self,all_species_model_merge_dict,filterthreshold=None,bestshare=0.25):
+        '''
+        kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
+        do not change args,kwargs here without changing there
+        '''
+        if all_species_model_merge_dict is None:
+            all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
         new_model_save_list=[]
         for spec in all_species_model_merge_dict:
             model_save_list=all_species_model_merge_dict[spec]
@@ -39,13 +44,18 @@ class KCPisces():
         return new_model_save_list
         
         
-    def opt_job_builder(self,model_save_list,maxiter=None,do_minimize=None):
+    def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,mse_threshold=None,maxiter=None,do_minimize=None):
+        '''
+        kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
+        do not change args,kwargs here without changing there
+        '''
         for model_save in model_save_list:
             modeldict=model_save['modeldict']
             opt_settings_dict=model_save['opt_settings_dict']
             expanded_datagen_dict=model_save['datagen_dict']
             if not maxiter is None:
                 opt_settings_dict['options']['maxiter']=maxiter
+            if not mse_threshold
             
             if not do_minimize is None:
                 opt_settings_dict['do_minimize']=do_minimize
@@ -56,7 +66,10 @@ class KCPisces():
             self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
             
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):
-        
+        '''
+        kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
+        do not change args,kwargs here without changing there
+        '''
         #species_model_save_path_dict_list=[]
         species_model_save_path_dict=self.split_pisces_model_save_path_dict(startpath)
         #species_model_save_path_dict_list.append(species_model_save_path_dict)
@@ -89,6 +102,7 @@ class KCPisces():
             if recondense2:
                 all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
         self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)
+        return all_species_model_merge_dict
             
     
     

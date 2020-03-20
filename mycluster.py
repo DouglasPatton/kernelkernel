@@ -107,14 +107,23 @@ class run_cluster(kernelcompare.KernelCompare):
         return list_of_run_dicts
     
     
+    def setupalljob_paths(self,rundictlist,step):
+        rundictpathlist=[]
+        for idx,rundict in enumerate(rundictlist):
+            jobpath=os.path.join(self.jobdirectory,'step'+str(step),str(idx)+'_jobdict')
+            try: species=rundict['datagen_dict']['species']
+            except: species=''
+            savepath=os.path.join(self.modelsavedirectory,'step'+str(step),'species-'+species+'_model_save_'+str(idx)')
+            rundict['jobpath']=jobpath
+            rundict['savepath']=savepath
+
+    
     def setmasterdir(self,savedirectory,myname):
         masterdir=os.path.join(savedirectory,'master')
         masterfiledir=os.path.join(os.getcwd(),'master')
         if not os.path.exists(masterdir): os.mkdir(masterdir)
         if myname=='master':
             if not os.path.exists(masterfiledir): os.mkdir(masterfiledir)
-            
-                
         return masterdir,masterfiledir
         
     def setdirectory(self,local_run='yes'):
@@ -141,32 +150,26 @@ class run_cluster(kernelcompare.KernelCompare):
             return self.runmaster()
         model_run_stepdict_list=self.build_stepdict_list()
         for i,stepdict in enumerate(model_run_stepdict_list):
+            stepfolders=stepdict['stepfolders']
             if 'variations' in stepdict:
                 list_of_run_dicts=self.generate_rundicts_from_variations()
-                self.runmaster(list_of_run_dicts)
-                self.logger.info(f'step#:{i} completed')
+                runmasterresult=self.runmaster(list_of_run_dicts)
+                self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
             else:
                 resultslist=[]
+                
                 for func_tup in stepdict['functions']
                     args=functup[1]
+                    if args==[]:
+                        args=resultslist[-1]
                     kwargs=functup[2]
                     resultslist.append(functup[0](*args,**kwargs))
-                next_list_of_run_dicts=resultslist[-1]
-                self.rundict_advance_path(next_list_of_run_dicts,i)
+                list_of_run_dicts=resultslist[-1]
+                #self.rundict_advance_path(list_of_run_dicts,i,stepfolders)
+            runmasterresult=self.runmaster(list_of_run_dicts)
+            self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
                 
-                
-    def rundict_advance_path(self,next_list_of_rundicts,i):
-        for rundict in list_of_rundicts
-            jobpath=rundict['jobpath']
-            savepath=rundict['savepath']
-            savefolderpath,savepathstem=os.path.split(savepath)
-            jobfolderpath,jobpathstem=os.path.split(jobpath)
-            charcount=len(str(i))+4 # 4 for 'step'
-            newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
-            newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
-            rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
-            rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
-            
+     
             
         
     def initialize(self,myname):
@@ -336,7 +339,7 @@ class run_cluster(kernelcompare.KernelCompare):
             for j, name in enumerate(old_name_list):
                 
                 try:
-                    self.mergethisnode(name,old=1,move=1)
+                    self.mergethisnode(name)
                 
                 except:
                     self.logger.exception('')
@@ -376,7 +379,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
     def runmaster(self,list_of_run_dicts):
-        dorestart=1
+        '''dorestart=1
         if self.checkmaster(): 
             masterfile=self.getmaster()
             
@@ -392,12 +395,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.logger.exception('restarting master')
                 dorestart=1
         
-        if dorestart:
-            assignment_tracker={}
-            list_of_run_dicts=self.generate_rundicts_from_variations()
-            model_run_count=len(list_of_run_dicts)
-            if run_dict
-            run_dict_status=['ready' for status in range(model_run_count)]
+        if dorestart:'''
+        assignment_tracker={}
+        list_of_run_dicts=self.generate_rundicts_from_variations()
+        model_run_count=len(list_of_run_dicts)
+        if run_dict
+        run_dict_status=['ready' for status in range(model_run_count)]
         print('model_run_count',model_run_count)
 
         i=0;loopcount=0
@@ -511,7 +514,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             next_readynamelist.append(name)    
                         except:
                             self.logger.exception(f'could not update_my_namefile: name:{name}')
-                        mergestatus=self.mergethisnode(name,move=1)
+                        #mergestatus=self.mergethisnode(name,move=1)
 
                     except:
                         self.logger.exception(f'error deleting assignment_tracker for key:{name} with job_status:{job_status}')
@@ -564,70 +567,46 @@ class run_cluster(kernelcompare.KernelCompare):
     
 
     
-    def mergethisnode(self,name,old=0,move=0):
-        nodesdir=os.path.join(self.savedirectory,name)
-        if not move:
-            for i in range(1):
+    def mergethisnode(self,name):
+        nodedir=os.path.join(self.savedirectory, name)
+        '''if os.path.exists(nodedir):
+            model_save_pathlist=[name_i for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
+            renamelist=[]
+
+            for model_save_path in model_save_pathlist:
                 try:
-                    print(f'trying merge{i}')
-                    self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=0)
-                    print(f'completed merge{i}')
-                    break
+                    newdir=self.model_collection_directory
+                    newpath=os.path.join(newdir,model_save_path)
+                    unique_newpath=self.helper.getname(newpath)
+                    shutil.move(os.path.join(nodedir,model_save_path),unique_newpath)
+
                 except:
-                    if i==0:
-                        try:
-                            print(f'trying final merge')
-                            self.merge_and_condense_saved_models(merge_directory=nodesdir,save_directory=self.savedirectory,condense=0,verbose=1)
-                            print('completed final merge')
-                        except:
-                            print(f'merge this node failed for node named:{name}')
-                            self.logger.exception(f'error in {__name__}')
-                            return False
-        if move:
+                    self.logger.exception(f'move error in mergethisnode name:{name}, model_save_path:{model_save_path}')'''
+        try:
+            namefilesuffix=name + '.name'
+            namefilepath=os.path.join(self.masterdirectory,namefilesuffix)
+            destination_namefilepath=self.helper.getname(os.path.join(self.model_collection_directory,namefilesuffix))
             try:
-                nodedir=os.path.join(self.savedirectory, name)
-                if os.path.exists(nodedir):
-                    model_save_pathlist=[name_i for name_i in os.listdir(nodedir) if re.search('model_save',name_i)]
-                    renamelist=[]
-                
-                    for model_save_path in model_save_pathlist:
-                        try:
-                            newdir=self.model_collection_directory
-                            newpath=os.path.join(newdir,model_save_path)
-                            unique_newpath=self.helper.getname(newpath)
-                            shutil.move(os.path.join(nodedir,model_save_path),unique_newpath)
-                            
-                        except:
-                            self.logger.exception(f'move error in mergethisnode name:{name}, model_save_path:{model_save_path}')
-                try:
-                    namefilesuffix=name + '.name'
-                    namefilepath=os.path.join(self.masterdirectory,namefilesuffix)
-                    destination_namefilepath=self.helper.getname(os.path.join(self.model_collection_directory,namefilesuffix))
-                    try:
-                        shutil.move(namefilepath,destination_namefilepath)
-                    except:
-                        self.logger.exception('')
-                        self.logger.debug(f'could not move namefilepath:{namefilepath} to destination_namefilepath:{destination_namefilepath}')
-                except:
-                    self.logger.exception('')
-                    self.logger.debug(f'error for name:{name}')
-                try:    
-                    nodedir=os.path.join(self.savedirectory,name)
-                    destination_nodedir=self.helper.getname(os.path.join(self.model_collection_directory,name))
-                    try:
-                        shutil.move(nodedir,destination_nodedir)
-                    except:
-                        self.logger.exception('')
-                        self.logger.debug(f'could not move nodedir:{nodedir} to destination_nodedir:{destination_nodedir}')
-                except:
-                    self.logger.exception('')
-                    self.logger.debug(f'error for name:{name}')
+                shutil.move(namefilepath,destination_namefilepath)
             except:
-                self.logger.exception('outer catchall')
-        if old:    
-            return True
-        else:
-            return False
+                self.logger.exception('')
+                self.logger.debug(f'could not move namefilepath:{namefilepath} to destination_namefilepath:{destination_namefilepath}')
+        except:
+            self.logger.exception('')
+            self.logger.debug(f'error for name:{name}')
+        try:    
+            nodedir=os.path.join(self.savedirectory,name)
+            destination_nodedir=self.helper.getname(os.path.join(self.model_collection_directory,name))
+            try:
+                shutil.move(nodedir,destination_nodedir)
+            except:
+                self.logger.exception('')
+                self.logger.debug(f'could not move nodedir:{nodedir} to destination_nodedir:{destination_nodedir}')
+        except:
+            self.logger.exception('')
+            self.logger.debug(f'error for name:{name}')
+        except:
+            self.logger.exception('outer catchall')
                 
                 
         
@@ -644,16 +623,6 @@ class run_cluster(kernelcompare.KernelCompare):
                     
         return
     
-    def setupalljob_paths(self,rundictlist,step):
-        rundictpathlist=[]
-        for idx,rundict in enumerate(rundictlist):
-            jobpath=os.path.join(self.jobdirectory,'step'+str(step),str(idx)+'_jobdict')
-            try: species=rundict['datagen_dict']['species']
-            except: species=''
-            savepath=os.path.join(self.modelsavedirectory,'step'+str(step),'species-'+species+'_model_save_'+str(idx)')
-            rundict['jobpath']=jobpath
-            rundict['savepath']=savepath
-
                                   
     def setup_job_for_node(self,name,rundict):
         nodedir=os.path.join(self.savedirectory,name)
