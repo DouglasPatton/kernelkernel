@@ -46,24 +46,35 @@ class KCPisces():
         
     def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,mse_threshold=None,maxiter=None,do_minimize=None):
         '''
+        
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
         '''
+        model_rundict_list=[]
         for model_save in model_save_list:
             modeldict=model_save['modeldict']
             opt_settings_dict=model_save['opt_settings_dict']
             expanded_datagen_dict=model_save['datagen_dict']
+            if not maxbatchbatchcount is None:
+                modeldict['maxbatchbatchcount']=maxbatchbatchcount
             if not maxiter is None:
                 opt_settings_dict['options']['maxiter']=maxiter
-            if not mse_threshold
+            if not mse_threshold is None:
+                opt_settings_dict['mse_threshold']=mse_threshold
             
             if not do_minimize is None:
                 opt_settings_dict['do_minimize']=do_minimize
                
-            modeldict_datagen_dict_dict['opt_settings_dict']=opt_settings_dict
-            optimizedict=self.build_optdict(opt_dict_override=modeldict_datagen_dict_dict,param_count=None,species=None)
+            new_opt_dict['opt_settings_dict']=opt_settings_dict
+            new_opt_dict['modeldict']=modeldict
+            new_opt_dict['datagen_dict']=expanded_datagen_dict
+            new_opt_dict['savepath']=model_save['savepath']
+            new_opt_dict['jobpath']=model_save['jobpath']
+            optimizedict=self.build_optdict(opt_dict_override=new_opt_dict,param_count=None,species=None)
             best_fof_paramdict=model_save['params']
             self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
+            model_rundict_list.append(optimizedict)
+        return model_rundict_list
             
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):
         '''

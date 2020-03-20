@@ -90,17 +90,16 @@ class run_cluster(kernelcompare.KernelCompare):
             local_run=0
 
         #print(f'datagen_variation_list:{datagen_variation_list}')
-        self.initialize(
-            myname,optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list)
+        self.initialize(myname)
 
-    def generate_rundicts_from_variations(self,source,optdict_variation_list,datagen_variation_list):
-        if optdict_variation_list is None:
-            optdict_variation_list=self.getoptdictvariations(source=source)
-        if datagen_variation_list is None:
-            datagen_variation_list=self.getdatagenvariations(source=source)
-        initial_datagen_dict=self.setdata(source)
+    def generate_rundicts_from_variations(self,):
+        if self.optdict_variation_list is None:
+            self.optdict_variation_list=self.getoptdictvariations(source=source)
+        if self.datagen_variation_list is None:
+            self.datagen_variation_list=self.getdatagenvariations(source=source)
+        initial_datagen_dict=self.setdata(self.source)
         list_of_run_dicts=self.prep_model_list(
-        optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=initial_datagen_dict)
+        optdict_variation_list=self.optdict_variation_list,datagen_variation_list=self.datagen_variation_list,datagen_dict=initial_datagen_dict)
         #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
         self.setupalljob_paths(list_of_run_dicts)
         #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
@@ -275,7 +274,7 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 os.remove(self.masterfilefilename+'_backup')
             except:
-                self.logger.exception(f'error removing mastefilebackup at:{self.masterfilefilename+'_backup'} ')
+                self.logger.exception(f'error removing mastefilebackup at:{self.masterfilefilename+"_backup"}')
                 
             return
         except:
@@ -381,7 +380,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
 
     def runmaster(self,list_of_run_dicts):
-        dorestart=1
+        do_startup=1
         if self.checkmaster(): 
             masterfile=self.getmaster()
             
@@ -391,13 +390,13 @@ class run_cluster(kernelcompare.KernelCompare):
                 list_of_run_dicts=masterfile['list_of_run_dicts']
                 run_dict_status=masterfile['run_dict_status']
                 model_run_count=len(list_of_run_dicts)
-                
-                dorestart=0
+                self.logger.info('master is restarting from saved masterfile')
+                do_startup=0
             except:
                 self.logger.exception('restarting master')
-                dorestart=1
+                do_startup=1
         
-        if dorestart:
+        if do_startup:
             assignment_tracker={}
             #list_of_run_dicts=self.generate_rundicts_from_variations()
             model_run_count=len(list_of_run_dicts)
@@ -598,9 +597,6 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             self.logger.exception('')
             self.logger.debug(f'error for name:{name}')
-        except:
-            self.logger.exception('outer catchall')
-                
                 
         
     def discard_job_for_node(self,name):

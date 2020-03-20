@@ -242,7 +242,7 @@ class KernelParams:
                 'mse_threshold':mse_threshold_list[step],
                 'maxiter':maxiter_list[step],
                 'do_minimize':do_minimize_list[step],
-                'maxbatchbatchcount'=maxbatchbatchcount_list[step]
+                'maxbatchbatchcount':maxbatchbatchcount_list[step]
             }
             advance_path_kwargs={'i':step,'stepfolders':stepfolders}
             stepdict={'functions':[
@@ -259,7 +259,7 @@ class KernelParams:
         charcount=len(str(i))+4 # 4 for 'step'
         newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
         newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
-        for rundict in list_of_rundicts
+        for rundict in list_of_rundicts:
             jobpath=rundict['jobpath']
             savepath=rundict['savepath']
             _,savepathstem=os.path.split(savepath)
