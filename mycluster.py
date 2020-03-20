@@ -58,7 +58,8 @@ class run_cluster(kernelcompare.KernelCompare):
         self.logger = logging.getLogger(handlername)
         self.helper=Helper()
         if myname=='master':
-            self.model_collection_directory=self.helper.getname(os.path.join(os.getcwd(),'model_collection'))#
+            self.model_collection_directory=os.path.join(os.getcwd(),'model_collection')
+            #self.model_collection_directory=self.helper.getname()#
             self.logger.info(f'self.model_collection_directory:{self.model_collection_directory}')
             if not os.path.exists(self.model_collection_directory): os.mkdir(self.model_collection_directory)
 
@@ -92,27 +93,31 @@ class run_cluster(kernelcompare.KernelCompare):
         #print(f'datagen_variation_list:{datagen_variation_list}')
         self.initialize(myname)
 
-    def generate_rundicts_from_variations(self,):
+    def generate_rundicts_from_variations(self,step=None):
         if self.optdict_variation_list is None:
-            self.optdict_variation_list=self.getoptdictvariations(source=source)
+            self.optdict_variation_list=self.getoptdictvariations(source=self.source)
         if self.datagen_variation_list is None:
-            self.datagen_variation_list=self.getdatagenvariations(source=source)
+            self.datagen_variation_list=self.getdatagenvariations(source=self.source)
         initial_datagen_dict=self.setdata(self.source)
         list_of_run_dicts=self.prep_model_list(
         optdict_variation_list=self.optdict_variation_list,datagen_variation_list=self.datagen_variation_list,datagen_dict=initial_datagen_dict)
         #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-        self.setupalljob_paths(list_of_run_dicts)
+        self.setupalljob_paths(list_of_run_dicts,step=step)
         #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
         return list_of_run_dicts
     
     
-    def setupalljob_paths(self,rundictlist,step):
+    def setupalljob_paths(self,rundictlist,step=None):
         rundictpathlist=[]
         for idx,rundict in enumerate(rundictlist):
-            jobpath=os.path.join(self.jobdirectory,'step'+str(step),str(idx)+'_jobdict')
+            if step is None:
+                step='step0'
+            else:
+                step='step'+str(step)
+            jobpath=os.path.join(self.jobdirectory,step,str(idx)+'_jobdict')
             try: species=rundict['datagen_dict']['species']
             except: species=''
-            savepath=os.path.join(self.modelsavedirectory,'step'+str(step),'species-'+species+'_model_save_'+str(idx))
+            savepath=os.path.join(self.modelsavedirectory,step,'species-'+species+'_model_save_'+str(idx))
             rundict['jobpath']=jobpath
             rundict['savepath']=savepath
 
@@ -146,7 +151,8 @@ class run_cluster(kernelcompare.KernelCompare):
 
     def mastermaster(self,):
         if not self.dosteps:
-            return self.runmaster()
+            list_of_run_dicts=self.generate_rundicts_from_variations()
+            return self.runmaster(list_of_run_dicts)
         model_run_stepdict_list=self.build_stepdict_list()
         for i,stepdict in enumerate(model_run_stepdict_list):
             stepfolders=stepdict['stepfolders']
