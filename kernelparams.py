@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 
@@ -214,7 +215,7 @@ class KernelParams:
         even if step0 is skipped, include it in the step count
         '''
         
-        stepdict_list=[]
+        stepdictlist=[]
         optdict_variation_list=self.getoptdictvariations(source=self.source)
         datagen_variation_list=self.getdatagenvariations(source=self.source)
         if not skipstep0:
@@ -225,13 +226,13 @@ class KernelParams:
             bestshare_list=[.25,.25,.25,.25]
         filterthreshold_list=[None]*(stepcount-1)
         if type(threshcutstep) is int:
-            threshold_list[threshcutstep]='naivemse'
+            filterthreshold_list[threshcutstep]='naivemse'
         mse_threshold_list=[None]*stepcount # 
         maxiter_list=[1,5,20,100]
         maxbatchbatchcount_list=[1,2,4,8]
         do_minimize_list=[0,1,1,1]
         for step in range(stepcount-1):
-            filter_kwargs={'filterthreshold':threshold_list[step],'bestshare':bestshare_list[step]}
+            filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
             startpath=os.path.join(self.modelsavedirectory,'step'+str(step))
             savepath=startpath
             jobpath=os.path.join(self.jobdirectory,'step'+str(step))
@@ -251,6 +252,8 @@ class KernelParams:
                 (self.opt_job_builder,[],opt_job_kwargs),
                 (self.rundict_advance_path,[],advance_path_kwargs)
             ]}
+            stepdictlist.append(stepdict)
+        return stepdictlist
             
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
