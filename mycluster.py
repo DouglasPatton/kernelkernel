@@ -158,7 +158,7 @@ class run_cluster(kernelcompare.KernelCompare):
             return self.runmaster(list_of_run_dicts)
         model_run_stepdict_list=self.build_stepdict_list()
         for i,stepdict in enumerate(model_run_stepdict_list):
-            stepfolders=stepdict['stepfolders']
+            #stepfolders=stepdict['stepfolders']
             if 'variations' in stepdict:
                 list_of_run_dicts=self.generate_rundicts_from_variations()
                 runmasterresult=self.runmaster(list_of_run_dicts)
@@ -636,8 +636,10 @@ class run_cluster(kernelcompare.KernelCompare):
         except:
             self.logger.exception('')
             myjobfile={'status':[]}
+        
         rundictpath=rundict['jobpath']
         myjobfile['jobpath']=rundictpath
+        myjobfile['savepath']=rundict['savepath']
         now=strftime("%Y%m%d-%H%M%S")
         time_status_tup=(now,'ready')
         myjobfile['status'].append(time_status_tup)
@@ -788,7 +790,8 @@ class run_cluster(kernelcompare.KernelCompare):
             rundictpath=jobfile_dict['jobpath']
             my_opt_job=self.getpickle(rundictpath)
             my_optimizedict=my_opt_job['optimizedict']
-            my_optimizedict['savepath']=my_opt_job['savepath']
+            my_optimizedict['savepath']=jobfile_dict['savepath']
+            my_optimizedict['jobpath']=jobfile_dict['jobpath']
             my_datagen_dict=my_opt_job['datagen_dict']
 
 

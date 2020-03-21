@@ -815,6 +815,8 @@ class optimize_free_params(kNdtool):
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
         self.datagen_dict=None
+        self.savepath=None
+        self.jobpath=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname
@@ -823,7 +825,9 @@ class optimize_free_params(kNdtool):
     def run_opt(self,datagen_obj,optimizedict,savedir):
         
         self.savedir=savedir
-        self.savepath=optimizedict.pop('savepath')#pop so it's not saved
+        self.savepath=optimizedict['savepath']
+        self.jobpath=optimizedict['jobpath']
+        
     
         #self.Ndiff_list_of_masks_x=xmask
         #self.Ndiff_list_of_masks_y=ymask

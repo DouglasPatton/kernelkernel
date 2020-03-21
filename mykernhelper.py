@@ -304,6 +304,8 @@ class MyKernHelper:
         now=strftime("%Y%m%d-%H%M%S")
         savedict['when_saved']=now
         savedict['datagen_dict']=self.datagen_dict
+        savedict['savepath']=self.savepath
+        savedict['jobpath']=self.jobpath
         try:
             savedict['yhatmaskscount']=self.yhatmaskscount
         except:
