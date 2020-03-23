@@ -27,6 +27,7 @@ class KCPisces():
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
         '''
+        self.logger.info(f'merge_dict_model_filter: len(all_species_model_merge_dict):{len(all_species_model_merge_dict)},filterthreshold:{filterthreshold},bestshare:{bestshare}')
         if all_species_model_merge_dict is None:
             all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
         new_model_save_list=[]
@@ -83,6 +84,7 @@ class KCPisces():
         do not change args,kwargs here without changing there
         '''
         #species_model_save_path_dict_list=[]
+        self.logger.info(f'process_pisces_models startpath:{startpath}')
         species_model_save_path_dict=self.split_pisces_model_save_path_dict(startpath)
         #species_model_save_path_dict_list.append(species_model_save_path_dict)
         #species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)

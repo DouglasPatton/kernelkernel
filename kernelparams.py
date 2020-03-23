@@ -210,11 +210,11 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=None):
+    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
-        
+        self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
         stepdictlist=[]
         optdict_variation_list=self.getoptdictvariations(source=self.source)
         datagen_variation_list=self.getdatagenvariations(source=self.source)
@@ -222,7 +222,7 @@ class KernelParams:
             step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
             stepdictlist.append(step0)
             
-        if bestshare_list is None:
+        if not bestshare_list:
             bestshare_list=[.25,.25,.25,.25]
         filterthreshold_list=[None]*(stepcount-1)
         if type(threshcutstep) is int:
@@ -257,6 +257,7 @@ class KernelParams:
             
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
+        self.logger.info(f'len(list_of_rundicts:{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders})')
         savefolderpath=stepfolders['savedir']
         jobfolderpath=stepfolders['jobdir']
         charcount=len(str(i))+4 # 4 for 'step'

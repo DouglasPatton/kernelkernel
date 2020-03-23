@@ -159,6 +159,7 @@ class run_cluster(kernelcompare.KernelCompare):
         model_run_stepdict_list=self.build_stepdict_list()
         for i,stepdict in enumerate(model_run_stepdict_list):
             #stepfolders=stepdict['stepfolders']
+            
             if 'variations' in stepdict:
                 list_of_run_dicts=self.generate_rundicts_from_variations()
                 runmasterresult=self.runmaster(list_of_run_dicts)
@@ -653,7 +654,8 @@ class run_cluster(kernelcompare.KernelCompare):
             jobdict['status']=[(now,'ready')]
             
             self.savepickle(jobdict,rundictpath)
-            self.logger.debug(f'setting up jobdict:{jobdict} at rundictpath:{rundictpath}')
+            #self.logger.debug(f'setting up jobdict:{jobdict} at rundictpath:{rundictpath}')
+            self.logger.debug(f'setting up jobdict at rundictpath:{rundictpath}')
         return 1
 
     def namefile_statuscheck(self,name):
@@ -766,7 +768,7 @@ class run_cluster(kernelcompare.KernelCompare):
         self.update_my_namefile(myname,status='ready')
         while keepgoing:
             
-            self.update_my_namefile(myname,status='ready')
+            #self.update_my_namefile(myname,status='ready')
             start_time=strftime("%Y%m%d-%H%M%S")
             i_have_opt_job=0
             i=0
@@ -795,12 +797,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
                 #    my_optimizedict,my_datagen_dict,force_start_params=0)
                 self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
-                self.logger.debug(f'myname:{myname}' succeeded)
+                self.logger.debug(f'myname:{myname} succeeded')
                 success=1
                 
             except:
                 success=0
-                self.logger.exception(f'myname:{myname}' failed)
+                self.logger.exception(f'myname:{myname} failed')
                 try:
                     self.update_node_job_status(myname,status='failed',mydir=mydir)
                 except:

@@ -782,7 +782,7 @@ class optimize_free_params(kNdtool):
 
 
         
-        self.logger.info(f'optimizedict for {self.name}:{optimizedict}')
+        #self.logger.info(f'optimizedict for {self.name}:{optimizedict}')
 
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
