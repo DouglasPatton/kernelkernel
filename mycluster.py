@@ -317,7 +317,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
             current_name_list,current_name_list_tuplist = zip(*[(name,namefile_tuplist[i]) for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold])
             old_name_list1,old_name_position_list = zip(*[(name,i) for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
-                              not s_since_update_list[i] < self.oldnode_threshold]
+                              not s_since_update_list[i] < self.oldnode_threshold])
             
             old_name_list = []
             for i,name_i in enumerate(old_name_list1):
@@ -415,8 +415,8 @@ class run_cluster(kernelcompare.KernelCompare):
 
         i=0;loopcount=0
         keepgoing=1
-        readynamelist=[]
-        next_readynamelist=[]
+        #readynamelist=[]
+        #next_readynamelist=[]
         while keepgoing:
             
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
@@ -443,8 +443,8 @@ class run_cluster(kernelcompare.KernelCompare):
                 
             else:
                 readynamelist=next_readynamelist
-            next_readynamelist=[]
-            shuffle(readynamelist)
+            #next_readynamelist=[]
+            #shuffle(readynamelist)
             readysleepcount=0
             for i in range(current_name_count):
                 loopcount+=1
@@ -452,7 +452,17 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready']
                 name=current_name_list[i]
+                
                 job_time,job_status=current_name_list_tuplist[i]
+                try:
+                    if assignment_tracker[name] and job_status=='ready':
+                        job_status='assigned' # this happens when the node has been assigned a job but has not picked it up yet
+                except KeyError:
+                    pass #this happens when there is no assignment_tracker for 
+                    #     this node or the assignment tracker evaluates as false (e.g., None)
+                except
+                    self.logger.exception(f'unexpected error for name:{name}, job_time:{job_time},job_status:{job_status}')
+                    
                 '''try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
                     #p#rint(f'job_time:{job_time},job_status:{job_status} for name:{name}')
@@ -461,7 +471,8 @@ class run_cluster(kernelcompare.KernelCompare):
                     #p#rint(f'check_node_job_status failed for node:{name}')
                     self.logger.exception(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
-                    job_time='failed''''
+                    job_time='failed'
+                    '''
 
                 #p#rint(f"job_time:{job_time},job_status:{job_status}")
                 """try:
@@ -524,7 +535,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         try:
                             self.logger.info(f'namefile for name:{name} is being updated: ready for job')
                             self.update_my_namefile(name,status='ready')
-                            next_readynamelist.append(name)    
+                            #next_readynamelist.append(name)    
                         except:
                             self.logger.exception(f'could not update_my_namefile: name:{name}')
                         #mergestatus=self.mergethisnode(name,move=1)
@@ -551,7 +562,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         assignment_tracker[name]=None
                         run_dict_status[job_idx]='finished'
                         self.update_my_namefile(name,status='ready')
-                        next_readynamelist.append(name)
+                        #next_readynamelist.append(name)
                         #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
                         #p#rint(f'for node name:{name}, mergestatus:{mergestatus}')
@@ -559,8 +570,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     except:
                         self.logger.exception('')
                 elif job_status=='starting':
-                    next_readynamelist.append(name)   
-                    
+                    pass
+                    #next_readynamelist.append(name)   
+                elif job_status=='assigned':
+                    pass # for a node that hasn't picked up it's job yet and that's not old either
                 else:
                     self.logger.critical(f'for name:{name} job_status not recognized:{job_status}')
             if readysleepcount==0:
