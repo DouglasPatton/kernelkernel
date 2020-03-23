@@ -306,7 +306,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 if i==2:
                     self.logger.exception(f'error in {__name__}')
                     assert False, 'masterfile problem'
-
+    def myunzzip2(self,tuplist):
+        if tuplist:
+            return zip(*tuplist)
+        else:
+            return [],[]
+                
     def rebuild_namefiles(self, run_dict_status, assignment_tracker):
         try:
             
@@ -315,8 +320,8 @@ class run_cluster(kernelcompare.KernelCompare):
             # print(f'namefile_tuplist:{namefile_tuplist}')
             s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
 
-            current_name_list,current_name_list_tuplist = zip(*[(name,namefile_tuplist[i]) for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold])
-            old_name_list1,old_name_position_list = zip(*[(name,i) for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
+            current_name_list,current_name_list_tuplist = self.myunzzip2([(name,namefile_tuplist[i]) for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold])
+            old_name_list1,old_name_position_list = self.myunzzip2([(name,i) for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
                               not s_since_update_list[i] < self.oldnode_threshold])
             
             old_name_list = []
@@ -432,13 +437,13 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
                 current_name_count=len(current_name_list)
-                if current_name_count>1:
-                    self.logger.debug(f'readynamelist:{current_name_list_tuplist}')
-                    print(f'readynamelist:{readynamelist}')
+                self.logger.debug(f'current_name_list_tuplist:{current_name_list_tuplist}, current_name_list:{current_name_list}')
+                print(f'current_name_list:{current_name_list}')
+                
                 if all([status=='finished' for status in run_dict_status]):
+                    self.logger.info('all statuses are finished')
                     break
                 ready_dict_idx=[i for i in range(model_run_count) if run_dict_status[i]=='ready']
-                notanewjob_list=[]
                 
                 
             else:
@@ -456,44 +461,14 @@ class run_cluster(kernelcompare.KernelCompare):
                 job_time,job_status=current_name_list_tuplist[i]
                 try:
                     if assignment_tracker[name] and job_status=='ready':
+                        self.logger.debug(f'assignment_tracker[{name}]:{assignment_tracker[name]} and job_status ready')
                         job_status='assigned' # this happens when the node has been assigned a job but has not picked it up yet
                 except KeyError:
+                    self.logger.debug(f'name:{name} not in assignment_tracker')
                     pass #this happens when there is no assignment_tracker for 
                     #     this node or the assignment tracker evaluates as false (e.g., None)
-                except
+                except:
                     self.logger.exception(f'unexpected error for name:{name}, job_time:{job_time},job_status:{job_status}')
-                    
-                '''try:
-                    job_time,job_status=self.check_node_job_status(name,time=1)
-                    #p#rint(f'job_time:{job_time},job_status:{job_status} for name:{name}')
-                    
-                except:
-                    #p#rint(f'check_node_job_status failed for node:{name}')
-                    self.logger.exception(f'check_node_job_status failed for node:{name}')
-                    job_status='failed'
-                    job_time='failed'
-                    '''
-
-                #p#rint(f"job_time:{job_time},job_status:{job_status}")
-                """try:
-                    now=strftime("%Y%m%d-%H%M%S")
-                    
-                    elapsed=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(job_time,"%Y%m%d-%H%M%S")
-                    islate=elapsed>self.oldnode_threshold
-                    
-                except:
-                    self.logger.exception(f'now:{now},job_time:{job_time}')
-                    islate=0
-                if islate:
-                    self.logger.info(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
-                    print(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
-                    job_status='old'"""
-                '''if job_status "filenotfound" :
-                    if not job_status=='finished':
-                        notanewjob_list.append([name,job_status])
-                    else:
-                        notanewjob_list.append([name,job_status])
-                    #nonewjob_namelist=[i[0] for i in notanewjob_list]'''
                 if job_status == 'ready':
                     print(f'about to setup the job for node:{name}')
                     self.logger.debug(f'about to setup the job for node:{name}')
@@ -788,6 +763,7 @@ class run_cluster(kernelcompare.KernelCompare):
         #self.Ndiff_list_of_masks_x=None
         #self.Ndiff_list_of_masks_y=None
         keepgoing=1
+        self.update_my_namefile(myname,status='ready')
         while keepgoing:
             
             self.update_my_namefile(myname,status='ready')
@@ -819,10 +795,12 @@ class run_cluster(kernelcompare.KernelCompare):
                 #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
                 #    my_optimizedict,my_datagen_dict,force_start_params=0)
                 self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
+                self.logger.debug(f'myname:{myname}' succeeded)
                 success=1
                 
             except:
                 success=0
+                self.logger.exception(f'myname:{myname}' failed)
                 try:
                     self.update_node_job_status(myname,status='failed',mydir=mydir)
                 except:
