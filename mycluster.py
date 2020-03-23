@@ -174,6 +174,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     kwargs=functup[2]
                     resultslist.append(functup[0](*args,**kwargs))
                 list_of_run_dicts=resultslist[-1]
+                self.logger.debug(f'step:{i} len(list_of_run_dicts:{len(list_of_run_dicts})')
                 #self.rundict_advance_path(list_of_run_dicts,i,stepfolders)
             runmasterresult=self.runmaster(list_of_run_dicts)
             self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')

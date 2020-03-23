@@ -36,7 +36,7 @@ class KCPisces():
             model_save_list=all_species_model_merge_dict[spec]
             self.logger.debug('model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
             model_save_list=all_species_model_merge_dict[spec]
-            sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=1, strict=1,verbose=0,endsort=1,threshold=threshold)
+            sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=1, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
             #help_start applies do_partial_match and will eliminate models with higher nwtmse and only a partial match of parameters.
         if bestshare:
             fullcount=len(sorted_condensed_model_list)
@@ -107,7 +107,7 @@ class KCPisces():
             mergedlist=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
-                condense=1,#first condensing addreses iterations
+                condense=1,#first condensing addresses iterations
                 recondense=recondense,returnlist=1
                 )
             if species not in all_species_model_merge_dict:
