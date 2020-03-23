@@ -90,7 +90,7 @@ class run_cluster(kernelcompare.KernelCompare):
         if local_run=='no' or local_run=='No':
             local_run=0
 
-        #print(f'datagen_variation_list:{datagen_variation_list}')
+        #p#rint(f'datagen_variation_list:{datagen_variation_list}')
         self.initialize(myname)
 
     def generate_rundicts_from_variations(self,step=None):
@@ -103,7 +103,7 @@ class run_cluster(kernelcompare.KernelCompare):
         optdict_variation_list=self.optdict_variation_list,datagen_variation_list=self.datagen_variation_list,datagen_dict=initial_datagen_dict)
         #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
         self.setupalljob_paths(list_of_run_dicts,step=step)
-        #print(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
+        #p#rint(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
         return list_of_run_dicts
     
     
@@ -432,6 +432,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 
                 #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
                 if len(readynamelist)>1:
+                    self.logger.debug(f'readynamelist:{readynamelist}')
                     print(f'readynamelist:{readynamelist}')
                 if all([status=='finished' for status in run_dict_status]):
                     break
@@ -452,15 +453,15 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
-                    #print(f'job_time:{job_time},job_status:{job_status} for name:{name}')
+                    #p#rint(f'job_time:{job_time},job_status:{job_status} for name:{name}')
                     
                 except:
-                    #print(f'check_node_job_status failed for node:{name}')
+                    #p#rint(f'check_node_job_status failed for node:{name}')
                     self.logger.exception(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
                     job_time='failed'
 
-                #print(f"job_time:{job_time},job_status:{job_status}")
+                #p#rint(f"job_time:{job_time},job_status:{job_status}")
                 try:
                     now=strftime("%Y%m%d-%H%M%S")
                     
@@ -482,9 +483,11 @@ class run_cluster(kernelcompare.KernelCompare):
                     #nonewjob_namelist=[i[0] for i in notanewjob_list]'''
                 if job_status in ['filenotfound','ready']:
                     print(f'about to setup the job for node:{name}')
-                    #print('len(ready_dict_idx)',len(ready_dict_idx))
+                    self.logger.debug(f'about to setup the job for node:{name}')
+                    #p#rint('len(ready_dict_idx)',len(ready_dict_idx))
                     if len(ready_dict_idx) == 0:
                         print('run_dict_status',run_dict_status)
+                        self.logger.debug(f'run_dict_status:{run_dict_status}')
                     if len(ready_dict_idx)>0:
                         #next_ready_dict_idx=ready_dict_idx.pop()
                         readysleepcount+=1
@@ -495,14 +498,12 @@ class run_cluster(kernelcompare.KernelCompare):
                             #if not name in nonewjob_namelist:
                             setup=self.setup_job_for_node(name,list_of_run_dicts[next_ready_dict_idx])
                             assignment_tracker[name] = next_ready_dict_idx
-                            #print('assignment_tracker', assignment_tracker)
+                            #p#rint('assignment_tracker', assignment_tracker)
                             i+=1
                         except:
-                            self.logger.exception('setup job for node failed')
+                            self.logger.exception(f'setup_job_for_node named:{name}, i:{i} has failed')
                             run_dict_status[next_ready_dict_idx] = 'ready'
                             #ready_dict_idx = [ii for ii in range(model_run_count) if run_dict_status[ii] == 'ready']
-
-                            self.logger.exception(f'error in {__name__}')
                             print(f'setup_job_for_node named:{name}, i:{i} has failed')
                 
 
@@ -533,6 +534,7 @@ class run_cluster(kernelcompare.KernelCompare):
 
                 elif job_status=='finished':
                     print(f'node:{name} has finished')
+                    self.logger.info(f'node:{name} has finished')
                     try:
                         job_idx=assignment_tracker[name]
                     except:
@@ -550,7 +552,7 @@ class run_cluster(kernelcompare.KernelCompare):
                         next_readynamelist.append(name)
                         #mergestatus=self.mergethisnode(name,move=1)
                         #self.logger.info(f'for node name:{name}, mergestatus:{mergestatus}')
-                        #print(f'for node name:{name}, mergestatus:{mergestatus}')
+                        #p#rint(f'for node name:{name}, mergestatus:{mergestatus}')
                         #readynamelist.append(name)
                     except:
                         self.logger.exception('')
@@ -647,6 +649,7 @@ class run_cluster(kernelcompare.KernelCompare):
             with open(job_file_path,'wb') as f:
                 pickle.dump(myjobfile,f)
             print(f'job setup for node:{name}')
+            self.logger.debug(f'job setup for node:{name}')
             # print(f'newjob has jobdict:{jobdict}')
         except:
             self.logger.exception(f'error in {__name__}')
@@ -777,6 +780,7 @@ class run_cluster(kernelcompare.KernelCompare):
             i_have_opt_job=0
             i=0
             print(f'{myname} ischecking for jobs')
+            self.logger.debug(f'{myname} ischecking for jobs')
             while i_have_opt_job==0:
                 jobfile_dict=self.check_for_opt_job(myname,start_time,mydir)
                 if type(jobfile_dict) is dict:
@@ -800,21 +804,23 @@ class run_cluster(kernelcompare.KernelCompare):
                 #kernelcompare.KernelCompare(directory=mydir,myname=myname).run_model_as_node(
                 #    my_optimizedict,my_datagen_dict,force_start_params=0)
                 self.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
-
-                try:
-                    self.update_node_job_status(myname,status="finished",mydir=mydir)
-                except:
-                    print(f'could not update node status for {myname} to finished')
-                    self.logger.exception(f'error in {__name__}')
-                    #self.runnode(myname+'0')#relying on wrapper function restarting the node
+                success=1
+                
             except:
+                success=0
                 try:
-                    self.update_node_job_status(myname,status='finished',mydir=mydir)
+                    self.update_node_job_status(myname,status='failed',mydir=mydir)
                 except:
                     self.logger.exception(f'error in {__name__}')
                     #self.runnode(myname+'0')#relying on wrapper function restarting the node
                 self.logger.exception(f'error in {__name__}')
-
+            if success:
+                try:
+                    self.update_node_job_status(myname,status="finished",mydir=mydir)
+                except:
+                    print(f'could not update node status for {myname} to finished')
+                    self.logger.exception(f'could not update node status for {myname} to finished')
+                    #self.runnode(myname+'0')#relying on wrapper function restarting the node
 
 
             #self.runnode(myname)#relying on wrapper function restarting the node
@@ -841,7 +847,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     i=0
                     return myjob
                 else:
-                    #print('myjob status:',myjob['status'])
+                    #p#rint('myjob status:',myjob['status'])
                     i+=1
                     sleep(.25*log(10*i+1))
             except:
@@ -904,11 +910,11 @@ class run_cluster(kernelcompare.KernelCompare):
             try:
                 with open(nodes_job_filename,'rb') as saved_job_file:
                     nodesjob_dict=pickle.load(saved_job_file)
-                #print(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["status"]}')
+                #p#rint(f'check_node_job_status found: nodes_jobdict["status"]:{nodesjob_dict["status"]}')
                 if time==0:
                     return nodesjob_dict['status'][-1][1]
                 if time==1:
-                    #print(f"nodesjob_dict['status'][-1]:{nodesjob_dict['status'][-1]}")
+                    #p#rint(f"nodesjob_dict['status'][-1]:{nodesjob_dict['status'][-1]}")
                     return nodesjob_dict['status'][-1][0],nodesjob_dict['status'][-1][1]#time_status tup
             except FileNotFoundError:
                 if i==2:

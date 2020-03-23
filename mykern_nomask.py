@@ -739,6 +739,9 @@ class optimize_free_params(kNdtool):
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
         self.datagen_dict=None
+        self.savepath=None
+        self.jobpath=None
+        self.yhatmaskscount=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname

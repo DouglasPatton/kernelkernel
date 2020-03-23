@@ -817,6 +817,7 @@ class optimize_free_params(kNdtool):
         self.datagen_dict=None
         self.savepath=None
         self.jobpath=None
+        self.yhatmaskscount=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname

@@ -31,6 +31,7 @@ class KCPisces():
             all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
         new_model_save_list=[]
         for spec in all_species_model_merge_dict:
+            
             model_save_list=all_species_model_merge_dict[spec]
             self.logger.debug('model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
             model_save_list=all_species_model_merge_dict[spec]
