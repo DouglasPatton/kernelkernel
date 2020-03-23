@@ -22,7 +22,7 @@ class KCPisces():
     
     
         
-    def merge_dict_model_filter(self,all_species_model_merge_dict,filterthreshold=None,bestshare=0.25):
+    def merge_dict_model_filter(self,all_species_model_merge_dict,filterthreshold=None,bestshare=None):
         '''
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
@@ -41,8 +41,11 @@ class KCPisces():
         if bestshare:
             fullcount=len(sorted_condensed_model_list)
             bestcount=int(fullcount*bestshare)
-            new_model_save_list.extend(sorted_condensed_model_list[:bestcount])
+            if bestcount==0:
+                bestcount=1
+            new_model_save_list.extend(sorted_condensed_model_list[0:bestcount])
         else:new_model_save_list.extend(sorted_condensed_model_list)
+        self.logger.debug(f'for spec:{spec} len(new_model_save_list):{len(new_model_save_list)}')    
         return new_model_save_list
         
         
