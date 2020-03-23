@@ -315,12 +315,12 @@ class run_cluster(kernelcompare.KernelCompare):
             # print(f'namefile_tuplist:{namefile_tuplist}')
             s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
 
-            current_name_list = [name for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold]
-            old_name_list1 = [name for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
+            current_name_list,current_name_list_tuplist = zip(*[(name,namefile_tuplist[i]) for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold])
+            old_name_list1,old_name_position_list = zip(*[(name,i) for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
                               not s_since_update_list[i] < self.oldnode_threshold]
             
             old_name_list = []
-            for name_i in old_name_list1:
+            for i,name_i in enumerate(old_name_list1):
                 for j in range(10):
                     try:
                         idx=assignment_tracker[name_i]
@@ -334,6 +334,7 @@ class run_cluster(kernelcompare.KernelCompare):
                             self.logger.info(f'1-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
                         elif time_i < self.oldnode_threshold:
                             current_name_list.append(name_i)
+                            current_name_list_tuplist.append(namefile_tuplist[old_name_position_list[i]])
                             self.update_my_namefile(name_i,status='working')
                         else: 
                             old_name_list.append(name_i)
@@ -383,8 +384,8 @@ class run_cluster(kernelcompare.KernelCompare):
 
         except:
             self.logger.exception('')
-        readynamelist=current_name_list
-        return run_dict_status, assignment_tracker, readynamelist
+        #readynamelist=current_name_list
+        return run_dict_status, assignment_tracker, current_name_list,current_name_list_tuplist
   
 
 
@@ -420,19 +421,19 @@ class run_cluster(kernelcompare.KernelCompare):
             
             self.savemasterstatus(assignment_tracker,run_dict_status,list_of_run_dicts)
             
-            loopmax=5*len(readynamelist)
-	
+            #loopmax=5*len(readynamelist)
             if True:#loopcount>loopmax or len(next_readynamelist)==0:
                 loopcount=0
                 
 
-                run_dict_status, assignment_tracker, readynamelist=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
+                run_dict_status, assignment_tracker,current_name_list,current_name_list_tuplist=self.rebuild_namefiles(run_dict_status, assignment_tracker)#get rid of the old names that are inactive
                 #namelist=self.getnamelist()
                 #readynamelist=self.getreadynames(namelist)
                 
                 #self.logger.debug('i:{i},loopcount:{loopcount}readynamelist:{readynamelist}')
-                if len(readynamelist)>1:
-                    self.logger.debug(f'readynamelist:{readynamelist}')
+                current_name_count=len(current_name_list)
+                if current_name_count>1:
+                    self.logger.debug(f'readynamelist:{current_name_list_tuplist}')
                     print(f'readynamelist:{readynamelist}')
                 if all([status=='finished' for status in run_dict_status]):
                     break
@@ -445,13 +446,14 @@ class run_cluster(kernelcompare.KernelCompare):
             next_readynamelist=[]
             shuffle(readynamelist)
             readysleepcount=0
-            for name in readynamelist:
+            for i in range(current_name_count):
                 loopcount+=1
                 #name=readynamelist.pop(0)
                 
                 #ready_dicts=[dict_i for i,dict_i in enumerate(list_of_run_dicts) if run_dict_status[i]=='ready']
-
-                try:
+                name=current_name_list[i]
+                job_time,job_status=current_name_list_tuplist[i]
+                '''try:
                     job_time,job_status=self.check_node_job_status(name,time=1)
                     #p#rint(f'job_time:{job_time},job_status:{job_status} for name:{name}')
                     
@@ -459,10 +461,10 @@ class run_cluster(kernelcompare.KernelCompare):
                     #p#rint(f'check_node_job_status failed for node:{name}')
                     self.logger.exception(f'check_node_job_status failed for node:{name}')
                     job_status='failed'
-                    job_time='failed'
+                    job_time='failed''''
 
                 #p#rint(f"job_time:{job_time},job_status:{job_status}")
-                try:
+                """try:
                     now=strftime("%Y%m%d-%H%M%S")
                     
                     elapsed=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(job_time,"%Y%m%d-%H%M%S")
@@ -474,14 +476,14 @@ class run_cluster(kernelcompare.KernelCompare):
                 if islate:
                     self.logger.info(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
                     print(f'job_time:{job_time},job_status:{job_status} for name:{name}, islate:{islate}')
-                    job_status='old'
+                    job_status='old'"""
                 '''if job_status "filenotfound" :
                     if not job_status=='finished':
                         notanewjob_list.append([name,job_status])
                     else:
                         notanewjob_list.append([name,job_status])
                     #nonewjob_namelist=[i[0] for i in notanewjob_list]'''
-                if job_status in ['filenotfound','ready']:
+                if job_status == 'ready':
                     print(f'about to setup the job for node:{name}')
                     self.logger.debug(f'about to setup the job for node:{name}')
                     #p#rint('len(ready_dict_idx)',len(ready_dict_idx))
