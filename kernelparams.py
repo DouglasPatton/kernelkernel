@@ -147,7 +147,11 @@ class KernelParams:
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
+        
         p=modeldict['param_count']
+        if p is None:
+            p=2
+         
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
@@ -224,7 +228,7 @@ class KernelParams:
             
         if not bestshare_list:
             bestshare_list=[.25,.25,.25,.25]
-        filterthreshold_list=[None]*(stepcount-1)
+        filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep]='naivemse'
         mse_threshold_list=[None]*stepcount # 
@@ -239,7 +243,7 @@ class KernelParams:
             if not os.path.exists(jobdir):os.mkdir(jobdir)
             stepfolders={'savedir':savedir,'jobdir':jobdir}
             if not os.path.exists(startdir): os.mkdir(startdir)
-            ppm_kwargs={'condense':1,'recondense':0,'recondense2':1}
+            ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
             opt_job_kwargs={
                 'mse_threshold':mse_threshold_list[step],
                 'maxiter':maxiter_list[step],

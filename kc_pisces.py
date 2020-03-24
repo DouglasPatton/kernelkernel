@@ -36,15 +36,22 @@ class KCPisces():
             model_save_list=all_species_model_merge_dict[spec]
             self.logger.debug(f'model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
             model_save_list=all_species_model_merge_dict[spec]
-            sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=1, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
-            self.logger.debug(f'sorted_condensed_model_list[0:2]:{sorted_condensed_model_list[0:2]}')
+            #sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=0, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
+            model_list_mselist=[model_save['mse'] for model_save in model_save_list]
+            self.logger.debug(f'model_list_mselist:{model_list_mselist}')
+            if filterthreshold is None:
+                filterthreshold=1+max(model_list_mselist)
+            self.logger.debug(f'filterthreshold:{filterthreshold}')
+                
+            sorted_model_list=[model_save_list[pos] for mse,pos in sorted(zip(model_list_mselist,list(range(len(model_list_mselist))))) if mse<filterthreshold]
+            self.logger.debug(f'sorted_model_list[0:2]:{sorted_model_list[0:2]}')
             #help_start applies do_partial_match and will eliminate models with higher nwtmse and only a partial match of parameters.
             if bestshare:
-                fullcount=len(sorted_condensed_model_list)
+                fullcount=len(sorted_model_list)
                 bestcount=max([1,int(fullcount*bestshare)])
-                new_model_save_list.extend(sorted_condensed_model_list[0:bestcount])
+                new_model_save_list.extend(sorted_model_list[0:bestcount])
             else:
-                new_model_save_list.extend(sorted_condensed_model_list)
+                new_model_save_list.extend(sorted_model_list)
             self.logger.debug(f'for spec:{spec} len(new_model_save_list):{len(new_model_save_list)}')    
         return new_model_save_list
         
@@ -57,6 +64,7 @@ class KCPisces():
         '''
         model_rundict_list=[]
         for model_save in model_save_list:
+            new_opt_dict={}
             modeldict=model_save['modeldict']
             opt_settings_dict=model_save['opt_settings_dict']
             expanded_datagen_dict=model_save['datagen_dict']
@@ -75,7 +83,8 @@ class KCPisces():
             new_opt_dict['datagen_dict']=expanded_datagen_dict
             new_opt_dict['savepath']=model_save['savepath']
             new_opt_dict['jobpath']=model_save['jobpath']
-            optimizedict=self.build_optdict(opt_dict_override=new_opt_dict,param_count=None,species=None)
+            defaultoptimizedict=self.build_optdict(param_count=None,species=None)
+            optimizedict=self.do_dict_override(defaultoptimizeedict,new_opt_dicts)
             best_fof_paramdict=model_save['params']
             self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
             model_rundict_list.append(optimizedict)
@@ -110,14 +119,16 @@ class KCPisces():
             mergedlist=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
-                condense=1,#first condensing addresses iterations
+                condense=condense,#first condensing addresses iterations
                 recondense=recondense,returnlist=1
                 )
+            self.logger.debug(f'len(mergedlist):{len(mergedlist)}')
             if species not in all_species_model_merge_dict:
                 all_species_model_merge_dict[species]=[]
             all_species_model_merge_dict[species].extend(mergedlist)
             if recondense2:
                 all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
+                self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
         self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)
         return all_species_model_merge_dict
             

@@ -306,6 +306,7 @@ class MyKernHelper:
         savedict['datagen_dict']=self.datagen_dict
         savedict['savepath']=self.savepath
         savedict['jobpath']=self.jobpath
+        savedict['opt_settings_dict']=self.opt_settings_dict
         try:
             savedict['yhatmaskscount']=self.yhatmaskscount
         except:

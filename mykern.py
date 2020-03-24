@@ -815,6 +815,7 @@ class optimize_free_params(kNdtool):
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
         self.datagen_dict=None
+        self.opt_settings_dict=None
         self.savepath=None
         self.jobpath=None
         self.yhatmaskscount=None
@@ -864,6 +865,7 @@ class optimize_free_params(kNdtool):
 
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
+        self.opt_settings_dict=opt_settings_dict
         opt_method_options=opt_settings_dict['options']
         self.mse_threshold=opt_settings_dict['mse_threshold']
         self.do_minimize=opt_settings_dict['do_minimize']

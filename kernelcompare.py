@@ -389,17 +389,19 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                                 break
                     
         final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]]
-        
+        self.logger.debug(f'len(final_keep_list):{len(final_keep_list)}')
         if verbose>0:
             print(f'len(final_keep_list):{len(final_keep_list)}')
         if endsort:
             final_nwt_list=[nwt_list[i] for i in range(modelcount) if keep_model[i]]
-            final_keep_list,final_nwt_list=zip(*[(nwt_mse,model) for nwt_mse,model in sorted(zip(final_nwt_list,final_keep_list))])
+            final_keep_list,final_nwt_list=zip(*[(model,nwt_mse) for nwt_mse,model in sorted(zip(final_nwt_list,final_keep_list))])
         if threshold:
-            if final_nwt_list=='naivemse':
+            if type(threshold) is str and threshold=='naivemse':
                 final_keep_list=[model for model in final_keep_list if model['mse']<model['naivemse']]
+            if type(threshold) in  [float,int]:
+                final_keep_list=[model for model in final_keep_list if model['mse']<threshold]
             #condensed_model_list.sort(key=lambda savedicti: savedicti['mse'])
-            
+        self.logger.debug(f'finally, len(final_keep_list):{len(final_keep_list)}')
         return final_keep_list
 
     def do_nwt_mse(self,mse,n,batch_count=1,naivemse=1,batchbatchcount=1):

@@ -183,6 +183,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
             except:
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
+                assert False,'halt'
      
             
         
