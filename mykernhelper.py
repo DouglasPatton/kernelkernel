@@ -90,7 +90,7 @@ class MyKernHelper:
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
         
-        self.logger.info(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
+        #self.logger.info(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
         return free_params,fixed_or_free_paramdict
 
     

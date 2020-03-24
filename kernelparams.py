@@ -230,12 +230,13 @@ class KernelParams:
         mse_threshold_list=[None]*stepcount # 
         maxiter_list=[1,5,20,100]
         maxbatchbatchcount_list=[1,2,4,8]
-        do_minimize_list=[0,1,1,1]
+        do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
-            startdir=os.path.join(self.modelsavedirectory,'step'+str(step))
+            startdir=os.path.join(self.modelsavedirectory,'step'+str(step+1))
             savedir=startdir
-            jobdir=os.path.join(self.jobdirectory,'step'+str(step))
+            jobdir=os.path.join(self.jobdirectory,'step'+str(step+1))
+            if not os.path.exists(jobdir):os.mkdir(jobdir)
             stepfolders={'savedir':savedir,'jobdir':jobdir}
             if not os.path.exists(startdir): os.mkdir(startdir)
             ppm_kwargs={'condense':1,'recondense':0,'recondense2':1}

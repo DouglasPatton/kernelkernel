@@ -158,27 +158,31 @@ class run_cluster(kernelcompare.KernelCompare):
             return self.runmaster(list_of_run_dicts)
         model_run_stepdict_list=self.build_stepdict_list()
         for i,stepdict in enumerate(model_run_stepdict_list):
+            self.logger.debug(f'i:{i}, stepdict:{stepdict}')
             #stepfolders=stepdict['stepfolders']
-            
-            if 'variations' in stepdict:
-                list_of_run_dicts=self.generate_rundicts_from_variations()
-                runmasterresult=self.runmaster(list_of_run_dicts)
+            try:
+                self.logger.debug(f'i:{i},stepdict:{stepdict}')
+                if 'variations' in stepdict:
+                    list_of_run_dicts=self.generate_rundicts_from_variations()
+                    runmasterresult=self.runmaster(list_of_run_dicts)
+                    #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
+                else:
+                    resultslist=[]
+
+                    for functup in stepdict['functions']:
+                        args=functup[1]
+                        if args==[]:
+                            args=[resultslist[-1]]
+                        kwargs=functup[2]
+                        result=functup[0](*args,**kwargs)
+                        resultslist.append(result)
+                    list_of_run_dicts=resultslist[-1]
+                    self.logger.debug(f'step:{i} len(list_of_run_dicts):{len(list_of_run_dicts)}')
+                    #self.rundict_advance_path(list_of_run_dicts,i,stepfolders)
+                    runmasterresult=self.runmaster(list_of_run_dicts)
                 self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-            else:
-                resultslist=[]
-                
-                for func_tup in stepdict['functions']:
-                    args=functup[1]
-                    if args==[]:
-                        args=resultslist[-1]
-                    kwargs=functup[2]
-                    resultslist.append(functup[0](*args,**kwargs))
-                list_of_run_dicts=resultslist[-1]
-                self.logger.debug(f'step:{i} len(list_of_run_dicts:{len(list_of_run_dicts})')
-                #self.rundict_advance_path(list_of_run_dicts,i,stepfolders)
-            runmasterresult=self.runmaster(list_of_run_dicts)
-            self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-                
+            except:
+                self.logger.exception(f'i:{i},stepdict:{stepdict}')
      
             
         

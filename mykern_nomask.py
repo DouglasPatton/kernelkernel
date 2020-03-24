@@ -657,7 +657,7 @@ class kNdtool(Ndiff,MyKernHelper):
        
         args_tuple=(batchdata_dictlist, modeldict, fixed_or_free_paramdict)
         #val_args_tuple=(val_batchdata_dict, modeldict, fixed_or_free_paramdict)
-        self.logger.info(f'mykern modeldict:{modeldict}')
+        #self.logger.info(f'mykern modeldict:{modeldict}')
         
         return free_params,args_tuple#,val_args_tuple
     
