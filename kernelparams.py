@@ -233,9 +233,9 @@ class KernelParams:
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
-            startdir=os.path.join(self.modelsavedirectory,'step'+str(step+1))
+            startdir=os.path.join(self.modelsavedirectory,'step'+str(step))
             savedir=startdir
-            jobdir=os.path.join(self.jobdirectory,'step'+str(step+1))
+            jobdir=os.path.join(self.jobdirectory,'step'+str(step))
             if not os.path.exists(jobdir):os.mkdir(jobdir)
             stepfolders={'savedir':savedir,'jobdir':jobdir}
             if not os.path.exists(startdir): os.mkdir(startdir)
@@ -264,11 +264,13 @@ class KernelParams:
         charcount=len(str(i))+4 # 4 for 'step'
         newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
         newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+        self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
         for rundict in list_of_rundicts:
             jobpath=rundict['jobpath']
             savepath=rundict['savepath']
             _,savepathstem=os.path.split(savepath)
             _,jobpathstem=os.path.split(jobpath)
+            
             rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
             rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
         return list_of_rundicts        
