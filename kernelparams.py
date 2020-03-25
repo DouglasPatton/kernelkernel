@@ -24,7 +24,7 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.3,.6,2)])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.3,.6,6)])
         
         """Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
             [
@@ -34,11 +34,11 @@ class KernelParams:
                 *[factor*np.array([-1,-1]) for factor in np.linspace(.3,.9,3)]
             ])"""
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
-        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,.8,2)))
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,.8,4)))
         
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.7,2)])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.7,4)])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.7,2)])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.7,6)])
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         NWnorm_variations=('modeldict:NWnorm',['none'])
@@ -133,7 +133,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(102,103)])
+            species_variations=('species',[self.specieslist[i] for i in range(100,105)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
@@ -214,7 +214,7 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
+    def build_stepdict_list(self,stepcount=5,threshcutstep=2,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -227,12 +227,12 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[.25,.25,.25,.25]
+            bestshare_list=[.1,.25,.25,.25]
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep]='naivemse'
         mse_threshold_list=[None]*stepcount # 
-        maxiter_list=[1,5,20,100]
+        maxiter_list=[5,10,20,30]
         maxbatchbatchcount_list=[2,4,8,16]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
