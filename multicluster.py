@@ -27,55 +27,29 @@ class mypool:
         self.source=source
 
         self.sleepfactor=0.1 #0.2->4min. 0.1->6sec, 0.224 ->10min
-        
-        #logging.basicConfig(level=logging.INFO)
-        #with open(os.path.join(os.getcwd(),'logconfig.yaml'),'rt') as f:
-        #    configfile=yaml.safe_load(f.read())
-        #logging.config.dictConfig(configfile)
-        #self.logger = logging.getLogger('multiClusterLogger')
-
-        ''' platform=sys.platform
-        p=psutil.Process(os.getpid())
-        if platform=='win32':
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-        else:
-            p.nice(6)'''
-        #seed(1)
-        #seed(datetime.now())
         self.local_run=local_run
         self.i=0
         self.id=randint(0,100000000)
         self.nodecount=nodecount
         self.workercount=nodecount
-        
-        #if includemaster==1:
-        #    self.workercount=nodecount+1
-        #    self.arg_list=['master']+['node']*(nodecount)
-        #else:
-        #    self.arg_list = ['node'] * (nodecount)
         self.arg_list = ['node'] * (nodecount)
         self.runpool(self.arg_list,self.workercount)
-        
-
-    def runpool0(self,arg_list,workercount):
-        with mp.Pool(processes=workercount) as pool:
-            pool.map(self.runworker,arg_list)
-            
             
     def runpool(self,arg_list,workercount):
         if self.includemaster:
-            master_proc=mp.Process(target=self.runworker,args=('master',))
-            master_proc.start()
+            master=qcluster.RunCluster()
+            master.start()
+            
             
         process_list=[None]*workercount
         for i in range(workercount):
             self.i+=1
-            process_list[i]=mp.Process(target=self.runworker,args=(arg_list[i],))
+            process_list[i]=qcluster.RunNode()
             process_list[i].start()
         for i in range(workercount):
             process_list[i].join()
         if self.includemaster:
-            master_proc.join()
+            master.join()
         print('============================================')
         print('==========multicluster has completed=========')
         print('============================================')
