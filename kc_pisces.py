@@ -80,14 +80,18 @@ class KCPisces():
                
             new_opt_dict['opt_settings_dict']=opt_settings_dict
             new_opt_dict['modeldict']=modeldict
-            new_opt_dict['datagen_dict']=expanded_datagen_dict
-            new_opt_dict['savepath']=model_save['savepath']
-            new_opt_dict['jobpath']=model_save['jobpath']
+            #new_opt_dict['datagen_dict']=expanded_datagen_dict
             defaultoptimizedict=self.build_optdict(param_count=None,species=None)
-            optimizedict=self.do_dict_override(defaultoptimizeedict,new_opt_dicts)
+            optimizedict=self.do_dict_override(defaultoptimizedict,new_opt_dict)
             best_fof_paramdict=model_save['params']
-            self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
-            model_rundict_list.append(optimizedict)
+            self.logger.debug(best_fof_paramdict)
+            optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
+            self.logger.debug(f'after rebuild hyper param dict, optimizedict:{optimizedict}')
+            optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  
+            optmodel_run_dict['savepath']=model_save['savepath']
+            optmodel_run_dict['jobpath']=model_save['jobpath']
+            model_rundict_list.append(optmodel_run_dict)
+        self.logger.debug(f'len(model_rundict_list):{len(model_rundict_list)}')
         return model_rundict_list
             
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):

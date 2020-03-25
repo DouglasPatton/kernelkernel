@@ -85,6 +85,8 @@ class MyKernHelper:
                 param_feature_dict['const']=param_form
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
+                if param_form == 'non-neg':
+                    param_val=np.log(param_val)
                 free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'

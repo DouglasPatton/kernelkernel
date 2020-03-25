@@ -304,11 +304,11 @@ class KernelParams:
             'regression_model':'NW',
             'product_kern_norm':'self',
             'hyper_param_form_dict':{
-                'Ndiff_exponent':'fixed',#'free',
+                'Ndiff_exponent':'free',
                 'x_bandscale':'non-neg',
-                'Ndiff_depth_bw':'fixed',#'non-neg',
-                'outer_x_bw':'fixed',#'non-neg',
-                'outer_y_bw':'fixed',#'non-neg',
+                'Ndiff_depth_bw':'non-neg',
+                'outer_x_bw':'non-neg',
+                'outer_y_bw':'non-neg',
                 'y_bandscale':'fixed',#'fixed'
                 }
             }
