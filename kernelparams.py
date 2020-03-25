@@ -6,7 +6,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[4]
+        self.batchcount_variation_list=[16]
         self.do_minimize=0
         self.maxiter=3
         
@@ -233,7 +233,7 @@ class KernelParams:
             filterthreshold_list[threshcutstep]='naivemse'
         mse_threshold_list=[None]*stepcount # 
         maxiter_list=[1,5,20,100]
-        maxbatchbatchcount_list=[1,2,4,8]
+        maxbatchbatchcount_list=[2,4,8,16]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
