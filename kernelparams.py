@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 
@@ -5,9 +6,9 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[8]
-        self.do_minimize=1
-        self.maxiter=20
+        self.batchcount_variation_list=[16]
+        self.do_minimize=0
+        self.maxiter=3
         
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
@@ -23,25 +24,25 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0]),.5*np.array([-1,1]),1.8*np.array([-1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.3,.6,6)])
         
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
+        """Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
             [
                 *[factor*np.array([1,-1]) for factor in np.linspace(.3,.9,3)],
                 *[factor*np.array([1,1]) for factor in np.linspace(.3,.9,3)],
                 *[factor*np.array([-1,1]) for factor in np.linspace(.3,.9,3)],
                 *[factor*np.array([-1,-1]) for factor in np.linspace(.3,.9,3)]
-            ])
+            ])"""
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
-        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.arange(0.15,.9,.3)))
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,.8,4)))
         
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.2,.8,3)])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.7,4)])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.2,.8,3)])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.7,6)])
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
-        #NWnorm_variations=('modeldict:NWnorm',['across','none'])
-        NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm','none'])
+        NWnorm_variations=('modeldict:NWnorm',['none'])
+        #NWnorm_variations=('modeldict:NWnorm',['across-except:batchnorm','none'])
         #binary_y_variations=('modeldict:binary_y',[0.5])
         binary_y_variations=('modeldict:binary_y',[(.5, .45, .55)]) # if binary_y is a tuple,
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
@@ -50,15 +51,15 @@ class KernelParams:
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
-        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
+        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
-        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -146,7 +147,11 @@ class KernelParams:
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         Ndiff_start=modeldict['Ndiff_start']
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
+        
         p=modeldict['param_count']
+        if p is None:
+            p=2
+         
         assert not p==None, f"p is unexpectedly p:{p}"
         if modeldict['Ndiff_type']=='product':
                 hyper_paramdict1={
@@ -207,8 +212,72 @@ class KernelParams:
             assert False, f"error, source not recognized. source:{source}"
             
         self.datagen_dict=datagen_dict
-        return datagen_dict    
-
+        return datagen_dict   
+    
+    def build_stepdict_list(self,stepcount=5,threshcutstep=2,skipstep0=0,bestshare_list=[]):
+        '''
+        even if step0 is skipped, include it in the step count
+        '''
+        self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
+        stepdictlist=[]
+        optdict_variation_list=self.getoptdictvariations(source=self.source)
+        datagen_variation_list=self.getdatagenvariations(source=self.source)
+        if not skipstep0:
+            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+            stepdictlist.append(step0)
+            
+        if not bestshare_list:
+            bestshare_list=[.1,.25,.25,.25]
+        filterthreshold_list=[1]*(stepcount-1)
+        if type(threshcutstep) is int:
+            filterthreshold_list[threshcutstep]='naivemse'
+        mse_threshold_list=[None]*stepcount # 
+        maxiter_list=[5,10,20,30]
+        maxbatchbatchcount_list=[2,4,8,16]
+        do_minimize_list=[1,1,1,1]
+        for step in range(stepcount-1):
+            filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
+            startdir=os.path.join(self.modelsavedirectory,'step'+str(step))
+            savedir=startdir
+            jobdir=os.path.join(self.jobdirectory,'step'+str(step))
+            if not os.path.exists(jobdir):os.mkdir(jobdir)
+            stepfolders={'savedir':savedir,'jobdir':jobdir}
+            if not os.path.exists(startdir): os.mkdir(startdir)
+            ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
+            opt_job_kwargs={
+                'mse_threshold':mse_threshold_list[step],
+                'maxiter':maxiter_list[step],
+                'do_minimize':do_minimize_list[step],
+                'maxbatchbatchcount':maxbatchbatchcount_list[step]
+            }
+            advance_path_kwargs={'i':step,'stepfolders':stepfolders}
+            stepdict={'functions':[
+                (self.process_pisces_models,[startdir],ppm_kwargs),
+                (self.merge_dict_model_filter,[],filter_kwargs),
+                (self.opt_job_builder,[],opt_job_kwargs),
+                (self.rundict_advance_path,[],advance_path_kwargs)
+            ]}
+            stepdictlist.append(stepdict)
+        return stepdictlist
+            
+               
+    def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
+        self.logger.info(f'len(list_of_rundicts:{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders})')
+        savefolderpath=stepfolders['savedir']
+        jobfolderpath=stepfolders['jobdir']
+        charcount=len(str(i))+4 # 4 for 'step'
+        newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
+        newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+        self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
+        for rundict in list_of_rundicts:
+            jobpath=rundict['jobpath']
+            savepath=rundict['savepath']
+            _,savepathstem=os.path.split(savepath)
+            _,jobpathstem=os.path.split(jobpath)
+            
+            rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
+            rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
+        return list_of_rundicts        
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
         if opt_dict_override==None:
@@ -235,11 +304,11 @@ class KernelParams:
             'regression_model':'NW',
             'product_kern_norm':'self',
             'hyper_param_form_dict':{
-                'Ndiff_exponent':'fixed',#'free',
+                'Ndiff_exponent':'free',
                 'x_bandscale':'non-neg',
-                'Ndiff_depth_bw':'fixed',#'non-neg',
-                'outer_x_bw':'fixed',#'non-neg',
-                'outer_y_bw':'fixed',#'non-neg',
+                'Ndiff_depth_bw':'non-neg',
+                'outer_x_bw':'non-neg',
+                'outer_y_bw':'non-neg',
                 'y_bandscale':'fixed',#'fixed'
                 }
             }

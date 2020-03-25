@@ -31,7 +31,7 @@ class KCHelper():
         vstring=''
         for key,val in new_opt_dict['hyper_param_dict'].items():
             if not old_opt_dict['modeldict']['hyper_param_form_dict'][key]=='fixed':
-                new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform='no')
+                new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict,transform=1)
                 vstring+=f"for {key} old val({val})replaced with new val({new_val})"
                 new_opt_dict['hyper_param_dict'][key]=new_val
         if verbose==1:print(vstring)

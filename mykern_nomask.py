@@ -657,7 +657,7 @@ class kNdtool(Ndiff,MyKernHelper):
        
         args_tuple=(batchdata_dictlist, modeldict, fixed_or_free_paramdict)
         #val_args_tuple=(val_batchdata_dict, modeldict, fixed_or_free_paramdict)
-        self.logger.info(f'mykern modeldict:{modeldict}')
+        #self.logger.info(f'mykern modeldict:{modeldict}')
         
         return free_params,args_tuple#,val_args_tuple
     
@@ -739,6 +739,10 @@ class optimize_free_params(kNdtool):
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
         self.datagen_dict=None
+        self.opt_settings_dict=None
+        self.savepath=None
+        self.jobpath=None
+        self.yhatmaskscount=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.name=myname
@@ -747,7 +751,8 @@ class optimize_free_params(kNdtool):
     def run_opt(self,datagen_obj,optimizedict,savedir):
         
         self.savedir=savedir
-    
+        self.savepath=optimizedict['savepath']
+        self.jobpath=optimizedict['jobpath']
         #self.Ndiff_list_of_masks_x=xmask
         #self.Ndiff_list_of_masks_y=ymask
         
@@ -778,10 +783,11 @@ class optimize_free_params(kNdtool):
 
 
         
-        self.logger.info(f'optimizedict for {self.name}:{optimizedict}')
+        #self.logger.info(f'optimizedict for {self.name}:{optimizedict}')
 
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']
+        self.opt_settings_dict=opt_settings_dict
         opt_method_options=opt_settings_dict['options']
         self.mse_threshold=opt_settings_dict['mse_threshold']
         self.do_minimize=opt_settings_dict['do_minimize']

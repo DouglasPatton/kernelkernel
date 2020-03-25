@@ -85,12 +85,14 @@ class MyKernHelper:
                 param_feature_dict['const']=param_form
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
+                if param_form == 'non-neg':
+                    param_val=np.log(param_val)
                 free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
         
-        self.logger.info(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
+        #self.logger.info(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
         return free_params,fixed_or_free_paramdict
 
     
@@ -274,7 +276,7 @@ class MyKernHelper:
             species=''
         except:
             self.logger.exception('something happened when pulling species from self.datagen_dict')
-        fullpath_filename=os.path.join(self.savedir,species+filename)
+        fullpath_filename=self.savepath
         savedir=os.path.split(fullpath_filename)[0]
         if not os.path.exists(savedir): 
             os.mkdir(savedir)
@@ -304,6 +306,9 @@ class MyKernHelper:
         now=strftime("%Y%m%d-%H%M%S")
         savedict['when_saved']=now
         savedict['datagen_dict']=self.datagen_dict
+        savedict['savepath']=self.savepath
+        savedict['jobpath']=self.jobpath
+        savedict['opt_settings_dict']=self.opt_settings_dict
         try:
             savedict['yhatmaskscount']=self.yhatmaskscount
         except:

@@ -22,35 +22,85 @@ class KCPisces():
     
     
         
-    def merge_dict_model_filter(self,threshold=None,bestshare=0.1):
-        all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
+    def merge_dict_model_filter(self,all_species_model_merge_dict,filterthreshold=None,bestshare=None):
+        '''
+        kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
+        do not change args,kwargs here without changing there
+        '''
+        self.logger.info(f'merge_dict_model_filter: len(all_species_model_merge_dict):{len(all_species_model_merge_dict)},filterthreshold:{filterthreshold},bestshare:{bestshare}')
+        if all_species_model_merge_dict is None:
+            all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
         new_model_save_list=[]
         for spec in all_species_model_merge_dict:
+            
             model_save_list=all_species_model_merge_dict[spec]
-            self.logger.debug('model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
+            self.logger.debug(f'model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
             model_save_list=all_species_model_merge_dict[spec]
-            sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=1, strict=1,verbose=0,endsort=1,threshold=threshold)
+            #sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=0, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
+            model_list_mselist=[model_save['mse'] for model_save in model_save_list]
+            self.logger.debug(f'model_list_mselist:{model_list_mselist}')
+            if filterthreshold is None:
+                filterthreshold=1+max(model_list_mselist)
+            self.logger.debug(f'filterthreshold:{filterthreshold}')
+                
+            sorted_model_list=[model_save_list[pos] for mse,pos in sorted(zip(model_list_mselist,list(range(len(model_list_mselist))))) if mse<filterthreshold]
+            self.logger.debug(f'sorted_model_list[0:2]:{sorted_model_list[0:2]}')
             #help_start applies do_partial_match and will eliminate models with higher nwtmse and only a partial match of parameters.
-        if bestshare:
-            fullcount=len(sorted_condensed_model_list)
-            bestcount=int(fullcount*bestshare)
-            new_model_save_list.extend(sorted_condensed_model_list[:bestcount])
-        else:new_model_save_list.extend(sorted_condensed_model_list)
+            if bestshare:
+                fullcount=len(sorted_model_list)
+                bestcount=max([1,int(fullcount*bestshare)])
+                new_model_save_list.extend(sorted_model_list[0:bestcount])
+            else:
+                new_model_save_list.extend(sorted_model_list)
+            self.logger.debug(f'for spec:{spec} len(new_model_save_list):{len(new_model_save_list)}')    
         return new_model_save_list
         
         
-    def opt_job_builder(self,model_save_list,maxiter=None,):
+    def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,mse_threshold=None,maxiter=None,do_minimize=None):
+        '''
+        
+        kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
+        do not change args,kwargs here without changing there
+        '''
+        model_rundict_list=[]
         for model_save in model_save_list:
+            new_opt_dict={}
             modeldict=model_save['modeldict']
-            datagen_dict=model_save['modeldict']
-            modeldict_datagen_dict_dict=self.pull2dicts(model_save)
-            optimizedict=self.build_optdict(opt_dict_override=modeldict_datagen_dict_dict,param_count=None,species=None)
+            opt_settings_dict=model_save['opt_settings_dict']
+            expanded_datagen_dict=model_save['datagen_dict']
+            if not maxbatchbatchcount is None:
+                modeldict['maxbatchbatchcount']=maxbatchbatchcount
+            if not maxiter is None:
+                opt_settings_dict['options']['maxiter']=maxiter
+            if not mse_threshold is None:
+                opt_settings_dict['mse_threshold']=mse_threshold
+            
+            if not do_minimize is None:
+                opt_settings_dict['do_minimize']=do_minimize
+               
+            new_opt_dict['opt_settings_dict']=opt_settings_dict
+            new_opt_dict['modeldict']=modeldict
+            #new_opt_dict['datagen_dict']=expanded_datagen_dict
+            defaultoptimizedict=self.build_optdict(param_count=None,species=None)
+            optimizedict=self.do_dict_override(defaultoptimizedict,new_opt_dict)
             best_fof_paramdict=model_save['params']
-            self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
+            self.logger.debug(best_fof_paramdict)
+            optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
+            self.logger.debug(f'after rebuild hyper param dict, optimizedict:{optimizedict}')
+            optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  
+            optmodel_run_dict['savepath']=model_save['savepath']
+            optmodel_run_dict['jobpath']=model_save['jobpath']
+            model_rundict_list.append(optmodel_run_dict)
+        self.logger.debug(f'len(model_rundict_list):{len(model_rundict_list)}')
+        return model_rundict_list
             
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):
-        
+        '''
+        kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
+        do not change args,kwargs here without changing there
+        '''
         #species_model_save_path_dict_list=[]
+        self.logger.info(f'process_pisces_models startpath:{startpath}')
         species_model_save_path_dict=self.split_pisces_model_save_path_dict(startpath)
         #species_model_save_path_dict_list.append(species_model_save_path_dict)
         #species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
@@ -73,15 +123,18 @@ class KCPisces():
             mergedlist=self.merge_and_condense_saved_models(
                 species_name=species,
                 pathlist=pathlist,
-                condense=1,#first condensing addreses iterations
+                condense=condense,#first condensing addresses iterations
                 recondense=recondense,returnlist=1
                 )
+            self.logger.debug(f'len(mergedlist):{len(mergedlist)}')
             if species not in all_species_model_merge_dict:
                 all_species_model_merge_dict[species]=[]
             all_species_model_merge_dict[species].extend(mergedlist)
             if recondense2:
                 all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
+                self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
         self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)
+        return all_species_model_merge_dict
             
     
     
