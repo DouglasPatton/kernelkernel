@@ -11,6 +11,28 @@ from random import randint,seed,shuffle
 import logging
 from helpers import Helper
 import multiprocessing as mp
+from multiprocessing.managers import BaseManager
+from queue import Queue
+
+class QueueManager(BaseManager): pass
+class TheQManager():
+    def __init__(self,qname,address):
+        logdir=os.path.join(os.getcwd(),'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=os.path.join(logdir,f'TheQManager-log')
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
+        self.logger = logging.getLogger(handlername)
+        self.logger.info(f'TheQManager starting with qname:{qname}')
+        
+        queue = Queue()
+        QueueManager.register(qname, callable=lambda:queue)
+        m = QueueManager(address=(address, 50000), authkey=b'qname')
+        s = m.get_server()
+        s.serve_forever()
 
 class run_cluster(kernelcompare.KernelCompare):
     '''
@@ -23,6 +45,7 @@ class run_cluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,myname=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None):
+        self.address='192.168.1.89'
         seed(1)        
         self.oldnode_threshold=datetime.timedelta(minutes=60)
         self.dosteps=dosteps
@@ -44,12 +67,13 @@ class run_cluster(kernelcompare.KernelCompare):
         self.helper=Helper()
         if myname=='master':
             self.model_collection_directory=os.path.join(os.getcwd(),'model_collection')
-            #self.model_collection_directory=self.helper.getname()#
             self.logger.info(f'self.model_collection_directory:{self.model_collection_directory}')
             if not os.path.exists(self.model_collection_directory): os.mkdir(self.model_collection_directory)
-
-        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
-        
+            self.stepcount=5
+            self.steptrackerQ=mp.Queue()
+            self.steptrackerQ.put([0 for _ in range(self.stepcount)])
+            kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source,myname=myname)
+            
         self.masterdirectory, self.masterfiledirectory=self.setmasterdir(self.savedirectory,myname)
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
         self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
@@ -87,12 +111,12 @@ class run_cluster(kernelcompare.KernelCompare):
         list_of_run_dicts=self.prep_model_list(
         optdict_variation_list=self.optdict_variation_list,datagen_variation_list=self.datagen_variation_list,datagen_dict=initial_datagen_dict)
         #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-        self.setupalljob_paths(list_of_run_dicts,step=step)
+        self.setup_save_paths(list_of_run_dicts,step=step)
         #p#rint(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
         return list_of_run_dicts
     
     
-    '''def setupalljob_paths(self,rundictlist,step=None):
+    def setupalljobsetup_save_paths_paths(self,rundictlist,step=None):
         if step is None:
             step=0
         for idx,rundict in enumerate(rundictlist):
@@ -107,7 +131,7 @@ class run_cluster(kernelcompare.KernelCompare):
             if not os.path.exists(savestepdir): os.mkdir(savestepdir)
             savepath=os.path.join(savestepdir,'species-'+species+'_model_save_'+str(idx))
             rundict['jobpath']=jobpath
-            rundict['savepath']=savepath'''
+            rundict['savepath']=savepath
 
     
     def setmasterdir(self,savedirectory,myname):
@@ -138,11 +162,15 @@ class run_cluster(kernelcompare.KernelCompare):
         return savedirectory
 
     def mastermaster(self,):
+        
+        
         if not self.dosteps:
             list_of_run_dicts=self.generate_rundicts_from_variations()
             return self.runmaster(list_of_run_dicts)
-        model_run_stepdict_list=self.build_stepdict_list()
+        
+        model_run_stepdict_list=self.build_stepdict_list(stepcount=self.stepcount,threshcutstep=2,skipstep0=0,bestshare_list=[])
         for i,stepdict in enumerate(model_run_stepdict_list):
+            
             self.logger.debug(f'i:{i}, stepdict:{stepdict}')
             #stepfolders=stepdict['stepfolders']
             try:
@@ -152,6 +180,7 @@ class run_cluster(kernelcompare.KernelCompare):
                     runmasterresult=self.runmaster(list_of_run_dicts)
                     #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
                 else:
+                    steptracker=self.steptrackerQ.get()
                     resultslist=[]
 
                     for functup in stepdict['functions']:
@@ -169,13 +198,43 @@ class run_cluster(kernelcompare.KernelCompare):
             except:
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
                 assert False,'halt'
-     
+                
+                
+                
+    def runmaster(self,list_of_run_dicts):
+        self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
+        jobqfiller=mp.Process(target=JobQFiller,args=[list_of_run_dicts,self.address])
+        
+        
             
+            
+    class JobQFiller:
+        def __init__:(self,joblist,address):
+        QueueManager.register('jobq')
+        m = QueueManager(address=(address, 50000), authkey=b'jobq')
+        m.connect()
+        queue = m.jobq()
+        while joblist
+            
+            
+            
+            
+            
+    def initializequeuemanager(self):
+        self.jobmanager=mp.Process(target=TheQManager(b'jobq',self.address))
+        self.jobmanager.start()
+        self.savemanager=mp.Process(target=TheQManager(b'saveq',self.address))
+        self.savemanager.start()
+        
+        
+        
+        
         
     def initialize(self,myname):
         
         if myname=="master":
             try:
+                self.initializequeuemanager()
                 self.mastermaster()
             except:
                 self.logger.exception('mastermaster failed')
@@ -190,43 +249,7 @@ class run_cluster(kernelcompare.KernelCompare):
                 self.logger.exception('node with myname:{myname} has failed')
 
 
-    def createnamefile(self,name):
-        namefilename=os.path.join(self.masterdirectory,name+'.name')
-        if os.path.exists(namefilename):
-            oldname=name
-            nameset=0
-            while nameset==0:
-                name=oldname+str(randint(0,9))
-                namefilename = os.path.join(self.masterdirectory, name+'.name')
-                if not os.path.exists(namefilename):
-                    break
-            print(f' {oldname} taken; new name is {name}')
-
-        now = strftime("%Y%m%d-%H%M%S")
-        time_status_tup_list = [(now, 'created')]
-        for i in range(10):
-            try:
-                with open(namefilename,'wb') as savednamefile:
-                    pickle.dump(time_status_tup_list,savednamefile)
-                break
-            except:
-                if i==9:
-                    self.logger.exception(f'error in {__name__}')
-                    print(f'problem creating:{name}, restarting createnamefile')
-                    name=self.createnamefile(name)
-        return name
-
-            
-    def getreadynames(self,namelist):
-        readylist=[];sortlist=[]
-        for name_i in namelist:
-            last_time_status_tup=self.namefile_statuscheck(name_i)
-            if last_time_status_tup[1] in ['ready','failed','finished']:
-                readylist.append(name_i)
-                #sortlist.append(last_time_status_tup[0])
-        shuffle(readylist)
-        #sorted_readylist=[name_i for _, name_i in sorted(zip(sortlist,readylist), key=lambda pair: pair[0])]
-        return readylist
+    
     
     def checkmaster(self):
         return os.path.exists(self.masterfilefilename)
@@ -304,87 +327,7 @@ class run_cluster(kernelcompare.KernelCompare):
         else:
             return [],[]
                 
-    def rebuild_namefiles(self, run_dict_status, assignment_tracker):
-        try:
-            
-            namelist = self.getnamelist()  # get a new copy just in case
-            namefile_tuplist = [self.namefile_statuscheck(name) for name in namelist]
-            # print(f'namefile_tuplist:{namefile_tuplist}')
-            s_since_update_list = [self.s_before_now(time) for time, status in namefile_tuplist]
-
-            current_name_list,current_name_list_tuplist = self.myunzzip2([(name,namefile_tuplist[i]) for i, name in enumerate(namelist) if (not s_since_update_list[i]==None) and s_since_update_list[i] < self.oldnode_threshold])
-            old_name_list1,old_name_position_list = self.myunzzip2([(name,i) for i, name in enumerate(namelist) if s_since_update_list[i]==None or 
-                              not s_since_update_list[i] < self.oldnode_threshold])
-            
-            old_name_list = []
-            for i,name_i in enumerate(old_name_list1):
-                for j in range(10):
-                    try:
-                        idx=assignment_tracker[name_i]
-                    except:
-                        idx=None
-                    try:
-                        time_i = self.model_save_activitycheck(name_i)
-                        
-                        if not type(time_i) is datetime.timedelta:
-                            old_name_list.append(name_i)
-                            self.logger.info(f'1-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
-                        elif time_i < self.oldnode_threshold:
-                            current_name_list.append(name_i)
-                            current_name_list_tuplist.append(namefile_tuplist[old_name_position_list[i]])
-                            self.update_my_namefile(name_i,status='working')
-                        else: 
-                            old_name_list.append(name_i)
-                            self.logger.info(f'2-rebuild_namefiles classifies name_i:{name_i} with time_i:{time_i} as old')
-                        break
-                    except:
-                        if j == 1:
-                            self.logger.info(f'-----rebuild namefiles timeout for name_i:{name_i} with time_i:{time_i}', traceback.format_exc())
-                            old_name_list.append(name_i)
-
-            if len(old_name_list) > 0:
-                print(f'old_name_list:{old_name_list}')
-            for j, name in enumerate(old_name_list):
-                
-                try:
-                    self.mergethisnode(name)
-                
-                except:
-                    self.logger.exception('')
-                    self.logger.debug(f'failed to merge node named:{name}')
-                
-            assigned_to_not_current_name_idx=[]
-            #ignment_tracker',assignment_tracker)
-            for name_i,idx in assignment_tracker.items():
-                for name_j in old_name_list:
-                    if name_i==name_j:
-                        assigned_to_not_current_name_idx.append(idx)
-                        break
-
-            the_not_current_names=[name_i for name_i,idx in assignment_tracker.items() if not any([name_j==name_i for name_j in current_name_list])]
-            for idx in assigned_to_not_current_name_idx:
-                run_dict_status[idx]='ready'
-            for name_i in the_not_current_names:
-                try:del assignment_tracker[name_i]
-                except:pass
-            '''print('assignment_tracker',assignment_tracker)
-            print('current_name_list',current_name_list)
-            print('the_not_current_names',the_not_current_names)'''
-            #assigned_names = [name_i for name_i in current_name_list if name_i in assignment_tracker]
-            assigned_names_idx = [assignment_tracker[name_i] for name_i in current_name_list if
-                                  name_i in assignment_tracker]
-            status_assigned_idx = [i for i, status in enumerate(run_dict_status) if status == 'assigned']
-
-            release_status_idx = [idx for idx in status_assigned_idx if not any([idx == j for j in assigned_names_idx])]
-            for idx in release_status_idx:
-                run_dict_status[idx]='ready'
-
-        except:
-            self.logger.exception('')
-        #readynamelist=current_name_list
-        return run_dict_status, assignment_tracker, current_name_list,current_name_list_tuplist
-  
-
+   
 
     def runmaster(self,list_of_run_dicts):
         do_startup=1
