@@ -455,7 +455,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 return self.forcefail
         except:
             pass
-        if self.iter=1:
+        if self.iter==1:
             try:
                 self.success
                 if not type(self.success) is np.float64:
