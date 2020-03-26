@@ -6,7 +6,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=32 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[4]#[16]
+        self.batchcount_variation_list=[16]
         self.do_minimize=0
         self.maxiter=3
         
