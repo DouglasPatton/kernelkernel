@@ -262,7 +262,8 @@ class RunCluster(kernelcompare.KernelCompare):
         saveqdumper=SaveQDumper(self.qdict['saveq'])
         saveqdumper.start()
         if nodecount:
-            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
+            #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
+            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=None) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
         #according to the docs:https://docs.python.org/3.7/library/multiprocessing.html#using-a-remote-manager,
         #     I need to get local queue users started up before getting the network going
