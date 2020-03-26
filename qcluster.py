@@ -382,7 +382,7 @@ class RunCluster(kernelcompare.KernelCompare):
             except:
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
                 assert False,'halt'
-        #self.qdict['saveq'].put('shutdown')
+        self.qdict['saveq'].put('shutdown')
         #saveqdumper.join()
                 
                 
@@ -414,10 +414,8 @@ class RunCluster(kernelcompare.KernelCompare):
     
     
     
-    
     def savecheck(self,pathlist):
         try:
-             # reverse the order so the first item is checked first by pop()
             i=0
             sleeptime=5 # seconds
             while pathlist:
@@ -425,15 +423,6 @@ class RunCluster(kernelcompare.KernelCompare):
                 if not os.path.exists(path):
                     pathlist.append(path)
                     return pathlist
-
-                '''
-                    sleep(sleeptime)
-                else:
-                    i=0
-                    self.logger.debug(f'savecheck-path exists len(pathlist):{len(pathlist)}, path:{path}')
-                if not (i+1)%20:
-                    self.logger.info(f'savecheck i*sleeptime:{i*sleeptime}')
-                if i*sleeptime/60/60>self.savechecktimeout_hours:'''
         
             return pathlist
         except:
