@@ -264,7 +264,11 @@ class RunCluster(kernelcompare.KernelCompare):
             self.netaddress='127.0.0.1'
         else:
             self.netaddress='192.168.1.89'
-        f.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
+            
+        self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
+        qm=TheQManager(self.netaddress,self.qdict)
+        qm.start()
+        
         #saveqdumper=SaveQDumper(self.qdict['saveq'],None)
         saveqdumper=SaveQDumper(None,self.netaddress)
         saveqdumper.start()
@@ -274,8 +278,8 @@ class RunCluster(kernelcompare.KernelCompare):
             [node.start() for node in self.nodelist]
         #according to the docs:https://docs.python.org/3.7/library/multiprocessing.html#using-a-remote-manager,
         #     I need to get local queue users started up before getting the network going
-        qm=TheQManager(self.netaddress,self.qdict)
-        qm.start()
+        #qm=TheQManager(self.netaddress,self.qdict)
+        #qm.start()
             
         self.savechecktimeout_hours=2
         seed(1)  
