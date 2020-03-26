@@ -365,7 +365,7 @@ class RunCluster(kernelcompare.KernelCompare):
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
                 assert False,'halt'
         self.qdict['saveq'].put('shutdown')
-        saveqdumper.join()
+        #saveqdumper.join()
                 
                 
                 

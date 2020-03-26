@@ -12,7 +12,7 @@ import os
 import datagen as dg
 
 #import mykern_nomask as mk
-import mykern as mk
+import mykern_nomask as mk
 
 import re
 import logging,traceback
