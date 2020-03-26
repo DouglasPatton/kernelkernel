@@ -264,7 +264,7 @@ class RunCluster(kernelcompare.KernelCompare):
         qm=TheQManager(self.netaddress,self.qdict)
         qm.start()
         
-        self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
+        #self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
         #saveqdumper=SaveQDumper(self.qdict['saveq'],None)
         #saveqdumper=SaveQDumper(None,self.netaddress)
         #saveqdumper.start()
@@ -380,10 +380,10 @@ class RunCluster(kernelcompare.KernelCompare):
             #jobqfiller.join()
             jobqfiller.run()
             self.logger.debug('back from jobqfiller')
-            
+            SaveQDumper=SaveQDumper(self.qdict['saveq'])
             while pathlist:
                 sleep(5)
-                self.SaveQDumper.run()
+                SaveQDumper.run()
                 pathcount1=len(pathlist)
                 pathlist=self.savecheck(pathlist)
                 pathcount2=len(pathlist)
