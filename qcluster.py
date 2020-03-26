@@ -84,13 +84,16 @@ class SaveQDumper(mp.Process):
                     if model_save=='shutdown':
                         self.logger.warning(f'SaveQDumper shutting down')
                         return
-                savepath=model_save['savepath']
+                savepath=model_save[-1]['savepath']
                 with open(savepath,'wb') as f:
                     pickle.dump(model_save,f)
             
             
             
 class JobQFiller(mp.Process):
+    '''
+    runmaster calls this and passes the full list_of_rundicts to it
+    '''
     def __init__(self,q,joblist,address):
         self.q=q
         self.joblist=joblist
@@ -201,6 +204,8 @@ class RunNode(mp.Process):
                             return
                     my_optimizedict=rundict['optimizedict']
                     my_datagen_dict=rundict['datagen_dict']
+                    my_optimizedict['savepath']=rundict['savepath']
+                    my_optimizedict['jobpath']=rundict['jobpath']
                     try:
                         jobsavepath=rundict['savepath']
                         jobsavefolder=os.path.split(jobsavepath)[0]
