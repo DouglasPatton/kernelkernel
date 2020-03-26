@@ -14,12 +14,13 @@ import multiprocessing as mp
 from multiprocessing.managers import BaseManager
 from queue import Queue
 
-class QueueManager(BaseManager): pass
+#class QueueManager(BaseManager): pass
 
-class TheQManager(mp.Process):
+class TheQManager(mp.Process,BaseManager):
     def __init__(self,address,qdict):
         self.address=address
         self.qdict=qdict
+        self.BaseManager=BaseManager
         super(TheQManager,self).__init__()
         
     def run(self):
@@ -34,20 +35,19 @@ class TheQManager(mp.Process):
         self.logger = logging.getLogger(handlername)
         for qname in self.qdict:
             q=self.qdict[qname]
-            QueueManager.register(qname, callable=lambda:q)
+            self.basemanager.register(qname, callable=lambda:q)
         #jobq = Queue()
         #saveq = Queue()
         #QueueManager.register('jobq', callable=lambda:jobq)
         #QueueManager.register('saveq', callable=lambda:saveq)
-        m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+        m = self.basemanager(address=(self.address, 50000), authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
 class SaveQDumper(mp.Process):
-    def __init__(self,q,address):
+    def __init__(self,q):
         self.q=q
-        self.address=address
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'SaveQDumper-log')
@@ -95,10 +95,9 @@ class JobQFiller(mp.Process):
     '''
     runmaster calls this and passes the full list_of_rundicts to it
     '''
-    def __init__(self,q,joblist,address):
+    def __init__(self,q,joblist):
         self.q=q
         self.joblist=joblist
-        self.address=address
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'JobQFiller-log')
@@ -148,7 +147,7 @@ class JobQFiller(mp.Process):
 
                 
 
-class RunNode(mp.Process):
+class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
         if local_run:
             self.address='127.0.0.1'
@@ -167,6 +166,7 @@ class RunNode(mp.Process):
         self.logger.info('RunNode logging')
         self.qdict=qdict
         self.source=source
+        self.BaseManager=BaseManager
         super(RunNode,self).__init__()
         
     def run(self,):
@@ -181,9 +181,9 @@ class RunNode(mp.Process):
             jobq=self.qdict['jobq']
             saveq=self.qdict['saveq']
         else:
-            QueueManager.register('jobq')
-            QueueManager.register('saveq')
-            m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+            self.BaseManager.register('jobq')
+            self.BaseManager.register('saveq')
+            m = self.BaseManager(address=(self.address, 50000), authkey=b'qkey')
             m.connect()
             jobq = m.jobq()
             saveq = m.saveq()
@@ -214,15 +214,18 @@ class RunNode(mp.Process):
                         kc.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
                         jobsuccess=1
                     except:
-                        self.logger.exception('putting job back in jobq')
+                        self.logger.exception('putting job back in jobq with savepath:{jobsavepath}')
                         jobq.put(rundict)
                         self.logger.debug('job back in jobq')
                     if jobsuccess:
                         with open(jobsavepath,'rb') as f:
-                            model_save=pickle.load(f)
+                            model_save_list=pickle.load(f)
                         while True:
+                            self.logger.debug(f'adding model_save_list to saveq, savepath:{jobsavepath}')
                             try:
-                                saveq.put(model_save)
+                                
+                                saveq.put(model_save_list)
+                                self.logger.debug(f'model_save_list sucesfully added to saveq, savepath: {jobsavepath}')
                                 break
                             except:
                                 if not saveq.full():
@@ -240,6 +243,17 @@ class RunCluster(kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None,nodecount=0):
+        logdir=os.path.join(os.getcwd(),'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=os.path.join(logdir,f'mycluster_.log')
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
+        self.logger = logging.getLogger(handlername)
+        
+        
         if local_run:
             self.address='127.0.0.1'
         else:
@@ -260,16 +274,6 @@ class RunCluster(kernelcompare.KernelCompare):
         self.source=source
         self.savedirectory=os.path.join('.','results')
         if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
-        
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'mycluster_.log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-            level=logging.DEBUG,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
         
        
         self.stepcount=5
@@ -318,7 +322,7 @@ class RunCluster(kernelcompare.KernelCompare):
             return self.runmaster(list_of_run_dicts)
         
         model_run_stepdict_list=self.build_stepdict_list(stepcount=self.stepcount,threshcutstep=2,skipstep0=0,bestshare_list=[])
-        saveqdumper=SaveQDumper(self.qdict['saveq'],self.address)
+        saveqdumper=SaveQDumper(self.qdict['saveq'])
         saveqdumper.start()
         for i,stepdict in enumerate(model_run_stepdict_list):
             
@@ -355,7 +359,7 @@ class RunCluster(kernelcompare.KernelCompare):
                 
     def runmaster(self,list_of_run_dicts):
         self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
-        jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts,self.address)
+        jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
         #jobqfiller.start()
         #jobqfiller.join()
         jobqfiller.run()

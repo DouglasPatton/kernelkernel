@@ -6,6 +6,7 @@ import re
 
 class KCPisces():
     def __init__(self):
+        self.all_species_model_merge_dict_path=os.path.join(self.kc_savedirectory,'all_species_model_merge.pickle')
         pass
        
     def update_species_model_save_path_dict(self,species_model_save_path_dict):
@@ -32,15 +33,18 @@ class KCPisces():
             all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
         new_model_save_list=[]
         for spec in all_species_model_merge_dict:
-            
+            spec_filter_threshold=filterthreshold.copy()
             model_save_list=all_species_model_merge_dict[spec]
             self.logger.debug(f'model_save_filter starting spec:{spec} with len(model_save_list):{len(model_save_list)}')
             model_save_list=all_species_model_merge_dict[spec]
             #sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=0, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
             model_list_mselist=[model_save['mse'] for model_save in model_save_list]
             self.logger.debug(f'model_list_mselist:{model_list_mselist}')
-            if filterthreshold is None:
-                filterthreshold=1+max(model_list_mselist)
+            if spec_filter_threshold is None:
+                spec_filter_threshold=1+max(model_list_mselist)
+            if type(spec_filter_threshold) is str:
+                if spec_filter_threshold=='naivemse':
+                    spec_filter_threshold=model_save_list[-1]['naivemse']
             self.logger.debug(f'filterthreshold:{filterthreshold}')
                 
             sorted_model_list=[model_save_list[pos] for mse,pos in sorted(zip(model_list_mselist,list(range(len(model_list_mselist))))) if mse<filterthreshold]
@@ -94,7 +98,7 @@ class KCPisces():
         self.logger.debug(f'len(model_rundict_list):{len(model_rundict_list)}')
         return model_rundict_list
             
-    def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0):
+    def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0):
         '''
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
@@ -105,13 +109,16 @@ class KCPisces():
         #species_model_save_path_dict_list.append(species_model_save_path_dict)
         #species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
         #full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
-        try:
-            all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
-        except FileNotFoundError:
+        if merge_with_existing:
+            try:
+                all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
+            except FileNotFoundError:
+                all_species_model_merge_dict={}
+            except:
+                self.logger.exception('')
+                assert False, 'unexpected exception'
+        else:
             all_species_model_merge_dict={}
-        except:
-            self.logger.exception('')
-            assert False, 'unexpected exception'
             
         speciescount=len(species_model_save_path_dict)
         
@@ -133,7 +140,11 @@ class KCPisces():
             if recondense2:
                 all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
                 self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
-        self.savepickle(all_species_model_merge_dict,self.all_species_model_merge_dict_path)
+        if merge_with_existing:
+            savepath=self.all_species_model_merge_dict_path
+        else:
+            savepat=startpath
+        self.savepickle(all_species_model_merge_dict,savepath)
         return all_species_model_merge_dict
             
     

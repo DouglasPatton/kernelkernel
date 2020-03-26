@@ -27,7 +27,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         else:
             self.kc_savedirectory=directory
         self.species_model_save_path_dict=os.path.join(self.kc_savedirectory,'species_model_save_path_dict.pickle')
-        self.all_species_model_merge_dict_path=os.path.join(self.kc_savedirectory,'all_species_model_merge.pickle')
+        
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
         self.Ndiff_list_of_masks_x=None
         self.Ndiff_list_of_masks_y=None
