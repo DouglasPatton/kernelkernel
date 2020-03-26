@@ -144,13 +144,6 @@ class JobQFiller(mp.Process):
             else:
                 self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job["savepath"]}')
         self.logger.debug('all jobs added to jobq.')
-        '''self.logger.info('alljobs added to Q, waiting till empty')
-        while True:
-            if queue.empty():
-                break
-            else:
-                sleep(20)
-        self.logger.info('JobQFiller exiting')      '''      
         return
 
                 
@@ -377,22 +370,29 @@ class RunCluster(kernelcompare.KernelCompare):
                 
                 
     def runmaster(self,list_of_run_dicts):
-        self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
-        jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
-        #jobqfiller.start()
-        #jobqfiller.join()
-        jobqfiller.run()
-        pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts][::-1]
-        while pathlist:
-            sleep(5)
-            self.SaveQDumper.run()
-            pathcount1=len(pathlist)
-            pathlist=self.savecheck(pathlist)
-            pathcount2=len(pathlist)
-            if pathcount1>pathcount2:
-                self.logger.debug(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
-                print(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
-        return
+        try:
+            pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts]
+            self.logger.debug(f"len(pathlist):{len(pathlist)}")
+            
+            self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
+            jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
+            #jobqfiller.start()
+            #jobqfiller.join()
+            jobqfiller.run()
+            self.logger.debug('back from jobqfiller')
+            
+            while pathlist:
+                sleep(5)
+                self.SaveQDumper.run()
+                pathcount1=len(pathlist)
+                pathlist=self.savecheck(pathlist)
+                pathcount2=len(pathlist)
+                if pathcount1>pathcount2:
+                    self.logger.debug(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
+                    print(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
+            return
+        except:
+            self.logger.exception('')
     
     
     
