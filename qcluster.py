@@ -73,7 +73,7 @@ class SaveQDumper(mp.Process):
             success=0
             try:
                 model_save=queue.get()
-                self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}")
+                self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}"  )
                 success=1
             except:
                 if queue.empty():
