@@ -18,7 +18,7 @@ from queue import Queue
 
 class TheQManager(mp.Process,BaseManager):
     def __init__(self,address,qdict):
-        self.address=address
+        self.netaddress=address
         self.qdict=qdict
         self.BaseManager=BaseManager
         super(TheQManager,self).__init__()
@@ -35,12 +35,12 @@ class TheQManager(mp.Process,BaseManager):
         self.logger = logging.getLogger(handlername)
         for qname in self.qdict:
             q=self.qdict[qname]
-            self.basemanager.register(qname, callable=lambda:q)
+            self.BaseManager.register(qname, callable=lambda:q)
         #jobq = Queue()
         #saveq = Queue()
         #QueueManager.register('jobq', callable=lambda:jobq)
         #QueueManager.register('saveq', callable=lambda:saveq)
-        m = self.basemanager(address=(self.address, 50000), authkey=b'qkey')
+        m = self.BaseManager(address=(self.netaddress, 50000), authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
         s.serve_forever()
@@ -63,7 +63,7 @@ class SaveQDumper(mp.Process):
         
     def run(self):
         #QueueManager.register('saveq')
-        #m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+        #m = QueueManager(address=(self.netaddress, 50000), authkey=b'qkey')
         #m.connect()
         #queue = m.saveq()
         queue=self.q
@@ -112,7 +112,7 @@ class JobQFiller(mp.Process):
         
     def run(self):
         #QueueManager.register('jobq')
-        #m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+        #m = QueueManager(address=(self.netaddress, 50000), authkey=b'qkey')
         #m.connect()
         #queue = m.jobq()
         queue=self.q
@@ -150,9 +150,9 @@ class JobQFiller(mp.Process):
 class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
         if local_run:
-            self.address='127.0.0.1'
+            self.netaddress='127.0.0.1'
         else:
-            self.address='192.168.1.89'
+            self.netaddress='192.168.1.89'
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -183,7 +183,7 @@ class RunNode(mp.Process,BaseManager):
         else:
             self.BaseManager.register('jobq')
             self.BaseManager.register('saveq')
-            m = self.BaseManager(address=(self.address, 50000), authkey=b'qkey')
+            m = self.BaseManager(address=(self.netaddress, 50000), authkey=b'qkey')
             m.connect()
             jobq = m.jobq()
             saveq = m.saveq()
@@ -255,11 +255,11 @@ class RunCluster(kernelcompare.KernelCompare):
         
         
         if local_run:
-            self.address='127.0.0.1'
+            self.netaddress='127.0.0.1'
         else:
-            self.address='192.168.1.89'
+            self.netaddress='192.168.1.89'
         self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}    
-        qm=TheQManager(self.address,self.qdict)
+        qm=TheQManager(self.netaddress,self.qdict)
         qm.start()
         if nodecount:
             self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
