@@ -70,24 +70,29 @@ class SaveQDumper(mp.Process):
         keepgoing=1
         
         while keepgoing:
-            success=0
             try:
-                model_save=queue.get()
-                self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}"  )
-                success=1
+                success=0
+                try:
+                    model_save=queue.get(True,30)
+                    self.logger.debug('SaveQDumper got something')
+                    self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}"  )
+                    success=1
+                except:
+                    if queue.empty():
+                        self.logger.debug('SaveQDumper saveq is empty')
+                        sleep(4)
+                    else:
+                        self.logger.exception('SaveQDumper not empty')
+                if success:
+                    if type(model_save) is str:
+                        if model_save=='shutdown':
+                            self.logger.warning(f'SaveQDumper shutting down')
+                            return
+                    savepath=model_save[-1]['savepath']
+                    with open(savepath,'wb') as f:
+                        pickle.dump(model_save,f)
             except:
-                if queue.empty():
-                    sleep(4)
-                else:
-                    self.logger.exception('')
-            if success:
-                if type(model_save) is str:
-                    if model_save=='shutdown':
-                        self.logger.warning(f'SaveQDumper shutting down')
-                        return
-                savepath=model_save[-1]['savepath']
-                with open(savepath,'wb') as f:
-                    pickle.dump(model_save,f)
+                self.logger.exception('unexpeted error in SaveQDumper while outer try')
             
             
             
