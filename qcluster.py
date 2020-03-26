@@ -17,8 +17,9 @@ from queue import Queue
 class QueueManager(BaseManager): pass
 
 class TheQManager(mp.Process):
-    def __init__(self,address):
+    def __init__(self,address,qdict):
         self.address=address
+        self.qdict=qdict
         super(TheQManager,self).__init__()
         
     def run(self):
@@ -31,17 +32,21 @@ class TheQManager(mp.Process):
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
-        jobq = Queue()
-        saveq = Queue()
-        QueueManager.register('jobq', callable=lambda:jobq)
-        QueueManager.register('saveq', callable=lambda:saveq)
+        for qname in self.qdict:
+            q=self.qdict[qname]
+            QueueManager.register(qname, callable=lambda:q)
+        #jobq = Queue()
+        #saveq = Queue()
+        #QueueManager.register('jobq', callable=lambda:jobq)
+        #QueueManager.register('saveq', callable=lambda:saveq)
         m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
 class SaveQDumper(mp.Process):
-    def __init__(self,address):
+    def __init__(self,q,address):
+        self.q=q
         self.address=address
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -57,10 +62,11 @@ class SaveQDumper(mp.Process):
         super(SaveQDumper,self).__init__()
         
     def run(self):
-        QueueManager.register('saveq')
-        m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
-        m.connect()
-        queue = m.saveq()
+        #QueueManager.register('saveq')
+        #m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+        #m.connect()
+        #queue = m.saveq()
+        queue=self.q
         keepgoing=1
         
         while keepgoing:
@@ -85,7 +91,8 @@ class SaveQDumper(mp.Process):
             
             
 class JobQFiller(mp.Process):
-    def __init__(self,joblist,address):
+    def __init__(self,q,joblist,address):
+        self.q=q
         self.joblist=joblist
         self.address=address
         logdir=os.path.join(os.getcwd(),'log')
@@ -101,10 +108,11 @@ class JobQFiller(mp.Process):
         super(JobQFiller,self).__init__()
         
     def run(self):
-        QueueManager.register('jobq')
-        m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
-        m.connect()
-        queue = m.jobq()
+        #QueueManager.register('jobq')
+        #m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+        #m.connect()
+        #queue = m.jobq()
+        queue=self.q
         jobcount=len(self.joblist)
         i=1
         while self.joblist:
@@ -119,7 +127,7 @@ class JobQFiller(mp.Process):
                     self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
                 except:
                     self.joblist.append(job)
-                    if queue.full():
+                    if queue.empty():
                         sleep(4)
                     else:
                         self.logger.exception(f'jobq error for i:{i}')
@@ -137,7 +145,7 @@ class JobQFiller(mp.Process):
                 
 
 class RunNode(mp.Process):
-    def __init__(self,local_run=None,source=None):
+    def __init__(self,local_run=None,source=None,qdict=None):
         if local_run:
             self.address='127.0.0.1'
         else:
@@ -153,7 +161,7 @@ class RunNode(mp.Process):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('RunNode logging')
-        
+        self.qdict=qdict
         self.source=source
         super(RunNode,self).__init__()
         
@@ -165,20 +173,25 @@ class RunNode(mp.Process):
             p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
         else:
             p.nice(6)
-            
-        QueueManager.register('jobq')
-        QueueManager.register('saveq')
-        m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
-        m.connect()
-        jobq = m.jobq()
-        saveq = m.saveq()
+        if self.qdict:
+            jobq=self.qdict['jobq']
+            saveq=self.qdict['saveq']
+        else:
+            QueueManager.register('jobq')
+            QueueManager.register('saveq')
+            m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
+            m.connect()
+            jobq = m.jobq()
+            saveq = m.saveq()
         kc=kernelcompare.KernelCompare(source=self.source)
         while True:
             try:
                 havejob=0
                 jobsuccess=0
                 try:
+                    self.logger.debug('RunNode about to check jobq')
                     rundict=jobq.get()
+                    self.logger.debug(f'RunNode has job, rundict: {rundict}')
                     havejob=1
                 except:
                     self.logger.exception('')
@@ -220,16 +233,20 @@ class RunCluster(kernelcompare.KernelCompare):
     '''
     '''
     
-    def __init__(self,source=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None):
+    def __init__(self,source=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None,nodecount=0):
         if local_run:
             self.address='127.0.0.1'
         else:
             self.address='192.168.1.89'
-            
-        qm=TheQManager(self.address)
+        self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}    
+        qm=TheQManager(self.address,self.qdict)
         qm.start()
+        if nodecount:
+            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
+            [node.start() for node in self.nodelist]
         self.savechecktimeout_hours=2
-        seed(1)        
+        seed(1)  
+        self.nodecount=nodecount
         self.dosteps=dosteps
         self.optdict_variation_list=optdict_variation_list
         self.datagen_variation_list=datagen_variation_list
@@ -295,7 +312,7 @@ class RunCluster(kernelcompare.KernelCompare):
             return self.runmaster(list_of_run_dicts)
         
         model_run_stepdict_list=self.build_stepdict_list(stepcount=self.stepcount,threshcutstep=2,skipstep0=0,bestshare_list=[])
-        saveqdumper=SaveQDumper(self.address)
+        saveqdumper=SaveQDumper(self.qdict['saveq'],self.address)
         saveqdumper.start()
         for i,stepdict in enumerate(model_run_stepdict_list):
             
@@ -325,12 +342,14 @@ class RunCluster(kernelcompare.KernelCompare):
             except:
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
                 assert False,'halt'
+        self.qdict['saveq'].put('shutdown')
+        saveqdumper.join()
                 
                 
                 
     def runmaster(self,list_of_run_dicts):
         self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
-        jobqfiller=JobQFiller(list_of_run_dicts,self.address)
+        jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts,self.address)
         #jobqfiller.start()
         #jobqfiller.join()
         jobqfiller.run()
