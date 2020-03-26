@@ -45,8 +45,8 @@ class TheQManager(mp.Process,BaseManager):
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
-class SaveQDumper(mp.Process,BaseManager):
-    def __init__(self,q,address):
+class SaveQDumper(mp.Process):
+    def __init__(self,q):
         self.q=q
         self.netaddress=address
         logdir=os.path.join(os.getcwd(),'log')
@@ -59,15 +59,15 @@ class SaveQDumper(mp.Process,BaseManager):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('SaveQDumper starting')
-        self.BaseManager=BaseManager
+        #self.BaseManager=BaseManager
         super(SaveQDumper,self).__init__()
         
     def run(self):
-        self.BaseManager.register('saveq')
-        m = self.BaseManager(address=(self.netaddress, 50000), authkey=b'qkey')
-        m.connect()
-        queue = m.saveq()
-        #queue=self.q
+        #self.BaseManager.register('saveq')
+        #m = self.BaseManager(address=(self.netaddress, 50000), authkey=b'qkey')
+        #m.connect()
+        #queue = m.saveq()
+        queue=self.q
         keepgoing=1
         
         while keepgoing:
@@ -75,13 +75,13 @@ class SaveQDumper(mp.Process,BaseManager):
                 success=0
                 try:
                     model_save=queue.get_nowait()
-                    self.logger.debug('SaveQDumper got something')
+                    self.logger.debug(f'SaveQDumper got: {model_save}')
                     self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}"  )
                     success=1
                 except:
                     if queue.empty():
-                        #self.logger.debug('SaveQDumper saveq is empty')
-                        sleep(5)
+                        self.logger.debug('SaveQDumper saveq is empty')
+                        break
                     else:
                         self.logger.exception('SaveQDumper not empty')
                 if success:
@@ -90,6 +90,7 @@ class SaveQDumper(mp.Process,BaseManager):
                             self.logger.warning(f'SaveQDumper shutting down')
                             return
                     savepath=model_save[-1]['savepath']
+                    self.logger.debug(f'saveqdumper saving to savepath:{savepath}')
                     with open(savepath,'wb') as f:
                         pickle.dump(model_save,f)
             except:
@@ -269,9 +270,10 @@ class RunCluster(kernelcompare.KernelCompare):
         qm=TheQManager(self.netaddress,self.qdict)
         qm.start()
         
+        self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
         #saveqdumper=SaveQDumper(self.qdict['saveq'],None)
-        saveqdumper=SaveQDumper(None,self.netaddress)
-        saveqdumper.start()
+        #saveqdumper=SaveQDumper(None,self.netaddress)
+        #saveqdumper.start()
         if nodecount:
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             self.nodelist=[RunNode(source=source,local_run=local_run,qdict=None) for _ in range(nodecount)]
@@ -379,7 +381,11 @@ class RunCluster(kernelcompare.KernelCompare):
         #jobqfiller.start()
         #jobqfiller.join()
         jobqfiller.run()
-        self.savecheck(list_of_run_dicts)
+        savecheckrundicts=list_of_run_dicts.copy()
+        while savecheckrundicts:
+            sleep(5)
+            self.SaveQDumper.run()
+            savecheckrundicts=self.savecheck(savecheckrundicts)
         return
     
     
@@ -393,16 +399,19 @@ class RunCluster(kernelcompare.KernelCompare):
             path=pathlist.pop()
             if not os.path.exists(path):
                 pathlist.append(path)
-                i+=1
+                return pathlist
+            else:list_of_run_dicts.pop()
+                
+            '''
                 sleep(sleeptime)
             else:
                 i=0
                 self.logger.debug(f'savecheck-path exists len(pathlist):{len(pathlist)}, path:{path}')
             if not (i+1)%20:
                 self.logger.info(f'savecheck i*sleeptime:{i*sleeptime}')
-            if i*sleeptime/60/60>self.savechecktimeout_hours:
-                return
-        return
+            if i*sleeptime/60/60>self.savechecktimeout_hours:'''
+                
+        return pathlist
                 
         
            
