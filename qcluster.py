@@ -45,7 +45,7 @@ class TheQManager(mp.Process,BaseManager):
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
-class SaveQDumper(mp.Process):
+class SaveQDumper(mp.Process,BaseManager):
     def __init__(self,q,address):
         self.q=q
         self.netaddress=address
@@ -59,12 +59,12 @@ class SaveQDumper(mp.Process):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('SaveQDumper starting')
-        
+        self.BaseManager=BaseManager
         super(SaveQDumper,self).__init__()
         
     def run(self):
-        QueueManager.register('saveq')
-        m = QueueManager(address=(self.netaddress, 50000), authkey=b'qkey')
+        self.BaseManager.register('saveq')
+        m = self.BaseManager(address=(self.netaddress, 50000), authkey=b'qkey')
         m.connect()
         queue = m.saveq()
         #queue=self.q
