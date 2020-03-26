@@ -46,8 +46,9 @@ class TheQManager(mp.Process,BaseManager):
         s.serve_forever()
         
 class SaveQDumper(mp.Process):
-    def __init__(self,q):
+    def __init__(self,q,address):
         self.q=q
+        self.netaddress=address
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'SaveQDumper-log')
@@ -62,25 +63,25 @@ class SaveQDumper(mp.Process):
         super(SaveQDumper,self).__init__()
         
     def run(self):
-        #QueueManager.register('saveq')
-        #m = QueueManager(address=(self.netaddress, 50000), authkey=b'qkey')
-        #m.connect()
-        #queue = m.saveq()
-        queue=self.q
+        QueueManager.register('saveq')
+        m = QueueManager(address=(self.netaddress, 50000), authkey=b'qkey')
+        m.connect()
+        queue = m.saveq()
+        #queue=self.q
         keepgoing=1
         
         while keepgoing:
             try:
                 success=0
                 try:
-                    model_save=queue.get(True,30)
+                    model_save=queue.get_nowait()
                     self.logger.debug('SaveQDumper got something')
                     self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}"  )
                     success=1
                 except:
                     if queue.empty():
-                        self.logger.debug('SaveQDumper saveq is empty')
-                        sleep(4)
+                        #self.logger.debug('SaveQDumper saveq is empty')
+                        sleep(5)
                     else:
                         self.logger.exception('SaveQDumper not empty')
                 if success:
@@ -263,8 +264,9 @@ class RunCluster(kernelcompare.KernelCompare):
             self.netaddress='127.0.0.1'
         else:
             self.netaddress='192.168.1.89'
-        self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
-        saveqdumper=SaveQDumper(self.qdict['saveq'])
+        f.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
+        #saveqdumper=SaveQDumper(self.qdict['saveq'],None)
+        saveqdumper=SaveQDumper(None,self.netaddress)
         saveqdumper.start()
         if nodecount:
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
