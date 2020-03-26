@@ -143,13 +143,14 @@ class JobQFiller(mp.Process):
                         self.logger.exception(f'jobq error for i:{i}')
             else:
                 self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job["savepath"]}')
-        self.logger.info('alljobs added to Q, waiting till empty')
+        self.logger.debug('all jobs added to jobq.')
+        '''self.logger.info('alljobs added to Q, waiting till empty')
         while True:
             if queue.empty():
                 break
             else:
                 sleep(20)
-        self.logger.info('JobQFiller exiting')            
+        self.logger.info('JobQFiller exiting')      '''      
         return
 
                 
@@ -381,38 +382,44 @@ class RunCluster(kernelcompare.KernelCompare):
         #jobqfiller.start()
         #jobqfiller.join()
         jobqfiller.run()
-        savecheckrundicts=list_of_run_dicts.copy()
-        while savecheckrundicts:
+        pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts][::-1]
+        while pathlist:
             sleep(5)
             self.SaveQDumper.run()
-            savecheckrundicts=self.savecheck(savecheckrundicts)
+            pathcount1=len(pathlist)
+            pathlist=self.savecheck(pathlist)
+            pathcount2=len(pathlist)
+            if pathcount1>pathcount2:
+                self.logger.debug(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
+                print(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
         return
     
     
     
     
-    def savecheck(self,list_of_run_dicts):
-        pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts][::-1] # reverse the order so the first item is checked first by pop()
-        i=0
-        sleeptime=5 # seconds
-        while pathlist:
-            path=pathlist.pop()
-            if not os.path.exists(path):
-                pathlist.append(path)
-                return pathlist
-            else:list_of_run_dicts.pop()
-                
-            '''
-                sleep(sleeptime)
-            else:
-                i=0
-                self.logger.debug(f'savecheck-path exists len(pathlist):{len(pathlist)}, path:{path}')
-            if not (i+1)%20:
-                self.logger.info(f'savecheck i*sleeptime:{i*sleeptime}')
-            if i*sleeptime/60/60>self.savechecktimeout_hours:'''
-                
-        return pathlist
-                
+    def savecheck(self,pathlist):
+        try:
+             # reverse the order so the first item is checked first by pop()
+            i=0
+            sleeptime=5 # seconds
+            while pathlist:
+                path=pathlist.pop()
+                if not os.path.exists(path):
+                    pathlist.append(path)
+                    return pathlist
+
+                '''
+                    sleep(sleeptime)
+                else:
+                    i=0
+                    self.logger.debug(f'savecheck-path exists len(pathlist):{len(pathlist)}, path:{path}')
+                if not (i+1)%20:
+                    self.logger.info(f'savecheck i*sleeptime:{i*sleeptime}')
+                if i*sleeptime/60/60>self.savechecktimeout_hours:'''
+        
+            return pathlist
+        except:
+            self.logger.exception('')
         
            
 
