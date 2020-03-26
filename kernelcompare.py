@@ -662,7 +662,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
 
         
         if source is None:
-            source='monte'
+            source='pisces'
         self.source=source
         self.name=myname
         if directory==None:

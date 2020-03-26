@@ -17,7 +17,7 @@ from queue import Queue
 class QueueManager(BaseManager): pass
 
 class TheQManager(mp.Process):
-    def __init__(self,,address):
+    def __init__(self,address):
         self.address=address
         super(TheQManager,self).__init__()
         
@@ -58,7 +58,7 @@ class SaveQDumper(mp.Process):
         
     def run(self):
         QueueManager.register('saveq')
-        m = QueueManager(address=(self.address, 50000), authkey=b'saveq')
+        m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
         m.connect()
         queue = m.saveq()
         keepgoing=1
@@ -79,12 +79,13 @@ class SaveQDumper(mp.Process):
                         self.logger.warning(f'SaveQDumper shutting down')
                         return
                 savepath=model_save['savepath']
-                self.savepickle(model_save,savepath)
+                with open(savepath,'wb') as f:
+                    pickle.dump(model_save,f)
             
             
             
 class JobQFiller(mp.Process):
-    def __init__:(self,joblist,address):
+    def __init__(self,joblist,address):
         self.joblist=joblist
         self.address=address
         logdir=os.path.join(os.getcwd(),'log')
@@ -101,7 +102,7 @@ class JobQFiller(mp.Process):
         
     def run(self):
         QueueManager.register('jobq')
-        m = QueueManager(address=(self.address, 50000), authkey=b'jobq')
+        m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
         m.connect()
         queue = m.jobq()
         jobcount=len(self.joblist)
@@ -109,7 +110,8 @@ class JobQFiller(mp.Process):
         while self.joblist:
             job=self.joblist.pop()
             if not os.path.exists(job['savepath']):
-                self.savepickle(job,job['jobpath'])#just for documentation
+                with open(job['jobpath'],'wb') as f:
+                    pickle.dump(job,f)
                 try:
                     self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
                     queue.put(job)
@@ -117,46 +119,64 @@ class JobQFiller(mp.Process):
                     self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
                 except:
                     self.joblist.append(job)
-                    if queue.full()
+                    if queue.full():
                         sleep(4)
                     else:
-                        self.logger.exception('jobq error for i:{i}')
+                        self.logger.exception(f'jobq error for i:{i}')
             else:
-                self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job['savepath']}')
+                self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job["savepath"]}')
+        self.logger.info('alljobs added to Q, waiting till empty')
+        while True:
+            if queue.empty():
+                break
+            else:
+                sleep(20)
         self.logger.info('JobQFiller exiting')            
         return
 
                 
 
 class RunNode(mp.Process):
-    def __init__(self,local_run=None):
+    def __init__(self,local_run=None,source=None):
         if local_run:
             self.address='127.0.0.1'
         else:
             self.address='192.168.1.89'
-        address=self.address
+        
+        logdir=os.path.join(os.getcwd(),'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=os.path.join(logdir,f'RunNode-log')
+        logging.basicConfig(
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            level=logging.DEBUG,
+            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            datefmt='%Y-%m-%dT%H:%M:%S')
+        self.logger = logging.getLogger(handlername)
+        self.logger.info('RunNode logging')
+        
+        self.source=source
         super(RunNode,self).__init__()
         
     def run(self,):
+        self.logger.info('RunNode running')
         platform=sys.platform
         p=psutil.Process(os.getpid())
         if platform=='win32':
             p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
         else:
             p.nice(6)
-        return self.initialize(myname)
+            
         QueueManager.register('jobq')
         QueueManager.register('saveq')
         m = QueueManager(address=(self.address, 50000), authkey=b'qkey')
         m.connect()
         jobq = m.jobq()
         saveq = m.saveq()
-        kc=kernelcompare.KernelCompare()
+        kc=kernelcompare.KernelCompare(source=self.source)
         while True:
             try:
                 havejob=0
                 jobsuccess=0
-                saveqsuccess=0
                 try:
                     rundict=jobq.get()
                     havejob=1
@@ -170,7 +190,7 @@ class RunNode(mp.Process):
                     my_datagen_dict=rundict['datagen_dict']
                     try:
                         jobsavepath=rundict['savepath']
-                        jobsavefolder=os.path.split(jobsavepath)
+                        jobsavefolder=os.path.split(jobsavepath)[0]
                         if not os.path.exists(jobsavefolder):os.makedirs(jobsavefolder)
                         kc.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
                         jobsuccess=1
@@ -179,8 +199,18 @@ class RunNode(mp.Process):
                         jobq.put(rundict)
                         self.logger.debug('job back in jobq')
                     if jobsuccess:
-                        model_save=self.getpickle(jobsavepath)
-                        saveq.put(model_save)
+                        with open(jobsavepath,'rb') as f:
+                            model_save=pickle.load(f)
+                        while True:
+                            try:
+                                saveq.put(model_save)
+                                break
+                            except:
+                                if not saveq.full():
+                                    self.logger.exception('')
+                                else:
+                                    sleep(2)
+                                    
                         
             except:
                 self.logger.exception('')           
@@ -198,18 +228,19 @@ class RunCluster(kernelcompare.KernelCompare):
             
         qm=TheQManager(self.address)
         qm.start()
-        
+        self.savechecktimeout_hours=2
         seed(1)        
         self.dosteps=dosteps
         self.optdict_variation_list=optdict_variation_list
         self.datagen_variation_list=datagen_variation_list
         if source is None: source='monte'
         self.source=source
-        self.savedirectory='results'
+        self.savedirectory=os.path.join('.','results')
+        if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'mycluster_{myname}.log')
+        handlername=os.path.join(logdir,f'mycluster_.log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
             level=logging.DEBUG,
@@ -224,11 +255,8 @@ class RunCluster(kernelcompare.KernelCompare):
         self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
         if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
         if not os.path.exists(self.modelsavedirectory): os.mkdir(self.modelsavedirectory)
-            self.mastermaster() 
+        self.mastermaster() 
         
-
-        #p#rint(f'datagen_variation_list:{datagen_variation_list}')
-        self.initialize(myname)
 
     def generate_rundicts_from_variations(self,step=None):
         if self.optdict_variation_list is None:
@@ -260,9 +288,8 @@ class RunCluster(kernelcompare.KernelCompare):
             rundict['jobpath']=jobpath
             rundict['savepath']=savepath
 
+            
     def mastermaster(self,):
-        
-        
         if not self.dosteps:
             list_of_run_dicts=self.generate_rundicts_from_variations()
             return self.runmaster(list_of_run_dicts)
@@ -307,38 +334,33 @@ class RunCluster(kernelcompare.KernelCompare):
         #jobqfiller.start()
         #jobqfiller.join()
         jobqfiller.run()
-        self.savecheck(list_of_run_dicts):
+        self.savecheck(list_of_run_dicts)
         return
-    
-    
-    
-    
     
     
     
     
     def savecheck(self,list_of_run_dicts):
         pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts][::-1] # reverse the order so the first item is checked first by pop()
+        i=0
+        sleeptime=5 # seconds
         while pathlist:
             path=pathlist.pop()
             if not os.path.exists(path):
                 pathlist.append(path)
-                sleep(5)
+                i+=1
+                sleep(sleeptime)
             else:
+                i=0
                 self.logger.debug(f'savecheck-path exists len(pathlist):{len(pathlist)}, path:{path}')
+            if not (i+1)%20:
+                self.logger.info(f'savecheck i*sleeptime:{i*sleeptime}')
+            if i*sleeptime/60/60>self.savechecktimeout_hours:
+                return
         return
                 
         
            
 
 if __name__=="__main__":
-
-    #import mycluster
-   
-    
-    RunNode()
-
-
-
-
-
+    RunNode(local_run=0)
