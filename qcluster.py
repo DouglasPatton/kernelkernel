@@ -33,13 +33,13 @@ class TheQManager(mp.Process,BaseManager):
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
-        for qname in self.qdict:
-            q=self.qdict[qname]
-            self.BaseManager.register(qname, callable=lambda:q)
-        #jobq = Queue()
-        #saveq = Queue()
-        #QueueManager.register('jobq', callable=lambda:jobq)
-        #QueueManager.register('saveq', callable=lambda:saveq)
+        #for qname in self.qdict:
+        #    q=self.qdict[qname]
+        #    self.BaseManager.register(qname, callable=lambda:q)
+        jobq = qdict['jobq']
+        saveq = qdict['saveq']
+        self.BaseManager.register('jobq', callable=lambda:jobq)
+        QueueManager.register('saveq', callable=lambda:saveq)
         m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
