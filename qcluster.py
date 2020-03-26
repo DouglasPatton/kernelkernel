@@ -380,10 +380,10 @@ class RunCluster(kernelcompare.KernelCompare):
             #jobqfiller.join()
             jobqfiller.run()
             self.logger.debug('back from jobqfiller')
-            SaveQDumper=SaveQDumper(self.qdict['saveq'])
+            saveqdumper=SaveQDumper(self.qdict['saveq'])
             while pathlist:
                 sleep(5)
-                SaveQDumper.run()
+                saveqdumper.run()
                 pathcount1=len(pathlist)
                 pathlist=self.savecheck(pathlist)
                 pathcount2=len(pathlist)
