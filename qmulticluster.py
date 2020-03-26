@@ -36,16 +36,16 @@ class mypool:
     def runpool(self,):
         try:
             if self.includemaster:
-                master=qcluster.RunCluster(local_run=self.local_run, source=self.source,nodecount=self.nodecount)
+                master=qcluster.RunCluster(local_run=self.local_run, source=self.source,nodecount=0)
                 master.start()
-                master.join()
-            else:
+                #master.join()
+            if self.nodecount>0:
                 self.logger.debug('creating nodes')
                 proclist=[qcluster.RunNode(local_run=self.local_run,source=self.source) for _ in range(self.nodecount)]
                 self.logger.debug('starting nodes)')
                 [proc.start() for proc in proclist]
                 [proc.join() for proc in proclist]
-                
+            master.join()
         except:
              self.logger.exception('')
         print('============================================')

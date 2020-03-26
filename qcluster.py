@@ -36,10 +36,14 @@ class TheQManager(mp.Process,BaseManager):
         #for qname in self.qdict:
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
+        if self.qdict is None:
+            qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
+        else:
+            qdict=self.qdict
         jobq = qdict['jobq']
         saveq = qdict['saveq']
         self.BaseManager.register('jobq', callable=lambda:jobq)
-        QueueManager.register('saveq', callable=lambda:saveq)
+        self.BaseManager.register('saveq', callable=lambda:saveq)
         m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
@@ -259,10 +263,12 @@ class RunCluster(kernelcompare.KernelCompare):
             self.netaddress=('',0)
         else:
             self.netaddress=('192.168.1.89',50000)
-            
-        self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
-        qm=TheQManager(self.netaddress,self.qdict)
+        self.qdict=None    
+        #self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
+        #qm=TheQManager(self.netaddress,self.qdict)
+        qm=TheQManager(self.netaddress,None)
         qm.start()
+        
         
         #self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
         #saveqdumper=SaveQDumper(self.qdict['saveq'],None)
@@ -327,12 +333,24 @@ class RunCluster(kernelcompare.KernelCompare):
             savepath=os.path.join(savestepdir,'species-'+species+'_model_save_'+str(idx))
             rundict['jobpath']=jobpath
             rundict['savepath']=savepath
-
+            
+            
+    def getqdict(self):
+        BaseManager.register('jobq')
+        BaseManager.register('saveq')
+        m = BaseManager(address=self.netaddress, authkey=b'qkey')
+        m.connect()
+        jobq = m.jobq()
+        saveq = m.saveq()
+        return {'saveq':saveq,'jobq':jobq}    
             
     def mastermaster(self,):
         if not self.dosteps:
             list_of_run_dicts=self.generate_rundicts_from_variations()
             return self.runmaster(list_of_run_dicts)
+        
+        if self.qdict is None:
+            self.qdict=self.getqdict()
         
         model_run_stepdict_list=self.build_stepdict_list(stepcount=self.stepcount,threshcutstep=2,skipstep0=0,bestshare_list=[])
         
@@ -364,7 +382,7 @@ class RunCluster(kernelcompare.KernelCompare):
             except:
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
                 assert False,'halt'
-        self.qdict['saveq'].put('shutdown')
+        #self.qdict['saveq'].put('shutdown')
         #saveqdumper.join()
                 
                 
