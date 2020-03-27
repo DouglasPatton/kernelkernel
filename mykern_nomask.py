@@ -820,9 +820,9 @@ class optimize_free_params(kNdtool):
         if not self.do_minimize:
             try:
                 mse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
-                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
+                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=0)
             except:
-                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'final_model_save',getname=1)
+                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'final_model_save',getname=0)
                 self.logger.exception('')
         else:
             try:

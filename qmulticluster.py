@@ -45,7 +45,7 @@ class mypool:
                 self.logger.debug('starting nodes)')
                 [proc.start() for proc in proclist]
                 [proc.join() for proc in proclist]
-            master.join()
+            if self.includemaster:master.join()
         except:
              self.logger.exception('')
         print('============================================')
