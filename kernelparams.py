@@ -214,7 +214,7 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=5,threshcutstep=2,skipstep0=0,bestshare_list=[]):
+    def build_stepdict_list(self,stepcount=5,threshcutstep=3,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -231,7 +231,7 @@ class KernelParams:
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep]='naivemse'
-        mse_threshold_list=[None]*stepcount # 
+        mse_threshold_list=[1]*stepcount # 
         maxiter_list=[5,10,20,30]
         maxbatchbatchcount_list=[2,4,8,16]
         do_minimize_list=[1,1,1,1]
