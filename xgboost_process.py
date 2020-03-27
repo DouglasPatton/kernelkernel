@@ -16,7 +16,7 @@ class XgboostProcessTool(PiscesDataTool):
         if not os.path.exists(self.logdir):os.mkdir(self.logdir)
         handlername=os.path.join(self.logdir,f'XgboostProcessTool.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**5, backupCount=20)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')

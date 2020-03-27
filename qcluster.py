@@ -28,7 +28,7 @@ class TheQManager(mp.Process,BaseManager):
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'TheQManager-log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**5, backupCount=20)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
