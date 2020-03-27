@@ -143,7 +143,8 @@ class KCPisces():
         if merge_with_existing:
             savepath=self.all_species_model_merge_dict_path
         else:
-            savepath=startpath
+            _,stem=os.path.split(self.all_species_model_merge_dict_path)
+            savepath=os.path.join(startpath,stem)
         self.savepickle(all_species_model_merge_dict,savepath)
         return all_species_model_merge_dict
             
