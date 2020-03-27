@@ -227,13 +227,13 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[.1,.25,.25,.25]
+            bestshare_list=[.05,.1,.25,.25]
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep]='naivemse'
         mse_threshold_list=[1]*stepcount # 
-        maxiter_list=[5,10,20,30]
-        maxbatchbatchcount_list=[2,4,8,16]
+        maxiter_list=[3,5,12,30]
+        maxbatchbatchcount_list=[1,2,8,16]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
