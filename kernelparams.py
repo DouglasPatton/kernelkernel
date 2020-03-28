@@ -232,7 +232,7 @@ class KernelParams:
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naivemse'
         mse_threshold_list=[1]*stepcount # 
-        maxiter_list=[3,5,12,30]
+        maxiter_list=[3,5,8,16]
         maxbatchbatchcount_list=[1,2,8,16]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
