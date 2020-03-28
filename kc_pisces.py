@@ -45,9 +45,9 @@ class KCPisces():
             if type(spec_filter_threshold) is str:
                 if spec_filter_threshold=='naivemse':
                     spec_filter_threshold=model_save_list[-1]['naivemse']
-            self.logger.debug(f'filterthreshold:{filterthreshold}')
+            self.logger.debug(f'spec_filter_threshold:{spec_filter_threshold}')
                 
-            sorted_model_list=[model_save_list[pos] for mse,pos in sorted(zip(model_list_mselist,list(range(len(model_list_mselist))))) if mse<filterthreshold]
+            sorted_model_list=[model_save_list[pos] for mse,pos in sorted(zip(model_list_mselist,list(range(len(model_list_mselist))))) if mse<spec_filter_threshold]
             self.logger.debug(f'sorted_model_list[0:2]:{sorted_model_list[0:2]}')
             #help_start applies do_partial_match and will eliminate models with higher nwtmse and only a partial match of parameters.
             if bestshare:
