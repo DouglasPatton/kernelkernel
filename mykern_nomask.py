@@ -54,7 +54,7 @@ class kNdtool(Ndiff,MyKernHelper):
             else:
                 return self.NdiffBWmaker(modeldict['max_bw_Ndiff'], fixed_or_free_paramdict, diffdict, modeldict,xory)
     
-    def MY_KDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
+    def batchKDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
             then returns MSE of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
@@ -89,29 +89,29 @@ class kNdtool(Ndiff,MyKernHelper):
 
             yin_scaled=yin*y_bandscale_params
             yout_scaled=yout*y_bandscale_params
-            y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled)
+            y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled) # updated for batch
             y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             
             outdiffs_scaled_l2norm=np.power(np.sum(np.power(
                 self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params,2)
                                                    ,axis=2),.5)
             indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params,2),axis=2),.5)
-            assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0]),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr})'
+            assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0],self.batchcount),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr},{self.batchcount})'
 
             diffdict={}
             diffdict['outdiffs']=outdiffs_scaled_l2norm#ninXnpr?
             diffdict['indiffs']=indiffs_scaled_l2norm#ninXnin?
             ydiffdict={}
-            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None],y_outdiffs.shape+(self.npr,))#ninXnoutXnpr
-            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None],y_indiffs.shape+(self.npr,))#ninXninXnpr
+            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None,:],y_outdiffs.shape+(self.npr,self.batchcount))#ninXnoutXnprXbatchcount
+            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None,:],y_indiffs.shape+(self.npr,self.batchcount))#ninXninXnpr
             diffdict['ydiffdict']=ydiffdict
 
 
-        if modeldict['Ndiff_bw_kern']=='product':
+        """if modeldict['Ndiff_bw_kern']=='product':
             outdiffs=makediffmat_itoj(xin,xpr,spatial=spatial)#scale now? if so, move if...='rbfkern' down 
             #predict
             NWtup=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
-            #not developed yet
+            #not developed yet"""
         
         xbw = self.BWmaker(fixed_or_free_paramdict, diffdict, modeldict,'x')
         ybw = self.BWmaker(fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
@@ -464,11 +464,17 @@ class kNdtool(Ndiff,MyKernHelper):
             
             y_err_tup = ()
 
-            arglistlist=[] 
-            for batch_i in range(batchcount):
 
-
-                arglist=[]
+            #self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+            keylist=['yintup','youttup','xintup','xprtup']
+            args=[]
+            for key in keylist:
+                data_tup=batchdata_dict_i[key]
+                datalist=[np.expand_dims(data_array,axis=0) for data_array in data_tup]
+                args.append(np.concatenate(datalist,axis=0))
+            args.extend([modeldict,fixed_or_free_paramdict])
+            yhat_unstd_outtup_list=self.batchKDEpredict(*args)
+            '''    arglist=[]
                 arglist.append(batchdata_dict_i['yintup'][batch_i])
                 arglist.append(batchdata_dict_i['youttup'][batch_i])
                 arglist.append(batchdata_dict_i['xintup'][batch_i])
@@ -477,9 +483,12 @@ class kNdtool(Ndiff,MyKernHelper):
                 arglist.append(modeldict)
                 arglist.append(fixed_or_free_paramdict)
                 arglistlist.append(arglist)
-
+            batchconcat_arglist=[]
+            for arglist in arglistlist:
+                batchconcat_arglist.append(np.concatenate([np.expand_dims(data,axis=0) for data in arglist],axis=0))
+            yhat_unstd_outtup_list=self.batchKDEpredict(batchconcatarglist)'''
             
-            if self.batch_process_count>1 and batchcount>1:
+            '''if self.batch_process_count>1 and batchcount>1:
                 with multiprocessing.Pool(processes=self.batch_process_count) as pool:
                     yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
                     sleep(2)
@@ -490,7 +499,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 for i in range(batchcount):
                     result_tup=self.MPwrapperKDEpredict(arglistlist[i])
                     #self.logger.info(f'result_tup: {result_tup}')
-                    yhat_unstd_outtup_list.append(result_tup)
+                    yhat_unstd_outtup_list.append(result_tup)'''
             #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
             if modeldict['loss_function']=='batchnorm_crossval':
                 all_y_list=[yxvartup[0] for yxvartup in yxtup_list]

@@ -13,29 +13,29 @@ class Ndiff:
         """
             for x: (x has it's nout dimension (-2) added later on)
             before:
-            outdiffs is #ninXnpr
-            indiffs is #ninXnin
+            outdiffs is #ninXnpr(Xbatchcount)
+            indiffs is #ninXnin(Xbatchcount)
             after:
-            both are {depth*nin}XninXnpr
+            both are {depth*nin}XninXnprv
             
             for y:
             before:
-            outdiffs is broadcast to dim2 npr times #ninXnoutXnpr?
-            indiffs is broadcast to dim2 npr times #ninXninXnpr?
+            outdiffs is broadcast to dim2 npr times #ninXnoutXnpr(Xbatchcount)?
+            indiffs is broadcast to dim2 npr times #ninXninXnpr(Xbatchcount)?
             after:
-            outdiffs becomes {depth*nin}XninXnoutXnpr
+            outdiffs becomes {depth*nin}XninXnoutXnpr(Xbatchcount)
         """
         
         
         
         
-        if len(outdiffs.shape)==3:#(ninXnoutXnpr)this should only happen if we're working on y
+        if len(outdiffs.shape)==#4:3:#(ninXnoutXnpr(Xbatchcount))this should only happen if we're working on y
             #
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
             #expand_tup=tuple(range(depth)+2)
             if depth>1:
                 if depth%2==0:
-                    indiffs=np.transpose(indiffs,[1,0,2])
+                    indiffs=np.transpose(indiffs,[1,0,2,3])
                 expanded_indiffs=indiffs
                 for _ in range(depth): 
                     expanded_indiffs=np.expand_dims(expanded_indiffs,axis=2)    # there is variation over dims 0,1 for all dims to the rhs of them
@@ -47,11 +47,11 @@ class Ndiff:
                 
                 
                 return np.broadcast_to(outdiffs,shape_out_tup)
-        if len(outdiffs.shape)==2:#(ninXnpr)this should only happen if we're working on x
+        if len(outdiffs.shape)==3:#2:#(ninXnpr(Xbatchcount))this should only happen if we're working on x
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
             if depth>1:
                 if depth%2==0:
-                    indiffs=np.transpose(indiffs,[1,0])
+                    indiffs=np.transpose(indiffs,[1,0,2])
                 expanded_indiffs=indiffs
                 for _ in range(depth): 
                     expanded_indiffs=np.expand_dims(expanded_indiffs,axis=2)   
@@ -135,9 +135,9 @@ class Ndiff:
                 
             #else: missing_i_dimension=0
             if x_or_y=='y':
-                this_depth_bw=np.ones([self.nin,self.nout,self.npr])
+                this_depth_bw=np.ones([self.nin,self.nout,self.npr,self.batchcount])
             if x_or_y=='x':
-                this_depth_bw=np.ones([self.nin,1,self.npr])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
+                this_depth_bw=np.ones([self.nin,1,self.npr,self.batchcount])#x doesn't vary over nout like y does, so just 1 for a dimension placeholder.
             
             deeper_depth_bw=np.array([1])
             for depth in range(max_bw_Ndiff,0,-1):
@@ -198,160 +198,6 @@ class Ndiff:
         #kern=np.ma.masked_array(np.nan_to_num(kern,copy=False),mask=amask)
         return kern#
         
-
-    def max_bw_Ndiff_maskstacker_y(self,npr,nout,nin,p,max_bw_Ndiff,ykerngrid):
-        try:
-            self.predict_self_without_self
-        except:
-            self.logger.exception('setting self.predict_self_without_self to "n/a"')
-            self.predict_self_without_self='n/a'
-        #print('nout:',nout)
-        #ninmask=np.broadcast_to(np.ma.make_mask(np.eye(nin))[:,:,None],(nin,nin,npr))
-        
-        if not self.predict_self_without_self=='yes':
-            ninmask=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr))
-        if self.predict_self_without_self=='yes' and nin==npr and ykerngrid=='no':
-            assert False, 'needs logic rewrite'
-            ninmask3=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr))
-            ninmask2=np.broadcast_to(np.eye(nin,dtype=np.bool)[:,None,:],(nin,nin,nin))
-            ninmask1=np.broadcast_to(np.eye(nin,dtype=np.bool)[None,:,:],(nin,nin,nin))
-            ninmask1=np.ma.make_mask(ninmask1)
-            ninmask2=np.ma.make_mask(ninmask2)
-            ninmask3=np.ma.make_mask(ninmask3)
-            ninmask=np.ma.mask_or(ninmask1,np.ma.mask_or(ninmask2,ninmask3))
-        if self.predict_self_without_self=='yes' and nin==npr and type(ykerngrid) is int:
-            assert False, 'needs logic rewrite'
-            ninmask0=np.ma.make_mask(np.broadcast_to(np.eye(nin,dtype=np.bool)[:,:,None],(nin,nin,npr)))
-            ninmask=np.ma.make_mask(np.broadcast_to(np.eye(nin,dtype=np.bool)[:,None,:],(nin,nin,nin)))
-            ninmask=np.ma.mask_or(ninmask0,ninmask)
-            
-            
-        list_of_masks=[ninmask] # nout dimensionality fixed at end of needed
-        if max_bw_Ndiff>0:
-            if ykerngrid=='no':
-                assert False, 'needs reconfigure to bool and logic rewrite'
-                firstdiffmask=np.ma.mask_or(np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,0),(nin,nin,nin,npr))),np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nin,npr))))
-                firstdiffmask=np.ma.mask_or(np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,1),(nin,nin,nin,npr))),firstdiffmask)
-                #when 0 dim of ninmask is expanded, masked if i=j for all k.
-                #when 2 dim of nin mask is expanded, masked if k=j for all i, and when 1 dim of nin mask is expanded, masked if k=i for all j. all are for all ii
-            if type(ykerngrid) is int:
-                #firstdiffmask=np.ma.make_mask(np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr)))
-                firstdiffmask=np.broadcast_to(np.expand_dims(ninmask,2),(nin,nin,nout,npr))#k!=j Vi,ii (V : `for all')
-                #if yout is a grid and nout not equal to nin, 
-            list_of_masks.append(firstdiffmask)# this line is indexed (k,j,i,ii)
-                
-                
-                
-        '''if max_bw_Ndiff>1:
-            for ii in range(max_bw_Ndiff-1):
-                ninmask_3d=list_of_masks[1]
-                preshape=ii*(nin,)+ninmask_3d.shape # if max_bw_ndiff=2, at depth=2, ii is [0]
-                nextshape=(nin,)+preshape
-                ninmask_pre=np.broadcast_to(ninmask_3d,preshape)
-                nextblankmask=np.zeros(nextshape,dtype=np.bool)
-                list_of_masks.append(nextblankmask)
-                for iii in range(ii+2):
-                    list_of_masks[-1]=list_of_masks[-1]+np.expand_dims(ninmask_pre,axis=iii) '''
-                    
-                    
-        if max_bw_Ndiff>1:
-            for ii in range(max_bw_Ndiff-1):
-                ninmask_4d=list_of_masks[1]
-                nextshape=(ii+1)*(nin,)+ninmask_4d.shape
-                nextblankmask=np.zeros(nextshape,dtype=np.bool)
-                list_of_masks.append(nextblankmask)
-                for iii in range(ii+1):
-                    a_condition_mask=ninmask_4d.copy()
-                    exp_dim_list=[1]*(iii+1)+[-3]*(ii-iii) 
-                    for dim in exp_dim_list:
-                        a_condition_mask=np.expand_dims(a_condition_mask,axis=dim)
-                    list_of_masks[-1]+=a_condition_mask             
-                    
-                    '''
-        if max_bw_Ndiff>1:
-            for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
-                lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
-                masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                #list_of_masks.append(np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,0),masktup)))
-                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
-                for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at 1,
-                    #then this loop maxes at 0,1 from range(2-1+1)
-                    iii+=1 #since 0 dim added before for_loop
-                    #list_of_masks[-1]=np.ma.mask_or(list_of_masks[-1],np.ma.make_mask(np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)))
-                    list_of_masks[-1]=list_of_masks[-1]+\
-                        np.broadcast_to(
-                            np.expand_dims(
-                                lastmask,axis=iii),masktup)'''
-                if ykerngrid=='no':
-                    assert False, 'needs logic rewrite'
-                    list_of_masks[-1]=np.ma.mask_or(
-                        list_of_masks[-1],np.ma.make_mask(
-                            np.broadcast_to(
-                                np.expand_dims(lastmask,axis=ii+3),masktup)))#this should mask \
-                    #the yout values from the rest since yout==yin        
-        if type(ykerngrid) is int:
-            #list_of_masks[0]=np.ma.make_mask(np.zeros([nin,nout,npr]))#overwrite first item in list of masks to remove masking when predicting y using ykerngrid==int
-            list_of_masks[0]=np.zeros([nin,nout,npr],dtype=np.bool)
-        #[print('shape of mask {}'.format(i),list_of_masks[i].shape) for i in range(max_bw_Ndiff+1)]
-        return list_of_masks
-        
-    def max_bw_Ndiff_maskstacker_x(self,npr,nout,nin,p,max_bw_Ndiff):
-        '''match the parameter structure of data produced by Ndiff_datastacker at each depth
-        notably, mostly differences (and thus masks) will be between the nin (n in the original dataset) obeservations.
-        though would be interesting to make this more flexible in the future.
-        when i insert a new dimension between two dimensions, I'm effectively transposing
-        -Ndiff_datastacker does not have the 'out dimension at position, -1 added yet.'
-        '''
-        try:
-            self.predict_self_without_self
-        except:
-            self.logger.exception('setting self.predict_self_without_self to "n/a"')
-            self.predict_self_without_self='n/a'
-        
-            
-        ninmask=np.ma.make_mask(np.eye(nin,dtype=np.bool))
-        list_of_masks=[ninmask]
-        if not self.predict_self_without_self=='yes' and max_bw_Ndiff>0:#first mask will be corrected at the bottom
-            list_of_masks.append((np.broadcast_to(ninmask[:,:,None],(nin,nin,npr))))
-        '''if self.predict_self_without_self=='yes' and nin==npr and max_bw_Ndiff>0:
-                assert False, 'needs logic rewrite'
-                ninmask3=np.broadcast_to(ninmask[:,:,None],(nin,nin,nin))
-                ninmask2=np.broadcast_to(ninmask[:,None,:],(nin,nin,nin))
-                ninmask1=np.broadcast_to(ninmask[None,:,:],(nin,nin,nin))
-            
-
-                list_of_masks.append(ninmask1+ninmask2+ninmask3)'''
-        if max_bw_Ndiff>1:
-            for ii in range(max_bw_Ndiff-1):
-                ninmask_3d=list_of_masks[1]
-                nextshape=(ii+1)*(nin,)+ninmask_3d.shape
-                nextblankmask=np.zeros(nextshape,dtype=np.bool)
-                list_of_masks.append(nextblankmask)
-                for iii in range(ii+1):
-                    a_condition_mask=ninmask_3d.copy()
-                    exp_dim_list=[1]*(iii+1)+[-2]*(ii-iii) # if depth=2, ii=1, dimensio added to ninmask_3d at dim1 for l!=jVi,i,j and at 
-                    for dim in exp_dim_list:
-                        a_condition_mask=np.expand_dims(a_condition_mask,axis=dim)
-                    list_of_masks[-1]+=a_condition_mask
-                    
-                    
-                    
-                    
-        '''if max_bw_Ndiff>1:
-            for ii in range(max_bw_Ndiff-1):#-1 b/c 1diff masks already in second position of list of masks if max_bw_Ndiff>0
-                lastmask=list_of_masks[-1].copy() #second masks always based on self.nin
-                masktup=(nin,)+lastmask.shape#expand dimensions on lhs
-                list_of_masks.append(np.broadcast_to(np.expand_dims(lastmask,0),masktup))
-                for iii in range(ii+2):#if Ndiff is 2, above for loop maxes out at ii=0,
-                    #then this loop has iii=  0,1 from range(0+2)
-                    iii+=1 #since 0 dim added before for_loop
-                    list_of_masks[-1]=list_of_masks[-1]+np.broadcast_to(np.expand_dims(lastmask,axis=iii),masktup)'''
-            #lastmask=list_of_masks[-1]#copy the last item to lastmask
-        if not self.predict_self_without_self=='yes':
-            list_of_masks[0]=np.zeros([nin,npr],dtype=np.bool)
-        return list_of_masks
-    
-
     
     
     
