@@ -183,14 +183,15 @@ class kNdtool(Ndiff,MyKernHelper):
         
         return (yhat_un_std,cross_errors)
         
+        
+    def slicetup(self,dimcount,dimselect,dimval):
+        tup=(slice(None),)*(dimcount-1)
+        return tup[:dimselect]+(dimval,)+tup[dimselect:]
+        
     def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
+        #modifying to index numpy arrays instead of lists, requiring slices of all dims
         batchcount=self.batchcount
-        if batchcount>1:
-            yout,wt_stack,cross_errors=zip(*KDEregtup)
-            
-        else:
-            #p#rint('len(KDEregtup)',len(KDEregtup))
-            yout,wt_stack,cross_errors=KDEregtup
+        yout,wt_stack,cross_errors=KDEregtup#no zip required b/c list turned into dim 0 for batchcount # =zip(*KDEregtup)
         nin=self.nin;
         #ybatch=[]
         wtbatch=[]
@@ -367,7 +368,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wt_stack=prob_yx/prob_x_stack
             if NWnorm=='across':
                 wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
-            yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#sum over axis=0 collapses across nin for each nout
+            yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)
 
         binary_threshold=modeldict['binary_y']   
         if not binary_threshold is None and not lssfn=='batchnorm_crossval':
