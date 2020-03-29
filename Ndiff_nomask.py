@@ -212,14 +212,14 @@ class Ndiff:
         allkerns=self.gkernh(diffs, bw)
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
-            allkerns_sum=np.sum(allkerns,axis=-2)#this should be the nout axis
-            allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,-2),allkerns.shape)
+            allkerns_sum=np.sum(allkerns,axis=-3)#-2)#this should be the nout axis
+            allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,-3),allkerns.shape) # -2 to 3 since new rhs batchcount dim
             
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
             allkerns=allkerns/self.nout#1 should be the nout axis
         if modeldict['regression_model']=='NW-rbf' or modeldict['regression_model']=='NW-rbf2':
-            if allkerns.ndim>3:
+            if allkerns.ndim>4:#3:#+1b/c batchcount on rhs
                 for i in range((allkerns.ndim-3),0,-1):
                     assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
                                             "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
