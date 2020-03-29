@@ -103,7 +103,7 @@ class kNdtool(Ndiff,MyKernHelper):
             diffdict['indiffs']=indiffs_scaled_l2norm#ninXnin?
             ydiffdict={}
             ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None,:],y_outdiffs.shape+(self.npr,self.batchcount))#ninXnoutXnprXbatchcount
-            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None,:],y_indiffs.shape+(self.npr,self.batchcount))#ninXninXnpr
+            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None,:],y_indiffs.shape+(self.npr,self.batchcount))#ninXninXnprXbatchcount
             diffdict['ydiffdict']=ydiffdict
 
 
@@ -138,12 +138,11 @@ class kNdtool(Ndiff,MyKernHelper):
             ybw=ybw*hy
             xoutdiffs=diffdict['outdiffs']
             youtdiffs=diffdict['ydiffdict']['outdiffs']
-            assert xoutdiffs.ndim==2, "xoutdiffs have ndim={} not 2".format(xoutdiffs.ndim)
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
-                xoutdifftup=xoutdiffs.shape[:-1]+(self.nout,)+(xoutdiffs.shape[-1],)
+                xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd with batchcount.
                 #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
-                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-2),xoutdifftup)
+                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
                 xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-2),xoutdifftup)
             newaxis=-1
             yx_outdiffs_endstack=np.concatenate(
@@ -331,7 +330,7 @@ class kNdtool(Ndiff,MyKernHelper):
             iscrossmse=lossfn[0:8]=='crossmse'
         except: iscrossmse=0
             
-        yout_axis=-2#len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
+        yout_axis=-3 # from -2 to -3 b/c batchcount#len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         '''print('yout_axis(expected 0): ',yout_axis)
         print('prob_yx.shape',prob_yx.shape)
         print('prob_x.shape',prob_x.shape)'''
@@ -344,7 +343,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         #yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
         yout_stack=np.expand_dims(yout,1)
-        prob_x_stack_tup=prob_x.shape[:-1]+(self.nout,)+(prob_x.shape[-1],)
+        prob_x_stack_tup=prob_x.shape[:-2]+(self.nout,)+prob_x.shape[-2:] # -1 to -2 b/c batchcount
         prob_x_stack=self.ma_broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
         
@@ -362,7 +361,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wt_stack=np.power(np.power(prob_yx,2)-np.power(prob_x_stack,2),0.5)
             if NWnorm=='across':
                 wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
-            yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2
+            yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2 # -3 b/c batchcount
 
         else:
             wt_stack=prob_yx/prob_x_stack
@@ -473,7 +472,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 datalist=[np.expand_dims(data_array,axis=0) for data_array in data_tup]
                 args.append(np.concatenate(datalist,axis=0))
             args.extend([modeldict,fixed_or_free_paramdict])
-            yhat_unstd_outtup_list=self.batchKDEpredict(*args)
+            yhat_unstd_outtup=self.batchKDEpredict(*args)
             '''    arglist=[]
                 arglist.append(batchdata_dict_i['yintup'][batch_i])
                 arglist.append(batchdata_dict_i['youttup'][batch_i])
@@ -504,7 +503,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if modeldict['loss_function']=='batchnorm_crossval':
                 all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
                 all_y=np.concatenate(all_y_list,axis=0)
-                yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup_list, fixed_or_free_paramdict, modeldict, all_y)
+                yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
 
             else:
                 if batchcount>1:

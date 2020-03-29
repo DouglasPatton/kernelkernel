@@ -212,24 +212,24 @@ class Ndiff:
         allkerns=self.gkernh(diffs, bw)
         normalization=modeldict['product_kern_norm']
         if normalization =='self':
-            allkerns_sum=np.sum(allkerns,axis=-2)#this should be the nout axis
-            allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,-2),allkerns.shape)
+            allkerns_sum=np.sum(allkerns,axis=1)#from lhs, axes are nin,nout,npr,batchcount and an extra if y and x are stacked
+            allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,1),allkerns.shape)
             
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
             allkerns=allkerns/self.nout#1 should be the nout axis
         if modeldict['regression_model']=='NW-rbf' or modeldict['regression_model']=='NW-rbf2':
-            if allkerns.ndim>3:
-                for i in range((allkerns.ndim-3),0,-1):
-                    assert allkerns.ndim>3, "allkerns is being collapsed via rbf on rhs " \
+            if allkerns.ndim>4:# was 3 now 4 with batchcount
+                for i in range((allkerns.ndim-4),0,-1):
+                    assert allkerns.ndim>4, "allkerns is being collapsed via rbf on rhs " \
                                             "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
-                    allkerns=np.power(np.sum(np.power(allkerns,2),axis=allkerns.ndim-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
+                    allkerns=np.power(np.sum(np.power(allkerns,2),axis=-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
         if modeldict['regression_model']=='NW':
-            if allkerns.ndim>3:
-                for i in range((allkerns.ndim-3),0,-1):
-                    assert allkerns.ndim>3, "allkerns is being collapsed via product on rhs " \
+            if allkerns.ndim>4:#was 3 now 4 with batchcount
+                for i in range((allkerns.ndim-4),0,-1):
+                    assert allkerns.ndim>4, "allkerns is being collapsed via product on rhs " \
                                             "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
-                    allkerns=np.product(allkerns,axis=allkerns.ndim-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
+                    allkerns=np.product(allkerns,axis=-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
 
     
