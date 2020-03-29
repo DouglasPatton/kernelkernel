@@ -185,6 +185,10 @@ class kNdtool(Ndiff,MyKernHelper):
         
         
     def slicetup(self,dimcount,dimselect,dimval):
+        if not type(dimselect) is list:
+            dimselect=[dimselect]
+            dimval=[dimval]
+            for i in range(len(dimselect))
         tup=(slice(None),)*(dimcount-1)
         return tup[:dimselect]+(dimval,)+tup[dimselect:]
         
@@ -211,6 +215,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     istart=(i-1)*nin
                     iend=istart+nin
                 if j!=i:
+                    self.slicetup(wt_stack.dims,)
                     #all_y_fori_fromj=all_y[istart:iend]
                     wt_i_from_batch_j=wt_stack[j][:,istart:iend]
                     yout_batchj=self.ma_broadcast_to(np.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
