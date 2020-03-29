@@ -214,6 +214,8 @@ class Ndiff:
         if normalization =='self':
             allkerns_sum=np.sum(allkerns,axis=1)#from lhs, axes are nin,nout,npr,batchcount and an extra if y and x are stacked
             allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,1),allkerns.shape)
+            #allkerns_sum=np.sum(allkerns,axis=-3)#-2)#this should be the nout axis
+            #allkerns=allkerns/np.broadcast_to(np.expand_dims(allkerns_sum,-3),allkerns.shape) # -2 to 3 since new rhs batchcount dim
             
             # collapse just nin dim or both lhs dims?
         if normalization =="own_n":
@@ -222,7 +224,6 @@ class Ndiff:
             if allkerns.ndim>4:# was 3 now 4 with batchcount
                 for i in range((allkerns.ndim-4),0,-1):
                     assert allkerns.ndim>4, "allkerns is being collapsed via rbf on rhs " \
-                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
                     allkerns=np.power(np.sum(np.power(allkerns,2),axis=-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
         if modeldict['regression_model']=='NW':
             if allkerns.ndim>4:#was 3 now 4 with batchcount
