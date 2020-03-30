@@ -155,7 +155,7 @@ class JobQFiller(mp.Process):
 class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
         if local_run:
-            self.netaddress=('',0)
+            self.netaddress=('127.0.0.1',50001)
         else:
             self.netaddress=('192.168.1.89',50000)
         
@@ -260,7 +260,7 @@ class RunCluster(kernelcompare.KernelCompare):
         
         
         if local_run:
-            self.netaddress=('',0)
+            self.netaddress=('127.0.0.1',50001)
         else:
             self.netaddress=('192.168.1.89',50000)
         self.qdict=None    

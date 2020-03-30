@@ -29,7 +29,7 @@ class Ndiff:
         
         
         
-        if len(outdiffs.shape)==#4:3:#(ninXnoutXnpr(Xbatchcount))this should only happen if we're working on y
+        if len(outdiffs.shape)==4:#3:#(ninXnoutXnpr(Xbatchcount))this should only happen if we're working on y
             #
             shape_out_tup=tuple([self.nin for _ in range(depth)])+outdiffs.shape
             #expand_tup=tuple(range(depth)+2)
@@ -224,12 +224,13 @@ class Ndiff:
             if allkerns.ndim>4:# was 3 now 4 with batchcount
                 for i in range((allkerns.ndim-4),0,-1):
                     assert allkerns.ndim>4, "allkerns is being collapsed via rbf on rhs " \
+                                            "but has {} dimensions instead of ndim>4".format(allkerns.ndim)
                     allkerns=np.power(np.sum(np.power(allkerns,2),axis=-1),0.5)#collapse right most dimension, so if the two items in the 3rd dimension\\
         if modeldict['regression_model']=='NW':
             if allkerns.ndim>4:#was 3 now 4 with batchcount
                 for i in range((allkerns.ndim-4),0,-1):
                     assert allkerns.ndim>4, "allkerns is being collapsed via product on rhs " \
-                                            "but has {} dimensions instead of ndim>3".format(allkerns.ndim)
+                                            "but has {} dimensions instead of ndim>4".format(allkerns.ndim)
                     allkerns=np.product(allkerns,axis=-1)#collapse right most dimension, so if the two items in the 3rd dimension\\
         return np.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
 
