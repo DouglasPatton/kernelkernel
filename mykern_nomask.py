@@ -45,9 +45,9 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.Ndiff:
             if modeldict['max_bw_Ndiff']==0:
                 if xory=='x':
-                    bwshape=(self.nin,self.npr)
+                    bwshape=(self.nin,self.npr,self.batchcount)
                 if xory=='y':
-                    bwshape=(self.nin,self.nout,self.npr)
+                    bwshape=(self.nin,self.nout,self.npr,self.batchcount)
                 bw=np.array([1])
                 np.broadcast_to(bw,bwshape)    
                 return np.array([1])
@@ -185,12 +185,17 @@ class kNdtool(Ndiff,MyKernHelper):
         
         
     def slicetup(self,dimcount,dimselect,dimval):
+        
         if not type(dimselect) is list:
             dimselect=[dimselect]
             dimval=[dimval]
-            for i in range(len(dimselect))
-        tup=(slice(None),)*(dimcount-1)
-        return tup[:dimselect]+(dimval,)+tup[dimselect:]
+        for dim in dimselect:
+            if dim<0:
+                dim+=dimcount#so all dims are from lhs, 0...dimcount-1
+        slicelist=[slice(None) for _ in range(dimcount)]
+        for i in range(len(dimselect)):
+            slicelist[dimselect[i]]=dimval[i]
+        return tuple(slicelist)
         
     def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
         #modifying to index numpy arrays instead of lists, requiring slices of all dims
@@ -215,10 +220,10 @@ class kNdtool(Ndiff,MyKernHelper):
                     istart=(i-1)*nin
                     iend=istart+nin
                 if j!=i:
-                    self.slicetup(wt_stack.dims,)
+                    batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
                     #all_y_fori_fromj=all_y[istart:iend]
-                    wt_i_from_batch_j=wt_stack[j][:,istart:iend]
-                    yout_batchj=self.ma_broadcast_to(np.expand_dims(yout[j],axis=-1),(self.nout,self.nin))
+                    wt_i_from_batch_j=wt_stack[batchslicer]
+                    yout_batchj=self.ma_broadcast_to(np.expand_dims(yout[j],axis=-2),(self.nout,self.nin)) # was -1 now -2
                     wtbatchlist.append(wt_i_from_batch_j)
                     youtbatchlist.append(yout_batchj)
                     #trueybatchlist.append(all_y_fori_fromj)
