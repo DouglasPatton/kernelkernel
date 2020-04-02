@@ -157,7 +157,7 @@ class RunNode(mp.Process,BaseManager):
         if local_run:
             self.netaddress=('',0)
         else:
-            self.netaddress=('192.168.1.100',50001)
+            self.netaddress=('192.168.1.100',50002)
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -262,7 +262,7 @@ class RunCluster(kernelcompare.KernelCompare):
         if local_run:
             self.netaddress=('',0)
         else:
-            self.netaddress=('192.168.1.100',50001)
+            self.netaddress=('192.168.1.100',50002)
         self.qdict=None    
         #self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
         #qm=TheQManager(self.netaddress,self.qdict)
