@@ -5,6 +5,7 @@ import pickle
 import datetime
 from helpers import Helper
 import logging
+from math import log
 
 class MyKernHelper:
     def __init__(self,):
@@ -97,12 +98,34 @@ class MyKernHelper:
 
     
     def makediffmat_itoj(self,x1,x2,spatial=None,spatialtransform=None):
-        x1_ex=np.abs(np.expand_dims(x1, axis=1)
-        x2_ex=np.abs(np.expand_dims(x2, axis=0)
-        axes=[-1 for ]
-        np_iter=np.nditer([x1_ex,x2_ex,None],flags=['external_loop','buffered'],op_axes=())
-        for x,y,diff in np_iter:
-            diff[...]=
+        if spatial:spatial_p=x1.shape[-2]-1#this will be the last item along that axis
+        x1_ex=np.abs(np.expand_dims(x1, axis=1))
+        x2_ex=np.abs(np.expand_dims(x2, axis=0))#x1.size,x2.size,p,batch
+        np_iter=np.nditer([x1_ex,x2_ex,None],flags=['buffered','multi_index'])
+        if spatial is None:
+            while not np_iter.finished:
+                np_iter[2]=abs(np_iter[0]-np_iter[1])
+                np_iter.iternext()
+        else:
+            while not np_iter.finished:
+                diff=abs(np_iter[0]-np_iter[1])
+                if np_iter.multi_index[-2]==spatial_p:
+                    if diff!=0:
+                         diff=int((log(i,10))+2)/2
+                    if type(spatialtransform) is tuple:
+                        if spatialtransform[0]=='divide':
+                            diff=diff/spatialtransform[1]
+                        if spatialtransform[0]=='ln1':
+                            diff=np.log(diff+1)
+                    np_iter[2]=diff
+                np_iter.iternext()
+        return np_iter.operands[2]   
+                     
+                     
+                     
+                     
+        '''           
+                     
         diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         
         if spatial==1:
@@ -118,7 +141,7 @@ class MyKernHelper:
              
             
         #print('type(diffs)=',type(diffs))
-        return diffs
+        return diffs'''
 
     def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer
         #print('nparray.shape',nparray.shape)
@@ -127,7 +150,7 @@ class MyKernHelper:
             arraylist=[]
             for i in row:
                 if i>0:
-                    arraylist.append(int((np.log(i)+2)/2))
+                    arraylist.append(int((np.log10(i)+2)/2))
                     #if i is 3, huc10's match, log3<1, so (log(3)+2)/2 is a little over 1, so int returns 1.
                     #if i is 13, huc 10's match, log13>1 so (log(13)+2)/2 is a little over 1.5, so int returns 1.
                     # if i is 100, huc 10's do not match, but huc 8's do. (log(100)+2) is 4 and 4/2 is 2, so int returns 2

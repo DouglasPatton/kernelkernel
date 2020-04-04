@@ -93,17 +93,17 @@ class kNdtool(Ndiff,MyKernHelper):
             y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             
             outdiffs_scaled_l2norm=np.power(np.sum(np.power(
-                self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params,2)
+                self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params[:,None],2)
                                                    ,axis=2),.5)
-            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params,2),axis=2),.5)
+            indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params[:,None],2),axis=2),.5) # [:,None] for broadcasting to batch dim at -1
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0],self.batchcount),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr},{self.batchcount})'
 
             diffdict={}
             diffdict['outdiffs']=outdiffs_scaled_l2norm#ninXnpr?
             diffdict['indiffs']=indiffs_scaled_l2norm#ninXnin?
             ydiffdict={}
-            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None,:],y_outdiffs.shape+(self.npr,self.batchcount))#ninXnoutXnprXbatchcount
-            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None,:],y_indiffs.shape+(self.npr,self.batchcount))#ninXninXnprXbatchcount
+            ydiffdict['outdiffs']=np.broadcast_to(y_outdiffs[:,:,None,:],y_outdiffs.shape[:-1]+(self.npr,self.batchcount))#ninXnoutXnprXbatchcount
+            ydiffdict['indiffs']=np.broadcast_to(y_indiffs[:,:,None,:],y_indiffs.shape[:-1]+(self.npr,self.batchcount))#ninXninXnprXbatchcount
             diffdict['ydiffdict']=ydiffdict
 
 
@@ -140,10 +140,10 @@ class kNdtool(Ndiff,MyKernHelper):
             youtdiffs=diffdict['ydiffdict']['outdiffs']
             ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
             if True:#type(ykern_grid) is int and xkern_grid=='no':
-                xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd with batchcount.
+                xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd b/c batchcount.
                 #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
                 xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
-                xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-2),xoutdifftup)
+                xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-3),xoutdifftup)#fro -2 to -3
             newaxis=-1
             yx_outdiffs_endstack=np.concatenate(
                 (np.expand_dims(xoutdiffs_stack,axis=newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
@@ -223,7 +223,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
                     #all_y_fori_fromj=all_y[istart:iend]
                     wt_i_from_batch_j=wt_stack[batchslicer]
-                    yout_batchj=self.ma_broadcast_to(np.expand_dims(yout[j],axis=-2),(self.nout,self.nin)) # was -1 now -2
+                    yout_batchj=np.broadcast_to(np.expand_dims(yout[:,j],axis=-1),(self.nout,self.nin)) # 
                     wtbatchlist.append(wt_i_from_batch_j)
                     youtbatchlist.append(yout_batchj)
                     #trueybatchlist.append(all_y_fori_fromj)
