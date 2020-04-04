@@ -96,9 +96,13 @@ class MyKernHelper:
         return free_params,fixed_or_free_paramdict
 
     
-    def makediffmat_itoj(self,xin,xpr,spatial=None,spatialtransform=None):
-        
-        
+    def makediffmat_itoj(self,x1,x2,spatial=None,spatialtransform=None):
+        x1_ex=np.abs(np.expand_dims(x1, axis=1)
+        x2_ex=np.abs(np.expand_dims(x2, axis=0)
+        axes=[-1 for ]
+        np_iter=np.nditer([x1_ex,x2_ex,None],flags=['external_loop','buffered'],op_axes=())
+        for x,y,diff in np_iter:
+            diff[...]=
         diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         
         if spatial==1:

@@ -480,8 +480,8 @@ class kNdtool(Ndiff,MyKernHelper):
             args=[]
             for key in keylist:
                 data_tup=batchdata_dict_i[key]
-                datalist=[np.expand_dims(data_array,axis=0) for data_array in data_tup]
-                args.append(np.concatenate(datalist,axis=0))
+                datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
+                args.append(np.concatenate(datalist,axis=-1))
             args.extend([modeldict,fixed_or_free_paramdict])
             yhat_unstd_outtup=self.batchKDEpredict(*args)
             '''    arglist=[]
