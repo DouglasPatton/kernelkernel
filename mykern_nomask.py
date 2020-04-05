@@ -32,7 +32,7 @@ class kNdtool(Ndiff,MyKernHelper):
         #if not os.path.exists(logdir):os.mkdir(logdir)
         self.logger=logging.getLogger(__name__)
         self.savedir=savedir
-        self.name=myname
+        self.pname=myname
 
         self.cores=int(psutil.cpu_count(logical=False)-1)
         self.batch_process_count=1#self.cores
@@ -767,7 +767,7 @@ class optimize_free_params(kNdtool):
         self.yhatmaskscount=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
-        self.name=myname
+        self.pname=myname
         
     
     def run_opt(self,datagen_obj,optimizedict,savedir):
@@ -793,7 +793,7 @@ class optimize_free_params(kNdtool):
         except:
             logdir=os.path.join(os.getcwd(),'log')
             if not os.path.exists(logdir): os.mkdir(logdir)
-            handlername=os.path.join(logdir,f'optimize_free_params-{self.name}.log')
+            handlername=os.path.join(logdir,f'optimize_free_params-{self.pname}.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
                 level=logging.DEBUG,
@@ -805,7 +805,7 @@ class optimize_free_params(kNdtool):
 
 
         
-        #self.logger.info(f'optimizedict for {self.name}:{optimizedict}')
+        #self.logger.info(f'optimizedict for {self.pname}:{optimizedict}')
 
         opt_settings_dict=optimizedict['opt_settings_dict']
         method=opt_settings_dict['method']

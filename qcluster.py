@@ -249,7 +249,7 @@ class RunNode(mp.Process,BaseManager):
                 self.logger.exception('')           
     
     
-class RunCluster(kernelcompare.KernelCompare):
+class RunCluster(mp.Process,kernelcompare.KernelCompare):
     '''
     '''
     
@@ -307,6 +307,10 @@ class RunCluster(kernelcompare.KernelCompare):
         self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
         if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
         if not os.path.exists(self.modelsavedirectory): os.mkdir(self.modelsavedirectory)
+        super(RunCluster,self).__init__()
+        
+        
+    def run(self,):
         self.mastermaster() 
         
 

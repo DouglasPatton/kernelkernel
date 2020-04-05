@@ -56,7 +56,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         
         
         mk.optimize_free_params.__init__(self,kcsavedir=self.kc_savedirectory,myname=myname)
-        self.name=myname
+        self.pname=myname
        
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
@@ -93,7 +93,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         except: nodedir=self.kc_savedirectory
         self.run_opt(datagen_obj,optimizedict,nodedir)
         
-        #(datagen_obj,optimizedict,self.nodedirectory,myname=self.name,xmask=self.Ndiff_list_of_masks_x,ymask=self.Ndiff_list_of_masks_y)
+        #(datagen_obj,optimizedict,self.nodedirectory,myname=self.pname,xmask=self.Ndiff_list_of_masks_x,ymask=self.Ndiff_list_of_masks_y)
         return
         
                                
@@ -664,7 +664,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         if source is None:
             source='pisces'
         self.source=source
-        self.name=myname
+        self.pname=myname
         if directory==None:
             self.kc_savedirectory=os.getcwd()
             merge_directory=self.kc_savedirectory

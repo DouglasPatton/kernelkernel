@@ -364,7 +364,7 @@ class MyKernHelper:
         if len(modellist)>0:
             lastsavetime=modellist[-1]['when_saved']
             runtime=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsavetime,"%Y%m%d-%H%M%S")
-            print(f'time between saves for {self.name} is {runtime}')
+            print(f'time between saves for {self.pname} is {runtime}')
         modellist.append(savedict)
         
         for i in range(10):
