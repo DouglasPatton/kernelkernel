@@ -214,7 +214,7 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=5,threshcutstep=3,skipstep0=0,bestshare_list=[]):
+    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -227,7 +227,7 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[.05,.25,.25,.25]
+            bestshare_list=[.05,.5,.5,.5]
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naivemse'
@@ -237,7 +237,7 @@ class KernelParams:
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
-            startdir=os.path.join(self.modelsavedirectory,'step'+str(step))
+            startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
             savedir=startdir
             jobdir=os.path.join(self.jobdirectory,'step'+str(step))
             if not os.path.exists(jobdir):os.mkdir(jobdir)
@@ -267,7 +267,9 @@ class KernelParams:
         jobfolderpath=stepfolders['jobdir']
         charcount=len(str(i))+4 # 4 for 'step'
         newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
+        if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
         newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+        if not os.path.exists(newsavefolderpath):os.mkdir(newsavefolderpath)
         self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
         for rundict in list_of_rundicts:
             jobpath=rundict['jobpath']

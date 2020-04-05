@@ -295,7 +295,6 @@ class RunCluster(kernelcompare.KernelCompare):
         if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
         
        
-        self.stepcount=5
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source)
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
         self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
@@ -352,7 +351,7 @@ class RunCluster(kernelcompare.KernelCompare):
         if self.qdict is None:
             self.qdict=self.getqdict()
         
-        model_run_stepdict_list=self.build_stepdict_list(stepcount=self.stepcount,threshcutstep=2,skipstep0=0,bestshare_list=[])
+        model_run_stepdict_list=self.build_stepdict_list() #parameters set in kernelparams
         
         for i,stepdict in enumerate(model_run_stepdict_list):
             
