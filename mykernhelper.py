@@ -122,7 +122,7 @@ class MyKernHelper:
             arraylist=[]
             for i in row:
                 if i>0:
-                    arraylist.append(int((np.log(i)+2)/2))
+                    arraylist.append(int((np.log10(i)+2)/2))
                     #if i is 3, huc10's match, log3<1, so (log(3)+2)/2 is a little over 1, so int returns 1.
                     #if i is 13, huc 10's match, log13>1 so (log(13)+2)/2 is a little over 1.5, so int returns 1.
                     # if i is 100, huc 10's do not match, but huc 8's do. (log(100)+2) is 4 and 4/2 is 2, so int returns 2
