@@ -17,7 +17,7 @@ class mypool:
         handlername=os.path.join(logdir,f'multicluster.log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**6, backupCount=20)],
-            level=logging.WARNING,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
       
@@ -35,17 +35,20 @@ class mypool:
             
     def runpool(self,):
         try:
+            if self.local_run:
+                qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
+            else:
+                qdict=None
             if self.includemaster:
-                master=qcluster.RunCluster(local_run=self.local_run, source=self.source,nodecount=0)
-                master.start()
+                master=qcluster.RunCluster(local_run=self.local_run,qdict=qdict,source=self.source,nodecount=0)
+                proclist=[master]
+            else:proclist=[]
                 #master.join()
-            if self.nodecount>0:
-                self.logger.debug('creating nodes')
-                proclist=[qcluster.RunNode(local_run=self.local_run,source=self.source) for _ in range(self.nodecount)]
-                self.logger.debug('starting nodes)')
-                [proc.start() for proc in proclist]
-                [proc.join() for proc in proclist]
-            if self.includemaster:master.join()
+            self.logger.debug('creating nodes')
+            proclist.extend([qcluster.RunNode(local_run=self.local_run,qdict=qdict,source=self.source) for _ in range(self.nodecount)])
+            self.logger.debug('starting nodes')
+            [proc.start() for proc in proclist]
+            [proc.join() for proc in proclist[::-1]]
         except:
              self.logger.exception('')
         print('============================================')

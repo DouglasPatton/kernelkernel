@@ -91,11 +91,14 @@ class SaveQDumper(mp.Process):
                 if success:
                     if type(model_save) is str:
                         if model_save=='shutdown':
-                            self.logger.warning(f'SaveQDumper shutting down')
+                            self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    savepath=model_save[-1]['savepath']
-                    self.logger.debug(f'saveqdumper saving to savepath:{savepath}')
-                    with open(savepath,'wb') as f:
+                    nodesavepath=model_save[-1]['savepath']
+                    mastersavepath=os.path.join('master_save',nodesavepath)
+                    mastersavedir,stem=os.path.split(mastersavepath)
+                    if not os.path.exists(mastersavedir):os.makedirs(mastersavedir)
+                    self.logger.debug(f'saveqdumper saving to mastersavepath:{mastersavepath}')
+                    with open(mastersavepath,'wb') as f:
                         pickle.dump(model_save,f)
             except:
                 self.logger.exception('unexpeted error in SaveQDumper while outer try')
@@ -120,7 +123,9 @@ class JobQFiller(mp.Process):
         self.logger = logging.getLogger(handlername)
         self.logger.info('JobQFiller starting')
         super(JobQFiller,self).__init__()
-        
+    
+    
+    
     def run(self):
         #QueueManager.register('jobq')
         #m = QueueManager(address=self.netaddress, authkey=b'qkey')
@@ -131,7 +136,9 @@ class JobQFiller(mp.Process):
         i=1
         while self.joblist:
             job=self.joblist.pop()
-            if not os.path.exists(job['savepath']):
+            nodesavepath=job['savepath']
+            masterpath=os.path.join('master_save',nodesavepath)
+            if not os.path.exists(masterpath):
                 with open(job['jobpath'],'wb') as f:
                     pickle.dump(job,f)
                 try:
@@ -154,10 +161,7 @@ class JobQFiller(mp.Process):
 
 class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
-        if local_run:
-            self.netaddress=('127.0.0.1',50001)
-        else:
-            self.netaddress=('192.168.1.100',50001)
+
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -171,7 +175,9 @@ class RunNode(mp.Process,BaseManager):
         self.logger.info('RunNode logging')
         self.qdict=qdict
         self.source=source
-        self.BaseManager=BaseManager
+        if not local_run:
+            self.netaddress=('192.168.1.100',50001)
+            self.BaseManager=BaseManager
         super(RunNode,self).__init__()
         
     def run(self,):
@@ -247,7 +253,7 @@ class RunCluster(kernelcompare.KernelCompare):
     '''
     '''
     
-    def __init__(self,source=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None,nodecount=0):
+    def __init__(self,source=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None,nodecount=0,qdict=None):
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mycluster_.log')
@@ -258,17 +264,17 @@ class RunCluster(kernelcompare.KernelCompare):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         
-        
+        self.qdict=qdict 
         if local_run:
-            self.netaddress=('127.0.0.1',50001)
+            assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
             self.netaddress=('192.168.1.100',50001)
-        self.qdict=None    
+            qm=TheQManager(self.netaddress,None)
+            qm.start()
+            sleep(1)
         #self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
         #qm=TheQManager(self.netaddress,self.qdict)
-        qm=TheQManager(self.netaddress,None)
-        qm.start()
-        sleep(1)
+        
         
         
         #self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
@@ -277,7 +283,7 @@ class RunCluster(kernelcompare.KernelCompare):
         #saveqdumper.start()
         if nodecount:
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
-            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=None) for _ in range(nodecount)]
+            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=qdict) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
         #according to the docs:https://docs.python.org/3.7/library/multiprocessing.html#using-a-remote-manager,
         #     I need to get local queue users started up before getting the network going

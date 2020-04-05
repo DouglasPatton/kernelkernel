@@ -420,7 +420,7 @@ class kNdtool(Ndiff,MyKernHelper):
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         try:
             if self.forcefail:
-                self.logger.warning('forcefail activated')
+                self.logger.DEBUG('forcefail activated')
             #p#rint(f'returning self.forcefail:{self.forcefail}')
                 return self.forcefail
         except:
@@ -796,7 +796,7 @@ class optimize_free_params(kNdtool):
             handlername=os.path.join(logdir,f'optimize_free_params-{self.name}.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
-                level=logging.WARNING,
+                level=logging.DEBUG,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
 
