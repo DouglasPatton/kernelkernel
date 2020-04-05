@@ -37,6 +37,7 @@ class mypool:
         try:
             if self.local_run:
                 qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
+                sleep(2)
             else:
                 qdict=None
             if self.includemaster:
@@ -47,7 +48,7 @@ class mypool:
             self.logger.debug('creating nodes')
             proclist.extend([qcluster.RunNode(local_run=self.local_run,qdict=qdict,source=self.source) for _ in range(self.nodecount)])
             self.logger.debug('starting nodes')
-            [proc.start() for proc in proclist]
+            [proc.start() for proc in proclist[::-1]]
             [proc.join() for proc in proclist[::-1]]
         except:
              self.logger.exception('')

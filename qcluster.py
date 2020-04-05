@@ -176,7 +176,7 @@ class RunNode(mp.Process,BaseManager):
         self.qdict=qdict
         self.source=source
         if not local_run:
-            self.netaddress=('192.168.1.100',50001)
+            self.netaddress=('192.168.1.100',50002)
             self.BaseManager=BaseManager
         super(RunNode,self).__init__()
         
@@ -268,7 +268,7 @@ class RunCluster(kernelcompare.KernelCompare):
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
-            self.netaddress=('192.168.1.100',50001)
+            self.netaddress=('192.168.1.100',50002)
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
