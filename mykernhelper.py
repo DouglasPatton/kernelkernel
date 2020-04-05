@@ -96,8 +96,30 @@ class MyKernHelper:
         return free_params,fixed_or_free_paramdict
 
     
-    def makediffmat_itoj(self,xin,xpr,spatial=None,spatialtransform=None):
-        
+    def makediffmat_itoj(self,x1,x2,spatial=None,spatialtransform=None):                 
+        if spatial:spatial_p=x1.shape[-1]-1#this will be the last item along that axis
+        x1_ex=np.abs(np.expand_dims(x1, axis=1))
+        x2_ex=np.abs(np.expand_dims(x2, axis=0))#x1.size,x2.size,p,batch
+        np_iter=np.nditer([x1_ex,x2_ex,None],flags=['buffered','multi_index'])
+        if spatial is None:
+            while not np_iter.finished:
+                np_iter[2]=abs(np_iter[0]-np_iter[1])
+                np_iter.iternext()
+        else:
+            while not np_iter.finished:
+                diff=abs(np_iter[0]-np_iter[1])
+                if np_iter.multi_index[-1]==spatial_p:
+                    if diff!=0:
+                         diff=int((log(i,10))+2)/2
+                    if type(spatialtransform) is tuple:
+                        if spatialtransform[0]=='divide':
+                            diff=diff/spatialtransform[1]
+                        if spatialtransform[0]=='ln1':
+                            diff=np.log(diff+1)
+                    np_iter[2]=diff
+                np_iter.iternext()
+        return np_iter.operands[2]   
+        '''        
         diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         
         if spatial==1:
@@ -113,7 +135,7 @@ class MyKernHelper:
              
             
         #print('type(diffs)=',type(diffs))
-        return diffs
+        return diffs'''
 
     def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer
         #print('nparray.shape',nparray.shape)
