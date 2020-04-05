@@ -29,7 +29,7 @@ class TheQManager(mp.Process,BaseManager):
         handlername=os.path.join(logdir,f'TheQManager-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
-            level=logging.WARNING,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -157,7 +157,7 @@ class RunNode(mp.Process,BaseManager):
         if local_run:
             self.netaddress=('127.0.0.1',50001)
         else:
-            self.netaddress=('192.168.1.100',50000)
+            self.netaddress=('192.168.1.100',50001)
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -262,12 +262,13 @@ class RunCluster(kernelcompare.KernelCompare):
         if local_run:
             self.netaddress=('127.0.0.1',50001)
         else:
-            self.netaddress=('192.168.1.100',50000)
+            self.netaddress=('192.168.1.100',50001)
         self.qdict=None    
         #self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
         #qm=TheQManager(self.netaddress,self.qdict)
         qm=TheQManager(self.netaddress,None)
         qm.start()
+        sleep(1)
         
         
         #self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
