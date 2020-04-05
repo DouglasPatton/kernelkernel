@@ -556,7 +556,10 @@ class kNdtool(Ndiff,MyKernHelper):
                 all_y_err=np.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
             batchbatch_all_y_err.append(all_y_err)
         batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
+        
         mse = np.mean(np.power(batchbatch_all_y_err, 2))
+        self.logger.info(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
+        print(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
         #maskcount=np.ma.count_masked(batchbatch_all_y_err)
         
 

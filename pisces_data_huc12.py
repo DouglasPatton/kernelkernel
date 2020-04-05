@@ -46,7 +46,7 @@ class PiscesDataTool():
             species_filename=os.path.join(datadir,species_name+'.data')  
             with open(species_filename, 'rb') as f:
                 species_data=pickle.load(f)
-            return species_data
+            return np.asfortranarray(species_data)
         else:
             try:
                 with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
