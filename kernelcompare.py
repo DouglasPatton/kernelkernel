@@ -653,7 +653,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             handlername=os.path.join(logdir,'KernelCompare'+_name+'.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
-                level=logging.DEBUG,
+                level=logging.WARNING,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)

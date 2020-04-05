@@ -29,7 +29,7 @@ class TheQManager(mp.Process,BaseManager):
         handlername=os.path.join(logdir,f'TheQManager-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
-            level=logging.DEBUG,
+            level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -58,7 +58,7 @@ class SaveQDumper(mp.Process):
         handlername=os.path.join(logdir,f'SaveQDumper-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-            level=logging.DEBUG,
+            level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -117,7 +117,7 @@ class JobQFiller(mp.Process):
         handlername=os.path.join(logdir,f'JobQFiller-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-            level=logging.DEBUG,
+            level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -168,7 +168,7 @@ class RunNode(mp.Process,BaseManager):
         handlername=os.path.join(logdir,f'RunNode-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-            level=logging.DEBUG,
+            level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -259,7 +259,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         handlername=os.path.join(logdir,f'mycluster_.log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-            level=logging.DEBUG,
+            level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
