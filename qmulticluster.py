@@ -26,7 +26,7 @@ class mypool:
         self.includemaster=includemaster
         self.source=source
 
-        self.sleepfactor=0.1 #0.2->4min. 0.1->6sec, 0.224 ->10min
+        self.sleepbetweennodes=10 # seconds
         self.local_run=local_run
         self.i=0
         self.id=randint(0,100000000)
@@ -48,7 +48,9 @@ class mypool:
             self.logger.debug('creating nodes')
             proclist.extend([qcluster.RunNode(local_run=self.local_run,qdict=qdict,source=self.source) for _ in range(self.nodecount)])
             self.logger.debug('starting nodes')
-            [proc.start() for proc in proclist[::-1]]
+            for proc in proclist:
+                proc.start()
+                sleep(self.sleepbetweennodes)
             [proc.join() for proc in proclist[::-1]]
         except:
              self.logger.exception('')
