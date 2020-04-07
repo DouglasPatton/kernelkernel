@@ -60,6 +60,7 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[2])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -110,7 +111,8 @@ class KernelParams:
                                       max_bw_Ndiff_variations,
                                       Ndiff_start_variations,
                                       standardization_variations,
-                                      spatialtransform_variations
+                                      spatialtransform_variations,
+                                      maxbatchbatchcount_variations
                                      ]
             #hyper_param_form_dict_variations,
         return optdict_variation_list
@@ -133,7 +135,7 @@ class KernelParams:
                 
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(200,300)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
@@ -233,7 +235,7 @@ class KernelParams:
             filterthreshold_list[threshcutstep-1]='naivemse'
         mse_threshold_list=[1]*stepcount # 
         maxiter_list=[3,5,8,16]
-        maxbatchbatchcount_list=[1,2,8,16]
+        maxbatchbatchcount_list=[2,4,8,16]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
