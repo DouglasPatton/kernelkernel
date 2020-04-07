@@ -26,7 +26,7 @@ class mypool:
         self.includemaster=includemaster
         self.source=source
 
-        self.sleepbetweennodes=10 # seconds
+        self.sleepbetweennodes=1 # seconds
         self.local_run=local_run
         self.i=0
         self.id=randint(0,100000000)
