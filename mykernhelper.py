@@ -111,7 +111,7 @@ class MyKernHelper:
                 diff=abs(np_iter[0]-np_iter[1])
                 if np_iter.multi_index[-2]==spatial_p:
                     if diff!=0:
-                         diff=int((log(i,10))+2)/2
+                         diff=int((log(diff,10))+2)/2
                     if type(spatialtransform) is tuple:
                         if spatialtransform[0]=='divide':
                             diff=diff/spatialtransform[1]
