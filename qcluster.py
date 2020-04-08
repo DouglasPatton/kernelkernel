@@ -136,9 +136,9 @@ class JobQFiller(mp.Process):
         i=1
         while self.joblist:
             job=self.joblist.pop()
-            nodesavepath=job['savepath']
-            masterpath=os.path.join('master_save',nodesavepath)
-            if not os.path.exists(masterpath):
+            savepath=job['savepath']
+            #masterpath=os.path.join('master_save',savepath)
+            if not os.path.exists(savepath):
                 with open(job['jobpath'],'wb') as f:
                     pickle.dump(job,f)
                 try:
@@ -173,6 +173,8 @@ class RunNode(mp.Process,BaseManager):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('RunNode logging')
+        nodedir=os.path.join(os.getcwd(),'node')
+        if not os.path.exists(nodedir)
         self.qdict=qdict
         self.source=source
         if not local_run:
