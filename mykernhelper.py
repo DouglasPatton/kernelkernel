@@ -303,11 +303,8 @@ class MyKernHelper:
             species=''
         except:
             self.logger.exception('something happened when pulling species from self.datagen_dict')
-        fullpath_filename=self.savepath
-        savedir=os.path.split(fullpath_filename)[0]
-        if not os.path.exists(savedir): 
-            os.mkdir(savedir)
-            self.logger.info(f'sort_then_save_it is creating savedir:{savedir}')
+        
+        fullpath_filename=self.nodesavepath
         if getname:
             fullpath_filename=Helper().getname(fullpath_filename)
             
@@ -326,7 +323,8 @@ class MyKernHelper:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
+                savedict['binary_y_result']=self.binary_y_mse_list
+                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinarymse))
         except:
             self.logger.exception('')
         savedict['modeldict']=modeldict

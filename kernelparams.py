@@ -5,8 +5,8 @@ from pisces_data_huc12 import PiscesDataTool
 class KernelParams:
     
     def __init__(self,):
-        self.n=16 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[64]
+        self.n=8 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.batchcount_variation_list=[16]
         self.do_minimize=0
         self.maxiter=3
         
@@ -60,7 +60,8 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
-        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[8])
+        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[2])
+        
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('even',4),('exp',4)])
@@ -110,7 +111,8 @@ class KernelParams:
                                       max_bw_Ndiff_variations,
                                       Ndiff_start_variations,
                                       standardization_variations,
-                                      spatialtransform_variations
+                                      spatialtransform_variations,
+                                      maxbatchbatchcount_variations
                                      ]
             #hyper_param_form_dict_variations,
         return optdict_variation_list
@@ -132,8 +134,8 @@ class KernelParams:
             
                 
                 
-            species_variations=('species',self.specieslist)    
-            #species_variations=('species',[self.specieslist[i] for i in range(200,300)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,2)])    
+            #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
@@ -214,7 +216,7 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=2,threshcutstep=None,skipstep0=0,bestshare_list=[]):
+    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -227,14 +229,14 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[2,1]
+            bestshare_list=[.05,.5,.5,.5]
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naivemse'
         mse_threshold_list=[1]*stepcount # 
-        maxiter_list=[5,20]
-        maxbatchbatchcount_list=[16,16]
-        do_minimize_list=[1,1]
+        maxiter_list=[3,5,8,16]
+        maxbatchbatchcount_list=[2,4,8,16]
+        do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
             startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
@@ -358,7 +360,7 @@ class KernelParams:
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
-            'mse_threshold':'naive_mse',
+            'mse_threshold':1,#'naive_mse',
             'help_start':0,
             'partial_match':0,
             'do_minimize':self.do_minimize # do_minimize=0 means just predict once for mse and don't optimize

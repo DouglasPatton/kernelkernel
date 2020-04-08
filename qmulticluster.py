@@ -16,7 +16,7 @@ class mypool:
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'multicluster.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**6, backupCount=20)],
+            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=100)],
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
@@ -26,7 +26,7 @@ class mypool:
         self.includemaster=includemaster
         self.source=source
 
-        self.sleepbetweennodes=10 # seconds
+        self.sleepbetweennodes=2 # seconds
         self.local_run=local_run
         self.i=0
         self.id=randint(0,100000000)
