@@ -658,7 +658,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
             self.logger.info('starting new KernelCompare log')
-        self.nodesavepath=None
+
             
 
         

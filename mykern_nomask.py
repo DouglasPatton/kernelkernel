@@ -672,7 +672,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
             [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
-        
+        self.do_naivemse(ylist)
         #p#rint('buildbatcdatadict')
         batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict)
         #p#rint('for validation buildbatcdatadict')
@@ -779,6 +779,11 @@ class optimize_free_params(kNdtool):
         self.savepath=None
         self.jobpath=None
         self.yhatmaskscount=None
+        
+        self.nodesavepath=None
+        self.naivemse=None
+        self.ymean=None
+        self.naivebinarymse=None
         
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.pname=myname

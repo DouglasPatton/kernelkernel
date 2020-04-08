@@ -323,7 +323,7 @@ class MyKernHelper:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=[(modeldict['binary_y'][idx],self.binary_y_mse_list[idx]) for idx in range(len(modeldict['binary_y']))]
+                savedict['binary_y_result']=self.binary_y_mse_list
                 savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinarymse))
         except:
             self.logger.exception('')
