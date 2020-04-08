@@ -173,8 +173,7 @@ class RunNode(mp.Process,BaseManager):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('RunNode logging')
-        nodedir=os.path.join(os.getcwd(),'node')
-        if not os.path.exists(nodedir)
+        
         self.qdict=qdict
         self.source=source
         if not local_run:
