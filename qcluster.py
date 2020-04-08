@@ -57,7 +57,7 @@ class SaveQDumper(mp.Process):
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'SaveQDumper-log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
             level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
@@ -79,8 +79,10 @@ class SaveQDumper(mp.Process):
                 success=0
                 try:
                     model_save=queue.get_nowait()
-                    self.logger.debug(f'SaveQDumper got: {model_save}')
-                    self.logger.debug(f"SaveQDumper has with final mse ratio:{model_save[-1]['mse']/model_save[-1]['naivemse']} model_save[-1]['savepath']:{model_save[-1]['savepath']}"  )
+                    #self.logger.debug(f'SaveQDumper got: {model_save}')
+                    message=f"model_save['binary_y_result']:{model_save['binary_y_result']}"
+                    print(message)
+                    self.logger.debug(message)
                     success=1
                 except:
                     if queue.empty():
@@ -94,11 +96,11 @@ class SaveQDumper(mp.Process):
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
                     nodesavepath=model_save[-1]['savepath']
-                    mastersavepath=os.path.join('master_save',nodesavepath)
+                    '''mastersavepath=os.path.join('master_save',nodesavepath)
                     mastersavedir,stem=os.path.split(mastersavepath)
                     if not os.path.exists(mastersavedir):os.makedirs(mastersavedir)
-                    self.logger.debug(f'saveqdumper saving to mastersavepath:{mastersavepath}')
-                    with open(mastersavepath,'wb') as f:
+                    self.logger.debug(f'saveqdumper saving to mastersavepath:{mastersavepath}')'''
+                    with open(nodesavepath,'wb') as f:
                         pickle.dump(model_save,f)
             except:
                 self.logger.exception('unexpeted error in SaveQDumper while outer try')
@@ -116,7 +118,7 @@ class JobQFiller(mp.Process):
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'JobQFiller-log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
             level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
@@ -167,7 +169,7 @@ class RunNode(mp.Process,BaseManager):
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'RunNode-log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
             level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
@@ -220,9 +222,9 @@ class RunNode(mp.Process,BaseManager):
                     my_optimizedict['savepath']=rundict['savepath']
                     my_optimizedict['jobpath']=rundict['jobpath']
                     try:
-                        jobsavepath=rundict['savepath']
+                        '''jobsavepath=rundict['savepath']
                         jobsavefolder=os.path.split(jobsavepath)[0]
-                        if not os.path.exists(jobsavefolder):os.makedirs(jobsavefolder)
+                        if not os.path.exists(jobsavefolder):os.makedirs(jobsavefolder)'''
                         kc.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
                         jobsuccess=1
                     except:
@@ -230,20 +232,21 @@ class RunNode(mp.Process,BaseManager):
                         jobq.put(rundict)
                         self.logger.debug('job back in jobq')
                     if jobsuccess:
-                        with open(jobsavepath,'rb') as f:
+                        with open(kc.nodesavepath,'rb') as f:
                             model_save_list=pickle.load(f)
+                        qtry=0
                         while True:
-                            self.logger.debug(f'adding model_save_list to saveq, savepath:{jobsavepath}')
+                            self.logger.debug(f'adding model_save_list to saveq, kc.nodesavepath:{kc.nodesavepath}')
                             try:
-                                
+                                qtry+=1
                                 saveq.put(model_save_list)
-                                self.logger.debug(f'model_save_list sucesfully added to saveq, savepath: {jobsavepath}')
+                                self.logger.debug(f'model_save_list sucesfully added to saveq, savepath: {kc.nodesavepath}')
                                 break
                             except:
-                                if not saveq.full():
+                                if not saveq.full() and qtry>3:
                                     self.logger.exception('')
                                 else:
-                                    sleep(2)
+                                    sleep(1)
                                     
                         
             except:
@@ -259,7 +262,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'mycluster_.log')
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
             level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')

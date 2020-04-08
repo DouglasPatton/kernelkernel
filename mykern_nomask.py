@@ -1,6 +1,7 @@
 from Ndiff_nomask import Ndiff
 from mykernhelper import MyKernHelper
 
+import re
 import multiprocessing
 #import traceback
 from copy import deepcopy
@@ -250,7 +251,7 @@ class kNdtool(Ndiff,MyKernHelper):
         wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
         wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
         yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
-        print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
+        #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
         yhat_raw=yhat_raw.flatten(order='F')
 
        
@@ -559,7 +560,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         mse = np.mean(np.power(batchbatch_all_y_err, 2))
         self.logger.info(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
-        print(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
+        #print(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
         #maskcount=np.ma.count_masked(batchbatch_all_y_err)
         
 
@@ -665,9 +666,11 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.source=='monte':
             yxtup_list=datagen_obj.yxtup_list
         yxtup_listlist_std=[]
+        ylist=[]
         for batchbatchidx in range(self.batchbatchcount):
             if self.source=='pisces':
                 yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
+            [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
         
         #p#rint('buildbatcdatadict')
@@ -732,13 +735,24 @@ class kNdtool(Ndiff,MyKernHelper):
         return batchdata_dictlist
 
 
-    def do_naivemse(self,datagen_obj):
-        y=datagen_obj.ydataarray
-        ymean=np.mean(y)
-        err=y-ymean
-        mse=np.mean(np.power(err,2))
-        return mse
+    def do_naivemse(self,ylist):
+        try:
+            y=np.array(ylist)
+            ymean=np.mean(y)
+            err=y-ymean
+            mse=np.mean(np.power(err,2))
 
+            if ymean>0.5:yhat=1
+            else: yhat=0
+            err2=y-yhat
+            mse2=np.mean(np.power(err2,2))
+
+            self.naivemse=mse
+            self.ymean=ymean
+            self.naivebinarymse=mse2
+        except:
+            self.logger.exception('')
+        
 
     
 class optimize_free_params(kNdtool):
@@ -775,6 +789,13 @@ class optimize_free_params(kNdtool):
         self.savedir=savedir
         self.savepath=optimizedict['savepath']
         self.jobpath=optimizedict['jobpath']
+        
+        pathpartslist=re.split(os.path.sep,self.savepath)
+        self.nodesavepath=os.path.join('.','results','nodesave',*pathpartslist[3:])
+        nodesavedir=os.path.split(self.nodesavepath)[0]
+        if not os.path.exists(nodesavedir): os.makedirs(nodesavedir)
+        
+        
         #self.Ndiff_list_of_masks_x=xmask
         #self.Ndiff_list_of_masks_y=ymask
         
@@ -795,7 +816,7 @@ class optimize_free_params(kNdtool):
             if not os.path.exists(logdir): os.mkdir(logdir)
             handlername=os.path.join(logdir,f'optimize_free_params-{self.pname}.log')
             logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
                 level=logging.WARNING,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
@@ -821,20 +842,16 @@ class optimize_free_params(kNdtool):
         param_valdict=optimizedict['hyper_param_dict']
 
         
-        
-            
-        
-        self.naivemse=self.do_naivemse(datagen_obj)
-        if type(self.mse_threshold) is str:
-                if self.mse_threshold=='naive_mse':
-                    self.mse_threshold=self.naivemse
-        
-            
-        
         free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
         self.forcefail=None
         self.success=None
         self.iter=0
+        
+        
+        
+        if type(self.mse_threshold) is str:
+                if self.mse_threshold=='naive_mse':
+                    self.mse_threshold=self.naivemse
         
         #if 'species' in self.datagen_dict:
  

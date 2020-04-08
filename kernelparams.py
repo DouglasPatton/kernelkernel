@@ -360,7 +360,7 @@ class KernelParams:
         optimizer_settings_dict1={
             'method':'Nelder-Mead',
             'options':optiondict_NM,
-            'mse_threshold':'naive_mse',
+            'mse_threshold':1,#'naive_mse',
             'help_start':0,
             'partial_match':0,
             'do_minimize':self.do_minimize # do_minimize=0 means just predict once for mse and don't optimize
