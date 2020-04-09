@@ -36,7 +36,7 @@ class MyKernHelper:
         return fixed_or_free_paramdict
     
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict,transform=None):
-        if transform==None:
+        if transform is None:
             transform=0
 
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
@@ -93,7 +93,7 @@ class MyKernHelper:
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 if param_form == 'non-neg':
-                    param_val=np.log(param_val)
+                    param_val=np.abs(param_val)
                 free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'

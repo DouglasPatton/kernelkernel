@@ -6,7 +6,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[64]
+        self.batchcount_variation_list=[128]
         self.do_minimize=0
         self.maxiter=4
         
@@ -25,26 +25,20 @@ class KernelParams:
         
         arraylist=[]
         for i in range(4):
-            startarray=np.ones(4,dtype=np.float64)*0.01
+            startarray=np.ones(4,dtype=np.float64)*0.3
             startarray[i]=0.99
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.5,3,3)])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.5,4,3)])
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,-1])])
-        """Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
-            [
-                *[factor*np.array([1,-1]) for factor in np.linspace(.3,.9,3)],
-                *[factor*np.array([1,1]) for factor in np.linspace(.3,.9,3)],
-                *[factor*np.array([-1,1]) for factor in np.linspace(.3,.9,3)],
-                *[factor*np.array([-1,-1]) for factor in np.linspace(.3,.9,3)]
-            ])"""
+       
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
-        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,1,3)))
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,1,2)))
         
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,1,3)])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,1,2)])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,1,3)])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,1,2)])
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
         
                                   
@@ -119,7 +113,7 @@ class KernelParams:
                                       Ndiff_start_variations,
                                       standardization_variations,
                                       spatialtransform_variations,
-                                      maxbatchbatchcount_variations
+                                      maxbatchbatchcount_variations,x_bandscale_startingvalue_variations
                                      ]
             #hyper_param_form_dict_variations,
         return optdict_variation_list
@@ -141,7 +135,7 @@ class KernelParams:
             
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(0,2)])    
+            species_variations=('species',[self.specieslist[i] for i in range(0,200)])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
@@ -261,7 +255,7 @@ class KernelParams:
             filterthreshold_list[threshcutstep-1]='naivemse'
         mse_threshold_list=[1]*stepcount # 
         maxiter_list=[3,5,8,16]
-        maxbatchbatchcount_list=[1,1,1,1]#[2,4,8,16]
+        maxbatchbatchcount_list=[2,4,8,16]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
