@@ -3,12 +3,28 @@ import pickle
 import os
 import logging
 import pandas as pd
-
+import logging
 
 class KCHelper():
     def __init__(self):
-        pass
-    
+        try:
+            self.logger=logging.getLogger(__name__)
+            self.logger.info('starting new KCHelper object')
+        except:
+            #print(traceback.format_exc())
+            #if myname is None: _name=''
+            #else: _name=f'-{myname}'
+            logdir=os.path.join(directory,'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,__name__)
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
+                level=logging.WARNING,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
+            self.logger.info('starting new KCHelper log')
+
     
     
     def getpickle(self,path):
@@ -22,7 +38,7 @@ class KCHelper():
         return
     
     
-    def rebuild_hyper_param_dict(self,old_opt_dict,replacement_fixedfreedict,verbose=None):
+    '''def rebuild_hyper_param_dict(self,old_opt_dict,replacement_fixedfreedict,verbose=None):
         new_opt_dict=old_opt_dict.copy()
         if verbose==None or verbose=='no':
             verbose=0
@@ -35,7 +51,7 @@ class KCHelper():
                 vstring+=f"for {key} old val({val})replaced with new val({new_val})"
                 new_opt_dict['hyper_param_dict'][key]=new_val
         if verbose==1:print(vstring)
-        return new_opt_dict
+        return new_opt_dict'''
 
 
     

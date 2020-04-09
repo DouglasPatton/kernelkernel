@@ -7,7 +7,23 @@ import re
 class KCPisces():
     def __init__(self):
         self.all_species_model_merge_dict_path=os.path.join(self.kc_savedirectory,'all_species_model_merge.pickle')
-        pass
+        try:
+            self.logger=logging.getLogger(__name__)
+            self.logger.info('starting new KCPisces object')
+        except:
+            #print(traceback.format_exc())
+            #if myname is None: _name=''
+            #else: _name=f'-{myname}'
+            logdir=os.path.join(directory,'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,__name__)
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
+                level=logging.WARNING,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
+            self.logger.info('starting new KCPisces log')
        
     def update_species_model_save_path_dict(self,species_model_save_path_dict):
         path=self.species_model_save_path_dict
@@ -88,7 +104,7 @@ class KCPisces():
             defaultoptimizedict=self.build_optdict(param_count=None,species=None)
             optimizedict=self.do_dict_override(defaultoptimizedict,new_opt_dict)
             best_fof_paramdict=model_save['params']
-            self.logger.debug(best_fof_paramdict)
+            self.logger.debug(f'opt_job_builder has best_fof_paramdict:{best_fof_paramdict}')
             optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
             self.logger.debug(f'after rebuild hyper param dict, optimizedict:{optimizedict}')
             optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  

@@ -37,9 +37,8 @@ class MyKernHelper:
     
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict,transform=None):
         if transform==None:
-            transform=1
-        if transform=='no':
             transform=0
+
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='fixed':
             the_param_values=fixed_or_free_paramdict['fixed_params'][start:end]#end already includes +1 to make range inclusive of the end value

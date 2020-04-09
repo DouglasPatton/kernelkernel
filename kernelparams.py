@@ -151,6 +151,25 @@ class KernelParams:
             datagen_variation_list=[batch_n_variations,batchcount_variations,species_variations]
         return datagen_variation_list
     
+    
+        
+    def rebuild_hyper_param_dict(self,old_opt_dict,replacement_fixedfreedict,verbose=None):
+        new_opt_dict=old_opt_dict.copy()
+        if verbose==None or verbose=='no':
+            verbose=0
+        if verbose=='yes':
+            verbose=1
+        vstring=''
+        for key,val in new_opt_dict['hyper_param_dict'].items():
+            #if not old_opt_dict['modeldict']['hyper_param_form_dict'][key]=='fixed':
+            new_val=self.pull_value_from_fixed_or_free(key,replacement_fixedfreedict)
+            vstring+=f"for {key} old val({val})replaced with new val({new_val})"
+            new_opt_dict['hyper_param_dict'][key]=new_val
+        if verbose==1:print(vstring)
+        self.logger.debug(vstring)
+        return new_opt_dict
+    
+    
     def build_hyper_param_start_values(self,modeldict):
         depthfactor=0.3
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
