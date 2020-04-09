@@ -6,9 +6,9 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[16]
-        self.do_minimize=0
-        self.maxiter=3
+        self.batchcount_variation_list=[8]
+        self.do_minimize=1
+        self.maxiter=4
         
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
@@ -24,7 +24,7 @@ class KernelParams:
                 '''
         
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.3,.6,3)])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.3,.6,1)])
         
         """Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',
             [
@@ -34,11 +34,11 @@ class KernelParams:
                 *[factor*np.array([-1,-1]) for factor in np.linspace(.3,.9,3)]
             ])"""
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
-        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,.8,3)))
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,.8,1)))
         
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.7,3)])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.7,1)])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.7,3)])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.7,1)])
         #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
                                   
         NWnorm_variations=('modeldict:NWnorm',['none'])
@@ -134,7 +134,7 @@ class KernelParams:
             
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(0,2)])    
+            species_variations=('species',[self.specieslist[i] for i in range(0,1)])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
@@ -216,7 +216,7 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
+    def build_stepdict_list(self,stepcount=10,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -229,14 +229,14 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[.05,.5,.5,.5]
+            bestshare_list=[0.5]*(stepcount-1)
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naivemse'
-        mse_threshold_list=[1]*stepcount # 
-        maxiter_list=[3,5,8,16]
-        maxbatchbatchcount_list=[2,4,8,16]
-        do_minimize_list=[1,1,1,1]
+        mse_threshold_list=[1]*(stepcount-1) # 
+        maxiter_list=[10]*(stepcount-1)
+        maxbatchbatchcount_list=[1]*(stepcount-1)
+        do_minimize_list=[1]*(stepcount-1)
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
             startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path

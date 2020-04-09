@@ -27,11 +27,20 @@ class MyKernHelper:
         return params
     
     
+    def insert_detransformed_freeparams(self, fixed_or_free_paramdict,free_params):
+        for param_name,param_feature_dict in fixed_or_free_paramdict.items():
+            if not param_name in ['fixed_params','free_params'] and param_feature_dict['const']=='non-neg':
+                for i in range(*param_feature_dict['location_idx']):
+                    free_params[i]=np.exp(free_params[i])
+        fixed_or_free_paramdict['free_params']=free_params
+        return fixed_or_free_paramdict
+            
+    
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict,transform=None):
         if transform==None:
-            transform=1
-        if transform=='no':
             transform=0
+        if transform=='no':
+            transform=1
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='fixed':
             the_param_values=fixed_or_free_paramdict['fixed_params'][start:end]#end already includes +1 to make range inclusive of the end value
@@ -57,7 +66,9 @@ class MyKernHelper:
                 Once inside optimization, the following will be added
                 free_params:array of free params or string:'outside' if the array has been removed to pass to the optimizer
         '''
-        fixed_params=np.array([]);free_params=np.array([]);fixed_or_free_paramdict={}
+        fixed_or_free_paramdict={}
+        fixed_list=[]
+        free_list=[]
         #build fixed and free vectors of hyper-parameters based on hyper_param_formdict
         print(f'param_valdict:{param_valdict}')
         for param_name,param_form in model_param_formdict.items():
@@ -69,26 +80,27 @@ class MyKernHelper:
             if param_form=='fixed':
                 param_feature_dict['fixed_or_free']='fixed'
                 param_feature_dict['const']='fixed'
-                param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))
+                param_feature_dict['location_idx']=(len(fixed_list),len(fixed_list)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
-                fixed_params=np.concatenate([fixed_params,param_val],axis=0)
+                fixed_list.append(param_val)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
             elif param_form=='free':
                 param_feature_dict['fixed_or_free']='free'
                 param_feature_dict['const']='free'
-                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
+                param_feature_dict['location_idx']=(len(free_list),len(free_list)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
-                free_params=np.concatenate([free_params,param_val],axis=0)
+                free_list.append(param_val)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
             else:
                 param_feature_dict['fixed_or_free']='free'
                 param_feature_dict['const']=param_form
-                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
+                param_feature_dict['location_idx']=(len(free_list),len(free_list)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 if param_form == 'non-neg':
-                    param_val=np.log(param_val)
-                free_params=np.concatenate([free_params,param_val],axis=0)
+                    free_list.append(np.log(param_val))
                 fixed_or_free_paramdict[param_name]=param_feature_dict
+        free_params=np.array(free_list)
+        fixed_params=np.array(fixed_list)
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
         
@@ -370,9 +382,14 @@ class MyKernHelper:
                     pickle.dump(modellist,thefile)
                 donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and mse={minmse}'
                 print(donestring)
+                print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)
+                self.logger.debug(f'bestparams:{bestparams}')
                 break
             except:
                 if i==9:
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
-        return
+        return (minmse,bestparams)
+
+    
+    

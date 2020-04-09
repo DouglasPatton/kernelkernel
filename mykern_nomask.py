@@ -447,7 +447,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         batchcount=self.batchcount
 
-        fixed_or_free_paramdict['free_params'] = free_params
+        fixed_or_free_paramdict=self.insert_detransformed_freeparams(fixed_or_free_paramdict,free_params)
         self.fixed_or_free_paramdict = fixed_or_free_paramdict
         try:
             lossfn=modeldict['loss_function']
@@ -571,6 +571,7 @@ class kNdtool(Ndiff,MyKernHelper):
         
         if not predict:
             self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
+            
             # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
             
             t_format = "%Y%m%d-%H%M%S"
@@ -585,13 +586,13 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.logger.info(f'save_interval changed to {self.save_interval}')
 
             if self.call_iter % self.save_interval == 0:
-                self.sort_then_saveit(self.mse_param_list[-self.save_interval * 2:], modeldict, 'model_save')
+                bestmse,bestparams=self.sort_then_saveit(self.mse_param_list, modeldict, 'model_save')
             
-            
-            if self.iter>3 and mse>self.mse_threshold:
-                self.forcefail=mse
+             
+            if self.mse_threshold and self.iter==3 and bestmse>self.mse_threshold:
+                self.forcefail=bestmse
                 print(f'forcefail(mse):{self.forcefail}')
-        self.success=mse
+        self.success=bestmse
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
@@ -847,13 +848,13 @@ class optimize_free_params(kNdtool):
         param_valdict=optimizedict['hyper_param_dict']
 
         
-        free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
+        transformed_free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
         self.forcefail=None
         self.success=None
         self.iter=0
         
-        
-        
+        startingmse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
+        self.logger.debug(f'new optimization. starting mse:{startinemse}')
         if type(self.mse_threshold) is str:
                 if self.mse_threshold=='naive_mse':
                     self.mse_threshold=self.naivemse
@@ -863,19 +864,25 @@ class optimize_free_params(kNdtool):
             #self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
         if not self.do_minimize:
             try:
-                mse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
+                mse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
                 self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=0)
             except:
                 self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'final_model_save',getname=0)
                 self.logger.exception('')
         else:
             try:
-                startingmse=self.MY_KDEpredictMSE(free_params,*args_tuple, predict=1)
-                if startingmse<self.mse_threshold:
+                if self.mse_threshold:
+                    startingmse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
+                    if startingmse>self.mse_threshold:
+                        do_opt=0
+                        self.sort_then_saveit([[startingmse,args_tuple[-1]]],modeldict,'model_save',getname=0)
+                    else:
+                        do_opt=1
+                else: do_opt=1
+                if do_opt:
                     self.logger.info(f'-------------starting optimization with mse:{startingmse}-------------')
-                    self.minimize_obj=minimize(self.MY_KDEpredictMSE, free_params, args=args_tuple, method=method, options=opt_method_options)
-                else:
-                    self.sort_then_saveit([[startingmse,args_tuple[-1]]],modeldict,'model_save',getname=0)
+                    self.minimize_obj=minimize(self.MY_KDEpredictMSE, transformed_free_params, args=args_tuple, method=method, options=opt_method_options)
+                    
             except:
                 self.sort_then_saveit([[10.0**289,args_tuple[-1]]],modeldict,'error_model_save',getname=0)
                 self.logger.exception('')
