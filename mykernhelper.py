@@ -31,16 +31,15 @@ class MyKernHelper:
         for param_name,param_feature_dict in fixed_or_free_paramdict.items():
             if not param_name in ['fixed_params','free_params'] and param_feature_dict['const']=='non-neg':
                 for i in range(*param_feature_dict['location_idx']):
-                    free_params[i]=np.exp(free_params[i])
+                    free_params[i]=np.abs(free_params[i])
         fixed_or_free_paramdict['free_params']=free_params
         return fixed_or_free_paramdict
-            
     
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict,transform=None):
         if transform==None:
-            transform=0
-        if transform=='no':
             transform=1
+        if transform=='no':
+            transform=0
         start,end=fixed_or_free_paramdict[param_name]['location_idx']
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='fixed':
             the_param_values=fixed_or_free_paramdict['fixed_params'][start:end]#end already includes +1 to make range inclusive of the end value
@@ -48,7 +47,7 @@ class MyKernHelper:
             the_param_values=fixed_or_free_paramdict['free_params'][start:end]#end already includes +1 to make range inclusive of the end value
         if transform==1:
             if fixed_or_free_paramdict[param_name]['const']=='non-neg':#transform variable with e^(.) if there is a non-negative constraint
-                the_param_values=np.exp(the_param_values)
+                the_param_values=np.abs(the_param_values)
         return the_param_values
 
     def setup_fixed_or_free(self,model_param_formdict,param_valdict):
@@ -66,9 +65,7 @@ class MyKernHelper:
                 Once inside optimization, the following will be added
                 free_params:array of free params or string:'outside' if the array has been removed to pass to the optimizer
         '''
-        fixed_or_free_paramdict={}
-        fixed_list=[]
-        free_list=[]
+        fixed_params=np.array([],dtype=np.float64);free_params=np.array([],dtype=np.float64);fixed_or_free_paramdict={}
         #build fixed and free vectors of hyper-parameters based on hyper_param_formdict
         print(f'param_valdict:{param_valdict}')
         for param_name,param_form in model_param_formdict.items():
@@ -80,27 +77,26 @@ class MyKernHelper:
             if param_form=='fixed':
                 param_feature_dict['fixed_or_free']='fixed'
                 param_feature_dict['const']='fixed'
-                param_feature_dict['location_idx']=(len(fixed_list),len(fixed_list)+len(param_val))
+                param_feature_dict['location_idx']=(len(fixed_params),len(fixed_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
-                fixed_list.append(param_val)
+                fixed_params=np.concatenate([fixed_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
             elif param_form=='free':
                 param_feature_dict['fixed_or_free']='free'
                 param_feature_dict['const']='free'
-                param_feature_dict['location_idx']=(len(free_list),len(free_list)+len(param_val))
+                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
-                free_list.append(param_val)
+                free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
             else:
                 param_feature_dict['fixed_or_free']='free'
                 param_feature_dict['const']=param_form
-                param_feature_dict['location_idx']=(len(free_list),len(free_list)+len(param_val))
+                param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 if param_form == 'non-neg':
-                    free_list.append(np.log(param_val))
+                    param_val=np.log(param_val)
+                free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
-        free_params=np.array(free_list)
-        fixed_params=np.array(fixed_list)
         fixed_or_free_paramdict['free_params']='outside'
         fixed_or_free_paramdict['fixed_params'] = fixed_params
         

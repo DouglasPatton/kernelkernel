@@ -592,7 +592,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if self.mse_threshold and self.iter==3 and bestmse>self.mse_threshold:
                 self.forcefail=bestmse
                 print(f'forcefail(mse):{self.forcefail}')
-        self.success=bestmse
+        self.success=mse
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
 
@@ -853,8 +853,8 @@ class optimize_free_params(kNdtool):
         self.success=None
         self.iter=0
         
-        startingmse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
-        self.logger.debug(f'new optimization. starting mse:{startinemse}')
+        #startingmse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
+        #self.logger.debug(f'new optimization. starting mse:{startingmse}')
         if type(self.mse_threshold) is str:
                 if self.mse_threshold=='naive_mse':
                     self.mse_threshold=self.naivemse
