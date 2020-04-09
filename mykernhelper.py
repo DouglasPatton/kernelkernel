@@ -22,7 +22,7 @@ class MyKernHelper:
             
             value=fixed_or_free_paramdict[f'{form}_params'][start:end]
             if const=='non-neg':
-                const=f'{const}'+':'+f'{np.exp(value)}'
+                const=f'{const}'+':'+f'{np.abs(value)}'
             params[param]={'value':value,'const':const}
         return params
     
