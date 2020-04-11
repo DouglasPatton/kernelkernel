@@ -254,8 +254,8 @@ class KernelParams:
             bestshare_list=[.1,.5,.5,.5]
         filterthreshold_list=[1]*(stepcount-1)
         if type(threshcutstep) is int:
-            filterthreshold_list[threshcutstep-1]='naivemse'
-        mse_threshold_list=[1]*stepcount # 
+            filterthreshold_list[threshcutstep-1]='naiveloss'
+        loss_threshold_list=[1]*stepcount # 
         maxiter_list=[1,1,1,1]
         maxbatchbatchcount_list=[2,8]
         do_minimize_list=[1,1,1,1]
@@ -269,7 +269,7 @@ class KernelParams:
             if not os.path.exists(startdir): os.mkdir(startdir)
             ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
             opt_job_kwargs={
-                'mse_threshold':mse_threshold_list[step],
+                'loss_threshold':loss_threshold_list[step],
                 'maxiter':maxiter_list[step],
                 'do_minimize':do_minimize_list[step],
                 'maxbatchbatchcount':maxbatchbatchcount_list[step]
@@ -357,7 +357,7 @@ class KernelParams:
         optimizer_settings_dict1={
             'method':'Powell',#''Nelder-Mead',
             'options':optiondict_p,
-            'mse_threshold':1,#'naive_mse',
+            'loss_threshold':1,#'naiveloss',
             'help_start':0,
             'partial_match':0,
             'do_minimize':self.do_minimize # do_minimize=0 means just predict once for mse and don't optimize

@@ -77,8 +77,8 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             return
             
-        # naive_mse=self.do_naiveloss(datagen_obj)
-        # print('naive_mse:',naive_mse)
+        # naiveloss=self.do_naiveloss(datagen_obj)
+        # print('naiveloss:',naiveloss)
         
         datagen_dict_expanded=datagen_obj.datagen_dict_expanded
         optimizedict['datagen_dict']=datagen_dict_expanded
@@ -105,9 +105,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         checks model_save and then final_model_save to see if the same modeldict has been run before (e.g.,
         same model featuers, same starting parameters, same datagen_dict).
         -by default or if replace set to 1 or 'yes', then the start parameters are replaced by the matching model from model_save 
-            and final_model_save with the lowest 'nwt mse "
+            and final_model_save with the lowest 'nwt loss "
         -if replace set to 0 or 'no', then the best matching model is still announced, but replacement of start parameters doens't happen
-            Only mse and parameters pulled by self.pull2dicts are compared/replaced. modeldict and datagen_dict
+            Only loss and parameters pulled by self.pull2dicts are compared/replaced. modeldict and datagen_dict
         '''
         optimizedict=optimizedict_orig.copy()
         if replace==None or replace=='yes':
@@ -138,7 +138,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         if len(same_modelxy_dict_list)>0:
             #p#rint(f"from model_save, This dictionary, x,y combo has finished optimization before:{len(same_modelxy_dict_list)} times")
             #p#rint(f'first item in modelxy_dict_list:{same_modelxy_dict_list[0]}'')
-            mse_list=[dict_i['mse'] for dict_i in same_modelxy_dict_list]
+            loss_list=[dict_i['loss'] for dict_i in same_modelxy_dict_list]
             try:
                 n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[1 for _ in range(len(n_list))]
@@ -159,16 +159,16 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                     naivelosslist.append(dict_i['naiveloss'])
                 except: naivelosslist.append(1)
                            
-            n_wt_mse_list=[self.do_nwt_loss(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naiveloss=naivelosslist[i]) for i in range(len(mse_list))]
-            lowest_n_wt_mse=min(n_wt_mse_list)
+            n_wt_loss_list=[self.do_nwt_loss(loss_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naiveloss=naivelosslist[i]) for i in range(len(loss_list))]
+            lowest_n_wt_loss=min(n_wt_loss_list)
             
-            best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
+            best_dict_list.append(same_modelxy_dict_list[n_wt_loss_list.index(lowest_n_wt_loss)])
         #if len(same_modelxy_dict_list)==0:
             #print('--------------no matching models found----------')
         
-        mse_list=[dict_i['mse'] for dict_i in best_dict_list]
-        if len(mse_list)>0:
-            mse_list=[dict_i['mse'] for dict_i in best_dict_list]
+        loss_list=[dict_i['loss'] for dict_i in best_dict_list]
+        if len(loss_list)>0:
+            loss_list=[dict_i['loss'] for dict_i in best_dict_list]
             try:
                 n_list=[dict_i['datagen_dict']['train_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[1 for _ in range(len(n_list))]
@@ -189,12 +189,12 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                     naivelosslist.append(dict_i['naiveloss'])
                 except: naivelosslist.append(1)
                            
-            n_wt_mse_list=[self.do_nwt_loss(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naiveloss=naivelosslist[i]) for i in range(len(mse_list))]
-            lowest_n_wt_mse=min(n_wt_mse_list)
-            best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
+            n_wt_loss_list=[self.do_nwt_loss(loss_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naiveloss=naivelosslist[i]) for i in range(len(loss_list))]
+            lowest_n_wt_loss=min(n_wt_loss_list)
+            best_dict=best_dict_list[n_wt_loss_list.index(lowest_n_wt_loss)]
             
-            #try:print(f'optimization dict with lowest mse:{best_dict["mse"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["whensaved"]}')
-            printstring=f"optimization dict with lowest mse:{best_dict['mse']}, n:{best_dict['datagen_dict']['batch_n']}was last saved{best_dict['when_saved']}"
+            #try:print(f'optimization dict with lowest loss:{best_dict["loss"]}, n:{best_dict["ydata"].shape[0]}was last saved{best_dict["whensaved"]}')
+            printstring=f"optimization dict with lowest loss:{best_dict['loss']}, n:{best_dict['datagen_dict']['batch_n']}was last saved{best_dict['when_saved']}"
             print(printstring)
             self.logger.info(printstring)
 
@@ -399,21 +399,21 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             final_keep_list,final_nwt_list=zip(*[(model,nwt_loss) for nwt_loss,model in sorted(zip(final_nwt_list,final_keep_list))])
         if threshold:
             if type(threshold) is str and threshold=='naiveloss':
-                final_keep_list=[model for model in final_keep_list if model['mse']<model['naiveloss']]
+                final_keep_list=[model for model in final_keep_list if model['loss']<model['naiveloss']]
             if type(threshold) in  [float,int]:
-                final_keep_list=[model for model in final_keep_list if model['mse']<threshold]
-            #condensed_model_list.sort(key=lambda savedicti: savedicti['mse'])
+                final_keep_list=[model for model in final_keep_list if model['loss']<threshold]
+            #condensed_model_list.sort(key=lambda savedicti: savedicti['loss'])
         self.logger.debug(f'finally, len(final_keep_list):{len(final_keep_list)}')
         return final_keep_list
 
-    def do_nwt_loss(self,mse,n,batch_count=1,naiveloss=1,batchbatchcount=1):
+    def do_nwt_loss(self,loss,n,batch_count=1,naiveloss=1,batchbatchcount=1):
         batch_count=batch_count*batchbatchcount
-        if not type(mse) is float:
+        if not type(loss) is float:
             return 10**301
         
         else:
-            #p#rint('type(mse)',type(mse))
-            return np.log(mse/naiveloss+1)/(np.log(n**2*batch_count)**1.5)
+            #p#rint('type(loss)',type(loss))
+            return np.log(loss/naiveloss+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}

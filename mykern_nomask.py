@@ -57,7 +57,7 @@ class kNdtool(Ndiff,MyKernHelper):
     
     def batchKDEpredict(self,yin,yout,xin,xpr,modeldict,fixed_or_free_paramdict):
         """moves free_params to first position of the obj function, preps data, and then runs MY_KDEreg to fit the model
-            then returns MSE of the fit 
+            then returns loss of the fit 
         Assumes last p elements of free_params are the scale parameters for 'el two' approach to
         columns of x.
         """
@@ -280,10 +280,10 @@ class kNdtool(Ndiff,MyKernHelper):
         if type(binary_threshold) is float:
             binary_yhat=np.zeros(yhat_un_std.shape)
             binary_yhat[yhat_un_std>binary_threshold]=1
-            binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so mse_threshold throws them out
+            binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so loss_threshold throws them out
             yhat_un_std=binary_yhat
         if type(binary_threshold) is tuple:
-            self.binary_y_mse_list=[]
+            self.binary_y_loss_list=[]
             for threshold in binary_threshold:
                 if type(threshold) is str:
                     #print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
@@ -299,8 +299,8 @@ class kNdtool(Ndiff,MyKernHelper):
                     
                 binary_yhat=np.zeros(yhat_un_std.shape)
                 binary_yhat[yhat_un_std>threshold]=1
-                threshmse=(np.mean(np.power(all_y-binary_yhat,2)))
-                self.binary_y_mse_list.append((threshold,threshmse))
+                threshloss=self.doLoss(all_y,binary_yhat)#(np.mean(np.power(all_y-binary_yhat,2)))
+                self.binary_y_loss_list.append((threshold,threshloss))
             
             
         return yhat_un_std,cross_errors
@@ -412,11 +412,11 @@ class kNdtool(Ndiff,MyKernHelper):
         """
         xpr=(xpr-self.xmean)/self.xstd
         
-        self.prediction=MY_KDEpredictMSE(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None)
+        self.prediction=MY_KDEpredictloss(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None)
         
         return self.prediction.yhat
 
-    def MY_KDEpredictMSE(self, free_params, batchdata_dictlist, modeldict, fixed_or_free_paramdict,predict=None):
+    def MY_KDEpredictloss(self, free_params, batchdata_dictlist, modeldict, fixed_or_free_paramdict,predict=None):
         
         #predict=1 or yes signals that the function is not being called for optimization, but for prediction.
         try:
@@ -432,8 +432,8 @@ class kNdtool(Ndiff,MyKernHelper):
                 if not type(self.success) is np.float64:
                     self.forcefail=9.99999*10**295
                     #print(f'self.success:{self.success},type(self.success):{type(self.success)}')
-                if self.success>self.mse_threshold:
-                    #print(f'self.success:{self.success},self.mse_threshold:{self.mse_threshold}')
+                if self.success>self.loss_threshold:
+                    #print(f'self.success:{self.success},self.loss_threshold:{self.loss_threshold}')
                     self.forcefail=9.99999*10**296
             except:
                 self.forcefail=9.99999*10**297
@@ -459,7 +459,9 @@ class kNdtool(Ndiff,MyKernHelper):
         
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
-        batchbatch_all_y_err=[]
+        #batchbatch_all_y_err=[]
+        batchbatch_all_y_list=[]
+        batchbatch_all_yhat_list=[]
         #print('self.batchbatchcount',self.batchbatchcount)
         maxbatchbatchcount=modeldict['maxbatchbatchcount']
         batchbatchcount=self.batchbatchcount
@@ -484,12 +486,13 @@ class kNdtool(Ndiff,MyKernHelper):
                 datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
                 args.append(np.concatenate(datalist,axis=-1))
             args.extend([modeldict,fixed_or_free_paramdict])
+            yhat_unstd_outtup=self.batchKDEpredict(*args)
             #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
             if modeldict['residual_treatment']=='batchnorm_crossval':
                 all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
                 all_y=np.concatenate(all_y_list,axis=0)
-                yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
-
+                all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
+                
             else:
                 if batchcount>1:
                     yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
@@ -497,6 +500,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     yhat_unstd,cross_errors=yhat_unstd_outtup_list
 
             if modeldict['residual_treatment']=='batch_crossval':
+                assert False, 'not developed'
                 ybatch=[]
                 for i in range(batchcount):
                     ycross_j=[]
@@ -506,44 +510,47 @@ class kNdtool(Ndiff,MyKernHelper):
                     ybatch.append(np.concatenate(ycross_j,axis=0))
             elif modeldict['residual_treatment']=='batchnorm_crossval':
                 # calculation of all_y moved up
-                all_y_err=all_y-yhat_unstd    
+                #all_y_err=all_y-all_yhat    
                 if type(cross_errors[0]) is np.ndarray:
                     cross_errors=np.concatenate(cross_errors,axis=0)
 
             else:
                 ybatch=[tup[0] for tup in yxtup_list]#the original yx data is a list of tupples
-        
+            ylist=[];yhatlist=[]
             if not modeldict['residual_treatment']=='batchnorm_crossval':
                 for batch_i in range(batchcount):
                     y_batch_i=ybatch[batch_i]
+                    ylist.append(y_batch_i)
+                    yhat_batch_i=yhat_unstd[batch_i]
+                    yhatlist.append(yhat_batch_i)
                     y_err = y_batch_i - yhat_unstd[batch_i]
                     y_err_tup = y_err_tup + (y_err,)
-
-
-                all_y_err = np.concatenate(y_err_tup,axis=0)
+                all_y=np.concatenate(ylist,axis=0)
+                all_yhat=np.concatenate(yhatlist,axis=0)
+                #all_y_err = np.concatenate(y_err_tup,axis=0)
             if iscrossloss:
+                #needs work. split into cross_all_y and cross_all_yhat?
                 all_y_err=np.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
             batchbatch_all_y_err.append(all_y_err)
+            batchbatch_all_y.append(all_y)
+            batchbatch_all_yhat.append(all_yhat)
+        batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
+        batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
         batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
-        
-        mse = np.mean(np.power(batchbatch_all_y_err, 2))
-        mae=np.mean(np.abs(batchbatch_all_y_err))
-        threshold=0.5
-        yhat_01=np.zeros(all_y.shape,dtype=np.float64)
-        yhat_01[yhat_unstd>threshold]=1
-        splithinge=np.mean((threshold-yhat_unstd)*(all_y-yhat_01))
-        self.logger.info(f'mse:{mse},mae:{mae},splithinge n:{batchbatch_all_y_err.shape}')
-        #print(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
-        #maskcount=np.ma.count_masked(batchbatch_all_y_err)
+        #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
+        mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
+        mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
+        splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
         lossdict={'mse':mse,'mae':mae,'splithinge',splithinge}
-
+        self.logger.info(f'lossdict':{lossdict}, n:{batchbatch_all_y_err.shape}')
         
         if mse<0:
-            mse=-mse*100000
+            loss=-mse*100000
+            self.logger.critical(f'mse':mse)
         #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
         
         if not predict:
-            self.lossdict_and_paramdict_list.append((lossdict, deepcopy(fixed_or_free_paramdict)))
+            self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
             
             # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
             
@@ -559,17 +566,17 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.logger.info(f'save_interval changed to {self.save_interval}')
 
             if self.call_iter % self.save_interval == 0:
-                bestmse,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
+                bestloss,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
             
              
-            if self.mse_threshold and self.iter==3 and bestmse>self.mse_threshold:
-                self.forcefail=bestmse
-                print(f'forcefail(mse):{self.forcefail}')
-        self.success=mse
+            if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
+                self.forcefail=bestloss
+                print(f'forcefail(loss):{self.forcefail}')
+        self.success=loss
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         
-        return mse
+        return loss
 
     def MPwrapperKDEpredict(self,arglist):
         #p#rint(f'arglist inside wrapper is:::::::{arglist}')
@@ -675,7 +682,7 @@ class kNdtool(Ndiff,MyKernHelper):
             xprtup = ()
             youttup = ()
             if modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval':
-                #the equivalent condition for the y values in the mse function does not apply to batchnorm_crossval
+                #the equivalent condition for the y values in the kernelloss function does not apply to batchnorm_crossval
                 xpri=[]
                 for i in range(batchcount):
                     xpricross_j=[]
@@ -707,24 +714,35 @@ class kNdtool(Ndiff,MyKernHelper):
             batchdata_dictlist.append(batchdata_dict)
         #p#rint([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
         return batchdata_dictlist
-
+    
+    
+    def doLoss(self,y,yhat,pthreshold=None,lssfn=None):
+        if not lssfn:lssfn=self.loss_function
+        err=y-yhat
+        if lssfn=='mse':
+            loss=np.mean(np.power(err,2))
+        if lssfn=='mae':
+            loss=np.mean(np.abs(err))
+        if lssfn=='splithinge':
+            if pthreshold is None:
+                threshold=self.pthreshold
+            yhat_01=np.zeros(yhat.shape,dtype=np.float64)
+            yhat_01[yhat>threshold]=1
+            loss=np.mean((threshold-yhat)*(y-yhat_01))      
+        return loss
 
     def do_naiveloss(self,ylist):
         try:
             y=np.array(ylist)
             ymean=np.mean(y)
-            err=y-ymean
-            
-            mse=np.mean(np.power(err,2))
-
+            self.ymean=ymean
             if ymean>0.5:yhat=1
             else: yhat=0
+            err=y-ymean
             err2=y-yhat
-            mse2=np.mean(np.power(err2,2))
-
-            self.naiveloss=mse
-            self.ymean=ymean
-            self.naivebinaryloss=mse2
+            
+            self.naiveloss=self.doLoss(y,ymean)
+            self.naivebinaryloss=self.doLoss(y,yhat)
         except:
             self.logger.exception('')
         
@@ -783,9 +801,9 @@ class optimize_free_params(kNdtool):
         #self.Ndiff_list_of_masks_y=ymask
         
         
-        self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
+        self.call_iter=0#one will be added to this each time the outer loss function is called by scipy.minimize
         self.iter=0
-        self.lossdict_and_paramdict_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
+        self.lossdict_and_paramdict_list=[]#will contain a tuple of  (lossdict, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
@@ -815,7 +833,7 @@ class optimize_free_params(kNdtool):
         method=opt_settings_dict['method']
         self.opt_settings_dict=opt_settings_dict
         opt_method_options=opt_settings_dict['options']
-        self.mse_threshold=opt_settings_dict['mse_threshold']
+        self.loss_threshold=opt_settings_dict['loss_threshold']
         self.do_minimize=opt_settings_dict['do_minimize']
         
         
@@ -831,35 +849,34 @@ class optimize_free_params(kNdtool):
         self.success=None
         self.iter=0
         
-        #startingmse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
-        #self.logger.debug(f'new optimization. starting mse:{startingmse}')
-        if type(self.mse_threshold) is str:
-                if self.mse_threshold=='naive_mse':
-                    self.mse_threshold=self.naiveloss
+        #startingloss=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+        #self.logger.debug(f'new optimization. starting loss:{startingloss}')
+        if type(self.loss_threshold) is str:
+                if self.loss_threshold=='naiveloss':
+                    self.loss_threshold=self.naiveloss
         
         #if 'species' in self.datagen_dict:
  
             #self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
         if not self.do_minimize:
             try:
-                mse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
-                self.sort_then_saveit([[mse,args_tuple[-1]]],modeldict,'final_model_save',getname=0)
+                loss=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
             except:
-                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'final_model_save',getname=0)
+                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
                 self.logger.exception('')
         else:
             try:
-                if self.mse_threshold:
-                    startingmse=self.MY_KDEpredictMSE(transformed_free_params,*args_tuple, predict=1)
-                    if startingmse>self.mse_threshold:
+                if self.loss_threshold:
+                    startingloss=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                    if startingloss>self.loss_threshold:
                         do_opt=0
-                        self.sort_then_saveit([[startingmse,args_tuple[-1]]],modeldict,'model_save',getname=0)
+                        self.sort_then_saveit([[startingloss,args_tuple[-1]]],modeldict,'model_save',getname=0)
                     else:
                         do_opt=1
                 else: do_opt=1
                 if do_opt:
-                    self.logger.info(f'-------------starting optimization with mse:{startingmse}-------------')
-                    self.minimize_obj=minimize(self.MY_KDEpredictMSE, transformed_free_params, args=args_tuple, method=method, options=opt_method_options)
+                    self.logger.info(f'-------------starting optimization with loss:{startingloss}-------------')
+                    self.minimize_obj=minimize(self.MY_KDEpredictloss, transformed_free_params, args=args_tuple, method=method, options=opt_method_options)
                     
             except:
                 self.sort_then_saveit([[10.0**289,args_tuple[-1]]],modeldict,'error_model_save',getname=0)
