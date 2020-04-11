@@ -77,7 +77,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
             return
             
-        # naive_mse=self.do_naivemse(datagen_obj)
+        # naive_mse=self.do_naiveloss(datagen_obj)
         # print('naive_mse:',naive_mse)
         
         datagen_dict_expanded=datagen_obj.datagen_dict_expanded
@@ -146,7 +146,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                 n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
 
-            batchbatchcountlist=[];naivemselist=[]
+            batchbatchcountlist=[];naivelosslist=[]
             for dict_i in same_modelxy_dict_list:
                 try:
                     i_batchbatch1=dict_i['datagen_dict']['batchbatchcount']
@@ -156,10 +156,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                     else: batchbatchcountlist.append(i_batchbatch2)
                 except: batchbatchcountlist.append(1)
                 try:
-                    naivemselist.append(dict_i['naivemse'])
-                except: naivemselist.append(1)
+                    naivelosslist.append(dict_i['naiveloss'])
+                except: naivelosslist.append(1)
                            
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naivemse=naivemselist[i]) for i in range(len(mse_list))]
+            n_wt_mse_list=[self.do_nwt_loss(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naiveloss=naivelosslist[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             
             best_dict_list.append(same_modelxy_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)])
@@ -176,7 +176,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                 n_list=[dict_i['datagen_dict']['batch_n'] for dict_i in same_modelxy_dict_list]
                 batchcount_list=[dict_i['datagen_dict']['batchcount'] for dict_i in same_modelxy_dict_list]
 
-            batchbatchcountlist=[];naivemselist=[]
+            batchbatchcountlist=[];naivelosslist=[]
             for dict_i in same_modelxy_dict_list:
                 try:
                     i_batchbatch1=dict_i['datagen_dict']['batchbatchcount']
@@ -186,10 +186,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                     else: batchbatchcountlist.append(i_batchbatch2)
                 except: batchbatchcountlist.append(1)
                 try:
-                    naivemselist.append(dict_i['naivemse'])
-                except: naivemselist.append(1)
+                    naivelosslist.append(dict_i['naiveloss'])
+                except: naivelosslist.append(1)
                            
-            n_wt_mse_list=[self.do_nwt_mse(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naivemse=naivemselist[i]) for i in range(len(mse_list))]
+            n_wt_mse_list=[self.do_nwt_loss(mse_list[i],n_list[i],batchcount_list[i],batchbatchcount=batchbatchcountlist[i],naiveloss=naivelosslist[i]) for i in range(len(mse_list))]
             lowest_n_wt_mse=min(n_wt_mse_list)
             best_dict=best_dict_list[n_wt_mse_list.index(lowest_n_wt_mse)]
             
@@ -330,14 +330,15 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         return merged_path
 
 
-    def get_nwt_mse(self,saved_model_list):
+    def get_nwt_loss(self,saved_model_list):
         nwt_list=[]
         for full_model_i in saved_model_list:
-            i_mse=full_model_i['mse']
+            loss_function=full_model_i['modeldict']['loss_function']
+            loss_i=full_model_i['lossdict'][loss_function]
             try:
-                i_naivemse=full_model_i['naivemse']
+                i_naiveloss=full_model_i['naiveloss']
             except:
-                i_naivemse=1
+                i_naiveloss=1
             i_n=full_model_i['datagen_dict']['batch_n']
             i_batchcount=full_model_i['datagen_dict']['batchcount']
             try:
@@ -347,7 +348,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                     i_batchbatchcount=i_batchbatch1
                 else: i_batchbatchcount=i_batchbatch2
             except: i_batchbatchcount=1
-            nwt_list.append(self.do_nwt_mse(i_mse,i_n,i_batchcount,naivemse=i_naivemse,batchbatchcount=i_batchbatchcount))
+            nwt_list.append(self.do_nwt_loss(loss_i,i_n,i_batchcount,naiveloss=i_naiveloss,batchbatchcount=i_batchbatchcount))
         return nwt_list
     
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0,threshold=None):
@@ -359,7 +360,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         if strict=='yes':strict=1
         if strict=='no':strict=0
 
-        nwt_list=self.get_nwt_mse(saved_model_list)
+        nwt_list=self.get_nwt_loss(saved_model_list)
         
         
         modelcount=len(saved_model_list)        
@@ -378,8 +379,6 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                         if len(matchlist)>0:
                             iwt=nwt_list[i]
                             jwt=nwt_list[j]
-                            if verbose>1:
-                                print(f'i_mse:{i_mse},i_n:{i_n},iwt:{iwt},j_mse:{j_mse},j_n:{j_n},jwt:{jwt}')
 
                             if iwt<jwt:
                                 if verbose>1:
@@ -397,24 +396,24 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             print(f'len(final_keep_list):{len(final_keep_list)}')
         if endsort:
             final_nwt_list=[nwt_list[i] for i in range(modelcount) if keep_model[i]]
-            final_keep_list,final_nwt_list=zip(*[(model,nwt_mse) for nwt_mse,model in sorted(zip(final_nwt_list,final_keep_list))])
+            final_keep_list,final_nwt_list=zip(*[(model,nwt_loss) for nwt_loss,model in sorted(zip(final_nwt_list,final_keep_list))])
         if threshold:
-            if type(threshold) is str and threshold=='naivemse':
-                final_keep_list=[model for model in final_keep_list if model['mse']<model['naivemse']]
+            if type(threshold) is str and threshold=='naiveloss':
+                final_keep_list=[model for model in final_keep_list if model['mse']<model['naiveloss']]
             if type(threshold) in  [float,int]:
                 final_keep_list=[model for model in final_keep_list if model['mse']<threshold]
             #condensed_model_list.sort(key=lambda savedicti: savedicti['mse'])
         self.logger.debug(f'finally, len(final_keep_list):{len(final_keep_list)}')
         return final_keep_list
 
-    def do_nwt_mse(self,mse,n,batch_count=1,naivemse=1,batchbatchcount=1):
+    def do_nwt_loss(self,mse,n,batch_count=1,naiveloss=1,batchbatchcount=1):
         batch_count=batch_count*batchbatchcount
         if not type(mse) is float:
             return 10**301
         
         else:
             #p#rint('type(mse)',type(mse))
-            return np.log(mse/naivemse+1)/(np.log(n**2*batch_count)**1.5)
+            return np.log(mse/naiveloss+1)/(np.log(n**2*batch_count)**1.5)
     
     def pull2dicts(self,optimizedict):
         return {'modeldict':optimizedict['modeldict'],'datagen_dict':optimizedict['datagen_dict']}

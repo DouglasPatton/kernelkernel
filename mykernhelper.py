@@ -298,7 +298,7 @@ class MyKernHelper:
             broadcasted_array=np.broadcast_to(maskedarray,tup)
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
-    def sort_then_saveit(self,mse_param_list,modeldict,filename,getname=0):
+    def sort_then_saveit(self,lossdict_paramdict_list,modeldict,filename,getname=0):
         try:
             
             species='species-'+self.datagen_dict['species']+'_'
@@ -316,13 +316,13 @@ class MyKernHelper:
             fullpath_filename=Helper().getname(fullpath_filename)
             
         
-        mse_list=[i[0] for i in mse_param_list]
-        minmse=min(mse_list)
-        fof_param_dict_list=[i[1] for i in mse_param_list]
-        bestparams=fof_param_dict_list[mse_list.index(minmse)]
+        loss_list=[i[0][self.loss_function] for i in lossdict_paramdict_list]
+        minloss=min(loss_list)
+        fof_param_dict_list=[i[1] for i in lossdict_paramdict_list]
+        bestparams=fof_param_dict_list[loss_list.index(minloss)]
         savedict={}
-        savedict['mse']=minmse
-        savedict['naivemse']=self.naivemse
+        savedict['loss']=minloss
+        savedict['naiveloss']=self.naiveloss
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
@@ -330,8 +330,8 @@ class MyKernHelper:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=self.binary_y_mse_list
-                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinarymse))
+                savedict['binary_y_result']=self.binary_y_loss_list
+                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
         except:
             self.logger.exception('')
         savedict['modeldict']=modeldict
@@ -375,7 +375,7 @@ class MyKernHelper:
             try:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and mse={minmse}'
+                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss={self.naiveloss} and loss={minloss}'
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)
@@ -384,7 +384,7 @@ class MyKernHelper:
             except:
                 if i==9:
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
-        return (minmse,bestparams)
+        return (minloss,bestparams)
 
     
     

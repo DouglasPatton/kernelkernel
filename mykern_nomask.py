@@ -673,7 +673,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
             [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
-        self.do_naivemse(ylist)
+        self.do_naiveloss(ylist)
         #p#rint('buildbatcdatadict')
         batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict)
         #p#rint('for validation buildbatcdatadict')
@@ -736,11 +736,12 @@ class kNdtool(Ndiff,MyKernHelper):
         return batchdata_dictlist
 
 
-    def do_naivemse(self,ylist):
+    def do_naiveloss(self,ylist):
         try:
             y=np.array(ylist)
             ymean=np.mean(y)
             err=y-ymean
+            
             mse=np.mean(np.power(err,2))
 
             if ymean>0.5:yhat=1
@@ -748,9 +749,9 @@ class kNdtool(Ndiff,MyKernHelper):
             err2=y-yhat
             mse2=np.mean(np.power(err2,2))
 
-            self.naivemse=mse
+            self.naiveloss=mse
             self.ymean=ymean
-            self.naivebinarymse=mse2
+            self.naivebinaryloss=mse2
         except:
             self.logger.exception('')
         
@@ -782,10 +783,10 @@ class optimize_free_params(kNdtool):
         self.yhatmaskscount=None
         
         self.nodesavepath=None
-        self.naivemse=None
+        self.naiveloss=None
         self.ymean=None
-        self.naivebinarymse=None
-        
+        self.naivebinaryloss=None
+        self.loss_function=None
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.pname=myname
         
@@ -847,6 +848,7 @@ class optimize_free_params(kNdtool):
         
         #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
+        self.loss_function=modeldict['loss_function']
         
         param_valdict=optimizedict['hyper_param_dict']
 
@@ -860,7 +862,7 @@ class optimize_free_params(kNdtool):
         #self.logger.debug(f'new optimization. starting mse:{startingmse}')
         if type(self.mse_threshold) is str:
                 if self.mse_threshold=='naive_mse':
-                    self.mse_threshold=self.naivemse
+                    self.mse_threshold=self.naiveloss
         
         #if 'species' in self.datagen_dict:
  

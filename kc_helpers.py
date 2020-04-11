@@ -276,15 +276,15 @@ class KCHelper():
             self.logger.info(f'no models in model_save_list for printing')
             return
         for model_save in model_save_list:
-            if type(model_save['mse']) is str:
-                self.logger.warning(f'model_save has string mse: {model_save}')
+            if type(model_save['loss']) is str:
+                self.logger.warning(f'model_save has string loss: {model_save}')
         
         try:
-            model_save_list.sort(key=lambda savedicti: savedicti['mse']/savedicti['naivemse'])
+            model_save_list.sort(key=lambda savedicti: savedicti['loss']/savedicti['naiveloss'])
             
         except:
-            model_save_list.sort(key=lambda savedicti: savedicti['mse'])
-              #sorts by mse
+            model_save_list.sort(key=lambda savedicti: savedicti['loss'])
+              #sorts by loss
 
         output_loc=os.path.join(directory,'output')
         if not os.path.exists(output_loc):
@@ -295,7 +295,7 @@ class KCHelper():
         output_filename=self.helper.getname(output_filename)
 
         modeltablehtml=''
-        #keylist = ['mse','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
+        #keylist = ['loss','params', 'modeldict', 'when_saved', 'datagen_dict']#xdata and ydata aren't in here
         
         self.logger.info(f'len(model_save_list:{len(model_save_list)}')
         for j,model in enumerate(model_save_list):
