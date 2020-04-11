@@ -137,7 +137,7 @@ class KernelParams:
             
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(200,400)])    
+            species_variations=('species',[self.specieslist[i] for i in range(0,2)])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
@@ -251,14 +251,14 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[.1,.5,.5,.5]
-        filterthreshold_list=[1]*(stepcount-1)
+            bestshare_list=[0.1]+[0.5 for _ in range(stepcount-2)]
+        filterthreshold_list=[1 for _ in range(stepcount-1)]
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naiveloss'
-        loss_threshold_list=[1]*stepcount # 
-        maxiter_list=[1,1,1,1]
+        loss_threshold_list=[1 for _ in range(stepcount-1)]
+        maxiter_list=[1 for _ in range(stepcount-1)]
         maxbatchbatchcount_list=[2,8]
-        do_minimize_list=[1,1,1,1]
+        do_minimize_list=[1 for _ in range(stepcount-1)]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
             startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path

@@ -113,76 +113,86 @@ class kNdtool(Ndiff,MyKernHelper):
             #predict
             NWtup=self.MY_NW_KDEreg(yin_scaled,xin_scaled,xpr_scaled,yout_scaled,fixed_or_free_paramdict,diffdict,modeldict)[0]
             #not developed yet"""
-        
-        xbw = self.BWmaker(fixed_or_free_paramdict, diffdict, modeldict,'x')
-        ybw = self.BWmaker(fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
+        try:
+            xbw = self.BWmaker(fixed_or_free_paramdict, diffdict, modeldict,'x')
+            ybw = self.BWmaker(fixed_or_free_paramdict, diffdict['ydiffdict'],modeldict,'y')
 
-        #p#rint('xbw',xbw)
-        #p#rint('ybw',ybw)
-        
-       
-        hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
-        hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
-                
-        xbw=xbw*hx
-        
-        
-        if modeldict['regression_model']=='logistic':
-            xoutdiffs=diffdict['outdiffs']
-            prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
-            
-            yhat_tup=self.kernel_logistic(prob_x,xin,yin)
-            yhat_std=yhat_tup[0]
-            cross_errors=yhat_tup[1]
-            
-        if modeldict['regression_model'][0:2]=='NW':
-            ybw=ybw*hy
-            xoutdiffs=diffdict['outdiffs']
-            youtdiffs=diffdict['ydiffdict']['outdiffs']
-            ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
-            if True:#type(ykern_grid) is int and xkern_grid=='no':
-                xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd b/c batchcount.
-                #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
-                xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
-                xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-3),xoutdifftup)#fro -2 to -3
-            newaxis=-1
-            yx_outdiffs_endstack=np.concatenate(
-                (np.expand_dims(xoutdiffs_stack,axis=newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
-            yx_bw_endstack=np.concatenate([
-                np.expand_dims(xbw_stack,newaxis),
-                np.expand_dims(ybw,newaxis)]
-                ,axis=newaxis)
-            #p#rint('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
-            
-            prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
-            prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
-            
-            KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
-            if modeldict['residual_treatment']=='batchnorm_crossval':
-                return KDEregtup
+            #p#rint('xbw',xbw)
+            #p#rint('ybw',ybw)
+
+
+            hx=self.pull_value_from_fixed_or_free('outer_x_bw', fixed_or_free_paramdict)
+            hy=self.pull_value_from_fixed_or_free('outer_y_bw', fixed_or_free_paramdict)
+
+            xbw=xbw*hx
+
+
+            if modeldict['regression_model']=='logistic':
+                xoutdiffs=diffdict['outdiffs']
+                prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
+
+                yhat_tup=self.kernel_logistic(prob_x,xin,yin)
+                yhat_std=yhat_tup[0]
+                cross_errors=yhat_tup[1]
+
+            if modeldict['regression_model'][0:2]=='NW':
+                ybw=ybw*hy
+                xoutdiffs=diffdict['outdiffs']
+                youtdiffs=diffdict['ydiffdict']['outdiffs']
+                ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
+                if True:#type(ykern_grid) is int and xkern_grid=='no':
+                    xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd b/c batchcount.
+                    #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
+                    xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
+                    xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-3),xoutdifftup)#fro -2 to -3
+                newaxis=-1
+                yx_outdiffs_endstack=np.concatenate(
+                    (np.expand_dims(xoutdiffs_stack,axis=newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
+                yx_bw_endstack=np.concatenate([
+                    np.expand_dims(xbw_stack,newaxis),
+                    np.expand_dims(ybw,newaxis)]
+                    ,axis=newaxis)
+                #p#rint('type(xoutdiffs)',type(xoutdiffs),'type(xbw)',type(xbw),'type(modeldict)',type(modeldict))
+
+                prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
+                prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
+
+                KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
+                if modeldict['residual_treatment']=='batchnorm_crossval':
+                    return KDEregtup
+                else:
+                    yhat_raw=KDEregtup[0]
+                    cross_errors=KDEregtup[1]
+
+                yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+
+            std_data=modeldict['std_data']
+
+            if type(std_data) is str:
+                if std_data=='all':
+                    yhat_un_std=yhat_std*self.ystd+self.ymean
+            elif type(std_data) is tuple:
+                if not std_data[0]==[]:
+                    yhat_un_std=yhat_std*self.ystd+self.ymean
+                    if iscrossloss:
+                        cross_error=cross_errors*self.ystd
+                else: yhat_un_std=yhat_std
+
+            #p#rint(f'yhat_un_std:{yhat_un_std}')
+
+
+
+            return (yhat_un_std,cross_errors)
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
             else:
-                yhat_raw=KDEregtup[0]
-                cross_errors=KDEregtup[1]
-            
-            yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
-        
-        std_data=modeldict['std_data']
-        
-        if type(std_data) is str:
-            if std_data=='all':
-                yhat_un_std=yhat_std*self.ystd+self.ymean
-        elif type(std_data) is tuple:
-            if not std_data[0]==[]:
-                yhat_un_std=yhat_std*self.ystd+self.ymean
-                if iscrossloss:
-                    cross_error=cross_errors*self.ystd
-            else: yhat_un_std=yhat_std
-        
-        #p#rint(f'yhat_un_std:{yhat_un_std}')
-
-        
-        
-        return (yhat_un_std,cross_errors)
+                return
         
         
     def slicetup(self,dimcount,dimselect,dimval):
@@ -199,115 +209,137 @@ class kNdtool(Ndiff,MyKernHelper):
         return tuple(slicelist)
         
     def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
-        #modifying to index numpy arrays instead of lists, requiring slices of all dims
-        batchcount=self.batchcount
-        yout,wt_stack,cross_errors=KDEregtup#no zip required b/c list turned into dim 0 for batchcount # =zip(*KDEregtup)
-        nin=self.nin;
-        #ybatch=[]
-        wtbatch=[]
-        youtbatch=[]
-        #trueybatch=[]
-        for i in range(batchcount):
-            #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
-            #ybatchlist=[]
-            wtbatchlist=[]
-            youtbatchlist=[]
-            #trueybatchlist=[]
-            for j in range(batchcount):
-                if j>i:
-                    istart=(i)*nin
-                    iend=istart+nin
-                elif j<i:
-                    istart=(i-1)*nin
-                    iend=istart+nin
-                if j!=i:
-                    batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
-                    #all_y_fori_fromj=all_y[istart:iend]
-                    wt_i_from_batch_j=wt_stack[batchslicer]
-                    yout_batchj=np.broadcast_to(np.expand_dims(yout[:,j],axis=-1),(self.nout,self.nin)) # 
-                    wtbatchlist.append(wt_i_from_batch_j)
-                    youtbatchlist.append(yout_batchj)
-                    #trueybatchlist.append(all_y_fori_fromj)
-                
-            dimcount=np.ndim(wtbatchlist[0])
-            #trueybatch.append(np.concatenate([trueybatchj[None,:] for trueybatchj in trueybatchlist],axis=0))
-            wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
-            #   of each of i's y.# 2/20a: concat switch from axis0 to -1
-            youtbatch.append(np.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
-            #   leaving rhs dim as nin*(batchcoun-1)=npr
+        try:
+            #modifying to index numpy arrays instead of lists, requiring slices of all dims
+            batchcount=self.batchcount
+            yout,wt_stack,cross_errors=KDEregtup#no zip required b/c list turned into dim 0 for batchcount # =zip(*KDEregtup)
+            nin=self.nin;
+            #ybatch=[]
+            wtbatch=[]
+            youtbatch=[]
+            #trueybatch=[]
+            for i in range(batchcount):
+                #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
+                #ybatchlist=[]
+                wtbatchlist=[]
+                youtbatchlist=[]
+                #trueybatchlist=[]
+                for j in range(batchcount):
+                    if j>i:
+                        istart=(i)*nin
+                        iend=istart+nin
+                    elif j<i:
+                        istart=(i-1)*nin
+                        iend=istart+nin
+                    if j!=i:
+                        batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
+                        #all_y_fori_fromj=all_y[istart:iend]
+                        wt_i_from_batch_j=wt_stack[batchslicer]
+                        yout_batchj=np.broadcast_to(np.expand_dims(yout[:,j],axis=-1),(self.nout,self.nin)) # 
+                        wtbatchlist.append(wt_i_from_batch_j)
+                        youtbatchlist.append(yout_batchj)
+                        #trueybatchlist.append(all_y_fori_fromj)
 
-            #summary:
-            #   for 2/20b: each i has batch_n values that batch_i doesn't predict, but each of the other batches does
-            #   so for each i we will get the batch_n true values of y and compre those to the weighted
-            #   average of youts from batch_j*(batchcount-1) other batches (i.e., i!=j)
-            #   so for a stack, dims are batchcount-1,yout,nin.  for each batchi, nin is
-            #       effectively npr, but only after we rearrange the data for crossval.
-            
-        
-        wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
-        youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
-        #trueystack=np.concatenate(trueybatch[:,:,None],axis=-1)
-        wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
-        wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
-        wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
-        yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
-        #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
-        yhat_raw=yhat_raw.flatten(order='F')
+                dimcount=np.ndim(wtbatchlist[0])
+                #trueybatch.append(np.concatenate([trueybatchj[None,:] for trueybatchj in trueybatchlist],axis=0))
+                wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
+                #   of each of i's y.# 2/20a: concat switch from axis0 to -1
+                youtbatch.append(np.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
+                #   leaving rhs dim as nin*(batchcoun-1)=npr
 
-       
-                
-        y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
-        
-        yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
-        
-        std_data=modeldict['std_data']
-        if type(std_data) is str:
-            if std_data=='all':
-                yhat_un_std=yhat_std*self.ystd+self.ymean
-        elif type(std_data) is tuple:
-            if not std_data[0]==[]:
-                yhat_un_std=yhat_std*self.ystd+self.ymean
-                try:
-                    cross_error=cross_errors*self.ystd
-                except:pass
-            else: yhat_un_std=yhat_std
-        
-        
-        yhat_un_std=yhat_std*self.ystd+self.ymean
+                #summary:
+                #   for 2/20b: each i has batch_n values that batch_i doesn't predict, but each of the other batches does
+                #   so for each i we will get the batch_n true values of y and compre those to the weighted
+                #   average of youts from batch_j*(batchcount-1) other batches (i.e., i!=j)
+                #   so for a stack, dims are batchcount-1,yout,nin.  for each batchi, nin is
+                #       effectively npr, but only after we rearrange the data for crossval.
 
-                
-        binary_threshold=modeldict['binary_y']
-        if type(binary_threshold) is float:
-            binary_yhat=np.zeros(yhat_un_std.shape)
-            binary_yhat[yhat_un_std>binary_threshold]=1
-            binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so loss_threshold throws them out
-            yhat_un_std=binary_yhat
-        if type(binary_threshold) is tuple:
-            self.binary_y_loss_list=[]
-            for threshold in binary_threshold:
-                if type(threshold) is str:
-                    #print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
-                    if threshold=='avgavg':
-                        avg_phat_0=np.mean(yhat_un_std[all_y==0])
-                        avg_phat_1=np.mean(yhat_un_std[all_y==1])
-                        threshold=(avg_phat_0+avg_phat_1)/2
-                    if threshold=='avgmedian':
-                        median_phat_0=np.median(yhat_un_std[all_y==0])
-                        median_phat_1=np.median(yhat_un_std[all_y==1])
-                        threshold=(median_phat_0+median_phat_1)/2
-                    
-                    
+
+            wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
+            youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
+            #trueystack=np.concatenate(trueybatch[:,:,None],axis=-1)
+            wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
+            wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
+            wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
+            yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
+            #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
+            yhat_raw=yhat_raw.flatten(order='F')
+
+
+
+            y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
+
+            yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+
+            std_data=modeldict['std_data']
+            if type(std_data) is str:
+                if std_data=='all':
+                    yhat_un_std=yhat_std*self.ystd+self.ymean
+            elif type(std_data) is tuple:
+                if not std_data[0]==[]:
+                    yhat_un_std=yhat_std*self.ystd+self.ymean
+                    try:
+                        cross_error=cross_errors*self.ystd
+                    except:pass
+                else: yhat_un_std=yhat_std
+
+
+            yhat_un_std=yhat_std*self.ystd+self.ymean
+
+
+            binary_threshold=modeldict['binary_y']
+            if type(binary_threshold) is float:
                 binary_yhat=np.zeros(yhat_un_std.shape)
-                binary_yhat[yhat_un_std>threshold]=1
-                threshloss=self.doLoss(all_y,binary_yhat)#(np.mean(np.power(all_y-binary_yhat,2)))
-                self.binary_y_loss_list.append((threshold,threshloss))
-            
-            
-        return yhat_un_std,cross_errors
+                binary_yhat[yhat_un_std>binary_threshold]=1
+                binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so loss_threshold throws them out
+                yhat_un_std=binary_yhat
+            if type(binary_threshold) is tuple:
+                self.binary_y_loss_list=[]
+                for threshold in binary_threshold:
+                    if type(threshold) is str:
+                        #print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
+                        if threshold=='avgavg':
+                            avg_phat_0=np.mean(yhat_un_std[all_y==0])
+                            avg_phat_1=np.mean(yhat_un_std[all_y==1])
+                            threshold=(avg_phat_0+avg_phat_1)/2
+                        if threshold=='avgmedian':
+                            median_phat_0=np.median(yhat_un_std[all_y==0])
+                            median_phat_1=np.median(yhat_un_std[all_y==1])
+                            threshold=(median_phat_0+median_phat_1)/2
+
+
+                    binary_yhat=np.zeros(yhat_un_std.shape)
+                    binary_yhat[yhat_un_std>threshold]=1
+                    threshloss=self.doLoss(all_y,binary_yhat)#(np.mean(np.power(all_y-binary_yhat,2)))
+                    self.binary_y_loss_list.append((threshold,threshloss))
+
+
+            return yhat_un_std,cross_errors
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
+        
     
     def do_KDEsmalln(self,diffs,bw,modeldict):
-        if self.Ndiff:
-            return self.Ndiffdo_KDEsmalln(diffs, bw, modeldict)
+        try:
+            if self.Ndiff:
+                return self.Ndiffdo_KDEsmalln(diffs, bw, modeldict)
+        except FloatingPointError:
+            self.nperror=1
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
         
     
     def kernel_logistic(self,prob_x,xin,yin):
@@ -337,84 +369,108 @@ class kNdtool(Ndiff,MyKernHelper):
     def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        residual_treatment=modeldict['residual_treatment']
         try:
-            iscrossloss=residual_treatment[0:8]=='crossloss'
-        except: iscrossloss=0
-            
-        yout_axis=-3 # from -2 to -3 b/c batchcount#len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
-        '''print('yout_axis(expected 0): ',yout_axis)
-        print('prob_yx.shape',prob_yx.shape)
-        print('prob_x.shape',prob_x.shape)'''
-        #prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
-        #cdfnorm_prob_yx=prob_yx/prob_yx_sum
-        #cdfnorm_prob_yx=prob_yx#dropped normalization
-        #prob_x_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
-        #cdfnorm_prob_x = prob_x / prob_x_sum
-        #cdfnorm_prob_x = prob_x#dropped normalization
-        
-        #yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
-        yout_stack=np.expand_dims(yout,1)
-        prob_x_stack_tup=prob_x.shape[:-2]+(self.nout,)+prob_x.shape[-2:] # -1 to -2 b/c batchcount
-        prob_x_stack=self.ma_broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
-        NWnorm=modeldict['NWnorm']
-        
-        residual_treatment=modeldict['residual_treatment']
-        # print('before',NWnorm,'lossfn:',lssfn)
-        if NWnorm=='across-except:batchnorm':
-            if residual_treatment=='batchnorm_crossval':
-                NWnorm='none'
+            residual_treatment=modeldict['residual_treatment']
+            try:
+                iscrossloss=residual_treatment[0:8]=='crossloss'
+            except: iscrossloss=0
+
+            yout_axis=-3 # from -2 to -3 b/c batchcount#len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
+            '''print('yout_axis(expected 0): ',yout_axis)
+            print('prob_yx.shape',prob_yx.shape)
+            print('prob_x.shape',prob_x.shape)'''
+            #prob_yx_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_yx,axis=yout_axis),yout_axis),prob_yx.shape)
+            #cdfnorm_prob_yx=prob_yx/prob_yx_sum
+            #cdfnorm_prob_yx=prob_yx#dropped normalization
+            #prob_x_sum=np.broadcast_to(np.ma.expand_dims(np.ma.sum(prob_x, axis=yout_axis),yout_axis),prob_x.shape)
+            #cdfnorm_prob_x = prob_x / prob_x_sum
+            #cdfnorm_prob_x = prob_x#dropped normalization
+
+            #yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+            yout_stack=np.expand_dims(yout,1)
+            prob_x_stack_tup=prob_x.shape[:-2]+(self.nout,)+prob_x.shape[-2:] # -1 to -2 b/c batchcount
+            prob_x_stack=self.ma_broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+            NWnorm=modeldict['NWnorm']
+
+            residual_treatment=modeldict['residual_treatment']
+            # print('before',NWnorm,'lossfn:',lssfn)
+            if NWnorm=='across-except:batchnorm':
+                if residual_treatment=='batchnorm_crossval':
+                    NWnorm='none'
+                else:
+                    NWnorm='across'
+            # print('after',NWnorm,'lossfn:',lssfn)
+
+
+            if modeldict['regression_model']=='NW-rbf2':
+                wt_stack=np.power(np.power(prob_yx,2)-np.power(prob_x_stack,2),0.5)
+                if NWnorm=='across':
+                    wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
+                yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2 # -3 b/c batchcount
+
             else:
-                NWnorm='across'
-        # print('after',NWnorm,'lossfn:',lssfn)
-        
-                
-        if modeldict['regression_model']=='NW-rbf2':
-            wt_stack=np.power(np.power(prob_yx,2)-np.power(prob_x_stack,2),0.5)
-            if NWnorm=='across':
-                wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
-            yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2 # -3 b/c batchcount
+                wt_stack=prob_yx/prob_x_stack
+                if NWnorm=='across':
+                    wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
+                yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)
 
-        else:
-            wt_stack=prob_yx/prob_x_stack
-            if NWnorm=='across':
-                wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
-            yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)
+            binary_threshold=modeldict['binary_y']   
+            if not binary_threshold is None and not residual_treatment=='batchnorm_crossval':
+                binary_yhat=np.zeros(yhat.shape)
+                binary_yhat[yhat>binary_threshold]=1
+                yhat=binary_yhat
 
-        binary_threshold=modeldict['binary_y']   
-        if not binary_threshold is None and not residual_treatment=='batchnorm_crossval':
-            binary_yhat=np.zeros(yhat.shape)
-            binary_yhat[yhat>binary_threshold]=1
-            yhat=binary_yhat
-            
+
+
+            if not iscrossloss:
+                cross_errors='no_cross_errors'
+
+
+            if iscrossloss:
+                if len(residual_treatment)>8:
+                    cross_exp=float(residual_treatment[8:])
+                    wt_stack=wt_stack**cross_exp
+
+                cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
+                crosswt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=1),axis=1)
+                wt_cross_errors=np.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
+                cross_errors=wt_cross_errors
+            if modeldict['residual_treatment']=='batchnorm_crossval':
+                return (yout,wt_stack,cross_errors)
+            return (yhat,cross_errors)
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
         
-        
-        if not iscrossloss:
-            cross_errors='no_cross_errors'
-            
-            
-        if iscrossloss:
-            if len(residual_treatment)>8:
-                cross_exp=float(residual_treatment[8:])
-                wt_stack=wt_stack**cross_exp
-            
-            cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
-            crosswt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=1),axis=1)
-            wt_cross_errors=np.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
-            cross_errors=wt_cross_errors
-        if modeldict['residual_treatment']=='batchnorm_crossval':
-            return (yout,wt_stack,cross_errors)
-        return (yhat,cross_errors)
             
     
     def predict_tool(self,xpr,fixed_or_free_paramdict,modeldict):
         """
         """
-        xpr=(xpr-self.xmean)/self.xstd
+        try:
+            xpr=(xpr-self.xmean)/self.xstd
+
+            self.prediction=MY_KDEpredictloss(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None)
         
-        self.prediction=MY_KDEpredictloss(self, free_params, batchdata_dict, modeldict, fixed_or_free_paramdict,predict=None)
+            return self.prediction.yhat
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
         
-        return self.prediction.yhat
 
     def MY_KDEpredictloss(self, free_params, batchdata_dictlist, modeldict, fixed_or_free_paramdict,predict=None):
         
@@ -468,114 +524,124 @@ class kNdtool(Ndiff,MyKernHelper):
         if type(maxbatchbatchcount) is int:
             if maxbatchbatchcount<self.batchbatchcount:
                 batchbatchcount=maxbatchbatchcount
-            
-        for batchbatchidx in range(batchbatchcount):
-            #print('batchbatchidx:',batchbatchidx)
-            if self.source=='pisces':
-                yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
-            batchdata_dict_i=batchdata_dictlist[batchbatchidx]
-            
-            y_err_tup = ()
+        try:    
+            for batchbatchidx in range(batchbatchcount):
+                #print('batchbatchidx:',batchbatchidx)
+                if self.source=='pisces':
+                    yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
+                batchdata_dict_i=batchdata_dictlist[batchbatchidx]
+
+                y_err_tup = ()
 
 
-            #self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
-            keylist=['yintup','youttup','xintup','xprtup']
-            args=[]
-            for key in keylist:
-                data_tup=batchdata_dict_i[key]
-                datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
-                args.append(np.concatenate(datalist,axis=-1))
-            args.extend([modeldict,fixed_or_free_paramdict])
-            yhat_unstd_outtup=self.batchKDEpredict(*args)
-            #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-            if modeldict['residual_treatment']=='batchnorm_crossval':
-                all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
-                all_y=np.concatenate(all_y_list,axis=0)
-                all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
-                
-            else:
-                if batchcount>1:
-                    yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
+                #self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
+                keylist=['yintup','youttup','xintup','xprtup']
+                args=[]
+                for key in keylist:
+                    data_tup=batchdata_dict_i[key]
+                    datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
+                    args.append(np.concatenate(datalist,axis=-1))
+                args.extend([modeldict,fixed_or_free_paramdict])
+                yhat_unstd_outtup=self.batchKDEpredict(*args)
+                #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
+                if modeldict['residual_treatment']=='batchnorm_crossval':
+                    all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
+                    all_y=np.concatenate(all_y_list,axis=0)
+                    all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
+
                 else:
-                    yhat_unstd,cross_errors=yhat_unstd_outtup_list
+                    if batchcount>1:
+                        yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
+                    else:
+                        yhat_unstd,cross_errors=yhat_unstd_outtup_list
 
-            if modeldict['residual_treatment']=='batch_crossval':
-                assert False, 'not developed'
-                ybatch=[]
-                for i in range(batchcount):
-                    ycross_j=[]
-                    for j,yxvartup in enumerate(yxtup_list):
-                        if not j==i:
-                            ycross_j.append(yxvartup[0])
-                    ybatch.append(np.concatenate(ycross_j,axis=0))
-            elif modeldict['residual_treatment']=='batchnorm_crossval':
-                # calculation of all_y moved up
-                #all_y_err=all_y-all_yhat    
-                if type(cross_errors[0]) is np.ndarray:
-                    cross_errors=np.concatenate(cross_errors,axis=0)
+                if modeldict['residual_treatment']=='batch_crossval':
+                    assert False, 'not developed'
+                    ybatch=[]
+                    for i in range(batchcount):
+                        ycross_j=[]
+                        for j,yxvartup in enumerate(yxtup_list):
+                            if not j==i:
+                                ycross_j.append(yxvartup[0])
+                        ybatch.append(np.concatenate(ycross_j,axis=0))
+                elif modeldict['residual_treatment']=='batchnorm_crossval':
+                    # calculation of all_y moved up
+                    #all_y_err=all_y-all_yhat    
+                    if type(cross_errors[0]) is np.ndarray:
+                        cross_errors=np.concatenate(cross_errors,axis=0)
 
-            else:
-                ybatch=[tup[0] for tup in yxtup_list]#the original yx data is a list of tupples
-            ylist=[];yhatlist=[]
-            if not modeldict['residual_treatment']=='batchnorm_crossval':
-                for batch_i in range(batchcount):
-                    y_batch_i=ybatch[batch_i]
-                    ylist.append(y_batch_i)
-                    yhat_batch_i=yhat_unstd[batch_i]
-                    yhatlist.append(yhat_batch_i)
-                    y_err = y_batch_i - yhat_unstd[batch_i]
-                    y_err_tup = y_err_tup + (y_err,)
-                all_y=np.concatenate(ylist,axis=0)
-                all_yhat=np.concatenate(yhatlist,axis=0)
-                #all_y_err = np.concatenate(y_err_tup,axis=0)
-            if iscrossloss:
-                #needs work. split into cross_all_y and cross_all_yhat?
-                all_y_err=np.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
-            batchbatch_all_y_err.append(all_y_err)
-            batchbatch_all_y.append(all_y)
-            batchbatch_all_yhat.append(all_yhat)
-        batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
-        batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
-        batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
-        #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
-        mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
-        mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
-        splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
-        lossdict={'mse':mse,'mae':mae,'splithinge',splithinge}
-        self.logger.info(f'lossdict':{lossdict}, n:{batchbatch_all_y_err.shape}')
-        
-        if mse<0:
-            loss=-mse*100000
-            self.logger.critical(f'mse':mse)
-        #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
-        
-        if not predict:
-            self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
-            
-            # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
-            
-            t_format = "%Y%m%d-%H%M%S"
-            self.iter_start_time_list.append(strftime(t_format))
+                else:
+                    ybatch=[tup[0] for tup in yxtup_list]#the original yx data is a list of tupples
+                ylist=[];yhatlist=[]
+                if not modeldict['residual_treatment']=='batchnorm_crossval':
+                    for batch_i in range(batchcount):
+                        y_batch_i=ybatch[batch_i]
+                        ylist.append(y_batch_i)
+                        yhat_batch_i=yhat_unstd[batch_i]
+                        yhatlist.append(yhat_batch_i)
+                        y_err = y_batch_i - yhat_unstd[batch_i]
+                        y_err_tup = y_err_tup + (y_err,)
+                    all_y=np.concatenate(ylist,axis=0)
+                    all_yhat=np.concatenate(yhatlist,axis=0)
+                    #all_y_err = np.concatenate(y_err_tup,axis=0)
+                if iscrossloss:
+                    #needs work. split into cross_all_y and cross_all_yhat?
+                    all_y_err=np.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
+                batchbatch_all_y_err.append(all_y_err)
+                batchbatch_all_y.append(all_y)
+                batchbatch_all_yhat.append(all_yhat)
+            batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
+            batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
+            batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
+            #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
+            mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
+            mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
+            splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
+            lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}
+            self.logger.info(f'lossdict:{lossdict}, n:{batchbatch_all_y_err.shape}')
 
-            if self.call_iter == 3:
-                tdiff = np.abs(
-                    datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
-                        self.iter_start_time_list[-2], t_format))
-                self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-                                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-                self.logger.info(f'save_interval changed to {self.save_interval}')
+            if mse<0:
+                loss=-mse*100000
+                self.logger.critical(f'mse:{mse}')
+            #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
 
-            if self.call_iter % self.save_interval == 0:
-                bestloss,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
-            
-             
-            if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
-                self.forcefail=bestloss
-                print(f'forcefail(loss):{self.forcefail}')
-        self.success=loss
+            if not predict:
+                self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
 
-        # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        
+                # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+
+                t_format = "%Y%m%d-%H%M%S"
+                self.iter_start_time_list.append(strftime(t_format))
+
+                if self.call_iter == 3:
+                    tdiff = np.abs(
+                        datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                            self.iter_start_time_list[-2], t_format))
+                    self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                                  1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+                    self.logger.info(f'save_interval changed to {self.save_interval}')
+
+                if self.call_iter % self.save_interval == 0:
+                    bestloss,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
+
+
+                if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
+                    self.forcefail=bestloss
+                    print(f'forcefail(loss):{self.forcefail}')
+            self.success=loss
+
+            # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+        if self.nperror:
+            self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
+            self.nperror=0
+            loss=0.999*10**275
         return loss
 
     def MPwrapperKDEpredict(self,arglist):
@@ -717,19 +783,30 @@ class kNdtool(Ndiff,MyKernHelper):
     
     
     def doLoss(self,y,yhat,pthreshold=None,lssfn=None):
-        if not lssfn:lssfn=self.loss_function
-        err=y-yhat
-        if lssfn=='mse':
-            loss=np.mean(np.power(err,2))
-        if lssfn=='mae':
-            loss=np.mean(np.abs(err))
-        if lssfn=='splithinge':
-            if pthreshold is None:
-                threshold=self.pthreshold
-            yhat_01=np.zeros(yhat.shape,dtype=np.float64)
-            yhat_01[yhat>threshold]=1
-            loss=np.mean((threshold-yhat)*(y-yhat_01))      
-        return loss
+        try:
+            if not lssfn:lssfn=self.loss_function
+            err=y-yhat
+            if lssfn=='mse':
+                loss=np.mean(np.power(err,2))
+            if lssfn=='mae':
+                loss=np.mean(np.abs(err))
+            if lssfn=='splithinge':
+                if pthreshold is None:
+                    threshold=self.pthreshold
+                yhat_01=np.zeros(yhat.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=np.mean((threshold-yhat)*(y-yhat_01))      
+            return loss
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
 
     def do_naiveloss(self,ylist):
         try:

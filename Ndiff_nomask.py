@@ -108,6 +108,7 @@ class Ndiff:
         except FloatingPointError:
             self.nperror=1
         except:
+            self.logger.exception('')
             assert False,'unexpected error'
 
         
