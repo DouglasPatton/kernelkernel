@@ -767,11 +767,13 @@ class optimize_free_params(kNdtool):
 
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
+        np.seterr(over='raise',under='raise', divide='raise', invalid='raise')
         self.datagen_dict=None
         self.opt_settings_dict=None
         self.savepath=None
         self.jobpath=None
         self.yhatmaskscount=None
+        self.nperror=0
         
         self.nodesavepath=None
         self.naiveloss=None
