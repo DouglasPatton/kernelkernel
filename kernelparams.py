@@ -48,7 +48,7 @@ class KernelParams:
         binary_y_variations=('modeldict:binary_y',[(.5, .45, .55)]) # if binary_y is a tuple,
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
-        loss_function_variations=('modeldict:loss_function',['batchnorm_crossval'])
+        residual_treatment_variations=('modeldict:residual_treatment',['batchnorm_crossval'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -76,6 +76,7 @@ class KernelParams:
                                       ykerngrid_form_variations,
                                       NWnorm_variations,
                                       loss_function_variations,
+                                      residual_treatment_variations
                                       regression_model_variations, 
                                       product_kern_norm_variations,
                                       normalize_Ndiffwtsum_variations,

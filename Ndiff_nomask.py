@@ -1,5 +1,5 @@
 import os
-os.environ["OMP_NUM_THREADS"] = "4"
+#os.environ["OMP_NUM_THREADS"] = "4"
 import numpy as np
 import logging,logging.config
 

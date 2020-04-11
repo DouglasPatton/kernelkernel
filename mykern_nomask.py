@@ -63,10 +63,10 @@ class kNdtool(Ndiff,MyKernHelper):
         """
 
         try:
-            lossfn=modeldict['loss_function']
+            residual_treatment=modeldict['residual_treatment']
         except KeyError:
-            lossfn='mse'
-        iscrossmse=lossfn[0:8]=='crossmse'
+            residual_treatment=None
+        iscrossloss=residual_treatment[0:8]=='crossloss'
         
         max_bw_Ndiff=modeldict['max_bw_Ndiff']
         #pull x_bandscale parameters from the appropriate location and appropriate vector
@@ -158,7 +158,7 @@ class kNdtool(Ndiff,MyKernHelper):
             prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
             
             KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
-            if modeldict['loss_function']=='batchnorm_crossval':
+            if modeldict['residual_treatment']=='batchnorm_crossval':
                 return KDEregtup
             else:
                 yhat_raw=KDEregtup[0]
@@ -174,7 +174,7 @@ class kNdtool(Ndiff,MyKernHelper):
         elif type(std_data) is tuple:
             if not std_data[0]==[]:
                 yhat_un_std=yhat_std*self.ystd+self.ymean
-                if iscrossmse:
+                if iscrossloss:
                     cross_error=cross_errors*self.ystd
             else: yhat_un_std=yhat_std
         
@@ -311,8 +311,8 @@ class kNdtool(Ndiff,MyKernHelper):
         
     
     def kernel_logistic(self,prob_x,xin,yin):
-        lossfn=modeldict['loss_function']
-        iscrossmse=lossfn[0:8]=='crossmse'
+        residual_treatment=modeldict['residual_treatment']
+        iscrossloss=residual_treatment[0:8]=='crossloss'
                       
         for i in range(prob_x.shape[-1]):
             xin_const=np.concatenate(np.ones((xin.shape[0],1),xin,axis=1))
@@ -322,9 +322,9 @@ class kNdtool(Ndiff,MyKernHelper):
         #cross_errors=np.masked_array(cross_errors,mask=np.eye(yin.shape[0])).T#to put ii back on dim 1
         cross_errors=cross_errors.T#no mask version
         yhat=np.array(yhat_std)                             
-        if not iscrossmse:
+        if not iscrossloss:
             return (yhat,'no_cross_errors')
-        if iscrossmse:
+        if iscrossloss:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
                 wt_stack=prob_x**cross_exp
@@ -337,10 +337,10 @@ class kNdtool(Ndiff,MyKernHelper):
     def my_NW_KDEreg(self,prob_yx,prob_x,yout,modeldict):
         """returns predited values of y for xpredict based on yin, xin, and modeldict
         """
-        lossfn=modeldict['loss_function']
+        residual_treatment=modeldict['residual_treatment']
         try:
-            iscrossmse=lossfn[0:8]=='crossmse'
-        except: iscrossmse=0
+            iscrossloss=residual_treatment[0:8]=='crossloss'
+        except: iscrossloss=0
             
         yout_axis=-3 # from -2 to -3 b/c batchcount#len(prob_yx.shape)-2#-2 b/c -1 for index form vs len count form and -1 b/c second to last dimensio is what we seek.
         '''print('yout_axis(expected 0): ',yout_axis)
@@ -359,10 +359,10 @@ class kNdtool(Ndiff,MyKernHelper):
         prob_x_stack=self.ma_broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
         NWnorm=modeldict['NWnorm']
         
-        lssfn=modeldict['loss_function']
+        residual_treatment=modeldict['residual_treatment']
         # print('before',NWnorm,'lossfn:',lssfn)
         if NWnorm=='across-except:batchnorm':
-            if lssfn=='batchnorm_crossval':
+            if residual_treatment=='batchnorm_crossval':
                 NWnorm='none'
             else:
                 NWnorm='across'
@@ -382,18 +382,18 @@ class kNdtool(Ndiff,MyKernHelper):
             yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)
 
         binary_threshold=modeldict['binary_y']   
-        if not binary_threshold is None and not lssfn=='batchnorm_crossval':
+        if not binary_threshold is None and not residual_treatment=='batchnorm_crossval':
             binary_yhat=np.zeros(yhat.shape)
             binary_yhat[yhat>binary_threshold]=1
             yhat=binary_yhat
             
         
         
-        if not iscrossmse:
+        if not iscrossloss:
             cross_errors='no_cross_errors'
             
             
-        if iscrossmse:
+        if iscrossloss:
             if len(lossfn)>8:
                 cross_exp=float(lossfn[8:])
                 wt_stack=wt_stack**cross_exp
@@ -402,7 +402,7 @@ class kNdtool(Ndiff,MyKernHelper):
             crosswt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=1),axis=1)
             wt_cross_errors=np.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
             cross_errors=wt_cross_errors
-        if modeldict['loss_function']=='batchnorm_crossval':
+        if modeldict['residual_treatment']=='batchnorm_crossval':
             return (yout,wt_stack,cross_errors)
         return (yhat,cross_errors)
             
@@ -450,11 +450,11 @@ class kNdtool(Ndiff,MyKernHelper):
         fixed_or_free_paramdict=self.insert_detransformed_freeparams(fixed_or_free_paramdict,free_params)
         self.fixed_or_free_paramdict = fixed_or_free_paramdict
         try:
-            lossfn=modeldict['loss_function']
+            residual_treatment=modeldict['residual_treatment']
         except KeyError:
-            print(f'loss_function not found in modeldict')
-            lossfn='mse'
-        iscrossmse=lossfn[0:8]=='crossmse'
+            print(f'residual_treatment not found in modeldict')
+            residual_treatment='mse'
+        iscrossloss=lossfn[0:8]=='crossloss'
 
         
         if self.source=='monte': 
@@ -512,7 +512,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     #self.logger.info(f'result_tup: {result_tup}')
                     yhat_unstd_outtup_list.append(result_tup)'''
             #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-            if modeldict['loss_function']=='batchnorm_crossval':
+            if modeldict['residual_treatment']=='batchnorm_crossval':
                 all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
                 all_y=np.concatenate(all_y_list,axis=0)
                 yhat_unstd,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
@@ -528,7 +528,7 @@ class kNdtool(Ndiff,MyKernHelper):
 
 
 
-            if modeldict['loss_function']=='batch_crossval':
+            if modeldict['residual_treatment']=='batch_crossval':
                 ybatch=[]
                 for i in range(batchcount):
                     ycross_j=[]
@@ -536,7 +536,7 @@ class kNdtool(Ndiff,MyKernHelper):
                         if not j==i:
                             ycross_j.append(yxvartup[0])
                     ybatch.append(np.concatenate(ycross_j,axis=0))
-            elif modeldict['loss_function']=='batchnorm_crossval':
+            elif modeldict['residual_treatment']=='batchnorm_crossval':
                 # calculation of all_y moved up
                 all_y_err=all_y-yhat_unstd    
                 if type(cross_errors[0]) is np.ndarray:
@@ -544,8 +544,8 @@ class kNdtool(Ndiff,MyKernHelper):
 
             else:
                 ybatch=[tup[0] for tup in yxtup_list]#the original yx data is a list of tupples
-
-            if not modeldict['loss_function']=='batchnorm_crossval':
+        
+            if not modeldict['residual_treatment']=='batchnorm_crossval':
                 for batch_i in range(batchcount):
                     y_batch_i=ybatch[batch_i]
                     y_err = y_batch_i - yhat_unstd[batch_i]
@@ -553,13 +553,18 @@ class kNdtool(Ndiff,MyKernHelper):
 
 
                 all_y_err = np.concatenate(y_err_tup,axis=0)
-            if iscrossmse:
+            if iscrossloss:
                 all_y_err=np.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
             batchbatch_all_y_err.append(all_y_err)
         batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
         
         mse = np.mean(np.power(batchbatch_all_y_err, 2))
-        self.logger.info(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
+        mae=np.mean(np.abs(batchbatch_all_y_err))
+        threshold=0.5
+        yhat_01=np.zeros(all_y.shape,dtype=np.float64)
+        yhat_01[yhat_unstd>threshold]=1
+        splithinge=np.mean((threshold-yhat_unst)*(all_y-yhat_01))
+        self.logger.info(f'mse:{mse},mae:{mae},splithinge n:{batchbatch_all_y_err.shape}')
         #print(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
         #maskcount=np.ma.count_masked(batchbatch_all_y_err)
         
@@ -595,7 +600,7 @@ class kNdtool(Ndiff,MyKernHelper):
         self.success=mse
 
         # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-
+        
         return mse
 
     def MPwrapperKDEpredict(self,arglist):
@@ -701,7 +706,7 @@ class kNdtool(Ndiff,MyKernHelper):
             yintup = ()
             xprtup = ()
             youttup = ()
-            if modeldict['loss_function']=='batch_crossval' or modeldict['loss_function']=='batchnorm_crossval':
+            if modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval':
                 #the equivalent condition for the y values in the mse function does not apply to batchnorm_crossval
                 xpri=[]
                 for i in range(batchcount):
