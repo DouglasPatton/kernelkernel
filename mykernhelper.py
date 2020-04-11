@@ -299,6 +299,7 @@ class MyKernHelper:
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
     def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,getname=0):
+
         try:
             
             species='species-'+self.datagen_dict['species']+'_'
@@ -317,13 +318,13 @@ class MyKernHelper:
         lossfn=modeldict['loss_function']    
         
         losslist=[lossdict[lossfn] for lossdict,paramdict in lossdict_and_paramdict_list]
-        minlost=min(losslist)
+        minloss=min(losslist)
         
-        bestlossdict,bestparams=lossdict_and_paramdict_list[losslist.index(minlost)]
+        bestlossdict,bestparams=lossdict_and_paramdict_list[losslist.index(minloss)]
         savedict={}
-        savedict['mse']=bestlossdict['mse']
         savedict['lossdict']=bestlossdict
-        savedict['naivemse']=self.naivemse
+        savedict['loss']=minloss
+        savedict['naiveloss']=self.naiveloss
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
@@ -331,8 +332,8 @@ class MyKernHelper:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=self.binary_y_mse_list
-                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinarymse))
+                savedict['binary_y_result']=self.binary_y_loss_list
+                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
         except:
             self.logger.exception('')
         savedict['modeldict']=modeldict
@@ -376,7 +377,7 @@ class MyKernHelper:
             try:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and lossdict:{lossdict}'
+                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss={self.naiveloss} and loss={minloss}'
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)

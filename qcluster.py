@@ -305,7 +305,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         self.datagen_variation_list=datagen_variation_list
         if source is None: source='monte'
         self.source=source
-        self.savedirectory=os.path.join('.','results')
+        self.savedirectory='results'
         if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
         
        
