@@ -605,7 +605,20 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.logger.critical(f'mse:{mse}')
             #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
 
-            if not predict:
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+        if self.nperror:
+            self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
+            self.nperror=0
+            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
+            if predict:
+                return [(lossdict,fixed_or_free_paramdict)]
+            else:
                 self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
 
                 # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
@@ -628,21 +641,11 @@ class kNdtool(Ndiff,MyKernHelper):
                 if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
                     self.forcefail=bestloss
                     print(f'forcefail(loss):{self.forcefail}')
-            self.success=loss
+            self.success=bestloss
 
             # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        except FloatingPointError:
-            self.nperror=1
-            self.logger.exception('nperror set to 1 to trigger error and big loss')
-        except:
-            if not self.nperror:
-                self.logger.exception('')
-                assert False,'unexpected error'
-        if self.nperror:
-            self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
-            self.nperror=0
-            loss=0.999*10**275
-        return loss
+        
+        return bestloss
 
     def MPwrapperKDEpredict(self,arglist):
         #p#rint(f'arglist inside wrapper is:::::::{arglist}')
@@ -939,7 +942,8 @@ class optimize_free_params(kNdtool):
             #self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
         if not self.do_minimize:
             try:
-                loss=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                lossdict_and_paramdict_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                self.sort_then_saveit(lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
             except:
                 self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
                 self.logger.exception('')
