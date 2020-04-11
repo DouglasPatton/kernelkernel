@@ -325,8 +325,8 @@ class kNdtool(Ndiff,MyKernHelper):
         if not iscrossloss:
             return (yhat,'no_cross_errors')
         if iscrossloss:
-            if len(lossfn)>8:
-                cross_exp=float(lossfn[8:])
+            if len(residual_treatment)>8:
+                cross_exp=float(residual_treatment[8:])
                 wt_stack=prob_x**cross_exp
             
             cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
@@ -394,8 +394,8 @@ class kNdtool(Ndiff,MyKernHelper):
             
             
         if iscrossloss:
-            if len(lossfn)>8:
-                cross_exp=float(lossfn[8:])
+            if len(residual_treatment)>8:
+                cross_exp=float(residual_treatment[8:])
                 wt_stack=wt_stack**cross_exp
             
             cross_errors=(yhat[None,:]-yout[:,None])#this makes dim0=nout,dim1=nin
@@ -453,8 +453,8 @@ class kNdtool(Ndiff,MyKernHelper):
             residual_treatment=modeldict['residual_treatment']
         except KeyError:
             print(f'residual_treatment not found in modeldict')
-            residual_treatment='mse'
-        iscrossloss=lossfn[0:8]=='crossloss'
+            residual_treatment=None
+        iscrossloss=residual_treatment[0:8]=='crossloss'
 
         
         if self.source=='monte': 
@@ -484,33 +484,6 @@ class kNdtool(Ndiff,MyKernHelper):
                 datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
                 args.append(np.concatenate(datalist,axis=-1))
             args.extend([modeldict,fixed_or_free_paramdict])
-            yhat_unstd_outtup=self.batchKDEpredict(*args)
-            '''    arglist=[]
-                arglist.append(batchdata_dict_i['yintup'][batch_i])
-                arglist.append(batchdata_dict_i['youttup'][batch_i])
-                arglist.append(batchdata_dict_i['xintup'][batch_i])
-                arglist.append(batchdata_dict_i['xprtup'][batch_i])
-
-                arglist.append(modeldict)
-                arglist.append(fixed_or_free_paramdict)
-                arglistlist.append(arglist)
-            batchconcat_arglist=[]
-            for arglist in arglistlist:
-                batchconcat_arglist.append(np.concatenate([np.expand_dims(data,axis=0) for data in arglist],axis=0))
-            yhat_unstd_outtup_list=self.batchKDEpredict(batchconcatarglist)'''
-            
-            '''if self.batch_process_count>1 and batchcount>1:
-                with multiprocessing.Pool(processes=self.batch_process_count) as pool:
-                    yhat_unstd_outtup_list=pool.map(self.MPwrapperKDEpredict,arglistlist)
-                    sleep(2)
-                    pool.close()
-                    pool.join()
-            else:
-                yhat_unstd_outtup_list=[]
-                for i in range(batchcount):
-                    result_tup=self.MPwrapperKDEpredict(arglistlist[i])
-                    #self.logger.info(f'result_tup: {result_tup}')
-                    yhat_unstd_outtup_list.append(result_tup)'''
             #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
             if modeldict['residual_treatment']=='batchnorm_crossval':
                 all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
@@ -522,11 +495,6 @@ class kNdtool(Ndiff,MyKernHelper):
                     yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
                 else:
                     yhat_unstd,cross_errors=yhat_unstd_outtup_list
-
-
-            #p#rint(f'after mp.pool,yhat_unstd has shape:{np.shape(yhat_unstd)}')
-
-
 
             if modeldict['residual_treatment']=='batch_crossval':
                 ybatch=[]
@@ -563,19 +531,19 @@ class kNdtool(Ndiff,MyKernHelper):
         threshold=0.5
         yhat_01=np.zeros(all_y.shape,dtype=np.float64)
         yhat_01[yhat_unstd>threshold]=1
-        splithinge=np.mean((threshold-yhat_unst)*(all_y-yhat_01))
+        splithinge=np.mean((threshold-yhat_unstd)*(all_y-yhat_01))
         self.logger.info(f'mse:{mse},mae:{mae},splithinge n:{batchbatch_all_y_err.shape}')
         #print(f'mse:{mse}, n:{batchbatch_all_y_err.shape}')
         #maskcount=np.ma.count_masked(batchbatch_all_y_err)
-        
+        lossdict={'mse':mse,'mae':mae,'splithinge',splithinge}
 
-       
+        
         if mse<0:
             mse=-mse*100000
         #assert maskcount==0,f'{maskcount} masked values found in all_y_err'
         
         if not predict:
-            self.mse_param_list.append((mse, deepcopy(fixed_or_free_paramdict)))
+            self.lossdict_and_paramdict_list.append((lossdict, deepcopy(fixed_or_free_paramdict)))
             
             # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
             
@@ -591,7 +559,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 self.logger.info(f'save_interval changed to {self.save_interval}')
 
             if self.call_iter % self.save_interval == 0:
-                bestmse,bestparams=self.sort_then_saveit(self.mse_param_list, modeldict, 'model_save')
+                bestmse,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
             
              
             if self.mse_threshold and self.iter==3 and bestmse>self.mse_threshold:
@@ -816,7 +784,7 @@ class optimize_free_params(kNdtool):
         
         self.call_iter=0#one will be added to this each time the outer MSE function is called by scipy.minimize
         self.iter=0
-        self.mse_param_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
+        self.lossdict_and_paramdict_list=[]#will contain a tuple of  (mse, fixed_or_free_paramdict) at each call
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']

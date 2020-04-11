@@ -49,6 +49,7 @@ class KernelParams:
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         residual_treatment_variations=('modeldict:residual_treatment',['batchnorm_crossval'])
+        loss_function_variations=('modeldict:loss_function',['mse'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -76,7 +77,7 @@ class KernelParams:
                                       ykerngrid_form_variations,
                                       NWnorm_variations,
                                       loss_function_variations,
-                                      residual_treatment_variations
+                                      residual_treatment_variations,
                                       regression_model_variations, 
                                       product_kern_norm_variations,
                                       normalize_Ndiffwtsum_variations,
@@ -256,7 +257,7 @@ class KernelParams:
             filterthreshold_list[threshcutstep-1]='naivemse'
         mse_threshold_list=[1]*stepcount # 
         maxiter_list=[1,1,1,1]
-        maxbatchbatchcount_list=[2,4,8,16]
+        maxbatchbatchcount_list=[2,8]
         do_minimize_list=[1,1,1,1]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
@@ -314,6 +315,7 @@ class KernelParams:
             'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
             'std_data':'all',
             'loss_function':'mse',
+            'residual_treatment':'batchnorm_crossval',
             'Ndiff_type':'product',
             'param_count':param_count,
             'Ndiff_start':Ndiff_start,
@@ -338,33 +340,6 @@ class KernelParams:
                 }
             }
         
-        """modeldict1={
-            'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
-            'std_data':'all',
-            'loss_function':'mse',
-            'Ndiff_type':'product',
-            'param_count':param_count,
-            'Ndiff_start':Ndiff_start,
-            'max_bw_Ndiff':max_bw_Ndiff,
-            'normalize_Ndiffwtsum':'own_n',
-            'NWnorm':'across',
-            'xkern_grid':'no',
-            'ykern_grid':33,
-            'maxbatchbatchcount':1,
-            'outer_kern':'gaussian',
-            'Ndiff_bw_kern':'rbfkern',
-            'outer_x_bw_form':'one_for_all',
-            'regression_model':'NW',
-            'product_kern_norm':'self',
-            'hyper_param_form_dict':{
-                'Ndiff_exponent':'free',
-                'x_bandscale':'non-neg',
-                'Ndiff_depth_bw':'non-neg',
-                'outer_x_bw':'non-neg',
-                'outer_y_bw':'non-neg',
-                'y_bandscale':'fixed'
-                }
-            }"""
         if not species is None:
             modeldict1['species']=species
             modeldict1['spatialtransform']=('divide',1)

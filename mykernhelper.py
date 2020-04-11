@@ -298,7 +298,7 @@ class MyKernHelper:
             broadcasted_array=np.broadcast_to(maskedarray,tup)
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
-    def sort_then_saveit(self,mse_param_list,modeldict,filename,getname=0):
+    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,getname=0):
         try:
             
             species='species-'+self.datagen_dict['species']+'_'
@@ -314,14 +314,15 @@ class MyKernHelper:
         fullpath_filename=self.nodesavepath
         if getname:
             fullpath_filename=Helper().getname(fullpath_filename)
-            
+        lossfn=modeldict['loss_function']    
         
-        mse_list=[i[0] for i in mse_param_list]
-        minmse=min(mse_list)
-        fof_param_dict_list=[i[1] for i in mse_param_list]
-        bestparams=fof_param_dict_list[mse_list.index(minmse)]
+        losslist=[lossdict[lossfn] for lossdict,paramdict in lossdict_and_paramdict_list]
+        minlost=min(losslist)
+        
+        bestlossdict,bestparams=lossdict_and_paramdict_list[losslist.index(minlost)]
         savedict={}
-        savedict['mse']=minmse
+        savedict['mse']=bestlossdict['mse']
+        savedict['lossdict']=bestlossdict
         savedict['naivemse']=self.naivemse
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
@@ -375,7 +376,7 @@ class MyKernHelper:
             try:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and mse={minmse}'
+                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naivemse={self.naivemse} and lossdict:{lossdict}'
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)
@@ -384,7 +385,7 @@ class MyKernHelper:
             except:
                 if i==9:
                     print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
-        return (minmse,bestparams)
+        return (bestlossdict,bestparams)
 
     
     
