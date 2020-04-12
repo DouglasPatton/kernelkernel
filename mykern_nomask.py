@@ -518,8 +518,8 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
         #batchbatch_all_y_err=[]
-        batchbatch_all_y_list=[]
-        batchbatch_all_yhat_list=[]
+        batchbatch_all_y=[]
+        batchbatch_all_yhat=[]
         #print('self.batchbatchcount',self.batchbatchcount)
         maxbatchbatchcount=modeldict['maxbatchbatchcount']
         batchbatchcount=self.batchbatchcount
@@ -533,7 +533,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     yxtup_list=self.datagen_obj.yxtup_batchbatch[batchbatchidx]
                 batchdata_dict_i=batchdata_dictlist[batchbatchidx]
 
-                y_err_tup = ()
+                #y_err_tup = ()
 
 
                 #self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
@@ -581,26 +581,26 @@ class kNdtool(Ndiff,MyKernHelper):
                         ylist.append(y_batch_i)
                         yhat_batch_i=yhat_unstd[batch_i]
                         yhatlist.append(yhat_batch_i)
-                        y_err = y_batch_i - yhat_unstd[batch_i]
-                        y_err_tup = y_err_tup + (y_err,)
+                        #y_err = y_batch_i - yhat_unstd[batch_i]
+                        #y_err_tup = y_err_tup + (y_err,)
                     all_y=np.concatenate(ylist,axis=0)
                     all_yhat=np.concatenate(yhatlist,axis=0)
                     #all_y_err = np.concatenate(y_err_tup,axis=0)
                 if iscrossloss:
                     #needs work. split into cross_all_y and cross_all_yhat?
                     all_y_err=np.concatenate([all_y_err,np.ravel(cross_errors)],axis=0)
-                batchbatch_all_y_err.append(all_y_err)
+                #batchbatch_all_y_err.append(all_y_err)
                 batchbatch_all_y.append(all_y)
                 batchbatch_all_yhat.append(all_yhat)
             batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
             batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
-            batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
+            #batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
             mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
             mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
             splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
             lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}
-            self.logger.info(f'lossdict:{lossdict}, n:{batchbatch_all_y_err.shape}')
+            self.logger.info(f'lossdict:{lossdict}, n:{batchbatch_all_yhat.shape}')
 
             if mse<0:
                 loss=-mse*100000
@@ -849,7 +849,7 @@ class optimize_free_params(kNdtool):
 
     def __init__(self,kcsavedir=None,myname=None):
         #np.seterr(over='warn',under='ignore', divide='raise', invalid='raise')
-        np.seterr(over='raise',under='raise', divide='raise', invalid='raise')
+        #np.seterr(over='raise',under='raise', divide='raise', invalid='raise')
         self.datagen_dict=None
         self.opt_settings_dict=None
         self.savepath=None

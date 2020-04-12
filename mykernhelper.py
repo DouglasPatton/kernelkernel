@@ -111,7 +111,7 @@ class MyKernHelper:
             #x1_ex=np.abs(np.expand_dims(x1, axis=1))
             #x2_ex=np.abs(np.expand_dims(x2, axis=0))#x1.size,x2.size,p,batch
             
-            diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
+            diffs= np.abs(np.expand_dims(x1, axis=1) - np.expand_dims(x2, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         
             if spatial:
                 #assuming the spatial variable is always the last one
