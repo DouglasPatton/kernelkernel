@@ -951,7 +951,7 @@ class optimize_free_params(kNdtool):
                 lossdict_and_paramdict_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
                 self.sort_then_saveit(lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
             except:
-                self.sort_then_saveit([[10.0**290,args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
+                self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
                 self.logger.exception('')
         else:
             try:
