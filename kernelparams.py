@@ -252,10 +252,10 @@ class KernelParams:
             
         if not bestshare_list:
             bestshare_list=[0.1]+[0.5 for _ in range(stepcount-2)]
-        filterthreshold_list=[1 for _ in range(stepcount-1)]
+        filterthreshold_list=[None for _ in range(stepcount-1)]
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naiveloss'
-        loss_threshold_list=[1 for _ in range(stepcount-1)]
+        loss_threshold_list=[None for _ in range(stepcount-1)]
         maxiter_list=[1 for _ in range(stepcount-1)]
         maxbatchbatchcount_list=[2,8]
         do_minimize_list=[1 for _ in range(stepcount-1)]

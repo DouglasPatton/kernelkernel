@@ -618,32 +618,32 @@ class kNdtool(Ndiff,MyKernHelper):
             self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
             self.nperror=0
             lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
-            if predict:
-                return [(lossdict,fixed_or_free_paramdict)]
-            else:
-                self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
+        if predict:
+            return [(lossdict,fixed_or_free_paramdict)]
+        else:
+            self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
 
-                # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+            # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
-                t_format = "%Y%m%d-%H%M%S"
-                self.iter_start_time_list.append(strftime(t_format))
+            t_format = "%Y%m%d-%H%M%S"
+            self.iter_start_time_list.append(strftime(t_format))
 
-                if self.call_iter == 3:
-                    tdiff = np.abs(
-                        datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
-                            self.iter_start_time_list[-2], t_format))
-                    self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-                                                  1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-                    self.logger.info(f'save_interval changed to {self.save_interval}')
+            if self.call_iter == 3:
+                tdiff = np.abs(
+                    datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                        self.iter_start_time_list[-2], t_format))
+                self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+                self.logger.info(f'save_interval changed to {self.save_interval}')
 
-                if self.call_iter % self.save_interval == 0:
-                    bestloss,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
+            if self.call_iter % self.save_interval == 0:
+                bestloss,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
 
 
-                if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
-                    self.forcefail=bestloss
-                    print(f'forcefail(loss):{self.forcefail}')
-            self.success=bestloss
+            if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
+                self.forcefail=bestloss
+                print(f'forcefail(loss):{self.forcefail}')
+        self.success=bestloss
 
             # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         loss_function=modeldict['loss_function']
@@ -956,7 +956,8 @@ class optimize_free_params(kNdtool):
         else:
             try:
                 if self.loss_threshold:
-                    startingloss=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                    lossdict_and_paramdict_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                    startingloss=lossdict_and_paramdict_list[-1][0][self.loss_function]
                     if startingloss>self.loss_threshold:
                         do_opt=0
                         self.sort_then_saveit([[startingloss,args_tuple[-1]]],modeldict,'model_save',getname=0)
