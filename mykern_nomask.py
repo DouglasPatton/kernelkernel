@@ -879,7 +879,7 @@ class optimize_free_params(kNdtool):
             pathpartslist=re.split(os.path.sep,self.savepath)
         except:
             pathpartslist=re.split('\\\\',self.savepath)
-        self.nodesavepath=os.path.join('.','results','nodesave',*pathpartslist[3:])
+        self.nodesavepath=os.path.join('.','results','nodesave',*pathpartslist[2:])
         nodesavedir=os.path.split(self.nodesavepath)[0]
         if not os.path.exists(nodesavedir): os.makedirs(nodesavedir)
         
