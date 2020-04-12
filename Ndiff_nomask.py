@@ -107,10 +107,14 @@ class Ndiff:
                 #need to think about the axis of this normalization
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            return
         except:
-            self.logger.exception('')
-            assert False,'unexpected error'
-
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
         
     def Ndiff_recursive(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize,depth,x_or_y):
         try:
@@ -120,10 +124,14 @@ class Ndiff:
             return result
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
             return
         except:
-            self.logger.exception('')
-            assert False,'unexpected error'
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize,depth,x_or_y):
         try:
@@ -132,10 +140,14 @@ class Ndiff:
                     self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize,depth,x_or_y),Ndiff_exp)
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
             return
         except:
-            self.logger.exception('')
-            assert False,'unexpected error'
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
     
     
     def NdiffBWmaker(self,max_bw_Ndiff,fixed_or_free_paramdict,diffdict,modeldict,x_or_y):
@@ -204,6 +216,7 @@ class Ndiff:
                 n_depth_masked_sum_kern=self.do_Ndiffbw_kern(Ndiff_bw_kern,n_depth_masked_sum,Ndiff_depth_bw_params[depth],x_bandscale_params)
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
             return
         except:
             if not self.nperror:
@@ -227,6 +240,7 @@ class Ndiff:
                 return self.gkernh(maskeddata, Ndiff_depth_bw_param)#parameters already collapsed, so this will be rbf
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('setting nperror to 1')
             return
         except:
             if not self.nperror:
@@ -244,6 +258,7 @@ class Ndiff:
             return kern#
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('setting nperror to 1')
             return
         except:
             if not self.nperror:
@@ -289,6 +304,7 @@ class Ndiff:
             return np.sum(allkerns,axis=0)/self.nin#collapsing across the nin kernels for each of nout    
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('setting nperror to 1')
             return
         except:
             if not self.nperror:

@@ -81,6 +81,7 @@ class SaveQDumper(mp.Process):
                     model_save=queue.get_nowait()
                     #self.logger.debug(f'SaveQDumper got: {model_save}')
                     loss=model_save[-1]['loss']
+                    lossdict=model_save['lossdict']
                     naiveloss=model_save[-1]['naiveloss']
                     binary_y_result=model_save[-1]['binary_y_result']
                     message=f"lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"

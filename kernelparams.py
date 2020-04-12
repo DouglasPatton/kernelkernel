@@ -6,7 +6,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[128]
+        self.batchcount_variation_list=[64]
         self.do_minimize=0
         self.maxiter=4
         
@@ -61,7 +61,7 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
         maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[1])
         
         if source=='monte':
@@ -96,7 +96,7 @@ class KernelParams:
             ykern_grid_variations=('modeldict:ykern_grid',[2])
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
-            spatialtransform_variations=('modeldict:spatialtransform',[('ln1')])#
+            spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),('stdz',)])#
         
             optdict_variation_list = [binary_y_variations,
                                       Ndiff_depth_bwstartingvalue_variations,

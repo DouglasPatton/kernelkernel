@@ -104,28 +104,70 @@ class MyKernHelper:
 
     
     def makediffmat_itoj(self,x1,x2,spatial=None,spatialtransform=None):
-        if spatial:spatial_p=x1.shape[-2]-1#this will be the last item along that axis
-        x1_ex=np.abs(np.expand_dims(x1, axis=1))
-        x2_ex=np.abs(np.expand_dims(x2, axis=0))#x1.size,x2.size,p,batch
-        np_iter=np.nditer([x1_ex,x2_ex,None],flags=['buffered','multi_index'])
-        if spatial is None:
-            while not np_iter.finished:
-                np_iter[2]=abs(np_iter[0]-np_iter[1])
-                np_iter.iternext()
-        else:
-            while not np_iter.finished:
-                diff=abs(np_iter[0]-np_iter[1])
-                if np_iter.multi_index[-2]==spatial_p:
-                    if diff!=0:
-                         diff=int((log(diff,10))+2)/2
-                    if type(spatialtransform) is tuple:
-                        if spatialtransform[0]=='divide':
-                            diff=diff/spatialtransform[1]
-                        if spatialtransform[0]=='ln1':
-                            diff=np.log(diff+1)
-                    np_iter[2]=diff
-                np_iter.iternext()
-        return np_iter.operands[2]   
+        try:
+            #if spatial:
+            #    spatial_p=-1#x1.shape[-2]-1#this will be the last item along that axis
+            #    self.logger.debug(f'spatial_p:{spatial_p}')
+            #x1_ex=np.abs(np.expand_dims(x1, axis=1))
+            #x2_ex=np.abs(np.expand_dims(x2, axis=0))#x1.size,x2.size,p,batch
+            
+            diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
+        
+            if spatial:
+                #assuming the spatial variable is always the last one
+                diffs[:,:,-1,:][diffs[:,:,-1,:]>0]=np.int_(np.log10(diffs[:,:,-1,:][diffs[:,:,-1,:]>0])/2)+1
+
+                #diffs[:,:,-1,:]=self.myspatialhucdiff(diffs[:,:,-1,:]) # dims are (nin,nout,p,batch)
+                if type(spatialtransform) is tuple:
+
+                    if spatialtransform[0]=='divide':
+                        diffs[:,:-1,:]=diffs[:,:-1,:]/spatialtransform[1]
+                    if spatialtransform[0]=='ln1':
+                        diffs[:,:-1,:]=np.log(diffs[:,:-1,:]+1)
+                    if spatialtransform[0]=='norm1':
+                        diffs[:,:-1,:]=diffs[:,:-1,:]/diffs[:,:-1,:].max()
+            #print('type(diffs)=',type(diffs))
+            return diffs
+
+            '''np_iter=np.nditer([x1_ex,x2_ex,None],flags=['buffered','multi_index'],order='F')
+            if spatial is None:
+                while not np_iter.finished:
+                    np_iter[2]=abs(np_iter[0]-np_iter[1])
+                    np_iter.iternext()
+            else:
+                while not np_iter.finished:
+                    diff=abs(np_iter[0]-np_iter[1])
+                    self.logger.debug(f'np_iter.multi_index:{np_iter.multi_index}')
+                    if np_iter.multi_index[-2]==spatial_p:
+                        if diff!=0:
+                             diff=int((log(diff,10))+2)/2
+                        if type(spatialtransform) is tuple:
+                            self.logger.debug(f'doing spatialtransform:{spatialtransform} on diff:{diff}')
+                            if spatialtransform[0]=='divide':
+                                diff=diff/spatialtransform[1]
+                            if spatialtransform[0]=='ln1':
+                                diff=np.log(diff+1)
+                            if spatialtransform[0]=='stdz':
+                                diff=(diff-self.xmean[-1])/self.xstd[-1]
+                            self.logger.debug(f'after spatial transform, diff:{diff}')
+                    np_iter[2][np_iter.multi_index][...]=diff
+                    np_iter.iternext()
+            result=np_iter.operands[2]
+            #self.logger.debug(f'result:{result}')
+            return result '''
+            
+            
+        except FloatingPointError:
+            self.nperror=1
+            self.logger.exception('nperror set to 1 to trigger error and big loss')
+            assert False, 'makediffmat floatingpoint error!'
+            return
+        except:
+            if not self.nperror:
+                self.logger.exception('')
+                assert False,'unexpected error'
+            else:
+                return
                      
                      
                      

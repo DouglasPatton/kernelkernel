@@ -93,9 +93,10 @@ class kNdtool(Ndiff,MyKernHelper):
             y_outdiffs=self.makediffmat_itoj(yin_scaled,yout_scaled) # updated for batch
             y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             
-            outdiffs_scaled_l2norm=np.power(np.sum(np.power(
-                self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params[:,None],2)
-                                                   ,axis=2),.5)
+            diffmat=self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)
+            self.logger.debug(f'diffmat.shape:{diffmat.shape}, diffmat:{diffmat}')
+            diffmat_scaled=diffmat*x_bandscale_params[:,None]
+            outdiffs_scaled_l2norm=np.power(np.sum(np.power(diffmat_scaled,2),axis=2),.5)
             indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params[:,None],2),axis=2),.5) # [:,None] for broadcasting to batch dim at -1
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0],self.batchcount),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr},{self.batchcount})'
 
@@ -333,6 +334,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 return self.Ndiffdo_KDEsmalln(diffs, bw, modeldict)
         except FloatingPointError:
             self.nperror=1
+            self.logger.exception('')
             return
         except:
             if not self.nperror:
@@ -612,7 +614,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if not self.nperror:
                 self.logger.exception('')
                 assert False,'unexpected error'
-        if self.nperror:
+        if self.nperror==1:
             self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
             self.nperror=0
             lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
@@ -854,6 +856,7 @@ class optimize_free_params(kNdtool):
         self.jobpath=None
         self.yhatmaskscount=None
         self.nperror=0
+        self.binary_y_loss_list=None
         
         self.nodesavepath=None
         self.naiveloss=None
