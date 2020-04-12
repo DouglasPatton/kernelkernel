@@ -646,7 +646,7 @@ class kNdtool(Ndiff,MyKernHelper):
             self.success=bestloss
 
             # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        loss_function=modledict['loss_function']
+        loss_function=modeldict['loss_function']
         thisloss=lossdict[loss_function]
         self.logger.debug('at end of iteration loss:{thisloss}, with loss_function:{loss_function}')
         return thisloss
