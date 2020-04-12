@@ -646,8 +646,10 @@ class kNdtool(Ndiff,MyKernHelper):
             self.success=bestloss
 
             # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
-        
-        return bestloss
+        loss_function=modledict['loss_function']
+        thisloss=lossdict[loss_function]
+        self.logger.debug('at end of iteration loss:{thisloss}, with loss_function:{loss_function}')
+        return thisloss
 
     def MPwrapperKDEpredict(self,arglist):
         #p#rint(f'arglist inside wrapper is:::::::{arglist}')
@@ -857,7 +859,7 @@ class optimize_free_params(kNdtool):
         self.yhatmaskscount=None
         self.nperror=0
         self.binary_y_loss_list=None
-        
+        self.pthreshold=None
         self.nodesavepath=None
         self.naiveloss=None
         self.ymean=None
@@ -925,6 +927,7 @@ class optimize_free_params(kNdtool):
         #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
         self.loss_function=modeldict['loss_function']
+        self.pthreshold=modeldict['pthreshold']
         
         param_valdict=optimizedict['hyper_param_dict']
 

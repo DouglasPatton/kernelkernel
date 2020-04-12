@@ -312,6 +312,7 @@ class KernelParams:
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
+            'pthreshold':0.5,
             'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
             'std_data':'all',
             'loss_function':'mse',
