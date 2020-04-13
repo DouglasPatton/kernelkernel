@@ -11,6 +11,38 @@ class MyKernHelper:
         self.logger=logging.getLogger(__name__)
         pass
     
+    def doBinaryThreshold(self,y,yhat,threshold=None):
+        if not threshold:
+            threshold=self.pthreshold
+    
+            if type(binary_threshold) is float:
+                binary_yhat=np.zeros(yhat.shape)
+                binary_yhat[yhat>binary_threshold]=1
+                binary_yhat[yhat>1]=yhat[yhat>1] # keep bad guesses bad so loss_threshold throws them out
+                yhat=binary_yhat
+            if type(binary_threshold) is tuple:
+                this_binary_y_loss_list=[]
+                for threshold in binary_threshold:
+                    if type(threshold) is str:
+                        #print(f'all_y.shape and yhat.shape:{all_y.shape} and {yhat.shape}')
+                        if threshold=='avgavg':
+                            avg_phat_0=np.mean(yhat[all_y==0])
+                            avg_phat_1=np.mean(yhat[all_y==1])
+                            threshold=(avg_phat_0+avg_phat_1)/2
+                        if threshold=='avgmedian':
+                            median_phat_0=np.median(yhat[all_y==0])
+                            median_phat_1=np.median(yhat[all_y==1])
+                            threshold=(median_phat_0+median_phat_1)/2
+
+
+                    binary_yhat=np.zeros(yhat.shape)
+                    binary_yhat[yhat>threshold]=1
+                    threshloss=self.doLoss(all_y,binary_yhat)#(np.mean(np.power(all_y-binary_yhat,2)))
+                    this_binary_y_loss_list.append((threshold,threshloss))
+                self.binary_y_loss_list.append(this_binary_y_loss_list)
+    
+    
+    
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
         params={}
         paramlist=[key for key in modeldict['hyper_param_form_dict']]

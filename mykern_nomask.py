@@ -288,32 +288,7 @@ class kNdtool(Ndiff,MyKernHelper):
             yhat_un_std=yhat_std*self.ystd+self.ymean
 
 
-            binary_threshold=modeldict['binary_y']
-            if type(binary_threshold) is float:
-                binary_yhat=np.zeros(yhat_un_std.shape)
-                binary_yhat[yhat_un_std>binary_threshold]=1
-                binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so loss_threshold throws them out
-                yhat_un_std=binary_yhat
-            if type(binary_threshold) is tuple:
-                this_binary_y_loss_list=[]
-                for threshold in binary_threshold:
-                    if type(threshold) is str:
-                        #print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
-                        if threshold=='avgavg':
-                            avg_phat_0=np.mean(yhat_un_std[all_y==0])
-                            avg_phat_1=np.mean(yhat_un_std[all_y==1])
-                            threshold=(avg_phat_0+avg_phat_1)/2
-                        if threshold=='avgmedian':
-                            median_phat_0=np.median(yhat_un_std[all_y==0])
-                            median_phat_1=np.median(yhat_un_std[all_y==1])
-                            threshold=(median_phat_0+median_phat_1)/2
-
-
-                    binary_yhat=np.zeros(yhat_un_std.shape)
-                    binary_yhat[yhat_un_std>threshold]=1
-                    threshloss=self.doLoss(all_y,binary_yhat)#(np.mean(np.power(all_y-binary_yhat,2)))
-                    this_binary_y_loss_list.append((threshold,threshloss))
-                self.binary_y_loss_list.append(this_binary_y_loss_list)
+           
 
 
             return yhat_un_std,cross_errors
@@ -595,6 +570,9 @@ class kNdtool(Ndiff,MyKernHelper):
                 batchbatch_all_yhat.append(all_yhat)
             batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
             batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
+            
+            binary_threshold=modeldict['binary_y']
+            self.doBinaryThreshold(batchbatch_all_y,batachbatch_all_yhat,threshold=binary_threshold)
             #batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
             mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
