@@ -78,16 +78,17 @@ class SaveQDumper(mp.Process):
             try:
                 success=0
                 try:
-                    model_save=queue.get_nowait()
-                    #self.logger.debug(f'SaveQDumper got: {model_save}')
-                    loss=model_save[-1]['loss']
-                    lossdict=model_save[-1]['lossdict']
-                    naiveloss=model_save[-1]['naiveloss']
-                    binary_y_result=model_save[-1]['binary_y_result']
-                    message=f"SaveQDumper has {model_save['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
+                    model_save_list=queue.get_nowait()
+                    success=1
+                    last_model_save=model_save_list[-1]
+                    #self.logger.debug(f'SaveQDumper got: {model_save_list}')
+                    loss=last_model_save['loss']
+                    lossdict=last_model_save['lossdict']
+                    naiveloss=last_model_save['naiveloss']
+                    binary_y_result=last_model_save['binary_y_result']
+                    message=f"SaveQDumper has {last_model_save['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
                     print(message)
                     self.logger.debug(message)
-                    success=1
                 except:
                     if queue.empty():
                         self.logger.debug('SaveQDumper saveq is empty')
@@ -95,8 +96,8 @@ class SaveQDumper(mp.Process):
                     else:
                         self.logger.exception('SaveQDumper unexpected error!')
                 if success:
-                    if type(model_save) is str:
-                        if model_save=='shutdown':
+                    if type(model_save_list) is str:
+                        if model_save_list=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
                     nodesavepath=model_save[-1]['savepath']
