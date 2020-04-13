@@ -601,7 +601,7 @@ class kNdtool(Ndiff,MyKernHelper):
             return [(lossdict,fixed_or_free_paramdict)],self.binary_y_loss_list
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
-        self.logger.debug(f'len(self.binary_y_loss_list):{len(self.self.binary_y_loss_list), len(self.lossdict_and_paramdict_list)}')
+        self.logger.debug(f'len(self.binary_y_loss_list):{len(self.binary_y_loss_list), len(self.lossdict_and_paramdict_list)}')
         if predict:
             return self.lossdict_and_paramdict_list,self.binary_y_loss_list
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
