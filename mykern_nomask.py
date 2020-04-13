@@ -94,7 +94,7 @@ class kNdtool(Ndiff,MyKernHelper):
             y_indiffs=self.makediffmat_itoj(yin_scaled,yin_scaled)
             
             diffmat=self.makediffmat_itoj(xin,xpr,spatial=spatial,spatialtransform=spatialtransform)
-            self.logger.debug(f'diffmat.shape:{diffmat.shape}, diffmat:{diffmat}')
+            #self.logger.debug(f'diffmat.shape:{diffmat.shape}, diffmat:{diffmat}')
             diffmat_scaled=diffmat*x_bandscale_params[:,None]
             outdiffs_scaled_l2norm=np.power(np.sum(np.power(diffmat_scaled,2),axis=2),.5)
             indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params[:,None],2),axis=2),.5) # [:,None] for broadcasting to batch dim at -1
@@ -295,7 +295,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 binary_yhat[yhat_un_std>1]=yhat_un_std[yhat_un_std>1] # keep bad guesses bad so loss_threshold throws them out
                 yhat_un_std=binary_yhat
             if type(binary_threshold) is tuple:
-                self.binary_y_loss_list=[]
+                this_binary_y_loss_list=[]
                 for threshold in binary_threshold:
                     if type(threshold) is str:
                         #print(f'all_y.shape and yhat_un_std.shape:{all_y.shape} and {yhat_un_std.shape}')
@@ -312,7 +312,8 @@ class kNdtool(Ndiff,MyKernHelper):
                     binary_yhat=np.zeros(yhat_un_std.shape)
                     binary_yhat[yhat_un_std>threshold]=1
                     threshloss=self.doLoss(all_y,binary_yhat)#(np.mean(np.power(all_y-binary_yhat,2)))
-                    self.binary_y_loss_list.append((threshold,threshloss))
+                    this_binary_y_loss_list.append((threshold,threshloss))
+                self.binary_y_loss_list.append(this_binary_y_loss_list)
 
 
             return yhat_un_std,cross_errors
@@ -620,35 +621,34 @@ class kNdtool(Ndiff,MyKernHelper):
             lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
         if predict:
             return [(lossdict,fixed_or_free_paramdict)]
-        else:
-            self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
+        self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
 
-            # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
+        # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
-            t_format = "%Y%m%d-%H%M%S"
-            self.iter_start_time_list.append(strftime(t_format))
+        t_format = "%Y%m%d-%H%M%S"
+        self.iter_start_time_list.append(strftime(t_format))
 
-            if self.call_iter == 3:
-                tdiff = np.abs(
-                    datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
-                        self.iter_start_time_list[-2], t_format))
-                self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-                                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-                self.logger.info(f'save_interval changed to {self.save_interval}')
+        if self.call_iter == 3:
+            tdiff = np.abs(
+                datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
+                    self.iter_start_time_list[-2], t_format))
+            self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+                                          1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+            self.logger.info(f'save_interval changed to {self.save_interval}')
 
-            if self.call_iter % self.save_interval == 0:
-                bestloss,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
+        if self.call_iter % self.save_interval == 0:
+            bestlossdict,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
+            bestloss=bestlossdict[self.loss_function]
 
-
-            if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
-                self.forcefail=bestloss
-                print(f'forcefail(loss):{self.forcefail}')
+        if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
+            self.forcefail=bestloss
+            print(f'forcefail(loss):{self.forcefail}')
         self.success=bestloss
 
             # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         loss_function=modeldict['loss_function']
         thisloss=lossdict[loss_function]
-        self.logger.debug('at end of iteration loss:{thisloss}, with loss_function:{loss_function}')
+        self.logger.debug(f'at end of iteration loss:{thisloss}, with loss_function:{loss_function}')
         return thisloss
 
     def MPwrapperKDEpredict(self,arglist):
@@ -826,6 +826,7 @@ class kNdtool(Ndiff,MyKernHelper):
             err2=y-yhat
             
             self.naiveloss=self.doLoss(y,ymean)
+            self.naivmse=seld.doLoss(y,ymean,lssfn='mse')
             self.naivebinaryloss=self.doLoss(y,yhat)
         except:
             self.logger.exception('')
@@ -858,7 +859,7 @@ class optimize_free_params(kNdtool):
         self.jobpath=None
         self.yhatmaskscount=None
         self.nperror=0
-        self.binary_y_loss_list=None
+        self.binary_y_loss_list=[]
         self.pthreshold=None
         self.nodesavepath=None
         self.naiveloss=None
@@ -870,7 +871,7 @@ class optimize_free_params(kNdtool):
         
     
     def run_opt(self,datagen_obj,optimizedict,savedir):
-        
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,1,2)))
         self.savedir=savedir
         self.savepath=optimizedict['savepath']
         self.jobpath=optimizedict['jobpath']
@@ -965,7 +966,8 @@ class optimize_free_params(kNdtool):
                         do_opt=1
                 else: do_opt=1
                 if do_opt:
-                    self.logger.info(f'-------------starting optimization with loss:{startingloss}-------------')
+                    if self.loss_threshold:
+                        self.logger.info(f'-------------starting optimization with loss:{startingloss}-------------')
                     self.minimize_obj=minimize(self.MY_KDEpredictloss, transformed_free_params, args=args_tuple, method=method, options=opt_method_options)
                     
             except:

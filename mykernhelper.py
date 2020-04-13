@@ -361,8 +361,8 @@ class MyKernHelper:
         
         losslist=[lossdict[lossfn] for lossdict,paramdict in lossdict_and_paramdict_list]
         minloss=min(losslist)
-        
-        bestlossdict,bestparams=lossdict_and_paramdict_list[losslist.index(minloss)]
+        bestiter_pos=losslist.index(minloss)
+        bestlossdict,bestparams=lossdict_and_paramdict_list[bestiter_pos]
         savedict={}
         savedict['lossdict']=bestlossdict
         savedict['loss']=minloss
@@ -374,7 +374,7 @@ class MyKernHelper:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=self.binary_y_loss_list
+                savedict['binary_y_result']=self.binary_y_loss_list[bestiter_pos]
                 savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
         except:
             self.logger.exception('')
@@ -385,10 +385,6 @@ class MyKernHelper:
         savedict['savepath']=self.savepath
         savedict['jobpath']=self.jobpath
         savedict['opt_settings_dict']=self.opt_settings_dict
-        try:
-            savedict['yhatmaskscount']=self.yhatmaskscount
-        except:
-            self.logger.exception('problem saving yhatmaskscount to savedict')
         
         try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
@@ -419,7 +415,8 @@ class MyKernHelper:
             try:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
-                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss={self.naiveloss} and loss={minloss}'
+                donestring=f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
+                'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])}, and self.binary_y_loss_list:{self.binary_y_loss_list}'
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)

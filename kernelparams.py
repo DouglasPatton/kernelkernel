@@ -35,7 +35,7 @@ class KernelParams:
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
         Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,1,2)))
-        
+        #Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.array([0.5])))
         Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,1,2)])
         #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
         Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,1,2)])
@@ -49,7 +49,7 @@ class KernelParams:
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         residual_treatment_variations=('modeldict:residual_treatment',['batchnorm_crossval'])
-        loss_function_variations=('modeldict:loss_function',['mse'])
+        loss_function_variations=('modeldict:loss_function',['splithinge'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -61,8 +61,8 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none','own_n'])
-        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[1])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[4])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -137,7 +137,7 @@ class KernelParams:
             
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(0,2)])    
+            species_variations=('species',[self.specieslist[i] for i in range(0,10)])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
@@ -257,7 +257,7 @@ class KernelParams:
             filterthreshold_list[threshcutstep-1]='naiveloss'
         loss_threshold_list=[None for _ in range(stepcount-1)]
         maxiter_list=[1 for _ in range(stepcount-1)]
-        maxbatchbatchcount_list=[2,8]
+        maxbatchbatchcount_list=[4,8]
         do_minimize_list=[1 for _ in range(stepcount-1)]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
@@ -356,9 +356,9 @@ class KernelParams:
             }
         optiondict_p={'maxiter':self.maxiter}
         optimizer_settings_dict1={
-            'method':'Powell',#''Nelder-Mead',
+            'method':'Powell',#'BFGS',#''Nelder-Mead',
             'options':optiondict_p,
-            'loss_threshold':1,#'naiveloss',
+            'loss_threshold':None,#1,#'naiveloss',
             'help_start':0,
             'partial_match':0,
             'do_minimize':self.do_minimize # do_minimize=0 means just predict once for mse and don't optimize
