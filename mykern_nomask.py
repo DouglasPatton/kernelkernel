@@ -572,7 +572,7 @@ class kNdtool(Ndiff,MyKernHelper):
             batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
             
             binary_threshold=modeldict['binary_y']
-            self.doBinaryThreshold(batchbatch_all_y,batachbatch_all_yhat,threshold=binary_threshold)
+            
             #batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
             mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
@@ -600,7 +600,9 @@ class kNdtool(Ndiff,MyKernHelper):
         if predict:
             return [(lossdict,fixed_or_free_paramdict)]
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
-
+        self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
+        self.logger.debug(f'len(self.binary_y_loss_list):{len(self.self.binary_y_loss_list), len(self.lossdict_and_paramdict_list)}')
+        s
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
         t_format = "%Y%m%d-%H%M%S"
@@ -778,7 +780,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if lssfn=='splithinge':
                 if pthreshold is None:
                     threshold=self.pthreshold
-                yhat_01=np.zeros(yhat.shape,dtype=np.float64)
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
                 loss=np.mean((threshold-yhat)*(y-yhat_01))      
             return loss
@@ -804,7 +806,7 @@ class kNdtool(Ndiff,MyKernHelper):
             err2=y-yhat
             
             self.naiveloss=self.doLoss(y,ymean)
-            self.naivmse=seld.doLoss(y,ymean,lssfn='mse')
+            self.naivemse=self.doLoss(y,ymean,lssfn='mse')
             self.naivebinaryloss=self.doLoss(y,yhat)
         except:
             self.logger.exception('')
