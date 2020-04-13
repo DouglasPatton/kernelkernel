@@ -373,7 +373,7 @@ class MyKernHelper:
             broadcasted_array=np.broadcast_to(maskedarray,tup)
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
-    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,getname=0):
+    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,binary_y_loss_list=None,getname=0):
 
         try:
             
@@ -403,11 +403,13 @@ class MyKernHelper:
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
         savedict['params']=bestparams
+        if binary_y_loss_list is None:
+            binary_y_loss_list=self.binary_y_loss_list[bestiter_pos]
         try:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=self.binary_y_loss_list[bestiter_pos]
+                savedict['binary_y_result']=binary_y_loss_list
                 savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
         except:
             self.logger.exception('')
@@ -449,8 +451,8 @@ class MyKernHelper:
                 with open(fullpath_filename,'wb') as thefile:
                     pickle.dump(modellist,thefile)
                 donestring=(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
-                    f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},\
-                    and self.binary_y_loss_list:{self.binary_y_loss_list}')
+                    f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},'
+                    f'and self.binary_y_loss_list:{self.binary_y_loss_list}')
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)

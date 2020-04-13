@@ -598,11 +598,12 @@ class kNdtool(Ndiff,MyKernHelper):
             self.nperror=0
             lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
         if predict:
-            return [(lossdict,fixed_or_free_paramdict)]
+            return [(lossdict,fixed_or_free_paramdict)],self.binary_y_loss_list
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
         self.logger.debug(f'len(self.binary_y_loss_list):{len(self.self.binary_y_loss_list), len(self.lossdict_and_paramdict_list)}')
-        s
+        if predict:
+            return self.lossdict_and_paramdict_list,self.binary_y_loss_list
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
         t_format = "%Y%m%d-%H%M%S"
@@ -843,6 +844,7 @@ class optimize_free_params(kNdtool):
         self.pthreshold=None
         self.nodesavepath=None
         self.naiveloss=None
+        self.naivemse=None
         self.ymean=None
         self.naivebinaryloss=None
         self.loss_function=None
@@ -929,8 +931,8 @@ class optimize_free_params(kNdtool):
             #self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
         if not self.do_minimize:
             try:
-                lossdict_and_paramdict_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
-                self.sort_then_saveit(lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
+                lossdict_and_paramdict_list,binary_y_loss_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                self.sort_then_saveit(lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0,binary_y_loss_list=binary_y_loss_list)
             except:
                 self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
                 self.logger.exception('')
