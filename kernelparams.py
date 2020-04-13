@@ -97,7 +97,7 @@ class KernelParams:
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),('norm1',)])#
-            spatialtransform_variations=('modeldict:spatialtransform',[None])#
+            spatialtransform_variations=('modeldict:spatialtransform',['norm1'])#
             optdict_variation_list = [binary_y_variations,
                                       Ndiff_depth_bwstartingvalue_variations,
                                       Ndiff_exponentstartingvalue_variations,

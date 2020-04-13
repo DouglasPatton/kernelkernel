@@ -84,7 +84,7 @@ class SaveQDumper(mp.Process):
                     lossdict=model_save[-1]['lossdict']
                     naiveloss=model_save[-1]['naiveloss']
                     binary_y_result=model_save[-1]['binary_y_result']
-                    message=f"lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
+                    message=f"SaveQDumper has {model_save['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
                     print(message)
                     self.logger.debug(message)
                     success=1

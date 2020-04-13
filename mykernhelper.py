@@ -93,7 +93,7 @@ class MyKernHelper:
                     pickle.dump(modellist,thefile)
                 donestring=(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
                     f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},'
-                    f'and self.binary_y_loss_list_list:{self.binary_y_loss_list_list}')
+                    f'and this binary_y_loss_list:{binary_y_loss_list}')
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)
