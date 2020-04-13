@@ -840,7 +840,7 @@ class optimize_free_params(kNdtool):
         self.jobpath=None
         self.yhatmaskscount=None
         self.nperror=0
-        self.binary_y_loss_list=[]
+        self.binary_y_loss_list=None
         self.pthreshold=None
         self.nodesavepath=None
         self.naiveloss=None
@@ -874,6 +874,7 @@ class optimize_free_params(kNdtool):
         self.call_iter=0#one will be added to this each time the outer loss function is called by scipy.minimize
         self.iter=0
         self.lossdict_and_paramdict_list=[]#will contain a tuple of  (lossdict, fixed_or_free_paramdict) at each call
+        self.binary_y_loss_list=[]
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
