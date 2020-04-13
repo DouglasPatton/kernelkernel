@@ -100,7 +100,7 @@ class SaveQDumper(mp.Process):
                         if model_save_list=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    nodesavepath=model_save[-1]['savepath']
+                    nodesavepath=last_model_save['savepath']
                     '''mastersavepath=os.path.join('master_save',nodesavepath)
                     mastersavedir,stem=os.path.split(mastersavepath)
                     if not os.path.exists(mastersavedir):os.makedirs(mastersavedir)
