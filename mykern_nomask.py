@@ -597,13 +597,11 @@ class kNdtool(Ndiff,MyKernHelper):
             self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
             self.nperror=0
             lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
-        if predict:
-            return [(lossdict,fixed_or_free_paramdict)],self.binary_y_loss_list
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
-        self.logger.debug(f'len(self.binary_y_loss_list):{len(self.binary_y_loss_list), len(self.lossdict_and_paramdict_list)}')
+        self.logger.debug(f'len(self.binary_y_loss_list_list):{len(self.binary_y_loss_list_list), len(self.lossdict_and_paramdict_list)}')
         if predict:
-            return self.lossdict_and_paramdict_list,self.binary_y_loss_list
+            return 
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
         t_format = "%Y%m%d-%H%M%S"
@@ -840,7 +838,7 @@ class optimize_free_params(kNdtool):
         self.jobpath=None
         self.yhatmaskscount=None
         self.nperror=0
-        self.binary_y_loss_list=None
+        self.binary_y_loss_list_list=None
         self.pthreshold=None
         self.nodesavepath=None
         self.naiveloss=None
@@ -874,7 +872,7 @@ class optimize_free_params(kNdtool):
         self.call_iter=0#one will be added to this each time the outer loss function is called by scipy.minimize
         self.iter=0
         self.lossdict_and_paramdict_list=[]#will contain a tuple of  (lossdict, fixed_or_free_paramdict) at each call
-        self.binary_y_loss_list=[]
+        self.binary_y_loss_list_list=[]
         self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
@@ -932,8 +930,8 @@ class optimize_free_params(kNdtool):
             #self.logger.warning(f'no species found in datagen_dict:{self.datagen_dict}', exc_info=True)
         if not self.do_minimize:
             try:
-                lossdict_and_paramdict_list,binary_y_loss_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
-                self.sort_then_saveit(lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0,binary_y_loss_list=binary_y_loss_list)
+                self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
             except:
                 self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
                 self.logger.exception('')

@@ -9,39 +9,136 @@ from math import log
 class MyKernHelper:
     def __init__(self,):
         self.logger=logging.getLogger(__name__)
-        pass
+        self.logger.debug('MyKernHelper is logging')
+    
+    
+    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,getname=0):
+
+        try:
+            
+            species='species-'+self.datagen_dict['species']+'_'
+        except AttributeError:
+            self.logger.exception('self.datagen_dict not found in object')
+            
+        except KeyError:
+            self.logger.Warning(f'no species found in self.datagen_dict', exc_info=True)
+            species=''
+        except:
+            self.logger.exception('something happened when pulling species from self.datagen_dict')
+        
+        fullpath_filename=self.nodesavepath
+        if getname:
+            fullpath_filename=Helper().getname(fullpath_filename)
+        lossfn=modeldict['loss_function']    
+        
+        losslist=[lossdict[lossfn] for lossdict,paramdict in lossdict_and_paramdict_list]
+        minloss=min(losslist)
+        bestiter_pos=losslist.index(minloss)
+        bestlossdict,bestparams=lossdict_and_paramdict_list[bestiter_pos]
+        savedict={}
+        savedict['lossdict']=bestlossdict
+        savedict['loss']=minloss
+        savedict['naiveloss']=self.naiveloss
+        #savedict['xdata']=self.xdata
+        #savedict['ydata']=self.ydata
+        savedict['params']=bestparams
+        #if binary_y_loss_list is None:
+            
+        binary_y_loss_list=self.binary_y_loss_list_list[bestiter_pos]
+        self.logger.debug(f'len(self.binary_y_loss_list_list):{len(self.binary_y_loss_list_list)}, self.binary_y_loss_list_list:{self.binary_y_loss_list_list}')
+        try:
+            if modeldict['binary_y'] is None:
+                savedict['binary_y_result']=[]
+            else:
+                savedict['binary_y_result']=binary_y_loss_list.copy()
+                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
+        except:
+            self.logger.exception('')
+        savedict['modeldict']=modeldict
+        now=strftime("%Y%m%d-%H%M%S")
+        savedict['when_saved']=now
+        savedict['datagen_dict']=self.datagen_dict
+        savedict['savepath']=self.savepath
+        savedict['jobpath']=self.jobpath
+        savedict['opt_settings_dict']=self.opt_settings_dict
+        
+        try:#this is only relevant after optimization completes
+            savedict['minimize_obj']=self.minimize_obj
+        except:
+            pass
+        savedict['do_minimize']=self.do_minimize
+        for i in range(10):
+            try: 
+                with open(fullpath_filename,'rb') as modelfile:
+                    modellist=pickle.load(modelfile)
+                break
+            except FileNotFoundError:
+                modellist=[]
+                break
+            except:
+                sleep(0.1)
+                if i==9:
+                    self.logger.exception(f'error in {__name__}')
+                    modellist=[]
+        
+        if len(modellist)>0:
+            lastsavetime=modellist[-1]['when_saved']
+            runtime=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsavetime,"%Y%m%d-%H%M%S")
+            print(f'time between saves for {self.pname} is {runtime}')
+        modellist.append(savedict)
+        
+        for i in range(10):
+            try:
+                with open(fullpath_filename,'wb') as thefile:
+                    pickle.dump(modellist,thefile)
+                donestring=(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
+                    f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},'
+                    f'and self.binary_y_loss_list_list:{self.binary_y_loss_list_list}')
+                print(donestring)
+                print(f'bestparams:{bestparams}')
+                self.logger.info(donestring)
+                self.logger.debug(f'bestparams:{bestparams}')
+                break
+            except:
+                if i==9:
+                    self.logger.exception('')
+                    print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
+        return (bestlossdict,bestparams)
     
     def doBinaryThreshold(self,y,yhat,threshold=None):
         try:
+            #self.logger.debug(f'dobinaryThreshold started with threshold:{threshold}')
             if not threshold:
                 threshold=self.pthreshold
 
-                if type(threshold) is float:
+            if type(threshold) is float:
+                binary_yhat=np.zeros(yhat.shape)
+                binary_yhat[yhat>threshold]=1
+                binary_yhat[yhat>1]=yhat[yhat>1] # keep bad guesses bad so loss_threshold throws them out
+                yhat=binary_yhat
+            if type(threshold) is tuple:
+                this_binary_y_loss_list=[]
+                for threshold_i in threshold:
+                    if type(threshold_i) is str:
+                        #print(f'y.shape and yhat.shape:{y.shape} and {yhat.shape}')
+                        if threshold_i=='avgavg':
+                            avg_phat_0=np.mean(yhat[y==0])
+                            avg_phat_1=np.mean(yhat[y==1])
+                            threshold_i=(avg_phat_0+avg_phat_1)/2
+                        elif threshold_i=='avgmedian':
+                            median_phat_0=np.median(yhat[y==0])
+                            median_phat_1=np.median(yhat[y==1])
+                            threshold_i=(median_phat_0+median_phat_1)/2
+
+
                     binary_yhat=np.zeros(yhat.shape)
-                    binary_yhat[yhat>threshold]=1
-                    binary_yhat[yhat>1]=yhat[yhat>1] # keep bad guesses bad so loss_threshold throws them out
-                    yhat=binary_yhat
-                if type(threshold) is tuple:
-                    this_binary_y_loss_list=[]
-                    for threshold in threshold:
-                        if type(threshold) is str:
-                            #print(f'y.shape and yhat.shape:{y.shape} and {yhat.shape}')
-                            if threshold=='avgavg':
-                                avg_phat_0=np.mean(yhat[y==0])
-                                avg_phat_1=np.mean(yhat[y==1])
-                                threshold=(avg_phat_0+avg_phat_1)/2
-                            if threshold=='avgmedian':
-                                median_phat_0=np.median(yhat[y==0])
-                                median_phat_1=np.median(yhat[y==1])
-                                threshold=(median_phat_0+median_phat_1)/2
-
-
-                        binary_yhat=np.zeros(yhat.shape)
-                        binary_yhat[yhat>threshold]=1
-                        threshloss=self.doLoss(y,binary_yhat)#(np.mean(np.power(y-binary_yhat,2)))
-                        this_binary_y_loss_list.append((threshold,threshloss))
-                    self.binary_y_loss_list.append(this_binary_y_loss_list)
-        except: self.logger.info(f'unexpected error')
+                    binary_yhat[yhat>threshold_i]=1
+                    threshloss=self.doLoss(y,binary_yhat)#(np.mean(np.power(y-binary_yhat,2)))
+                    this_binary_y_loss_list.append((threshold_i,threshloss))
+                    self.logger.debug(f'this_binary_y_loss_list:{this_binary_y_loss_list}')
+                self.binary_y_loss_list_list.append(this_binary_y_loss_list)
+        except: 
+            self.logger.exception(f'unexpected error')
     
     
     def return_param_name_and_value(self,fixed_or_free_paramdict,modeldict):
@@ -373,96 +470,7 @@ class MyKernHelper:
             broadcasted_array=np.broadcast_to(maskedarray,tup)
             return np.ma.array(broadcasted_array, mask=broadcasted_mask)
             
-    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,binary_y_loss_list=None,getname=0):
-
-        try:
-            
-            species='species-'+self.datagen_dict['species']+'_'
-        except AttributeError:
-            self.logger.exception('self.datagen_dict not found in object')
-            
-        except KeyError:
-            self.logger.Warning(f'no species found in self.datagen_dict', exc_info=True)
-            species=''
-        except:
-            self.logger.exception('something happened when pulling species from self.datagen_dict')
-        
-        fullpath_filename=self.nodesavepath
-        if getname:
-            fullpath_filename=Helper().getname(fullpath_filename)
-        lossfn=modeldict['loss_function']    
-        
-        losslist=[lossdict[lossfn] for lossdict,paramdict in lossdict_and_paramdict_list]
-        minloss=min(losslist)
-        bestiter_pos=losslist.index(minloss)
-        bestlossdict,bestparams=lossdict_and_paramdict_list[bestiter_pos]
-        savedict={}
-        savedict['lossdict']=bestlossdict
-        savedict['loss']=minloss
-        savedict['naiveloss']=self.naiveloss
-        #savedict['xdata']=self.xdata
-        #savedict['ydata']=self.ydata
-        savedict['params']=bestparams
-        if binary_y_loss_list is None:
-            binary_y_loss_list=self.binary_y_loss_list[bestiter_pos]
-        try:
-            if modeldict['binary_y'] is None:
-                savedict['binary_y_result']=[]
-            else:
-                savedict['binary_y_result']=binary_y_loss_list
-                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
-        except:
-            self.logger.exception('')
-        savedict['modeldict']=modeldict
-        now=strftime("%Y%m%d-%H%M%S")
-        savedict['when_saved']=now
-        savedict['datagen_dict']=self.datagen_dict
-        savedict['savepath']=self.savepath
-        savedict['jobpath']=self.jobpath
-        savedict['opt_settings_dict']=self.opt_settings_dict
-        
-        try:#this is only relevant after optimization completes
-            savedict['minimize_obj']=self.minimize_obj
-        except:
-            pass
-        savedict['do_minimize']=self.do_minimize
-        for i in range(10):
-            try: 
-                with open(fullpath_filename,'rb') as modelfile:
-                    modellist=pickle.load(modelfile)
-                break
-            except FileNotFoundError:
-                modellist=[]
-                break
-            except:
-                sleep(0.1)
-                if i==9:
-                    self.logger.exception(f'error in {__name__}')
-                    modellist=[]
-        
-        if len(modellist)>0:
-            lastsavetime=modellist[-1]['when_saved']
-            runtime=datetime.datetime.strptime(now,"%Y%m%d-%H%M%S")-datetime.datetime.strptime(lastsavetime,"%Y%m%d-%H%M%S")
-            print(f'time between saves for {self.pname} is {runtime}')
-        modellist.append(savedict)
-        
-        for i in range(10):
-            try:
-                with open(fullpath_filename,'wb') as thefile:
-                    pickle.dump(modellist,thefile)
-                donestring=(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
-                    f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},'
-                    f'and self.binary_y_loss_list:{self.binary_y_loss_list}')
-                print(donestring)
-                print(f'bestparams:{bestparams}')
-                self.logger.info(donestring)
-                self.logger.debug(f'bestparams:{bestparams}')
-                break
-            except:
-                if i==9:
-                    self.logger.exception('')
-                    print(f'mykern.py could not save to {fullpath_filename} after {i+1} tries')
-        return (bestlossdict,bestparams)
+    
 
     
     
