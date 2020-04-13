@@ -68,7 +68,11 @@ class KCPisces():
             #help_start applies do_partial_match and will eliminate models with higher nwtloss and only a partial match of parameters.
             if bestshare:
                 fullcount=len(sorted_model_list)
-                bestcount=max([1,int(fullcount*bestshare)])
+                if bestshare<1:
+                    bestcount=max([1,int(fullcount*bestshare)])
+                elif type(bestshare) is int:
+                    bestcount=bestshare
+                else: assert False,f'expected decimal or int but got (bestshare,type(bestshare)):{(bestshare,type(bestshare))}'
                 new_model_save_list.extend(sorted_model_list[0:bestcount])
             else:
                 new_model_save_list.extend(sorted_model_list)

@@ -10,6 +10,74 @@ class KernelParams:
         self.do_minimize=0
         self.maxiter=4
         
+    def build_stepdict_list(self,stepcount=3,threshcutstep=None,skipstep0=0,bestshare_list=[]):
+        '''
+        even if step0 is skipped, include it in the step count
+        '''
+        self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
+        stepdictlist=[]
+        optdict_variation_list=self.getoptdictvariations(source=self.source)
+        datagen_variation_list=self.getdatagenvariations(source=self.source)
+        if not skipstep0:
+            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+            stepdictlist.append(step0)
+            
+        if not bestshare_list:
+            bestshare_list=[4,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+        filterthreshold_list=[None for _ in range(stepcount-1)]
+        if type(threshcutstep) is int:
+            filterthreshold_list[threshcutstep-1]='naiveloss'
+        loss_threshold_list=[None for _ in range(stepcount-1)]
+        maxiter_list=[1 for _ in range(stepcount-1)]
+        maxbatchbatchcount_list=[4,8]
+        do_minimize_list=[1 for _ in range(stepcount-1)]
+        for step in range(stepcount-1):
+            filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
+            startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
+            savedir=startdir
+            jobdir=os.path.join(self.jobdirectory,'step'+str(step))
+            if not os.path.exists(jobdir):os.mkdir(jobdir)
+            stepfolders={'savedir':savedir,'jobdir':jobdir}
+            if not os.path.exists(startdir): os.mkdir(startdir)
+            ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
+            opt_job_kwargs={
+                'loss_threshold':loss_threshold_list[step],
+                'maxiter':maxiter_list[step],
+                'do_minimize':do_minimize_list[step],
+                'maxbatchbatchcount':maxbatchbatchcount_list[step]
+            }
+            advance_path_kwargs={'i':step,'stepfolders':stepfolders}
+            stepdict={'functions':[
+                (self.process_pisces_models,[startdir],ppm_kwargs),
+                (self.merge_dict_model_filter,[],filter_kwargs),
+                (self.opt_job_builder,[],opt_job_kwargs),
+                (self.rundict_advance_path,[],advance_path_kwargs)
+            ]}
+            stepdictlist.append(stepdict)
+        return stepdictlist
+            
+               
+    def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
+        self.logger.info(f'len(list_of_rundicts:{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders})')
+        savefolderpath=stepfolders['savedir']
+        jobfolderpath=stepfolders['jobdir']
+        charcount=len(str(i))+4 # 4 for 'step'
+        newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
+        if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
+        newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+        if not os.path.exists(newsavefolderpath):os.mkdir(newsavefolderpath)
+        self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
+        for rundict in list_of_rundicts:
+            jobpath=rundict['jobpath']
+            savepath=rundict['savepath']
+            _,savepathstem=os.path.split(savepath)
+            _,jobpathstem=os.path.split(jobpath)
+            
+            rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
+            rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
+        return list_of_rundicts      
+        
+        
     def getoptdictvariations(self,source='monte'):
         max_bw_Ndiff=2
         
@@ -238,72 +306,7 @@ class KernelParams:
         self.datagen_dict=datagen_dict
         return datagen_dict   
     
-    def build_stepdict_list(self,stepcount=3,threshcutstep=None,skipstep0=0,bestshare_list=[]):
-        '''
-        even if step0 is skipped, include it in the step count
-        '''
-        self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
-        stepdictlist=[]
-        optdict_variation_list=self.getoptdictvariations(source=self.source)
-        datagen_variation_list=self.getdatagenvariations(source=self.source)
-        if not skipstep0:
-            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
-            stepdictlist.append(step0)
-            
-        if not bestshare_list:
-            bestshare_list=[0.1]+[0.5 for _ in range(stepcount-2)]
-        filterthreshold_list=[None for _ in range(stepcount-1)]
-        if type(threshcutstep) is int:
-            filterthreshold_list[threshcutstep-1]='naiveloss'
-        loss_threshold_list=[None for _ in range(stepcount-1)]
-        maxiter_list=[1 for _ in range(stepcount-1)]
-        maxbatchbatchcount_list=[4,8]
-        do_minimize_list=[1 for _ in range(stepcount-1)]
-        for step in range(stepcount-1):
-            filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
-            startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
-            savedir=startdir
-            jobdir=os.path.join(self.jobdirectory,'step'+str(step))
-            if not os.path.exists(jobdir):os.mkdir(jobdir)
-            stepfolders={'savedir':savedir,'jobdir':jobdir}
-            if not os.path.exists(startdir): os.mkdir(startdir)
-            ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
-            opt_job_kwargs={
-                'loss_threshold':loss_threshold_list[step],
-                'maxiter':maxiter_list[step],
-                'do_minimize':do_minimize_list[step],
-                'maxbatchbatchcount':maxbatchbatchcount_list[step]
-            }
-            advance_path_kwargs={'i':step,'stepfolders':stepfolders}
-            stepdict={'functions':[
-                (self.process_pisces_models,[startdir],ppm_kwargs),
-                (self.merge_dict_model_filter,[],filter_kwargs),
-                (self.opt_job_builder,[],opt_job_kwargs),
-                (self.rundict_advance_path,[],advance_path_kwargs)
-            ]}
-            stepdictlist.append(stepdict)
-        return stepdictlist
-            
-               
-    def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
-        self.logger.info(f'len(list_of_rundicts:{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders})')
-        savefolderpath=stepfolders['savedir']
-        jobfolderpath=stepfolders['jobdir']
-        charcount=len(str(i))+4 # 4 for 'step'
-        newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
-        if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
-        newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
-        if not os.path.exists(newsavefolderpath):os.mkdir(newsavefolderpath)
-        self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
-        for rundict in list_of_rundicts:
-            jobpath=rundict['jobpath']
-            savepath=rundict['savepath']
-            _,savepathstem=os.path.split(savepath)
-            _,jobpathstem=os.path.split(jobpath)
-            
-            rundict['jobpath']=os.path.join(newjobfolderpath,jobpathstem)
-            rundict['savepath']=os.path.join(newsavefolderpath,savepathstem)
-        return list_of_rundicts        
+      
 
     def build_optdict(self,opt_dict_override=None,param_count=None,species=None):
         if opt_dict_override==None:
