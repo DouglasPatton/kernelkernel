@@ -56,15 +56,17 @@ class KCPisces():
             #sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=0, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
             model_list_losslist=[model_save['loss'] for model_save in model_save_list]
             self.logger.debug(f'model_list_losslist:{model_list_losslist}')
-            if spec_filter_threshold is None:
-                spec_filter_threshold=1+max(model_list_losslist)
+            #if spec_filter_threshold is None:
+            #    spec_filter_threshold=1+max(model_list_losslist)
             if type(spec_filter_threshold) is str:
                 if spec_filter_threshold=='naiveloss':
                     spec_filter_threshold=model_save_list[-1]['naiveloss']
             self.logger.debug(f'spec_filter_threshold:{spec_filter_threshold}')
-                
-            sorted_model_list=[model_save_list[pos] for loss,pos in sorted(zip(model_list_losslist,list(range(len(model_list_losslist))))) if loss<spec_filter_threshold]
-            self.logger.debug(f'sorted_model_list[0:2]:{sorted_model_list[0:2]}')
+            if spec_filter_threshold:    
+                sorted_model_list=[model_save_list[pos] for loss,pos in sorted(zip(model_list_losslist,list(range(len(model_list_losslist))))) if loss<spec_filter_threshold]
+            else:
+                sorted_model_list=[model_save_list[pos] for loss,pos in sorted(zip(model_list_losslist,list(range(len(model_list_losslist)))))]
+            self.logger.debug(f'model_save_filter after spec_filter_threshold, len(sorted_model_list):{len(sorted_model_list)}, sorted_model_list[0:2]:{sorted_model_list[0:2]}')
             #help_start applies do_partial_match and will eliminate models with higher nwtloss and only a partial match of parameters.
             if bestshare:
                 fullcount=len(sorted_model_list)
@@ -124,50 +126,55 @@ class KCPisces():
         do not change args,kwargs here without changing there
         '''
         #species_model_save_path_dict_list=[]
-        self.logger.info(f'process_pisces_models startpath:{startpath}')
-        species_model_save_path_dict=self.split_pisces_model_save_path_dict(startpath)
-        #species_model_save_path_dict_list.append(species_model_save_path_dict)
-        #species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
-        #full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
-        if merge_with_existing:
-            try:
-                all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
-            except FileNotFoundError:
+        try:
+            self.logger.info(f'process_pisces_models startpath:{startpath}')
+            species_model_save_path_dict=self.split_pisces_model_save_path_dict(startpath)
+
+            #species_model_save_path_dict_list.append(species_model_save_path_dict)
+            #species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
+            #full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
+            if merge_with_existing:
+                try:
+                    all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
+                except FileNotFoundError:
+                    all_species_model_merge_dict={}
+                except:
+                    self.logger.exception('')
+                    assert False, 'unexpected exception'
+            else:
                 all_species_model_merge_dict={}
-            except:
-                self.logger.exception('')
-                assert False, 'unexpected exception'
-        else:
-            all_species_model_merge_dict={}
-            
-        speciescount=len(species_model_save_path_dict)
-        
-        for i,species in enumerate(species_model_save_path_dict):
-            
-            pathlist=species_model_save_path_dict[species]
-            pathcount=len(pathlist)
-            self.logger.debug(f'starting merge; pathcount:{pathcount},species:{species},({i}/{speciescount})')
-            mergedlist=self.merge_and_condense_saved_models(
-                species_name=species,
-                pathlist=pathlist,
-                condense=condense,#first condensing addresses iterations
-                recondense=recondense,returnlist=1
-                )
-            self.logger.debug(f'len(mergedlist):{len(mergedlist)}')
-            if species not in all_species_model_merge_dict:
-                all_species_model_merge_dict[species]=[]
-            all_species_model_merge_dict[species].extend(mergedlist)
-            if recondense2:
-                all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
-                self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
-        if merge_with_existing:
-            savepath=self.all_species_model_merge_dict_path
-        else:
-            _,stem=os.path.split(self.all_species_model_merge_dict_path)
-            savepath=os.path.join(startpath,stem)
-        self.savepickle(all_species_model_merge_dict,savepath)
-        return all_species_model_merge_dict
-            
+
+            speciescount=len(species_model_save_path_dict)
+
+            for i,species in enumerate(species_model_save_path_dict):
+
+                pathlist=species_model_save_path_dict[species]
+                pathcount=len(pathlist)
+                self.logger.debug(f'starting merge; pathcount:{pathcount},species:{species},({i}/{speciescount})')
+                mergedlist=self.merge_and_condense_saved_models(
+                    species_name=species,
+                    pathlist=pathlist,
+                    condense=condense,#first condensing addresses iterations
+                    recondense=recondense,returnlist=1
+                    )
+                self.logger.debug(f'len(mergedlist):{len(mergedlist)}')
+                if species not in all_species_model_merge_dict:
+                    all_species_model_merge_dict[species]=[]
+                all_species_model_merge_dict[species].extend(mergedlist)
+                if recondense2:
+                    all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
+            self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
+            if merge_with_existing:
+                assert False, 'not developed'
+                savepath=self.all_species_model_merge_dict_path
+            else:
+                _,stem=os.path.split(self.all_species_model_merge_dict_path)
+                savepath=os.path.join(startpath,stem)
+            self.savepickle(all_species_model_merge_dict,savepath)
+            return all_species_model_merge_dict
+        except:
+            self.logger.exception("")
+            assert False, 'Halt'
     
     
     def print_pisces_all_species_model_merge_dict(self,shortlist=[]):
@@ -193,7 +200,7 @@ class KCPisces():
         species_model_save_path_dict={}
         for path in model_save_pathlist:
             #regex_genus_species=r'species-[(a-z)]+\s[a-z]+_'
-            regex_genus_species=r'species-[(a-z)]+(\s[a-z]+)+_'# this one will match 3 word species like cyprinella venusta cercostigma
+            #regex_genus_species=r'species-[(a-z)]+(\s[a-z]+)+_'# this one will match 3 word species like cyprinella venusta cercostigma
             regex_genus_species=r'species-[(a-z)]+(\s[\-\.a-z]+)+_'# this one will match species with - or . in name
             searchresult=re.search(regex_genus_species,path)
             if searchresult:
@@ -205,7 +212,7 @@ class KCPisces():
                     species_model_save_path_dict[spec_name]=[path]
                 species_model_save_path_dict[spec_name].append(path)
             else:
-                self.logger.debug(f'split_pisces_speices_model_save ignoring path:{path}')
+                self.logger.debug(f'split_pisces_species_model_save ignoring path:{path}')
         return species_model_save_path_dict
 
     

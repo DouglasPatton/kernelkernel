@@ -235,100 +235,107 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
 
 
     def recursive_build_model_save_pathlist(self,startdirectory):
-        
-        model_save_pathlist=[]
-        for rootpath,subdirs,files in os.walk(startdirectory):
-            for newroot in subdirs:
-                model_save_pathlist.extend(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))
-            for file in files:
-                if re.search('model_save',file):
-                    model_save_pathlist.append(os.path.join(rootpath,file))
-        return model_save_pathlist
+        try:
+            model_save_pathlist=[]
+            for rootpath,subdirs,files in os.walk(startdirectory):
+                for newroot in subdirs:
+                    model_save_pathlist.extend(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))
+                for file in files:
+                    if re.search('model_save',file):
+                        model_save_pathlist.append(os.path.join(rootpath,file))
+            self.logger.debug(f'len(model_save_pathlist):{len(model_save_pathlist)}')
+            return model_save_pathlist
+        except:
+            self.logger.exception('')
+            assert False, 'halt'
 
     def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',
                                         save_directory=None,condense=None,recondense=None,verbose=None,recursive=None,returnlist=0):
-        
-        if not merge_directory==None:
-            if not os.path.exists(merge_directory):
-                print(f'could not find merge_directory:{merge_directory}')
-                self.logger.error(f'could not find merge_directory:{merge_directory}')
-                return
-        else:
-            merge_directory=self.kc_savedirectory
-
-        if not save_directory==None:
-            assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
-        else:
-            save_directory=merge_directory
-                #os.makedirs(save_directory)
-        if condense==None or condense=='no':
-            condense=0
-        if condense=='yes':
-            condense=1
-        if verbose==None or verbose=='no':
-            verbose=0
-        if verbose=='yes':
-            verbose=1
-        if pathlist is None:
-                
-            if recursive:
-                model_save_filelist=self.recursive_build_model_save_pathlist(merge_directory)
-                modelfile_count=len(model_save_filelist)
-                print(f'len(model_save_filelist):{len(model_save_filelist)}')
-                print(f'model_save_filelist[0:5]:{model_save_filelist[0:5]}')
+        try:
+            if not merge_directory==None:
+                if not os.path.exists(merge_directory):
+                    print(f'could not find merge_directory:{merge_directory}')
+                    self.logger.error(f'could not find merge_directory:{merge_directory}')
+                    return
             else:
-                pathlist=os.listdir(merge_directory)
+                merge_directory=self.kc_savedirectory
 
-                model_save_filelist=[os.path.join(merge_directory,name_i) for name_i in pathlist if re.search('model_save',name_i)]
-                modelfile_count=len(model_save_filelist)
-        else:
-            model_save_filelist=pathlist
-            modelfile_count=len(model_save_filelist)
-                
+            if not save_directory==None:
+                assert os.path.exists(save_directory),f"save_directory does not exist:{save_directory}"
+            else:
+                save_directory=merge_directory
+                    #os.makedirs(save_directory)
+            if condense==None or condense=='no':
+                condense=0
+            if condense=='yes':
+                condense=1
+            if verbose==None or verbose=='no':
+                verbose=0
+            if verbose=='yes':
+                verbose=1
+            if pathlist is None:
 
-
-        if len(model_save_filelist)==0:
-            self.logger.warning(f'0 models found in save_directory:{merge_directory} when merging')
-            
-                         
-        
-        list_of_saved_models=[]
-        for file_i in model_save_filelist:
-            #file_i_name=os.path.join(merge_directory,file_i)
-            try:
-                with open(file_i,'rb') as savedfile:
-                    try: 
-                        saved_model_list=pickle.load(savedfile)
-                        #print(f'file_i:{file_i} has {len(saved_model_list)} saved model(s)')
-                    except:
-                        print(f'warning!saved_model_list{file_i} could not pickle.load')
-                        self.logger.exception(f'error in {__name__}')
-                        saved_model_list=None
-            
-            except:
-                saved_model_list=None
-                self.logger.exception('')
-                
-            if saved_model_list:    
-                if condense:
-                    list_of_saved_models.extend(self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose))
+                if recursive:
+                    model_save_filelist=self.recursive_build_model_save_pathlist(merge_directory)
+                    modelfile_count=len(model_save_filelist)
+                    print(f'len(model_save_filelist):{len(model_save_filelist)}')
+                    print(f'model_save_filelist[0:5]:{model_save_filelist[0:5]}')
                 else:
-                    list_of_saved_models.extend(saved_model_list)
-        
-        if recondense:
-            list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
+                    pathlist=os.listdir(merge_directory)
 
-        if returnlist:
-            return list_of_saved_models
-        
-        if os.path.exists(merged_path):
-            merged_path=self.helper.getname(merged_path)
-            
-        with open(merged_path,'wb') as newfile:
-            print(f'writing new_model_list length:{len(list_of_saved_models)} to newfile:{newfile}')
-            pickle.dump(list_of_saved_models,newfile)
-        return merged_path
+                    model_save_filelist=[os.path.join(merge_directory,name_i) for name_i in pathlist if re.search('model_save',name_i)]
+                    modelfile_count=len(model_save_filelist)
+            else:
+                model_save_filelist=pathlist
+                modelfile_count=len(model_save_filelist)
 
+
+
+            if len(model_save_filelist)==0:
+                self.logger.warning(f'0 models found in save_directory:{merge_directory} when merging')
+
+
+
+            list_of_saved_models=[]
+            for file_i in model_save_filelist:
+                #file_i_name=os.path.join(merge_directory,file_i)
+                try:
+                    with open(file_i,'rb') as savedfile:
+                        try: 
+                            saved_model_list=pickle.load(savedfile)
+                            self.logger.debug(f'for file_i:{file_i}, len(saved_model_list):{len(saved_model_list)}')
+                            #print(f'file_i:{file_i} has {len(saved_model_list)} saved model(s)')
+                        except:
+                            print(f'warning!saved_model_list{file_i} could not pickle.load')
+                            self.logger.exception(f'error in {__name__}')
+                            saved_model_list=None
+
+                except:
+                    saved_model_list=None
+                    self.logger.exception('')
+
+                if saved_model_list:    
+                    if condense:
+                        condense_saved_model_list=self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose,endsort=1)
+                        self.logger.debug(f'for file_i:{file_i}, len(condense_saved_model_list):{len(condense_saved_model_list)}')
+                        list_of_saved_models.extend(condense_saved_model_list[:condense])
+                    else:
+                        list_of_saved_models.extend(saved_model_list)
+
+            if recondense:
+                list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
+
+            if returnlist:
+                return list_of_saved_models
+
+            if os.path.exists(merged_path):
+                merged_path=self.helper.getname(merged_path)
+
+            with open(merged_path,'wb') as newfile:
+                print(f'writing new_model_list length:{len(list_of_saved_models)} to newfile:{newfile}')
+                pickle.dump(list_of_saved_models,newfile)
+            return merged_path
+        except:self.logger.exception('')
 
     def get_nwt_loss(self,saved_model_list):
         nwt_list=[]
@@ -352,59 +359,60 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         return nwt_list
     
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0,threshold=None):
-        if saved_model_list==None:
-            return []
-        if verbose=='yes': verbose=1
-        if verbose==None or verbose=='no':verbose=0
-        assert type(verbose)==int, f'type(verbose) should be int but :{type(verbose)}'
-        if strict=='yes':strict=1
-        if strict=='no':strict=0
+            if saved_model_list==None:
+                return []
+            if verbose=='yes': verbose=1
+            if verbose==None or verbose=='no':verbose=0
+            assert type(verbose)==int, f'type(verbose) should be int but :{type(verbose)}'
+            if strict=='yes':strict=1
+            if strict=='no':strict=0
 
-        nwt_list=self.get_nwt_loss(saved_model_list)
-        
-        
-        modelcount=len(saved_model_list)        
-        keep_model=[1 for _ in range(modelcount)]
-        for i in range(modelcount):
+            nwt_list=self.get_nwt_loss(saved_model_list)
+
+
+            modelcount=len(saved_model_list)        
+            keep_model=[1 for _ in range(modelcount)]
+            for i in range(modelcount):
+                if verbose>0:
+                    print(f'{100*i/modelcount}%',end=',')
+
+                if keep_model[i]:
+                    for j in range(modelcount-(i+1)):
+                    #for j,full_model_j in enumerate(saved_model_list[i+1:]):
+                        j=j+i+1
+                        if keep_model[j]:
+                            matchlist=self.do_partial_match([saved_model_list[i]],saved_model_list[j],help_start=help_start,strict=strict)
+                            #if full_model_i['modeldict']==full_model_j['modeldict']:
+                            if len(matchlist)>0:
+                                iwt=nwt_list[i]
+                                jwt=nwt_list[j]
+
+                                if iwt<jwt:
+                                    if verbose>1:
+                                        print('model j loses')
+                                    keep_model[j]=0
+                                else:
+                                    if verbose>1:
+                                        print('model i loses')
+                                    keep_model[i]=0
+                                    break
+
+            final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]]
+            self.logger.debug(f'len(final_keep_list):{len(final_keep_list)}')
             if verbose>0:
-                print(f'{100*i/modelcount}%',end=',')
-                
-            if keep_model[i]:
-                for j in range(modelcount-(i+1)):
-                #for j,full_model_j in enumerate(saved_model_list[i+1:]):
-                    j=j+i+1
-                    if keep_model[j]:
-                        matchlist=self.do_partial_match([saved_model_list[i]],saved_model_list[j],help_start=help_start,strict=strict)
-                        #if full_model_i['modeldict']==full_model_j['modeldict']:
-                        if len(matchlist)>0:
-                            iwt=nwt_list[i]
-                            jwt=nwt_list[j]
-
-                            if iwt<jwt:
-                                if verbose>1:
-                                    print('model j loses')
-                                keep_model[j]=0
-                            else:
-                                if verbose>1:
-                                    print('model i loses')
-                                keep_model[i]=0
-                                break
-                    
-        final_keep_list=[model for i,model in enumerate(saved_model_list) if keep_model[i]]
-        self.logger.debug(f'len(final_keep_list):{len(final_keep_list)}')
-        if verbose>0:
-            print(f'len(final_keep_list):{len(final_keep_list)}')
-        if endsort:
-            final_nwt_list=[nwt_list[i] for i in range(modelcount) if keep_model[i]]
-            final_keep_list,final_nwt_list=zip(*[(model,nwt_loss) for nwt_loss,model in sorted(zip(final_nwt_list,final_keep_list))])
-        if threshold:
-            if type(threshold) is str and threshold=='naiveloss':
-                final_keep_list=[model for model in final_keep_list if model['loss']<model['naiveloss']]
-            if type(threshold) in  [float,int]:
-                final_keep_list=[model for model in final_keep_list if model['loss']<threshold]
-            #condensed_model_list.sort(key=lambda savedicti: savedicti['loss'])
-        self.logger.debug(f'finally, len(final_keep_list):{len(final_keep_list)}')
-        return final_keep_list
+                print(f'len(final_keep_list):{len(final_keep_list)}')
+            if endsort:
+                final_nwt_list=[nwt_list[i] for i in range(modelcount) if keep_model[i]]
+                final_keep_list,final_nwt_list=zip(*[(model,nwt_loss) for nwt_loss,model in sorted(zip(final_nwt_list,final_keep_list))])
+            if threshold:
+                if type(threshold) is str and threshold=='naiveloss':
+                    final_keep_list=[model for model in final_keep_list if model['loss']<model['naiveloss']]
+                if type(threshold) in  [float,int]:
+                    final_keep_list=[model for model in final_keep_list if model['loss']<threshold]
+                #condensed_model_list.sort(key=lambda savedicti: savedicti['loss'])
+            self.logger.debug(f'finally, len(final_keep_list):{len(final_keep_list)}')
+            return final_keep_list
+        self.logger.exception('')
 
     def do_nwt_loss(self,loss,n,batch_count=1,naiveloss=1,batchbatchcount=1):
         batch_count=batch_count*batchbatchcount

@@ -375,7 +375,6 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         for i,stepdict in enumerate(model_run_stepdict_list):
             
-            self.logger.debug(f'i:{i}, stepdict:{stepdict}')
             #stepfolders=stepdict['stepfolders']
             try:
                 self.logger.debug(f'i:{i},stepdict:{stepdict}')
