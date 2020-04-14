@@ -88,38 +88,40 @@ class KCPisces():
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
         '''
-        model_rundict_list=[]
-        for model_save in model_save_list:
-            new_opt_dict={}
-            modeldict=model_save['modeldict']
-            opt_settings_dict=model_save['opt_settings_dict']
-            expanded_datagen_dict=model_save['datagen_dict']
-            if not maxbatchbatchcount is None:
-                modeldict['maxbatchbatchcount']=maxbatchbatchcount
-            if not maxiter is None:
-                opt_settings_dict['options']['maxiter']=maxiter
-            if not loss_threshold is None:
-                opt_settings_dict['loss_threshold']=loss_threshold
-            
-            if not do_minimize is None:
-                opt_settings_dict['do_minimize']=do_minimize
-               
-            new_opt_dict['opt_settings_dict']=opt_settings_dict
-            new_opt_dict['modeldict']=modeldict
-            #new_opt_dict['datagen_dict']=expanded_datagen_dict
-            defaultoptimizedict=self.build_optdict(param_count=None,species=None)
-            optimizedict=self.do_dict_override(defaultoptimizedict,new_opt_dict)
-            best_fof_paramdict=model_save['params']
-            self.logger.debug(f'opt_job_builder has best_fof_paramdict:{best_fof_paramdict}')
-            optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
-            self.logger.debug(f'after rebuild hyper param dict, optimizedict:{optimizedict}')
-            optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  
-            optmodel_run_dict['savepath']=model_save['savepath']
-            optmodel_run_dict['jobpath']=model_save['jobpath']
-            model_rundict_list.append(optmodel_run_dict)
-        self.logger.debug(f'len(model_rundict_list):{len(model_rundict_list)}')
-        return model_rundict_list
-            
+        try:
+            model_rundict_list=[]
+            for model_save in model_save_list:
+                new_opt_dict={}
+                modeldict=model_save['modeldict']
+                opt_settings_dict=model_save['opt_settings_dict']
+                expanded_datagen_dict=model_save['datagen_dict']
+                if not maxbatchbatchcount is None:
+                    modeldict['maxbatchbatchcount']=maxbatchbatchcount
+                if not maxiter is None:
+                    opt_settings_dict['options']['maxiter']=maxiter
+                if not loss_threshold is None:
+                    opt_settings_dict['loss_threshold']=loss_threshold
+
+                if not do_minimize is None:
+                    opt_settings_dict['do_minimize']=do_minimize
+
+                new_opt_dict['opt_settings_dict']=opt_settings_dict
+                new_opt_dict['modeldict']=modeldict
+                #new_opt_dict['datagen_dict']=expanded_datagen_dict
+                defaultoptimizedict=self.build_optdict(param_count=None,species=None)
+                optimizedict=self.do_dict_override(defaultoptimizedict,new_opt_dict)
+                best_fof_paramdict=model_save['params']
+                self.logger.debug(f'opt_job_builder has best_fof_paramdict:{best_fof_paramdict}')
+                optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
+                self.logger.debug(f'after rebuild hyper param dict, optimizedict:{optimizedict}')
+                optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  
+                optmodel_run_dict['savepath']=model_save['savepath']
+                optmodel_run_dict['jobpath']=model_save['jobpath']
+                model_rundict_list.append(optmodel_run_dict)
+            self.logger.debug(f'len(model_rundict_list):{len(model_rundict_list)}')
+            return model_rundict_list
+        except:self.logger.exception('')
+
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0):
         '''
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
@@ -209,7 +211,7 @@ class KCPisces():
             
                 if not spec_name in species_model_save_path_dict:
                     self.logger.debug(f'adding spec_name:{spec_name} to species_model_save_path_dict which has len:{len(species_model_save_path_dict)}')
-                    species_model_save_path_dict[spec_name]=[path]
+                    species_model_save_path_dict[spec_name]=[]
                 species_model_save_path_dict[spec_name].append(path)
             else:
                 self.logger.debug(f'split_pisces_species_model_save ignoring path:{path}')

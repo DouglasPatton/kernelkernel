@@ -151,8 +151,8 @@ class JobQFiller(mp.Process):
                 try:
                     self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
                     queue.put(job)
-                    i+=1
                     self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
+                    i+=1
                 except:
                     self.joblist.append(job)
                     if queue.empty():
