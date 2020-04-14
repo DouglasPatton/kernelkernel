@@ -359,6 +359,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         return nwt_list
     
     def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0,threshold=None):
+        try:
             if saved_model_list==None:
                 return []
             if verbose=='yes': verbose=1
@@ -412,7 +413,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                 #condensed_model_list.sort(key=lambda savedicti: savedicti['loss'])
             self.logger.debug(f'finally, len(final_keep_list):{len(final_keep_list)}')
             return final_keep_list
-        self.logger.exception('')
+        except:self.logger.exception('')
 
     def do_nwt_loss(self,loss,n,batch_count=1,naiveloss=1,batchbatchcount=1):
         batch_count=batch_count*batchbatchcount
