@@ -122,14 +122,14 @@ class KernelParams:
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
         maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[4])
         
         if source=='monte':
@@ -165,7 +165,7 @@ class KernelParams:
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),('norm1',)])#
-            spatialtransform_variations=('modeldict:spatialtransform',['norm1'])#
+            spatialtransform_variations=('modeldict:spatialtransform',['ln1'])#
             optdict_variation_list = [binary_y_variations,
                                       Ndiff_depth_bwstartingvalue_variations,
                                       Ndiff_exponentstartingvalue_variations,
