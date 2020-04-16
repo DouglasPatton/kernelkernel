@@ -122,14 +122,14 @@ class KernelParams:
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
         maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[4])
         
         if source=='monte':
@@ -205,7 +205,7 @@ class KernelParams:
             
                 
                 
-            species_variations=('species',[self.specieslist[i] for i in range(0,100)])    
+            species_variations=('species',[self.specieslist[i] for i in range(100,300)])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
