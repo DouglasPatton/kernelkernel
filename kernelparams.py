@@ -117,7 +117,7 @@ class KernelParams:
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         residual_treatment_variations=('modeldict:residual_treatment',['batchnorm_crossval'])
-        loss_function_variations=('modeldict:loss_function',['splithinge'])
+        loss_function_variations=('modeldict:loss_function',['mae'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -204,8 +204,8 @@ class KernelParams:
                 self.specieslist=pdh12.returnspecieslist()
             
                 
-                
-            species_variations=('species',[self.specieslist[i] for i in range(100,300)])    
+            species_variations=self.specieslist 
+            #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
