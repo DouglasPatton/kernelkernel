@@ -204,7 +204,7 @@ class KernelParams:
                 self.specieslist=pdh12.returnspecieslist()
             
                 
-            species_variations=self.specieslist 
+            species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
             #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
