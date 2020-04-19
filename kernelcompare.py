@@ -758,7 +758,15 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             
             batchcount=datagen_dict['batchcount']
             batch_n=datagen_dict['batch_n']
-            min_n=batchcount*batch_n
+            
+            try:
+                validate=modeldict['validate'] 
+            except:
+                validate=0
+                
+            min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
+                
+                
             
             '''try: 
                 dg_validate_batchcount=datagen_dict['validate_batchcount']
@@ -785,7 +793,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             if spec in species_n_dict:
                 spec_n=species_n_dict[spec]
             else:
-                datagen_obj=dg.datagen(datagen_dict)
+                datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed
                 spec_n=datagen_obj.species_n
                 species_n_dict[spec]=spec_n
             if spec_n<min_n:

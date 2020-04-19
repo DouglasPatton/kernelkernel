@@ -318,7 +318,7 @@ class KernelParams:
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
-            'validate':1, # if int - i, validate upto i batchbatches.
+            'validate':0, # if int - i, validate upto i batchbatches.
             #     if string - 'remaining' , validate all remaining batchbatches 
             #     and store average of results as well as separate list of all results
             'pthreshold':0.5, # used for assigning phat to yhat=1 or 0
