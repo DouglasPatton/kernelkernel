@@ -22,7 +22,7 @@ class datagen(PiscesDataTool):
         #self.logger.addHandler(handler)
         
         try:
-            theseed=datagen_dict['seed']
+            theseed=datagen_dict['seed'] #just used for montecarlo
         except:
             theseed=1
         if theseed is None:
@@ -168,6 +168,7 @@ class datagen(PiscesDataTool):
         self.expand_datagen_dict('summary_stats',self.summary_stats_dict)
         
     def processmissingvalues(self,nparray,missing_treatment):
+        #rewrite with fancy indexing
         outlist=[]
         if missing_treatment=='drop_row':
             for row in nparray:
@@ -186,8 +187,10 @@ class datagen(PiscesDataTool):
         random.shuffle(selectlist)
         #print('selectlist',selectlist)
         batchsize=batch_n*batchcount
-        batchbatchcount=-(-n//batchsize)#ceiling divide
-        self.batchbatchcount=batchbatchcount
+        if sample_replace:
+            batchbatchcount=-(-n//batchsize) # ceiling divide
+        else:
+            batchbatchcount=n//batchsize # floor divide
         self.batchbatchcount=batchbatchcount
         self.expand_datagen_dict('batchbatchcount',self.batchbatchcount)
         fullbatchbatch_n=batchbatchcount*batchsize

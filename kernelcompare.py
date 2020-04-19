@@ -471,17 +471,8 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
             if not tryagain==None:
                 return tryagain
         else:
-            #same_doubledict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
-            #                      self.pull2dicts(optdict_i)==this_2dicts]
-                                # optdict['modeldict']==optimizedict['modeldict'] and\
-                                # optdict['datagen_dict']==optimizedict['datagen_dict'] ]
             same_modeldict_list=[saved_dict_list[i] for i,optdict_i in enumerate(saved_dict_list) if \
                                  self.are_dicts_equal(optdict_i['modeldict'],optimizedict['modeldict'])]
-            #same_doubledict_list=[saved_dict_list[i] for i,is_same in enumerate(modeldict_compare_list) if is_same]
-            #xcompare_list=[np.all(dict_i['xdata']==x) for dict_i in doubledict_match_list]
-            #same_model_and_x_dict_list=[doubledict_match_list[i] for i,is_same in enumerate(xcompare_list) if is_same]
-            #ycompare_list=[np.all(dict_i['ydata']==y) for dict_i in same_model_and_x_dict_list]
-            #same_modelxy_dict_list=[same_model_and_x_dict_list[i] for i,is_same in enumerate(ycompare_list) if is_same]
             if len(doubledict_match_list)==0 and partial_match==1:
                 print('found matching models but no matching datagen_dict')
                 return same_modeldict_list
@@ -496,9 +487,6 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
                 
         adoubledict=self.pull2dicts(afullmodel)
         saved_doubledict_list=[self.pull2dicts(dict_i) for dict_i in saved_optdict_list]
-        #if type(adoubledict) is list: print(adoubledict)
-        #lists=[adoubledict_i for adoubledict_i in saved_doubledict_list if type(adoubledict_i) is list]
-        #if len(lists)>0:print(lists)
         same_model_datagen_compare=[self.are_dicts_equal(adoubledict,dict_i) for dict_i in saved_doubledict_list]
         
         matches=[item for i,item in enumerate(saved_optdict_list) if same_model_datagen_compare[i]]
@@ -709,13 +697,6 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 print('adding all species variations')
                 datagen_variation_list=self.addspeciesvariations(datagen_variation_list)
                 
-        '''assert type(datagen_variation_list)==list,f'datagen_variation_list type:{type(datagen_variation_list)} but expected a list'
-        assert type(datagen_variation_list[0])==tuple,f'first item of datagen_variation_list type:{type(datagen_variation_list[0])} but expected a tuple'
-                        
-        assert type(optdict_variation_list)==list,f'optdict_variation_list type:{type(optdict_variation_list)} but expected a list'
-        assert type(optdict_variation_list[0])==tuple,f'first item of optdict_variation_list type:{type(optdict_variation_list[0])} but expected a tuple'
-        '''
-        
         
         model_run_dict_list=[]
         #print(f'datagen_dict:{datagen_dict}, datagen_variation_list:{datagen_variation_list}')
@@ -779,6 +760,28 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             batch_n=datagen_dict['batch_n']
             min_n=batchcount*batch_n
             
+            '''try: 
+                dg_validate_batchcount=datagen_dict['validate_batchcount']
+                validate=1
+            else: 
+                dg_validate_batchcount=None
+                validate=0
+            if dg_validate_batchcount in ['none',None]:
+                validate_batchcount=batchcount
+            elif type(dg_validate_batchcount) is int:
+                validate_batchcount=dg_validate_batchcount
+            else: validate_batchcount=0
+                
+            
+            try: 
+                dg_validate_batchbatchcount=datagen_dict['validate_batchbatchcount']
+            except:
+                dg_validate_batchbatchcount=1
+            if type(dg_validate_batchbatchcount) is int:
+                validate_batchbatchcount=dg_validate_batchbatchcount
+            elif dg_validate_batchbatchcount=='remaining''''
+                
+                
             if spec in species_n_dict:
                 spec_n=species_n_dict[spec]
             else:
@@ -797,32 +800,6 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 newmodelrundictlist.append(model_run_dict)
             else:
                 self.logger.info(f'for species:{spec_n} is too small!')
-            '''datashape=(batchcount,batch_n)
-            newdatagen=1
-            if not spec in species_datashapedict:
-                species_datashapedict[spec]=[datashape]
-                datagen_obj=dg.datagen(datagen_dict)
-                species_n=datagen_obj.species_n
-                species_n_dict[spec]=species_n
-                newdatagen=0
-            else:
-                for h,old_datashape in enumerate(species_datashapedict[spec]):
-                    for i in range(2):
-                        if old_datashape[i]!=datashape[i]:
-                            break
-                    species_n=species_n_dict[spec][h]
-                    newdatagen=0
-                    break
-                if newdatagen:
-                    datagen_obj=dg.datagen(datagen_dict)
-                    species_n_dict[spec].append(datagen_obj)
-                    species_datashapedict[spec].append(datashape)
-            thisbatchbatchcount=batchbatchcount*datagen_obj.batch_n
-            if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
-                print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < datagen_obj.batch_n*datagen_obj.batchcount:{datagen_obj.batch_n*datagen_obj.batchcount}')
-                self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
-            else:
-                newmodelrundictlist.append(model_run_dict)'''
         return newmodelrundictlist
     
     

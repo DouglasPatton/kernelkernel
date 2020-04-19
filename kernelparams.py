@@ -291,14 +291,17 @@ class KernelParams:
                 'source':'pisces',
                 'batch_n':self.n,
                 'batchcount':8, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
-                'sample_replace':'no', #if no, batches are created until all data is sampled, and sampling with replacement used to fill up the last batch
-                #if 'no-drop' then drop any observations that don't fit into a batch (not developed)
+                #'batchbatchcount' this has never been part of the dict. it is determined by maxbatchbatchcount in modeldict as well as the available batchbatches.
+                'sample_replace':1, #if 1 (formerly 'no') , batches are created until all data is sampled, and sampling with replacement used to fill up the last batchbatch
+                #if 0 then drop any observations that don't fit into a batchbatch 
                 'species':'all',
                 #'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
                 'missing':'drop_row', #drop the row(observation) if any data is missing
                 'floatselecttup':floatselecttup,
                 'spatialselecttup':spatialselecttup,
-                'param_count':param_count
+                'param_count':param_count,
+                #'validate_batchcount':'none', # 'none'->same as batchcount
+                #'validate_batchbatchcount':1 # 'remaining'-> all batchbatches left after training 
             }
         else: 
             assert False, f"error, source not recognized. source:{source}"
@@ -315,8 +318,12 @@ class KernelParams:
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
-            'pthreshold':0.5,
-            'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5
+            'validate':1, # if int - i, validate upto i batchbatches.
+            #     if string - 'remaining' , validate all remaining batchbatches 
+            #     and store average of results as well as separate list of all results
+            'pthreshold':0.5, # used for assigning phat to yhat=1 or 0
+            'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5... 
+            #     if tuple of floats 0 to 1, calculates mse/mae for (binary) yhat-y
             'std_data':'all',
             'loss_function':'mse',
             'residual_treatment':'batchnorm_crossval',
