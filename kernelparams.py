@@ -10,7 +10,7 @@ class KernelParams:
         self.do_minimize=0
         self.maxiter=4
         
-    def build_stepdict_list(self,stepcount=4,threshcutstep=None,skipstep0=0,bestshare_list=[]):
+    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -23,14 +23,14 @@ class KernelParams:
             stepdictlist.append(step0)
             
         if not bestshare_list:
-            bestshare_list=[16,8,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+            bestshare_list=[16,8,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
         filterthreshold_list=[None for _ in range(stepcount-1)]
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naiveloss'
         loss_threshold_list=[None for _ in range(stepcount-1)]
-        maxiter_list=[1 for _ in range(stepcount-1)]
-        maxbatchbatchcount_list=[8,16,16]
-        do_minimize_list=[0,0,1]#[1 for _ in range(stepcount-1)]
+        maxiter_list=[1,1,1,4]
+        maxbatchbatchcount_list=[8,16,16,16]
+        do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
             startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
