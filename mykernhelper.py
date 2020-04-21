@@ -258,33 +258,6 @@ class MyKernHelper:
                         diffs[:,:-1,:]=diffs[:,:-1,:]/diffs[:,:-1,:].max()
             #print('type(diffs)=',type(diffs))
             return diffs
-
-            '''np_iter=np.nditer([x1_ex,x2_ex,None],flags=['buffered','multi_index'],order='F')
-            if spatial is None:
-                while not np_iter.finished:
-                    np_iter[2]=abs(np_iter[0]-np_iter[1])
-                    np_iter.iternext()
-            else:
-                while not np_iter.finished:
-                    diff=abs(np_iter[0]-np_iter[1])
-                    self.logger.debug(f'np_iter.multi_index:{np_iter.multi_index}')
-                    if np_iter.multi_index[-2]==spatial_p:
-                        if diff!=0:
-                             diff=int((log(diff,10))+2)/2
-                        if type(spatialtransform) is tuple:
-                            self.logger.debug(f'doing spatialtransform:{spatialtransform} on diff:{diff}')
-                            if spatialtransform[0]=='divide':
-                                diff=diff/spatialtransform[1]
-                            if spatialtransform[0]=='ln1':
-                                diff=np.log(diff+1)
-                            if spatialtransform[0]=='stdz':
-                                diff=(diff-self.xmean[-1])/self.xstd[-1]
-                            self.logger.debug(f'after spatial transform, diff:{diff}')
-                    np_iter[2][np_iter.multi_index][...]=diff
-                    np_iter.iternext()
-            result=np_iter.operands[2]
-            #self.logger.debug(f'result:{result}')
-            return result '''
             
             
         except FloatingPointError:
@@ -300,26 +273,6 @@ class MyKernHelper:
                 return
                      
                      
-                     
-                     
-        '''           
-                     
-        diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
-        
-        if spatial==1:
-            #assuming the spatial variable is always the last one
-            
-            diffs[:,:,-1,:]=self.myspatialhucdiff(diffs[:,:,-1,:]) # dims are (nin,nout,p,batch)
-        if type(spatialtransform) is tuple:
-            
-            if spatialtransform[0]=='divide':
-                diffs[:,:-1,:]=diffs[:,:-1,:]/spatialtransform[1]
-            if spatialtransform[0]=='ln1':
-                diffs[:,:-1,:]=np.log(diffs[:,:-1,:]+1)
-             
-            
-        #print('type(diffs)=',type(diffs))
-        return diffs'''
 
     def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer
         #print('nparray.shape',nparray.shape)
@@ -406,14 +359,14 @@ class MyKernHelper:
             return np.linspace(0,1,count)
             
     
-    def standardize_yx(self,xdata,ydata):
+    '''def standardize_yx(self,xdata,ydata):
         self.xmean=np.mean(xdata,axis=0)
         self.ymean=np.mean(ydata,axis=0)
         self.xstd=np.std(xdata,axis=0)
         self.ystd=np.std(ydata,axis=0)
         standard_x=(xdata-self.xmean)/self.xstd
         standard_y=(ydata-self.ymean)/self.ystd
-        return standard_x,standard_y
+        return standard_x,standard_y'''
 
     def standardize_yxtup(self,yxtup_list,modeldict):
         #yxtup_list=deepcopy(yxtup_list_unstd)
@@ -462,15 +415,6 @@ class MyKernHelper:
                 
         return yxtup_list
 
-
-        
-    def ma_broadcast_to(self, maskedarray,tup):
-            initial_mask=np.ma.getmask(maskedarray)
-            broadcasted_mask=np.broadcast_to(initial_mask,tup)
-            broadcasted_array=np.broadcast_to(maskedarray,tup)
-            return np.ma.array(broadcasted_array, mask=broadcasted_mask)
-            
-    
 
     
     

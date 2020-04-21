@@ -310,7 +310,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         self.savedirectory='results'
         if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
         
-       
+        self.max_maxbatchbatchcount=None
         kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source)
         self.jobdirectory=os.path.join(self.savedirectory,'jobs')
         self.modelsavedirectory=os.path.join(self.savedirectory,'saves')

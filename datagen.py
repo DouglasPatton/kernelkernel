@@ -4,7 +4,9 @@ import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 
 class datagen(PiscesDataTool):
-    '''generates numpy arrays of random training or validation for model: y=xb+e or variants
+    '''
+    
+    generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
     def __init__(self,datagen_dict):
@@ -16,7 +18,11 @@ class datagen(PiscesDataTool):
             level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')'''
-      
+        try:
+            self.max_maxbatchbatchcount=datagen_dict['max_maxbatchbatchcount'] # determines the cut-off between training and validation data
+        except:
+            self.logger.exception('max_maxbatchbatchcount error')
+            self.max_maxbatchbatchcount=None
         #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
         self.logger = logging.getLogger(__name__)
         #self.logger.addHandler(handler)
@@ -27,8 +33,6 @@ class datagen(PiscesDataTool):
             theseed=1
         if theseed is None:
             theseed=1
-            
-        random.seed(theseed)  
         source=datagen_dict['source']
         self.initial_datagen_dict=datagen_dict
         if source=='monte':
@@ -97,6 +101,8 @@ class datagen(PiscesDataTool):
             
 
     def gen_piscesdata01(self,seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup):
+        
+        random.seed(seed)  
         try:self.specieslist
         except: self.buildspecieslist()
         self.fullvarlist=self.retrievespeciesdata()
@@ -136,7 +142,7 @@ class datagen(PiscesDataTool):
                 for col in range(k):
                     try: float(speciesdata[row,col])
                     except: 
-                        self.loger.exception('')
+                        self.logger.exception('')
                         self.logger.info(f'speciesdata[row,:],row,col:{[speciesdata[row,:],row,col]}')
             
         #self.xdataarray=np.array(self.fullxdataarray[:,floatselecttup+spatialselecttup],dtype=float)
@@ -157,6 +163,20 @@ class datagen(PiscesDataTool):
         
         
     def build_sumstats_dict(self,ydata,xdata):
+        batchbatchcount=min(self.batchbatchcount,self.max_maxbatchbatchcount)
+        batchcount=self.batchcount
+        batch_n=self.batch_n
+        max_train_n=batchbatchcount*batchcount*batch_n
+        try:
+            old_train_n=self.summary_stats_dict['train_n']
+            if old_train_n>=train_n:
+                return
+            else:
+                self.logger.warning(f'build_sumstats_dict recalculating. old_train_n:{old_train_n}, self.summary_stats_dict:{self.summary_stats_dict}')
+        except:
+            self.logger.info(f'build sumstats dict building',exc_info=True)        
+        xdata=xdata[0:train_n,:]
+        ydata=ydata[0:train_n]
         self.xmean=np.mean(xdata,axis=0)
         self.ymean=np.mean(ydata,axis=0)
         self.xstd=np.std(xdata,axis=0)
@@ -164,7 +184,8 @@ class datagen(PiscesDataTool):
         self.summary_stats_dict={'xmean':self.xmean,
                                 'ymean':self.ymean,
                                 'ystd':self.ystd,
-                                'xstd':self.xstd}
+                                'xstd':self.xstd,
+                                'train_n':train_n}
         self.expand_datagen_dict('summary_stats',self.summary_stats_dict)
         
     def processmissingvalues(self,nparray,missing_treatment):
@@ -189,22 +210,39 @@ class datagen(PiscesDataTool):
         batchsize=batch_n*batchcount
         if sample_replace:
             batchbatchcount=-(-n//batchsize) # ceiling divide
+            assert False,'not developed/broken due to training/validation split'
         else:
             batchbatchcount=n//batchsize # floor divide
-        self.batchbatchcount=batchbatchcount
+        if self.max_maxbatchbatchcount:
+            if self.max_maxbatchbatchcount>batchbatchcount:
+                batchbatchcount_train=self.max_maxbatchbatchcount
+                batchbatchcount_val=batchbatchcount-batchbatchcount_train
+            elif batchbatchcount>1:
+                self.max_maxbatchbatchcount=batchbatchcount-1
+                self.expand_datagen_dict('max_maxbatchbatchcount',self.max_maxbatchbatchcount)
+                batchbatchcount_train=self.max_maxbatchbatchcount
+                batchbatchcount_val=batchbatchcount-batchbatchcount_train
+            else:
+                self.max_maxbatchbatchcount=1
+                self.expand_datagen_dict('max_maxbatchbatchcount',1)
+                batchbatchcount_train=1
+                batchbatchcount_val=0
+                self.logger.warning(f'cannot validate self.species:{self.species} due to batchbatchcount:{batchbatchcount}')
+        self.batchbatchcount=batchbatchcount_train
         self.expand_datagen_dict('batchbatchcount',self.batchbatchcount)
+        fullbatchbatch_n_train=batchbatchcount_train*batchsize
         fullbatchbatch_n=batchbatchcount*batchsize
-        self.fullbatchbatch_n=fullbatchbatch_n
+        self.fullbatchbatch_n=fullbatchbatch_n_train
         self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
 
-        fullbatchbatch_shortby=fullbatchbatch_n-n
+        '''fullbatchbatch_shortby=fullbatchbatch_n-n
         self.fullbatchbatch_shortby=fullbatchbatch_shortby
         
         if fullbatchbatch_shortby>0:
             selectfill=selectlist.copy()#fill in the missing values with random observations from the list.
             random.shuffle(selectfill)
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
-        #assert len(selectlist)==fullbatchbatch_n
+        #assert len(selectlist)==fullbatchbatch_n'''
         
         batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
@@ -217,7 +255,8 @@ class datagen(PiscesDataTool):
                 batchbatchlist[i][j]=(ydataarrayselect,xdataarrayselect)
                 #print('ydatashape:',batchbatchlist[i][j][0].shape,'xdatashape:',batchbatchlist[i][j][1].shape)
         #print('end',end,'fullbatchbatch_n',fullbatchbatch_n)
-        self.yxtup_batchbatch=batchbatchlist
+        self.yxtup_batchbatch=batchbatchlist[:batchbatchcount_train]
+        self.yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_val]
         
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
@@ -236,6 +275,7 @@ class datagen(PiscesDataTool):
             batchcount=1
         if not seed==None:
             seed=1
+        random.seed(seed)
         if validate_batchcount==None:
             validate_batchcount=batchcount
         
@@ -249,7 +289,7 @@ class datagen(PiscesDataTool):
         yxtup_list=[]
         for i in range(batchcount):
             yxtup_list.append(self.buildrandomdataset(n,p,ftype,evar))
-        self.yxtup_list=yxtup_list
+        self.yxtup_list=yxtup_listsummary_stats_dict
         self.y=yxtup_list[-1][0]
         self.x = yxtup_list[-1][1]
         val_yxtup_list=[]

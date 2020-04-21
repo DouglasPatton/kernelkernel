@@ -16,11 +16,8 @@ class KernelParams:
         '''
         self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
         stepdictlist=[]
-        optdict_variation_list=self.getoptdictvariations(source=self.source)
-        datagen_variation_list=self.getdatagenvariations(source=self.source)
-        if not skipstep0:
-            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
-            stepdictlist.append(step0)
+
+        
             
         if not bestshare_list:
             bestshare_list=[16,8,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
@@ -30,7 +27,16 @@ class KernelParams:
         loss_threshold_list=[None for _ in range(stepcount-1)]
         maxiter_list=[1,1,1,4]
         maxbatchbatchcount_list=[8,16,16,16]
+        self.max_maxbatchbatchcount=max(maxbatchbatchcount) # this is used for standardizing variables across steps 
+        #     and later to divide training from validation data
         do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
+        
+        
+        if not skipstep0:
+            optdict_variation_list=self.getoptdictvariations(source=self.source)
+            datagen_variation_list=self.getdatagenvariations(source=self.source)
+            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+            stepdictlist.append(step0)
         for step in range(stepcount-1):
             filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
             startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
@@ -292,8 +298,9 @@ class KernelParams:
                 'batch_n':self.n,
                 'batchcount':8, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 #'batchbatchcount' this has never been part of the dict. it is determined by maxbatchbatchcount in modeldict as well as the available batchbatches.
-                'sample_replace':1, #if 1 (formerly 'no') , batches are created until all data is sampled, and sampling with replacement used to fill up the last batchbatch
+                'sample_replace':0, #if 1 (formerly 'no') , batches are created until all data is sampled, and sampling with replacement used to fill up the last batchbatch
                 #if 0 then drop any observations that don't fit into a batchbatch 
+                # need to implement this on training vs. validation subset of data
                 'species':'all',
                 #'species':'all', #could be 'all', int for the idx or a string with the species name. if 'all', then variations of datagen_dict will be created from pdh12.specieslist
                 'missing':'drop_row', #drop the row(observation) if any data is missing
@@ -318,7 +325,7 @@ class KernelParams:
         Ndiff_start=1
         Ndiff_param_count=max_bw_Ndiff-(Ndiff_start-1)
         modeldict1={
-            'validate':0, # if int - i, validate upto i batchbatches.
+            #'validate':0, # if int - i, validate upto i batchbatches.
             #     if string - 'remaining' , validate all remaining batchbatches 
             #     and store average of results as well as separate list of all results
             'pthreshold':0.5, # used for assigning phat to yhat=1 or 0

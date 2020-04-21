@@ -60,6 +60,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
        
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
+        if self.max_maxbatchbatchcount:
+            if not max_maxbatchbatchcount in datagen_dict:
+                datagen_dict['max_maxbatchbatchcount']=self.max_maxbatchbatchcount
+            else: self.max_maxbatchbatchcount=datagen_dict['max_maxbatchbatchcount']
         optimizedict['datagen_dict']=datagen_dict
         
         if force_start_params==None or force_start_params=='no':
@@ -67,11 +71,11 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
         if force_start_params=='yes':
             force_start_params=1
 
-        datagen_obj=dg.datagen(datagen_dict)
+        
         maxbatchbatchcount=optimizedict['modeldict']['maxbatchbatchcount']
-        if type(maxbatchbatchcount) is int:
-            thisbatchbatchcount=maxbatchbatchcount*datagen_obj.batch_n
-            
+        
+        datagen_obj=dg.datagen(datagen_dict)
+        
         if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
             print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < datagen_obj.batch_n*datagen_obj.batchcount:{datagen_obj.batch_n*datagen_obj.batchcount}')
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
@@ -679,7 +683,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 try: datagen_dict=self.datagen_dict
                 except:
                     print('initializing monte carlo datagen_dict')
-                    self.logger.warning('initializing monte carlo datagen_dict')
+                    self.logger.warning('initializing monte carlo datagen_dict',exc_info=True)
                     param_count=2
                     datagen_dict={'validate_batchcount':10,'batch_n':32,'batchcount':10, 'param_count':param_count,'seed':1, 'ftype':'linear', 'evar':1, 'source':'monte'}
             else:assert False,f'datagen_dict:{datagen_dict}'
@@ -741,7 +745,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             
     
     
-    def restructure_small_n_species(self,model_run_dict_list):
+    def restructure_small_n_species(self,model_run_dict_list,validate=1):
         '''
         checks each model in the model_run_dict_list to make sure the associated species has enough observations. 
         if not, batchcount reduced as low as 2 and if species still don't have enough observations, they are dropped.
@@ -759,10 +763,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             batchcount=datagen_dict['batchcount']
             batch_n=datagen_dict['batch_n']
             
-            try:
-                validate=modeldict['validate'] 
-            except:
-                validate=0
+            
                 
             min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
                 
@@ -793,7 +794,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             if spec in species_n_dict:
                 spec_n=species_n_dict[spec]
             else:
-                datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed
+                datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed suffle
                 spec_n=datagen_obj.species_n
                 species_n_dict[spec]=spec_n
             if spec_n<min_n:

@@ -611,8 +611,8 @@ class kNdtool(Ndiff,MyKernHelper):
             tdiff = np.abs(
                 datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
                     self.iter_start_time_list[-2], t_format))
-            self.save_interval = int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-                                          1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
+            self.save_interval = 1#int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
+            #                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
             self.logger.info(f'save_interval changed to {self.save_interval}')
 
         if self.call_iter % self.save_interval == 0:
@@ -624,34 +624,11 @@ class kNdtool(Ndiff,MyKernHelper):
             print(f'forcefail(loss):{self.forcefail}')
         self.success=bestloss
 
-            # assert np.ma.count_masked(yhat_un_std)==0,"{}are masked in yhat of yhatshape:{}".format(np.ma.count_masked(yhat_un_std),yhat_un_std.shape)
         loss_function=modeldict['loss_function']
         thisloss=lossdict[loss_function]
         self.logger.debug(f'at end of iteration loss:{thisloss}, with loss_function:{loss_function}')
         return thisloss
 
-    def MPwrapperKDEpredict(self,arglist):
-        #p#rint(f'arglist inside wrapper is:::::::{arglist}')
-        yin=arglist[0]
-        yout=arglist[1]
-        xin=arglist[2]
-        xpr=arglist[3]
-        modeldict=arglist[4]
-        fixed_or_free_paramdict=arglist[5]
-        KDEpredict_tup=self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
-        #p#rint('type(KDEpredict_tup)',type(KDEpredict_tup))
-        #try:print(KDEpredict_tup[0].shape)
-        #except:pass
-        return KDEpredict_tup
-    
-        '''below functionality moved to datagen.py and accessed as datagen.summary_stats_dict['xmean'],etc
-        def batchbatch_stats(self,yxtup_batchbatch):
-        all_y=[ii for yxtup_list in yxtup_batchbatch for i in yxtup_list for ii in i[0]]
-        all_x=[ii for yxtup_list in yxtup_batchbatch for i in yxtup_list for ii in i[1]]
-        self.xmean=np.mean(all_x,axis=0)
-        self.ymean=np.mean(all_y,axis=0)
-        self.xstd=np.std(all_x,axis=0)
-        self.ystd=np.std(all_y,axis=0)'''
                        
                        
     def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,source='monte',predict=None):
@@ -669,11 +646,11 @@ class kNdtool(Ndiff,MyKernHelper):
             
             
             self.batchbatchcount=min([batchbatchcount1,batchbatchcount2])
-            #self.batchbatch_stats(datagen_obj.yxtup_batchbatch) #moved to datagen.py
         except: self.batchbatchcount=1 
         
+        
+        
         self.datagen_obj=datagen_obj
-        #self.spatialvar_loc=datagen_obj.spatial_loc
         
         model_param_formdict=modeldict['hyper_param_form_dict']
         xkerngrid=modeldict['xkern_grid']
@@ -686,15 +663,12 @@ class kNdtool(Ndiff,MyKernHelper):
         if predict==1:
             fixed_or_free_paramdict['free_params']='predict'#instead of 'outside'
                 
-        #save and transform the data
-        #self.xdata=datagen_obj.x;self.ydata=datagen_obj.y#this is just the first of the batches, if batchcount>1
         
         self.batchcount=datagen_obj.batchcount
         self.nin=datagen_obj.batch_n
         self.p=datagen_obj.param_count#p should work too
         #assert self.ydata.shape[0]==self.xdata.shape[0],'xdata.shape={} but ydata.shape={}'.format(xdata.shape,ydata.shape)
 
-        #standardize x and y and save their means and std to self
 
         if self.source=='monte':
             yxtup_list=datagen_obj.yxtup_list
