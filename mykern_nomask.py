@@ -144,7 +144,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 if True:#type(ykern_grid) is int and xkern_grid=='no':
                     xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd b/c batchcount.
                     #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
-                    xoutdiffs_stack=self.ma_broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
+                    xoutdiffs_stack=np.broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
                     xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-3),xoutdifftup)#fro -2 to -3
                 newaxis=-1
                 yx_outdiffs_endstack=np.concatenate(

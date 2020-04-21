@@ -2,6 +2,7 @@ import logging
 import random
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
+import os
 
 class datagen(PiscesDataTool):
     '''
@@ -10,14 +11,20 @@ class datagen(PiscesDataTool):
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
     def __init__(self,datagen_dict):
-        '''logdir=os.path.join(os.getcwd(),'log')
+        
+        
+        logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername='datagen.log'
+        handlername=os.path.join(logdir,__name__)
         logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10000, backupCount=4)],
-            level=logging.DEBUG,
+            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
+            level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')'''
+            datefmt='%Y-%m-%dT%H:%M:%S')
+        self.logger = logging.getLogger(handlername)
+        self.logger.info('starting new datagen log')
+        
+        
         try:
             self.max_maxbatchbatchcount=datagen_dict['max_maxbatchbatchcount'] # determines the cut-off between training and validation data
         except:
@@ -168,15 +175,17 @@ class datagen(PiscesDataTool):
         batch_n=self.batch_n
         max_train_n=batchbatchcount*batchcount*batch_n
         try:
-            old_train_n=self.summary_stats_dict['train_n']
-            if old_train_n>=train_n:
+            existing_sum_stats_dict=self.initial_datagen_dict['summary_stats_dict']
+            old_train_n=existing_sum_stats_dict['max_train_n']
+            if old_train_n>=max_train_n:
+                self.summary_stats_dict=existing_sum_stats_dict
                 return
             else:
                 self.logger.warning(f'build_sumstats_dict recalculating. old_train_n:{old_train_n}, self.summary_stats_dict:{self.summary_stats_dict}')
         except:
             self.logger.info(f'build sumstats dict building',exc_info=True)        
-        xdata=xdata[0:train_n,:]
-        ydata=ydata[0:train_n]
+        xdata=xdata[0:max_train_n,:]
+        ydata=ydata[0:max_train_n]
         self.xmean=np.mean(xdata,axis=0)
         self.ymean=np.mean(ydata,axis=0)
         self.xstd=np.std(xdata,axis=0)
@@ -185,8 +194,8 @@ class datagen(PiscesDataTool):
                                 'ymean':self.ymean,
                                 'ystd':self.ystd,
                                 'xstd':self.xstd,
-                                'train_n':train_n}
-        self.expand_datagen_dict('summary_stats',self.summary_stats_dict)
+                                'max_train_n':max_train_n}
+        self.expand_datagen_dict('summary_stats_dict',self.summary_stats_dict)
         
     def processmissingvalues(self,nparray,missing_treatment):
         #rewrite with fancy indexing
@@ -289,7 +298,7 @@ class datagen(PiscesDataTool):
         yxtup_list=[]
         for i in range(batchcount):
             yxtup_list.append(self.buildrandomdataset(n,p,ftype,evar))
-        self.yxtup_list=yxtup_listsummary_stats_dict
+        self.yxtup_list=yxtup_list
         self.y=yxtup_list[-1][0]
         self.x = yxtup_list[-1][1]
         val_yxtup_list=[]

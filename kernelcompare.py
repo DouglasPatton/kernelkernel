@@ -60,10 +60,9 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
        
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
-        if self.max_maxbatchbatchcount:
+        '''if self.max_maxbatchbatchcount:
             if not max_maxbatchbatchcount in datagen_dict:
-                datagen_dict['max_maxbatchbatchcount']=self.max_maxbatchbatchcount
-            else: self.max_maxbatchbatchcount=datagen_dict['max_maxbatchbatchcount']
+                datagen_dict['max_maxbatchbatchcount']=self.max_maxbatchbatchcount'''
         optimizedict['datagen_dict']=datagen_dict
         
         if force_start_params==None or force_start_params=='no':
@@ -762,9 +761,12 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             
             batchcount=datagen_dict['batchcount']
             batch_n=datagen_dict['batch_n']
+            if self.max_maxbatchbatchcount:
+                if not 'max_maxbatchbatchcount' in datagen_dict:
+                    datagen_dict['max_maxbatchbatchcount']=self.max_maxbatchbatchcount
             
             
-                
+                    
             min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
                 
                 
@@ -788,7 +790,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 dg_validate_batchbatchcount=1
             if type(dg_validate_batchbatchcount) is int:
                 validate_batchbatchcount=dg_validate_batchbatchcount
-            elif dg_validate_batchbatchcount=='remaining''''
+            elif dg_validate_batchbatchcount=='remaining'
+            '''
                 
                 
             if spec in species_n_dict:

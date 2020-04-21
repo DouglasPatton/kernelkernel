@@ -2,6 +2,7 @@ import os
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 
+
 class KernelParams:
     
     def __init__(self,):
@@ -27,7 +28,7 @@ class KernelParams:
         loss_threshold_list=[None for _ in range(stepcount-1)]
         maxiter_list=[1,1,1,4]
         maxbatchbatchcount_list=[8,16,16,16]
-        self.max_maxbatchbatchcount=max(maxbatchbatchcount) # this is used for standardizing variables across steps 
+        self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is used for standardizing variables across steps 
         #     and later to divide training from validation data
         do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
         
@@ -210,9 +211,9 @@ class KernelParams:
                 self.specieslist=pdh12.returnspecieslist()
             
                 
-            species_variations=('species',self.specieslist)
+            #species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            #species_variations=('species',[self.specieslist[i] for i in range(0,200)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,2)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
