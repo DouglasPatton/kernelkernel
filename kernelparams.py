@@ -21,12 +21,12 @@ class KernelParams:
         
             
         if not bestshare_list:
-            bestshare_list=[16,8,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+            bestshare_list=[.1,.1,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
         filterthreshold_list=[None for _ in range(stepcount-1)]
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naiveloss'
         loss_threshold_list=[None for _ in range(stepcount-1)]
-        maxiter_list=[1,1,1,4]
+        maxiter_list=[1,1,4,4]
         maxbatchbatchcount_list=[4,8,8,8]
         self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is used for standardizing variables across steps 
         #     and later to divide training from validation data
@@ -105,7 +105,7 @@ class KernelParams:
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor1*np.array([1,-1]) for factor1 in [.25,.5,.6]]+[factor1*np.array([1,1]) for factor1 in [.25,.5,1]])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor1*np.array([1,1]) for factor1 in [.4,.5,.75,1]])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,-1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
@@ -350,7 +350,7 @@ class KernelParams:
             'regression_model':'NW',
             'product_kern_norm':'self',
             'hyper_param_form_dict':{
-                'Ndiff_exponent':'fixed',
+                'Ndiff_exponent':'free',
                 'x_bandscale':'non-neg',
                 'Ndiff_depth_bw':'non-neg',
                 'outer_x_bw':'non-neg',
