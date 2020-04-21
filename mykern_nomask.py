@@ -263,7 +263,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
             wtstacksumsum=np.expand_dims(wtstacksumsum,axis=[0,1])# add back in the two lhs collapsed axes
             wtstacksumsum=np.broadcast_to(wtstacksumsum,wtstack.shape) # return to the original dimensions
-            self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
+            #self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
             self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
             wtstacknorm=np.zeros(wtstack.shape,dtype=np.float64)
             wtstacknorm[wtstacksumsum>0]=wtstack[wtstacksumsum>0]/wtstacksumsum[wtstacksumsum>0]
@@ -392,10 +392,10 @@ class kNdtool(Ndiff,MyKernHelper):
                 yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2 # -3 b/c batchcount
 
             else:
-                self.logger.debug(f'prob_yx.shape:{prob_yx.shape}')
-                self.logger.debug(f'prob_yx:{prob_yx}')
-                self.logger.debug(f'prob_x_stack.shape:{prob_x_stack.shape}')
-                self.logger.debug(f'prob_x_stack:{prob_x_stack}')
+                #self.logger.debug(f'prob_yx.shape:{prob_yx.shape}')
+                #self.logger.debug(f'prob_yx:{prob_yx}')
+                #self.logger.debug(f'prob_x_stack.shape:{prob_x_stack.shape}')
+                #self.logger.debug(f'prob_x_stack:{prob_x_stack}')
                 wt_stack=np.zeros(prob_yx.shape,dtype=np.float64)
                 wt_stack[prob_x_stack>0]=prob_yx[prob_x_stack>0]/prob_x_stack[prob_x_stack>0]
                 if NWnorm=='across':

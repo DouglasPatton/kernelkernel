@@ -100,12 +100,12 @@ class KernelParams:
         
         arraylist=[]
         for i in range(4):
-            startarray=np.ones(4,dtype=np.float64)*0.3
+            startarray=np.ones(4,dtype=np.float64)*0.1
             startarray[i]=0.99
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.25,.5,1)])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor1*np.array([1,-1]) for factor1 in [.25,.5,.6]]+[factor1*np.array([1,1]) for factor1 in [.25,.5,1]])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,-1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
@@ -124,7 +124,7 @@ class KernelParams:
         #   then optimization chooses continuous phat and calculates alternative MSEs. 'avgavg' means
         #   calculate the avg phat for 0 and for 1 and avg those for the threshold.
         residual_treatment_variations=('modeldict:residual_treatment',['batchnorm_crossval'])
-        loss_function_variations=('modeldict:loss_function',['mae'])
+        loss_function_variations=('modeldict:loss_function',['mse'])
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
@@ -136,7 +136,7 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['self'])
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
-        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
+        normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
         maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[2])
         
         if source=='monte':
@@ -213,7 +213,7 @@ class KernelParams:
                 
             #species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            species_variations=('species',[self.specieslist[i] for i in range(0,10)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,20)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])

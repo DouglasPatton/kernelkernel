@@ -223,7 +223,7 @@ class datagen(PiscesDataTool):
         else:
             batchbatchcount=n//batchsize # floor divide
         if self.max_maxbatchbatchcount:
-            if self.max_maxbatchbatchcount>batchbatchcount:
+            if self.max_maxbatchbatchcount<batchbatchcount:
                 batchbatchcount_train=self.max_maxbatchbatchcount
                 batchbatchcount_val=batchbatchcount-batchbatchcount_train
             elif batchbatchcount>1:
