@@ -7,9 +7,9 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
-        self.batchcount_variation_list=[64]
+        self.batchcount_variation_list=[32]
         self.do_minimize=0
-        self.maxiter=4
+        self.maxiter=2
         
     def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
@@ -27,7 +27,7 @@ class KernelParams:
             filterthreshold_list[threshcutstep-1]='naiveloss'
         loss_threshold_list=[None for _ in range(stepcount-1)]
         maxiter_list=[1,1,1,4]
-        maxbatchbatchcount_list=[8,16,16,16]
+        maxbatchbatchcount_list=[4,8,8,8]
         self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is used for standardizing variables across steps 
         #     and later to divide training from validation data
         do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
@@ -105,8 +105,8 @@ class KernelParams:
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.2,1,3)])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,-1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor*np.array([1,-1]) for factor in np.linspace(.25,.5,1)])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,-1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
         Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.2,1,3)))
@@ -137,7 +137,7 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['none'])
-        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[4])
+        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[2])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -213,7 +213,7 @@ class KernelParams:
                 
             #species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            species_variations=('species',[self.specieslist[i] for i in range(0,2)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,10)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])

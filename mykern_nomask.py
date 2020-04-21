@@ -261,7 +261,12 @@ class kNdtool(Ndiff,MyKernHelper):
             #trueystack=np.concatenate(trueybatch[:,:,None],axis=-1)
             wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
             wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
-            wtstacknorm=wtstack/wtstacksumsum#broadcasting will be automatic since new dimensions are on lhs
+            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=[0,1])# add back in the two lhs collapsed axes
+            wtstacksumsum=np.broadcast_to(wtstacksumsum,wtstack.shape) # return to the original dimensions
+            self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
+            self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
+            wtstacknorm=np.zeros(wtstack.shape,dtype=np.float64)
+            wtstacknorm[wtstacksumsum>0]=wtstack[wtstacksumsum>0]/wtstacksumsum[wtstacksumsum>0]
             yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
             #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
             yhat_raw=yhat_raw.flatten(order='F')
@@ -364,10 +369,10 @@ class kNdtool(Ndiff,MyKernHelper):
             #cdfnorm_prob_x = prob_x / prob_x_sum
             #cdfnorm_prob_x = prob_x#dropped normalization
 
-            #yout_stack=self.ma_broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
+            #yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
             yout_stack=np.expand_dims(yout,1)
             prob_x_stack_tup=prob_x.shape[:-2]+(self.nout,)+prob_x.shape[-2:] # -1 to -2 b/c batchcount
-            prob_x_stack=self.ma_broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+            prob_x_stack=np.broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
             NWnorm=modeldict['NWnorm']
 
             residual_treatment=modeldict['residual_treatment']
@@ -387,7 +392,12 @@ class kNdtool(Ndiff,MyKernHelper):
                 yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2 # -3 b/c batchcount
 
             else:
-                wt_stack=prob_yx/prob_x_stack
+                self.logger.debug(f'prob_yx.shape:{prob_yx.shape}')
+                self.logger.debug(f'prob_yx:{prob_yx}')
+                self.logger.debug(f'prob_x_stack.shape:{prob_x_stack.shape}')
+                self.logger.debug(f'prob_x_stack:{prob_x_stack}')
+                wt_stack=np.zeros(prob_yx.shape,dtype=np.float64)
+                wt_stack[prob_x_stack>0]=prob_yx[prob_x_stack>0]/prob_x_stack[prob_x_stack>0]
                 if NWnorm=='across':
                     wt_stack=wt_stack/np.expand_dims(np.sum(wt_stack,axis=yout_axis),axis=yout_axis)
                 yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)
