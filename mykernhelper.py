@@ -259,33 +259,6 @@ class MyKernHelper:
             #print('type(diffs)=',type(diffs))
             return diffs
 
-            '''np_iter=np.nditer([x1_ex,x2_ex,None],flags=['buffered','multi_index'],order='F')
-            if spatial is None:
-                while not np_iter.finished:
-                    np_iter[2]=abs(np_iter[0]-np_iter[1])
-                    np_iter.iternext()
-            else:
-                while not np_iter.finished:
-                    diff=abs(np_iter[0]-np_iter[1])
-                    self.logger.debug(f'np_iter.multi_index:{np_iter.multi_index}')
-                    if np_iter.multi_index[-2]==spatial_p:
-                        if diff!=0:
-                             diff=int((log(diff,10))+2)/2
-                        if type(spatialtransform) is tuple:
-                            self.logger.debug(f'doing spatialtransform:{spatialtransform} on diff:{diff}')
-                            if spatialtransform[0]=='divide':
-                                diff=diff/spatialtransform[1]
-                            if spatialtransform[0]=='ln1':
-                                diff=np.log(diff+1)
-                            if spatialtransform[0]=='stdz':
-                                diff=(diff-self.xmean[-1])/self.xstd[-1]
-                            self.logger.debug(f'after spatial transform, diff:{diff}')
-                    np_iter[2][np_iter.multi_index][...]=diff
-                    np_iter.iternext()
-            result=np_iter.operands[2]
-            #self.logger.debug(f'result:{result}')
-            return result '''
-            
             
         except FloatingPointError:
             self.nperror=1
@@ -299,10 +272,6 @@ class MyKernHelper:
             else:
                 return
                      
-                     
-                     
-                     
-        '''           
                      
         diffs= np.abs(np.expand_dims(xin, axis=1) - np.expand_dims(xpr, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         
