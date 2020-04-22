@@ -259,7 +259,6 @@ class MyKernHelper:
             #print('type(diffs)=',type(diffs))
             return diffs
             
-            
         except FloatingPointError:
             self.nperror=1
             self.logger.exception('nperror set to 1 to trigger error and big loss')
@@ -271,7 +270,6 @@ class MyKernHelper:
                 assert False,'unexpected error'
             else:
                 return
-                     
                      
 
     def myspatialhucdiff(self,nparray):#need to rewrite using np.nditer

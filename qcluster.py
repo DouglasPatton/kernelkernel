@@ -168,7 +168,6 @@ class JobQFiller(mp.Process):
 
 class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
-
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
