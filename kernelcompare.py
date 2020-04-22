@@ -799,6 +799,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             else:
                 datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed suffle
                 spec_n=datagen_obj.species_n
+                datagen_dict=datagen_obj.datagen_dict_expanded
                 species_n_dict[spec]=spec_n
             if spec_n<min_n:
                 newbatchcount=spec_n//batch_n
@@ -809,6 +810,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 else:
                     toosmall=1
             if not toosmall:
+                model_run_dict['datagen_dict']=datagen_dict
                 newmodelrundictlist.append(model_run_dict)
             else:
                 self.logger.info(f'for species:{spec_n} is too small!')
