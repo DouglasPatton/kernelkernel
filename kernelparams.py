@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
-
+from copy import deepcopy
 
 class KernelParams:
     
@@ -11,27 +11,34 @@ class KernelParams:
         self.do_minimize=0
         self.maxiter=2
         
-    def build_stepdict_list(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
+    def build_pipeline(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
         '''
         self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
+        pipelinedict
         stepdictlist=[]
 
-        
-            
         if not bestshare_list:
             bestshare_list=[16,4,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+            
         filterthreshold_list=[None for _ in range(stepcount-1)]
         if type(threshcutstep) is int:
             filterthreshold_list[threshcutstep-1]='naiveloss'
+            
         loss_threshold_list=[None for _ in range(stepcount-1)]
+        
         maxiter_list=[1,1,4,4]
+        
         maxbatchbatchcount_list=[2,4,4,8]
-        self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is used for standardizing variables across steps 
+        
+        self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is 
+        #     used for standardizing variables across steps 
         #     and later to divide training from validation data
+        
         do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
         
+        do_validate_list=[0]+do_minimize_list
         
         if not skipstep0:
             optdict_variation_list=self.getoptdictvariations(source=self.source)
@@ -39,7 +46,8 @@ class KernelParams:
             step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
             stepdictlist.append(step0)
         for step in range(stepcount-1):
-            filter_kwargs={'filterthreshold':filterthreshold_list[step],'bestshare':bestshare_list[step]}
+            filter_kwargs={'filterthreshold':filterthreshold_list[step],
+                           'bestshare':bestshare_list[step]}
             startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
             savedir=startdir
             jobdir=os.path.join(self.jobdirectory,'step'+str(step))
@@ -61,11 +69,32 @@ class KernelParams:
                 (self.rundict_advance_path,[],advance_path_kwargs)
             ]}
             stepdictlist.append(stepdict)
-        return stepdictlist
-            
+        pipelinedict['stepdictlist']=stepdictlist
+        validatedictlist=self.makeValidateDictList(stepdictlist,do_validate_list)
+        pipelinedict['validatedictlist']=validatedictlist
+        return pipelinedict
+     
+    def makeValidateDictList(self,stepdictlist,do_validate_list):
+        steps=len(stepdictlist)
+        validatedictlist=[None for _ in range(steps)]
+        for step in range(steps):
+            if do_validate_list[step]:
+                stepdict=stepdictlist[step]
+                valdict=deepcopy(stepdict)
+                valdict=self.convertStepToValDict(valdict)
+                validatedictlist[step]=valdict
+        return validatedictlist
+    
+    def convertStepToValDict(valdict):
+        functiontups=valdict['functions']
+        mergedicttupstep=functiontups.pop(1)
+        self.logger.debug(f'mergedicttupstep:{mergedicttupstep}')
+        kwarg_list=[{},{'validate':1},]
+                
+        
                
-    def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None):
-        self.logger.info(f'len(list_of_rundicts:{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders})')
+    def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None,validate=0):
+        self.logger.info(f'len(list_of_rundicts):{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders}, validate:{validate}')
         savefolderpath=stepfolders['savedir']
         jobfolderpath=stepfolders['jobdir']
         charcount=len(str(i))+4 # 4 for 'step'
@@ -211,9 +240,9 @@ class KernelParams:
                 self.specieslist=pdh12.returnspecieslist()
             
                 
-            species_variations=('species',self.specieslist)
+            #species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            #species_variations=('species',[self.specieslist[i] for i in range(0,1)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,2)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])

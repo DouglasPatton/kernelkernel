@@ -370,8 +370,9 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         if self.qdict is None:
             self.qdict=self.getqdict()
         
-        model_run_stepdict_list=self.build_stepdict_list() #parameters set in kernelparams
-        
+        pipelinedict=self.build_pipeline() #parameters set in kernelparams
+        model_run_stepdict_list=pipelinedict['stepdictlist']
+        validate_step_dict=
         for i,stepdict in enumerate(model_run_stepdict_list):
             
             #stepfolders=stepdict['stepfolders']
