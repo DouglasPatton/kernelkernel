@@ -257,11 +257,13 @@ class kNdtool(Ndiff,MyKernHelper):
 
 
             wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
+            self.logger.debug(f'wtstack:{wtstack}')
             youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
             #trueystack=np.concatenate(trueybatch[:,:,None],axis=-1)
             wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
             wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
-            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=[0,1])# add back in the two lhs collapsed axes
+            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=0)# add back in the two lhs collapsed axes
+            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=0)
             wtstacksumsum=np.broadcast_to(wtstacksumsum,wtstack.shape) # return to the original dimensions
             #self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
             self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
