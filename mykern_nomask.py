@@ -10,6 +10,7 @@ import os
 from time import strftime, sleep
 import datetime
 import pickle
+os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
@@ -257,7 +258,7 @@ class kNdtool(Ndiff,MyKernHelper):
 
 
             wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
-            self.logger.debug(f'wtstack:{wtstack}')
+            #self.logger.debug(f'wtstack:{wtstack}')
             youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
             #trueystack=np.concatenate(trueybatch[:,:,None],axis=-1)
             wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
@@ -266,7 +267,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wtstacksumsum=np.expand_dims(wtstacksumsum,axis=0)
             wtstacksumsum=np.broadcast_to(wtstacksumsum,wtstack.shape) # return to the original dimensions
             #self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
-            self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
+            #self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
             wtstacknorm=np.zeros(wtstack.shape,dtype=np.float64)
             wtstacknorm[wtstacksumsum>0]=wtstack[wtstacksumsum>0]/wtstacksumsum[wtstacksumsum>0]
             yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
