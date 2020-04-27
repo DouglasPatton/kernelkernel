@@ -485,7 +485,8 @@ class kNdtool(Ndiff,MyKernHelper):
             print(f'residual_treatment not found in modeldict')
             residual_treatment=None
         iscrossloss=residual_treatment[0:8]=='crossloss'
-
+        if self.validate:
+            val_y=[]
         
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
@@ -519,8 +520,11 @@ class kNdtool(Ndiff,MyKernHelper):
                 yhat_unstd_outtup=self.batchKDEpredict(*args)
                 #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
                 if modeldict['residual_treatment'][-9:]=='batchnorm':
-                    all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
-                    all_y=np.concatenate(all_y_list,axis=0)
+                    if self.validate:
+                        all_y=np.repeat(np.array(batchdata_dict_i['ylist']),batchcount)
+                    else:
+                        all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
+                        all_y=np.concatenate(all_y_list,axis=0)
                     all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
 
                 else:
@@ -680,6 +684,8 @@ class kNdtool(Ndiff,MyKernHelper):
         self.do_naiveloss(ylist)
         #p#rint('buildbatcdatadict')
         batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict,xpredict=xpredict)
+        for batchdata_dict in batchdata_dictlist:
+            batchdata_dict['ylist']=ylist
         #p#rint('for validation buildbatcdatadict')
         #val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dictlist[0]['xprtup'][0])
