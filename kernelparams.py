@@ -55,7 +55,7 @@ class KernelParams:
             stepfolders={'savedir':savedir,'jobdir':jobdir}
             if not os.path.exists(startdir): os.mkdir(startdir)
             ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
-            opt_job_kwargs={
+            opt_job_kwargs={ #these are changes to be to opt_dict for next step
                 'loss_threshold':loss_threshold_list[step],
                 'maxiter':maxiter_list[step],
                 'do_minimize':do_minimize_list[step],
@@ -85,13 +85,22 @@ class KernelParams:
         return validatedictlist
     
     def convertStepToValDict(stepdict):
+        #adds to every step the kwarg: 'validate':1
         valdict=deepcopy(stepdict)
-        functiontups=valdict['functions']
-        mergedicttupstep=functiontups.pop(1)
-        self.logger.debug(f'removing mergedicttupstep:{mergedicttupstep}')
-        kwarg_list=[{},{'validate':1},]
+        functiontup_list=valdict['functions']
+        for functiontup in functiontup_list:
+            kwargs=functiontup[2]
+            kwargs={'validate':1, **kwargs}
+        #mergedicttupstep=functiontups.pop(1) #remove the filter step
+        #opt_job_builder_step_tup=functiontups[1]
+        #opt_kwargs=opt_job_builder_step_tup[2]
+        #opt_val_kwargs={'validate':1, **opt_kwargs} #repack dict with an extra kwarg
+        #opt_job_builder_step_tup[2]=val_kwargs #overwrite kwargs
+        self.logger.debug(f'valdict:{valdict} from stepdict:{stepdict}')
+        return valdict
         
-                
+    def doPipeStep(self,stepdict):
+        
         
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None,validate=0):
@@ -99,9 +108,13 @@ class KernelParams:
         savefolderpath=stepfolders['savedir']
         jobfolderpath=stepfolders['jobdir']
         charcount=len(str(i))+4 # 4 for 'step'
-        newjobfolderpath=jobfolderpath[:-charcount]+'step'+str(i+1)
+        if not validate:
+            next_i=str(i+1)
+        else:
+            next_i=str(i)+'_val'
+        newjobfolderpath=jobfolderpath[:-charcount]+'step'+next_i
         if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
-        newsavefolderpath=savefolderpath[:-charcount]+'step'+str(i+1)
+        newsavefolderpath=savefolderpath[:-charcount]+'step'+next_i
         if not os.path.exists(newsavefolderpath):os.mkdir(newsavefolderpath)
         self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
         for rundict in list_of_rundicts:

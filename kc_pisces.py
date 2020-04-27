@@ -36,10 +36,8 @@ class KCPisces():
         self.savepickle(new_species_model_save_path_dict,path)
         return new_species_model_save_path_dict
     
-    
-    
         
-    def merge_dict_model_filter(self,all_species_model_merge_dict,filterthreshold=None,bestshare=None):
+    def merge_dict_model_filter(self,all_species_model_merge_dict,filterthreshold=None,bestshare=None,validate=0):
         '''
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
@@ -93,6 +91,8 @@ class KCPisces():
             for model_save in model_save_list:
                 new_opt_dict={}
                 modeldict=model_save['modeldict']
+                if validate:
+                    modeldict['validate']=validate
                 opt_settings_dict=model_save['opt_settings_dict']
                 expanded_datagen_dict=model_save['datagen_dict']
                 if not maxbatchbatchcount is None:
@@ -124,19 +124,18 @@ class KCPisces():
             return model_rundict_list
         except:self.logger.exception('')
 
-    def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0):
+    def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0,validate=0):
         '''
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
         '''
         #species_model_save_path_dict_list=[]
+        if validate:
+            condense=1;recondense=0;recondense2=0
+            self.logger.debug(f'validation step at startpath:{startpath}')
         try:
             self.logger.info(f'process_pisces_models startpath:{startpath}')
             species_model_save_path_dict=self.split_pisces_model_save_path_dict(startpath)
-
-            #species_model_save_path_dict_list.append(species_model_save_path_dict)
-            #species_model_save_path_dict=self.merge_list_of_listdicts(species_model_save_path_dict_list)
-            #full_species_model_save_path_dict=self.update_species_model_save_path_dict(species_model_save_path_dict)
             if merge_with_existing:
                 try:
                     all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)

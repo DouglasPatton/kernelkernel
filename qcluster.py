@@ -372,7 +372,10 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         pipelinedict=self.build_pipeline() #parameters set in kernelparams
         model_run_stepdict_list=pipelinedict['stepdictlist']
-        validate_step_dict=
+        if 'validatedictlist' in pipelinedict:
+            validate_stepdict_list=pipelinedict['validatedictlist']
+        else:
+            validate_stepdict_list=[None for _ in range(len(model_run_stepdict_list))]
         for i,stepdict in enumerate(model_run_stepdict_list):
             
             #stepfolders=stepdict['stepfolders']
@@ -400,6 +403,13 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             except:
                 self.logger.exception(f'i:{i},stepdict:{stepdict}')
                 assert False,'halt'
+            
+            try:
+                val_stepdict=validate_stepdict_list[i]
+                if val_stepdict:
+                    
+            except:
+                
         self.qdict['saveq'].put('shutdown')
         #saveqdumper.join()
                 
