@@ -100,8 +100,20 @@ class KernelParams:
         return valdict
         
     def doPipeStep(self,stepdict):
-        
-        
+        resultslist=[]
+        try:
+            for functup in stepdict['functions']:
+                args=functup[1]
+                if args==[]:
+                    args=[resultslist[-1]]
+                kwargs=functup[2]
+                result=functup[0](*args,**kwargs)
+                resultslist.append(result)
+            list_of_run_dicts=resultslist[-1]
+            return list_of_run_dicts
+            self.logger.debug(f'step:{i} len(list_of_run_dicts):{len(list_of_run_dicts)}')
+        except:
+            self.logger.exception(f'pipstep error stepdict:{stepdict}')
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None,validate=0):
         self.logger.info(f'len(list_of_rundicts):{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders}, validate:{validate}')
