@@ -82,7 +82,7 @@ class KCPisces():
         return new_model_save_list
         
         
-    def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,loss_threshold=None,maxiter=None,do_minimize=None):
+    def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,loss_threshold=None,maxiter=None,do_minimize=None, validate=0):
         '''
         
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
@@ -106,6 +106,7 @@ class KCPisces():
                     opt_settings_dict['do_minimize']=do_minimize
 
                 new_opt_dict['opt_settings_dict']=opt_settings_dict
+                
                 new_opt_dict['modeldict']=modeldict
                 #new_opt_dict['datagen_dict']=expanded_datagen_dict
                 defaultoptimizedict=self.build_optdict(param_count=None,species=None)
@@ -117,6 +118,7 @@ class KCPisces():
                 optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  
                 optmodel_run_dict['savepath']=model_save['savepath']
                 optmodel_run_dict['jobpath']=model_save['jobpath']
+                
                 model_rundict_list.append(optmodel_run_dict)
             self.logger.debug(f'len(model_rundict_list):{len(model_rundict_list)}')
             return model_rundict_list

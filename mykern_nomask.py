@@ -209,11 +209,11 @@ class kNdtool(Ndiff,MyKernHelper):
             slicelist[dimselect[i]]=dimval[i]
         return tuple(slicelist)
         
-    def do_batchnorm_crossval(self, KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
+    def do_batchnorm_crossval(self,KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
         try:
             #modifying to index numpy arrays instead of lists, requiring slices of all dims
             batchcount=self.batchcount
-            yout,wt_stack,cross_errors=KDEregtup#no zip required b/c list turned into dim 0 for batchcount # =zip(*KDEregtup)
+            yout,wt_stack,cross_errors=KDEregtup# dims:(nout,nin,batch)???
             nin=self.nin;
             #ybatch=[]
             wtbatch=[]
@@ -244,21 +244,9 @@ class kNdtool(Ndiff,MyKernHelper):
                 dimcount=np.ndim(wtbatchlist[0])
                 #trueybatch.append(np.concatenate([trueybatchj[None,:] for trueybatchj in trueybatchlist],axis=0))
                 wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
-                #   of each of i's y.# 2/20a: concat switch from axis0 to -1
-                youtbatch.append(np.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
-                #   leaving rhs dim as nin*(batchcoun-1)=npr
-
-                #summary:
-                #   for 2/20b: each i has batch_n values that batch_i doesn't predict, but each of the other batches does
-                #   so for each i we will get the batch_n true values of y and compre those to the weighted
-                #   average of youts from batch_j*(batchcount-1) other batches (i.e., i!=j)
-                #   so for a stack, dims are batchcount-1,yout,nin.  for each batchi, nin is
-                #       effectively npr, but only after we rearrange the data for crossval.
-
 
             wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
             youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
-            #trueystack=np.concatenate(trueybatch[:,:,None],axis=-1)
             wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
             wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
             wtstacksumsum=np.expand_dims(wtstacksumsum,axis=[0,1])# add back in the two lhs collapsed axes
@@ -270,8 +258,6 @@ class kNdtool(Ndiff,MyKernHelper):
             yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
             #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
             yhat_raw=yhat_raw.flatten(order='F')
-
-
 
             y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
 
@@ -532,7 +518,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 args.extend([modeldict,fixed_or_free_paramdict])
                 yhat_unstd_outtup=self.batchKDEpredict(*args)
                 #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-                if modeldict['residual_treatment']=='batchnorm_crossval':
+                if modeldict['residual_treatment'][-9:]=='batchnorm':
                     all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
                     all_y=np.concatenate(all_y_list,axis=0)
                     all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)

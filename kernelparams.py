@@ -80,16 +80,17 @@ class KernelParams:
         for step in range(steps):
             if do_validate_list[step]:
                 stepdict=stepdictlist[step]
-                valdict=deepcopy(stepdict)
-                valdict=self.convertStepToValDict(valdict)
+                valdict=self.convertStepToValDict(stepdict)
                 validatedictlist[step]=valdict
         return validatedictlist
     
-    def convertStepToValDict(valdict):
+    def convertStepToValDict(stepdict):
+        valdict=deepcopy(stepdict)
         functiontups=valdict['functions']
         mergedicttupstep=functiontups.pop(1)
-        self.logger.debug(f'mergedicttupstep:{mergedicttupstep}')
+        self.logger.debug(f'removing mergedicttupstep:{mergedicttupstep}')
         kwarg_list=[{},{'validate':1},]
+        
                 
         
                
