@@ -386,8 +386,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
                     runmasterresult=self.runmaster(list_of_run_dicts)
                     #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
                 else:
-                    list_of_run_dicts=self.doPipeStep(stepdict)
-                    #self.rundict_advance_path(list_of_run_dicts,i,stepfolders)
+                    list_of_run_dicts=self.doPipeStep(stepdict) #in KernelParams
                     runmasterresult=self.runmaster(list_of_run_dicts)
                 self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
             except:
