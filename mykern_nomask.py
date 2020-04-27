@@ -293,13 +293,6 @@ class kNdtool(Ndiff,MyKernHelper):
                     except:pass
                 else: yhat_un_std=yhat_std
 
-
-            yhat_un_std=yhat_std*self.ystd+self.ymean
-
-
-           
-
-
             return yhat_un_std,cross_errors
         except FloatingPointError:
             self.nperror=1
