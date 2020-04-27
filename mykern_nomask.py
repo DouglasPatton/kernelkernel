@@ -816,6 +816,7 @@ class optimize_free_params(kNdtool):
         self.ymean=None
         self.naivebinaryloss=None
         self.loss_function=None
+        self.validate=None
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.pname=myname
         
@@ -878,8 +879,14 @@ class optimize_free_params(kNdtool):
         
         #Extract from optimizedict
         modeldict=optimizedict['modeldict'] 
+        
         self.loss_function=modeldict['loss_function']
         self.pthreshold=modeldict['pthreshold']
+        if 'validate' in modeldict:
+            self.validate=modeldict['validate']
+        else:
+            self.validate=0
+        self.logger.debug(f'self.validate:{self.validate}')
         
         param_valdict=optimizedict['hyper_param_dict']
 

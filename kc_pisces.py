@@ -91,8 +91,6 @@ class KCPisces():
             for model_save in model_save_list:
                 new_opt_dict={}
                 modeldict=model_save['modeldict']
-                if validate:
-                    modeldict['validate']=validate
                 opt_settings_dict=model_save['opt_settings_dict']
                 expanded_datagen_dict=model_save['datagen_dict']
                 if not maxbatchbatchcount is None:
@@ -101,12 +99,15 @@ class KCPisces():
                     opt_settings_dict['options']['maxiter']=maxiter
                 if not loss_threshold is None:
                     opt_settings_dict['loss_threshold']=loss_threshold
-
                 if not do_minimize is None:
                     opt_settings_dict['do_minimize']=do_minimize
+                    
+                if validate: 
+                        opt_settings_dict['do_minimize']=0
+                        opt_settings_dict['loss_threshold']=None
+                        modeldict['validate']=validate
 
                 new_opt_dict['opt_settings_dict']=opt_settings_dict
-                
                 new_opt_dict['modeldict']=modeldict
                 #new_opt_dict['datagen_dict']=expanded_datagen_dict
                 defaultoptimizedict=self.build_optdict(param_count=None,species=None)
