@@ -6,7 +6,7 @@ from copy import deepcopy
 class KernelParams:
     
     def __init__(self,):
-        self.n=8 #used to generate variations datagen-batch_n and ykern_grid that are len n and n+1
+        self.n=8 #used to generate variations datagen-batch_n 
         self.batchcount_variation_list=[64]
         self.do_minimize=0
         self.maxiter=2

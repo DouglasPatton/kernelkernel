@@ -265,7 +265,7 @@ class datagen(PiscesDataTool):
                 #print('ydatashape:',batchbatchlist[i][j][0].shape,'xdatashape:',batchbatchlist[i][j][1].shape)
         #print('end',end,'fullbatchbatch_n',fullbatchbatch_n)
         self.yxtup_batchbatch=batchbatchlist[:batchbatchcount_train]
-        self.yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_val]
+        self.yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_train+batchbatchcount_val]
         
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]

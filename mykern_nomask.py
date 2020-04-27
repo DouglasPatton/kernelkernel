@@ -627,24 +627,21 @@ class kNdtool(Ndiff,MyKernHelper):
 
                        
                        
-    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,source='monte',predict=None):
-        if predict==None:
-            predict=0
-
+    def prep_KDEreg(self,datagen_obj,modeldict,param_valdict,source='monte',predict=None,valdata=None):
         #free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict)
         if 'max_bw_Ndiff' in modeldict:
             self.Ndiff=1
         else:
             self.Ndiff=0
+        
         try:
             batchbatchcount1=datagen_obj.batchbatchcount
             batchbatchcount2=modeldict['maxbatchbatchcount']
-            
-            
             self.batchbatchcount=min([batchbatchcount1,batchbatchcount2])
-        except: self.batchbatchcount=1 
-        
-        
+        except: 
+            self.logger.exception(f'error, setting self.batchbatchcount to 1')
+            self.batchbatchcount=1 
+
         
         self.datagen_obj=datagen_obj
         
@@ -656,7 +653,7 @@ class kNdtool(Ndiff,MyKernHelper):
         #build dictionary for parameters
         free_params,fixed_or_free_paramdict=self.setup_fixed_or_free(model_param_formdict,param_valdict)
         #self.fixed_or_free_paramdict=fixed_or_free_paramdict
-        if predict==1:
+        if predict:
             fixed_or_free_paramdict['free_params']='predict'#instead of 'outside'
                 
         
@@ -675,9 +672,14 @@ class kNdtool(Ndiff,MyKernHelper):
                 yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
             [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
+        if validate:
+            yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
+            #     batchbatch worth of validation data at a time
+            ylist,xpredict=zip(*[yxtup for yxtup in yxtup_list_stdval])
+        else:xpredict=None    
         self.do_naiveloss(ylist)
         #p#rint('buildbatcdatadict')
-        batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict)
+        batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict,xpredict=xpredict)
         #p#rint('for validation buildbatcdatadict')
         #val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dictlist[0]['xprtup'][0])
@@ -690,7 +692,7 @@ class kNdtool(Ndiff,MyKernHelper):
         return free_params,args_tuple#,val_args_tuple
     
     
-    def buildbatchdatadict(self,yxtup_listlist,xkerngrid,ykerngrid,modeldict):
+    def buildbatchdatadict(self,yxtup_listlist,xkerngrid,ykerngrid,modeldict,xpredict=None):
         #load up the data for each batch into a dictionary full of tuples
         # with each tuple item containing data for a batch from 0 to batchcount-1
         batchcount=self.batchcount
@@ -701,9 +703,14 @@ class kNdtool(Ndiff,MyKernHelper):
             #p#rint('self.batchcount: ',self.batchcount)
             xintup = ()
             yintup = ()
+            
             xprtup = ()
             youttup = ()
-            if modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval':
+            if self.validate:
+                xpredict_array=np.array(xpredict)
+                
+                xpri=[xpredict for _ in range(batchcount)]
+            elif modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval'):
                 #the equivalent condition for the y values in the kernelloss function does not apply to batchnorm_crossval
                 xpri=[]
                 for i in range(batchcount):
@@ -714,8 +721,8 @@ class kNdtool(Ndiff,MyKernHelper):
                     xpri_crossval_array=np.concatenate(xpricross_j,axis=0)
                         #p#rint('xpri_crossval_array.shape',xpri_crossval_array.shape)
                     xpri.append(xpri_crossval_array)
-
-
+            
+                
             else:
                 xpri=[None]*batchcount #self.prep_out_grid will treat this as in-sample prediction
             for i in range(batchcount):
@@ -736,6 +743,18 @@ class kNdtool(Ndiff,MyKernHelper):
             batchdata_dictlist.append(batchdata_dict)
         #p#rint([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
         return batchdata_dictlist
+    
+    
+    '''#args_tuple_val_list=self.valprep_args_tuple(args_tuple,datagen_obj.yxtup_batchbatch_val)
+    def valprep_args_tuple(self,args_tuple,yxtup_batchbatch_val):
+        bbvcount=len(yxtup_batchbatch_val)
+        args_tuple_val_list=[]
+        batchdata_dictlist,modeldict,fof_paramdict=args_tuple
+        for v in range(bbvcount):
+            yxtup_list_val=yxtup_batchbatch_val[v]
+            yxtup_list_val_std=self.standardize_yxtup(yxtup_list_val,modeldict)
+            batchdata_dictlist_v=
+            args_tuple_val_list.append((batchdata_dictlist_v,modeldict,fof_paramdict))'''
     
     
     def doLoss(self,y,yhat,pthreshold=None,lssfn=None):
@@ -889,12 +908,24 @@ class optimize_free_params(kNdtool):
         self.logger.debug(f'self.validate:{self.validate}')
         
         param_valdict=optimizedict['hyper_param_dict']
-
-        
-        transformed_free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
         self.forcefail=None
         self.success=None
         self.iter=0
+        
+        if self.validate:
+            valdatalist=datagen_obj.yxtup_batchbatch_val
+            bbv=len(valdatalist)
+            for v in range(bbv):
+                valdata=valdatalist[v]
+                transformed_free_params,args_tuple=self.prep_KDEreg(
+                    datagen_obj,modeldict,param_valdict,self.source,valdata=valdata)
+                self.MY_KDEpredictloss(transformed_free_params,*args_tuple,predict=1)
+            return
+                
+                    
+                    
+        transformed_free_params,args_tuple=self.prep_KDEreg(datagen_obj,modeldict,param_valdict,self.source)
+        
         
         #startingloss=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
         #self.logger.debug(f'new optimization. starting loss:{startingloss}')
@@ -908,10 +939,11 @@ class optimize_free_params(kNdtool):
         if not self.do_minimize:
             try:
                 self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
-                self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
+                # self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
             except:
                 self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
-                self.logger.exception('')
+            self.logger.exception('')
+
         else:
             try:
                 if self.loss_threshold:
