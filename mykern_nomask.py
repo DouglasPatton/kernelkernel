@@ -602,6 +602,7 @@ class kNdtool(Ndiff,MyKernHelper):
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
         self.logger.debug(f'len(self.binary_y_loss_list_list): {len(self.binary_y_loss_list_list)},len(self.lossdict_and_paramdict_list):{len(self.lossdict_and_paramdict_list)}')
         if predict:
+            self.logger.debug(f'')
             return 
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
@@ -939,10 +940,10 @@ class optimize_free_params(kNdtool):
         if not self.do_minimize:
             try:
                 self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
-                # self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
+                self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
             except:
                 self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
-            self.logger.exception('')
+            self.logger.exception('problem with exception_model_save')
 
         else:
             try:

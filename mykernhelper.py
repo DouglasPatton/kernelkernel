@@ -12,7 +12,7 @@ class MyKernHelper:
         self.logger.debug('MyKernHelper is logging')
     
     
-    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,filename,getname=0):
+    def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,getname=0):
 
         try:
             
