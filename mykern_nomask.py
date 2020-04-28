@@ -921,6 +921,9 @@ class optimize_free_params(kNdtool):
                 transformed_free_params,args_tuple=self.prep_KDEreg(
                     datagen_obj,modeldict,param_valdict,self.source,valdata=valdata)
                 self.MY_KDEpredictloss(transformed_free_params,*args_tuple,predict=1)
+                self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,getname=0)
+                self.lossdict_and_paramdict_list=[]
+                self.binary_y_loss_list_list=[]
             return
                 
                     
@@ -948,8 +951,8 @@ class optimize_free_params(kNdtool):
         else:
             try:
                 if self.loss_threshold:
-                    lossdict_and_paramdict_list=self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
-                    startingloss=lossdict_and_paramdict_list[-1][0][self.loss_function]
+                    self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
+                    startingloss=self.lossdict_and_paramdict_list[-1][0][self.loss_function]
                     if startingloss>self.loss_threshold:
                         do_opt=0
                         self.sort_then_saveit([[startingloss,args_tuple[-1]]],modeldict,getname=0)

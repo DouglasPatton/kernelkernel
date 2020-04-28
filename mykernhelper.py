@@ -45,7 +45,7 @@ class MyKernHelper:
         #if binary_y_loss_list is None:
             
         binary_y_loss_list=self.binary_y_loss_list_list[bestiter_pos]
-        self.logger.debug(f'len(self.binary_y_loss_list_list):{len(self.binary_y_loss_list_list)}, self.binary_y_loss_list_list:{self.binary_y_loss_list_list}')
+        #self.logger.debug(f'len(self.binary_y_loss_list_list):{len(self.binary_y_loss_list_list)}, self.binary_y_loss_list_list:{self.binary_y_loss_list_list}')
         try:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]

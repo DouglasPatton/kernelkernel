@@ -126,16 +126,7 @@ class KCPisces():
         except:self.logger.exception('')
 
             
-    def incrementstartpath(self,startpath):
-        end_digits=''
-        for char in startpath[::-1]:
-            if char.isdigit():
-                end_digits+=char
-            else: break
-        digitcount=len(end_digits)
-        newstartpath=startpath[:-digitcount]+str(int(end_digits)+1)
-        self.logger.debug(f'startpath:{startpath}, newstartpath:{newstartpath}')
-        return newstartpath
+
         
     def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0,validate=0):
         '''
@@ -144,7 +135,7 @@ class KCPisces():
         '''
         #species_model_save_path_dict_list=[]
         if validate:
-            startpath=self.incrementstartpath(startpath)
+            #startpath=self.incrementstartpath(startpath) # moved to creation of valdict in kernelparams
             condense=1;recondense=0;recondense2=0
             self.logger.debug(f'validation step at startpath:{startpath}')
         try:

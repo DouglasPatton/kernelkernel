@@ -95,16 +95,37 @@ class KernelParams:
     
     def convertStepToValDict(self,stepdict):
         #adds to every step the kwarg: 'validate':1
-        valdict=stepdict.copy()#{key:val for key,val in stepdict.items()}#new dict not a pointer, no copy b/c queue in funcs
-        functiontup_list=valdict['functions']
+        #valdict=stepdict.copy()#{key:val for key,val in stepdict.items()}#new dict not a pointer, no copy b/c queue in funcs
+        valdict={}
+        functiontup_list=stepdict['functions']
         newfunctuplist=[]
-        for functiontup in functiontup_list:
+        for f_idx,functiontup in enumerate(functiontup_list):
             oldkwargs=functiontup[2]
-            newfunctuplist.append(*functiontup[0:2],{'validate':1, **oldkwargs})
+            newkwargs={'validate':1, **oldkwargs}
+            oldargs=functiontup[1]
+            if f_idx==0:
+                startpath=oldargs[0]
+                newstartpath=self.incrementStartPath(startpath)
+                newargs=[newstartpath]
+            else:
+                newargs=oldargs
+            newfunctuplist.append((functiontup[0],newargs,newkwargs))
         valdict['functions']=newfunctuplist
         self.logger.debug(f'valdict:{valdict} from stepdict:{stepdict}')
         return valdict
-        
+    
+    def incrementStartPath(self,startpath):
+        end_digits=''
+        for char in startpath[::-1]:
+            if char.isdigit():
+                end_digits+=char
+            else: break
+        digitcount=len(end_digits)
+        newstartpath=startpath[:-digitcount]+str(int(end_digits)+1)
+        self.logger.debug(f'startpath:{startpath}, newstartpath:{newstartpath}')
+        return newstartpath
+    
+    
     def doPipeStep(self,stepdict):
         resultslist=[]
         try:
@@ -436,8 +457,8 @@ class KernelParams:
             }
         optiondict_p={'maxiter':self.maxiter}
         optimizer_settings_dict1={
-            'method':'Powell',#'BFGS',#''Nelder-Mead',
-            'options':optiondict_p,
+            'method':'Nelder-Mead',#'Powell',#'BFGS',#'
+            'options':optiondict_NM,#optiondict_p,
             'loss_threshold':None,#1,#'naiveloss',
             'help_start':0,
             'partial_match':0,
