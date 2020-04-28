@@ -221,7 +221,11 @@ class kNdtool(Ndiff,MyKernHelper):
             #trueybatch=[]
             
             for i in range(batchcount):
-                #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
+                '''
+                i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation. if i is 1, @j=0, j<i istart:iend::0-nin from batch 0, which doesn' have its own data in 0-nin, since that was skipped for cross-val.
+                if i is 1, @j=2, j>i istart:iend::nin-2nin from batch 2
+                if i is 1, @j=3, "                       " from batch 3
+                '''
                 #ybatchlist=[]
                 wtbatchlist=[]
                 youtbatchlist=[]

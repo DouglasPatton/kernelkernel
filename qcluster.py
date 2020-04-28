@@ -396,8 +396,13 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             try:
                 val_stepdict=validate_stepdict_list[i]
                 if val_stepdict:
+                    list_of_run_dicts=self.doPipeStep(val_stepdict)
+                    val_runmasterresult=self.runmaster(list_of_run_dicts)
+                    self.logger.info(f'valstep:{i} completed with val_runmasterresult:{val_runmasterresult}')
                     
             except:
+                self.logger.exception('')
+                assert False,'halt, valstep error'
                 
         self.qdict['saveq'].put('shutdown')
         #saveqdumper.join()
