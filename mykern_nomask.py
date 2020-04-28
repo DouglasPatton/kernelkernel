@@ -618,7 +618,7 @@ class kNdtool(Ndiff,MyKernHelper):
             self.logger.info(f'save_interval changed to {self.save_interval}')
 
         if self.call_iter % self.save_interval == 0:
-            bestlossdict,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict, 'model_save')
+            bestlossdict,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict)
             bestloss=bestlossdict[self.loss_function]
 
         if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
@@ -940,10 +940,10 @@ class optimize_free_params(kNdtool):
         if not self.do_minimize:
             try:
                 self.MY_KDEpredictloss(transformed_free_params,*args_tuple, predict=1)
-                self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,'exception_model_save',getname=0)
+                self.sort_then_saveit(self.lossdict_and_paramdict_list,modeldict,getname=0)
             except:
-                self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,'exception_model_save',getname=0)
-            self.logger.exception('problem with exception_model_save')
+                self.sort_then_saveit([[{self.loss_function:10.0**290},args_tuple[-1]]],modeldict,getname=0)
+                self.logger.exception('problem with exception_model_save')
 
         else:
             try:
@@ -952,7 +952,7 @@ class optimize_free_params(kNdtool):
                     startingloss=lossdict_and_paramdict_list[-1][0][self.loss_function]
                     if startingloss>self.loss_threshold:
                         do_opt=0
-                        self.sort_then_saveit([[startingloss,args_tuple[-1]]],modeldict,'model_save',getname=0)
+                        self.sort_then_saveit([[startingloss,args_tuple[-1]]],modeldict,getname=0)
                     else:
                         do_opt=1
                 else: do_opt=1
@@ -962,7 +962,7 @@ class optimize_free_params(kNdtool):
                     self.minimize_obj=minimize(self.MY_KDEpredictloss, transformed_free_params, args=args_tuple, method=method, options=opt_method_options)
                     
             except:
-                self.sort_then_saveit([[10.0**289,args_tuple[-1]]],modeldict,'error_model_save',getname=0)
+                self.sort_then_saveit([[10.0**289,args_tuple[-1]]],modeldict,getname=0)
                 self.logger.exception('')
         
 
