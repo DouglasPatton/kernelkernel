@@ -105,7 +105,7 @@ class KernelParams:
             oldargs=functiontup[1]
             if f_idx==0:
                 startpath=oldargs[0]
-                newstartpath=self.incrementStartPath(startpath)
+                newstartpath=self.incrementPathEndDigits(startpath)
                 newargs=[newstartpath]
             else:
                 newargs=oldargs
@@ -114,16 +114,16 @@ class KernelParams:
         self.logger.debug(f'valdict:{valdict} from stepdict:{stepdict}')
         return valdict
     
-    def incrementStartPath(self,startpath):
+    def incrementPathEndDigits(self,path):
         end_digits=''
-        for char in startpath[::-1]:
+        for char in path[::-1]:
             if char.isdigit():
                 end_digits+=char
             else: break
         digitcount=len(end_digits)
-        newstartpath=startpath[:-digitcount]+str(int(end_digits)+1)
-        self.logger.debug(f'startpath:{startpath}, newstartpath:{newstartpath}')
-        return newstartpath
+        newpath=path[:-digitcount]+str(int(end_digits)+1)
+        self.logger.debug(f'path:{path}, newpath:{newpath}')
+        return newpath
     
     
     def doPipeStep(self,stepdict):
@@ -144,13 +144,14 @@ class KernelParams:
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None,validate=0):
         self.logger.info(f'len(list_of_rundicts):{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders}, validate:{validate}')
+        next_i=str(i+1)
         savefolderpath=stepfolders['savedir']
         jobfolderpath=stepfolders['jobdir']
         charcount=len(str(i))+4 # 4 for 'step'
-        if not validate:
-            next_i=str(i+1)
-        else:
-            next_i=str(i)+'_val'
+        if validate:
+            next_i+='_val'
+            #savefolderpath=self.incrementPathEndDigits(savefolderpath)
+            #jobfolderpath=self.incrementPathEndDigits(jobfolderpath)
         newjobfolderpath=jobfolderpath[:-charcount]+'step'+next_i
         if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
         newsavefolderpath=savefolderpath[:-charcount]+'step'+next_i
