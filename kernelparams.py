@@ -97,10 +97,11 @@ class KernelParams:
         #adds to every step the kwarg: 'validate':1
         valdict=stepdict.copy()#{key:val for key,val in stepdict.items()}#new dict not a pointer, no copy b/c queue in funcs
         functiontup_list=valdict['functions']
-        for f_idx,functiontup in enumerate(functiontup_list):
-            kwargs=functiontup[2]
-            functiontup_list[f_idx]=(*functiontup[0:2],{'validate':1, **kwargs})
-        valdict['functions']=functiontup_list
+        newfunctuplist=[]
+        for functiontup in functiontup_list:
+            oldkwargs=functiontup[2]
+            newfunctuplist.append(*functiontup[0:2],{'validate':1, **oldkwargs})
+        valdict['functions']=newfunctuplist
         self.logger.debug(f'valdict:{valdict} from stepdict:{stepdict}')
         return valdict
         
@@ -128,7 +129,7 @@ class KernelParams:
         if not validate:
             next_i=str(i+1)
         else:
-            next_i=str(i+1)+'_val'
+            next_i=str(i)+'_val'
         newjobfolderpath=jobfolderpath[:-charcount]+'step'+next_i
         if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
         newsavefolderpath=savefolderpath[:-charcount]+'step'+next_i
@@ -298,7 +299,7 @@ class KernelParams:
             vstring+=f"for {key} old val({val})replaced with new val({new_val})"
             new_opt_dict['hyper_param_dict'][key]=new_val
         if verbose==1:print(vstring)
-        self.logger.debug(vstring)
+        #Sself.logger.debug(vstring)
         return new_opt_dict
     
     

@@ -371,6 +371,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             self.qdict=self.getqdict()
         
         pipelinedict=self.build_pipeline() #parameters set in kernelparams
+        self.logger.debug(f'pipelinedict:{pipelinedict}')
         model_run_stepdict_list=pipelinedict['stepdictlist']
         if 'validatedictlist' in pipelinedict:
             validate_stepdict_list=pipelinedict['validatedictlist']
