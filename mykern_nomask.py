@@ -209,7 +209,7 @@ class kNdtool(Ndiff,MyKernHelper):
             slicelist[dimselect[i]]=dimval[i]
         return tuple(slicelist)
         
-    def do_batchnorm_crossval(self,KDEregtup,fixed_or_free_paramdict,modeldict,all_y):
+    def do_batchnorm_crossval(self,KDEregtup,fixed_or_free_paramdict,modeldict):
         try:
             #modifying to index numpy arrays instead of lists, requiring slices of all dims
             batchcount=self.batchcount
@@ -219,6 +219,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wtbatch=[]
             youtbatch=[]
             #trueybatch=[]
+            
             for i in range(batchcount):
                 #i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation
                 #ybatchlist=[]
@@ -226,23 +227,20 @@ class kNdtool(Ndiff,MyKernHelper):
                 youtbatchlist=[]
                 #trueybatchlist=[]
                 for j in range(batchcount):
-                    if j>i:
+                    if j>i or self.validate
                         istart=(i)*nin
                         iend=istart+nin
                     elif j<i:
                         istart=(i-1)*nin
                         iend=istart+nin
-                    if j!=i:
+                    if j!=i or self.validate:
                         batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
-                        #all_y_fori_fromj=all_y[istart:iend]
                         wt_i_from_batch_j=wt_stack[batchslicer]
                         yout_batchj=np.broadcast_to(np.expand_dims(yout[:,j],axis=-1),(self.nout,self.nin)) # 
                         wtbatchlist.append(wt_i_from_batch_j)
                         youtbatchlist.append(yout_batchj)
-                        #trueybatchlist.append(all_y_fori_fromj)
 
                 dimcount=np.ndim(wtbatchlist[0])
-                #trueybatch.append(np.concatenate([trueybatchj[None,:] for trueybatchj in trueybatchlist],axis=0))
                 wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
 
             wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
@@ -274,13 +272,6 @@ class kNdtool(Ndiff,MyKernHelper):
                         cross_error=cross_errors*self.ystd
                     except:pass
                 else: yhat_un_std=yhat_std
-
-
-            yhat_un_std=yhat_std*self.ystd+self.ymean
-
-
-           
-
 
             return yhat_un_std,cross_errors
         except FloatingPointError:
@@ -525,7 +516,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     else:
                         all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
                         all_y=np.concatenate(all_y_list,axis=0)
-                    all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict, all_y)
+                    all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict)
 
                 else:
                     if batchcount>1:

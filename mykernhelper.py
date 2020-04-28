@@ -371,7 +371,7 @@ class MyKernHelper:
         p=yxtup_list[0][1].shape[1]
         modelstd=modeldict['std_data']
 
-        self.xmean=self.datagen_obj.summary_stats_dict['xmean']
+        self.xmean=self.datagen_obj.summary_stats_dict['xmean'] # if using pipline, sumstats built off largest batchbatch size
         self.ymean=self.datagen_obj.summary_stats_dict['ymean']
         self.xstd=self.datagen_obj.summary_stats_dict['xstd']
         self.ystd=self.datagen_obj.summary_stats_dict['ystd']
@@ -380,6 +380,7 @@ class MyKernHelper:
         if type(modelstd) is str: 
             if  modelstd=='all':
                 x_stdlist=[i for i in range(p)]
+                y_stdlist=[0]
             else:
                 assert False, f'modeldict:std_data is {modelstd} but expected "all"'
         elif type(modelstd) is tuple:
