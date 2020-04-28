@@ -258,7 +258,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wtstacksumsum=np.expand_dims(wtstacksumsum,axis=[0,1])# add back in the two lhs collapsed axes
             wtstacksumsum=np.broadcast_to(wtstacksumsum,wtstack.shape) # return to the original dimensions
             #self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
-            self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
+            #self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
             wtstacknorm=np.zeros(wtstack.shape,dtype=np.float64)
             wtstacknorm[wtstacksumsum>0]=wtstack[wtstacksumsum>0]/wtstacksumsum[wtstacksumsum>0]
             yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
@@ -596,7 +596,7 @@ class kNdtool(Ndiff,MyKernHelper):
             lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
-        self.logger.debug(f'len(self.binary_y_loss_list_list):{len(self.binary_y_loss_list_list), len(self.lossdict_and_paramdict_list)}')
+        self.logger.debug(f'len(self.binary_y_loss_list_list): {len(self.binary_y_loss_list_list)},len(self.lossdict_and_paramdict_list):{len(self.lossdict_and_paramdict_list)}')
         if predict:
             return 
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
