@@ -84,6 +84,7 @@ class KernelParams:
             validatedictlist=[None for _ in range(steps)]
             for step in range(steps):
                 if do_validate_list[step]:
+                    self.logger.debug(f'making validatedict for step:{step}')
                     stepdict=stepdictlist[step]
                     valdict=self.convertStepToValDict(stepdict)
                     validatedictlist[step]=valdict
@@ -127,7 +128,7 @@ class KernelParams:
         if not validate:
             next_i=str(i+1)
         else:
-            next_i=str(i)+'_val'
+            next_i=str(i+1)+'_val'
         newjobfolderpath=jobfolderpath[:-charcount]+'step'+next_i
         if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
         newsavefolderpath=savefolderpath[:-charcount]+'step'+next_i

@@ -579,7 +579,7 @@ class kNdtool(Ndiff,MyKernHelper):
             mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
             splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
             lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}
-            self.logger.info(f'lossdict:{lossdict}, n:{batchbatch_all_yhat.shape}')
+            self.logger.info(f'lossdict:{lossdict}, self.sample_ymean:{self.sample_ymean},n:{batchbatch_all_yhat.shape}')
 
             if mse<0:
                 loss=-mse*100000
