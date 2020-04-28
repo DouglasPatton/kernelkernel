@@ -720,7 +720,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if self.validate:
                 xpredict_array=np.array(xpredict)
                 
-                xpri=[xpredict for _ in range(batchcount)]
+                xpri=[xpredict_array for _ in range(batchcount)]
             elif modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval':
                 #the equivalent condition for the y values in the kernelloss function does not apply to batchnorm_crossval
                 xpri=[]

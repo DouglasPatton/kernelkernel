@@ -15,87 +15,91 @@ class KernelParams:
         '''
         even if step0 is skipped, include it in the step count
         '''
-        self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
-        pipelinedict={}
-        stepdictlist=[]
+        try:
+            self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
+            pipelinedict={}
+            stepdictlist=[]
 
-        if not bestshare_list:
-            bestshare_list=[16,4,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+            if not bestshare_list:
+                bestshare_list=[16,4,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+
+            filterthreshold_list=[None for _ in range(stepcount-1)]
+            if type(threshcutstep) is int:
+                filterthreshold_list[threshcutstep-1]='naiveloss'
+
+            loss_threshold_list=[None for _ in range(stepcount-1)]
+
+            maxiter_list=[1,1,4,4]
+
+            maxbatchbatchcount_list=[2,4,4,8]
+
+            self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is 
+            #     used for standardizing variables across steps 
+            #     and later to divide training from validation data
+
+            do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
+
+            do_validate_list=[0]+do_minimize_list.copy()
+
+            if not skipstep0:
+                optdict_variation_list=self.getoptdictvariations(source=self.source)
+                datagen_variation_list=self.getdatagenvariations(source=self.source)
+                step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+                stepdictlist.append(step0)
+            for step in range(stepcount-1):
+                filter_kwargs={'filterthreshold':filterthreshold_list[step],
+                               'bestshare':bestshare_list[step]}
+                startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
+                savedir=startdir
+                jobdir=os.path.join(self.jobdirectory,'step'+str(step))
+                if not os.path.exists(jobdir):os.mkdir(jobdir)
+                stepfolders={'savedir':savedir,'jobdir':jobdir}
+                if not os.path.exists(startdir): os.mkdir(startdir)
+                ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
+                opt_job_kwargs={ #these are changes to be to opt_dict for next step
+                    'loss_threshold':loss_threshold_list[step],
+                    'maxiter':maxiter_list[step],
+                    'do_minimize':do_minimize_list[step],
+                    'maxbatchbatchcount':maxbatchbatchcount_list[step]
+                }
+                advance_path_kwargs={'i':step,'stepfolders':stepfolders}
+                stepdict={'functions':[
+                    (self.process_pisces_models,[startdir],ppm_kwargs),
+                    (self.merge_dict_model_filter,[],filter_kwargs),
+                    (self.opt_job_builder,[],opt_job_kwargs),
+                    (self.rundict_advance_path,[],advance_path_kwargs)
+                ]}
+                stepdictlist.append(stepdict)
+            pipelinedict['stepdictlist']=stepdictlist
+            validatedictlist=self.makeValidateDictList(stepdictlist,do_validate_list)
+            pipelinedict['validatedictlist']=validatedictlist
+            return pipelinedict
+        except:
+            self.logger.exception('build_pipeline error')
             
-        filterthreshold_list=[None for _ in range(stepcount-1)]
-        if type(threshcutstep) is int:
-            filterthreshold_list[threshcutstep-1]='naiveloss'
             
-        loss_threshold_list=[None for _ in range(stepcount-1)]
-        
-        maxiter_list=[1,1,4,4]
-        
-        maxbatchbatchcount_list=[2,4,4,8]
-        
-        self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is 
-        #     used for standardizing variables across steps 
-        #     and later to divide training from validation data
-        
-        do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
-        
-        do_validate_list=[0]+do_minimize_list
-        
-        if not skipstep0:
-            optdict_variation_list=self.getoptdictvariations(source=self.source)
-            datagen_variation_list=self.getdatagenvariations(source=self.source)
-            step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
-            stepdictlist.append(step0)
-        for step in range(stepcount-1):
-            filter_kwargs={'filterthreshold':filterthreshold_list[step],
-                           'bestshare':bestshare_list[step]}
-            startdir=os.path.join(self.modelsavedirectory,'step'+str(step)) #step is incremented by rundict_advance_path
-            savedir=startdir
-            jobdir=os.path.join(self.jobdirectory,'step'+str(step))
-            if not os.path.exists(jobdir):os.mkdir(jobdir)
-            stepfolders={'savedir':savedir,'jobdir':jobdir}
-            if not os.path.exists(startdir): os.mkdir(startdir)
-            ppm_kwargs={'condense':1,'recondense':0,'recondense2':0}
-            opt_job_kwargs={ #these are changes to be to opt_dict for next step
-                'loss_threshold':loss_threshold_list[step],
-                'maxiter':maxiter_list[step],
-                'do_minimize':do_minimize_list[step],
-                'maxbatchbatchcount':maxbatchbatchcount_list[step]
-            }
-            advance_path_kwargs={'i':step,'stepfolders':stepfolders}
-            stepdict={'functions':[
-                (self.process_pisces_models,[startdir],ppm_kwargs),
-                (self.merge_dict_model_filter,[],filter_kwargs),
-                (self.opt_job_builder,[],opt_job_kwargs),
-                (self.rundict_advance_path,[],advance_path_kwargs)
-            ]}
-            stepdictlist.append(stepdict)
-        pipelinedict['stepdictlist']=stepdictlist
-        validatedictlist=self.makeValidateDictList(stepdictlist,do_validate_list)
-        pipelinedict['validatedictlist']=validatedictlist
-        return pipelinedict
-     
     def makeValidateDictList(self,stepdictlist,do_validate_list):
-        steps=len(stepdictlist)
-        validatedictlist=[None for _ in range(steps)]
-        for step in range(steps):
-            if do_validate_list[step]:
-                stepdict=stepdictlist[step]
-                valdict=self.convertStepToValDict(stepdict)
-                validatedictlist[step]=valdict
-        return validatedictlist
+        try:    
+            steps=len(stepdictlist)
+            validatedictlist=[None for _ in range(steps)]
+            for step in range(steps):
+                if do_validate_list[step]:
+                    stepdict=stepdictlist[step]
+                    valdict=self.convertStepToValDict(stepdict)
+                    validatedictlist[step]=valdict
+            return validatedictlist
+        except:
+            self.logger.exception('makeValidateDictList error')
+        
     
     def convertStepToValDict(self,stepdict):
         #adds to every step the kwarg: 'validate':1
         valdict=stepdict.copy()#{key:val for key,val in stepdict.items()}#new dict not a pointer, no copy b/c queue in funcs
         functiontup_list=valdict['functions']
-        for functiontup in functiontup_list:
+        for f_idx,functiontup in enumerate(functiontup_list):
             kwargs=functiontup[2]
-            kwargs={'validate':1, **kwargs}
-        #mergedicttupstep=functiontups.pop(1) #remove the filter step
-        #opt_job_builder_step_tup=functiontups[1]
-        #opt_kwargs=opt_job_builder_step_tup[2]
-        #opt_val_kwargs={'validate':1, **opt_kwargs} #repack dict with an extra kwarg
-        #opt_job_builder_step_tup[2]=val_kwargs #overwrite kwargs
+            functiontup_list[f_idx]=(*functiontup[0:2],{'validate':1, **kwargs})
+        valdict['functions']=functiontup_list
         self.logger.debug(f'valdict:{valdict} from stepdict:{stepdict}')
         return valdict
         
@@ -113,7 +117,7 @@ class KernelParams:
             return list_of_run_dicts
             self.logger.debug(f'step:{i} len(list_of_run_dicts):{len(list_of_run_dicts)}')
         except:
-            self.logger.exception(f'pipstep error stepdict:{stepdict}')
+            self.logger.exception(f'pipestep error stepdict:{stepdict}')
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None,validate=0):
         self.logger.info(f'len(list_of_rundicts):{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders}, validate:{validate}')

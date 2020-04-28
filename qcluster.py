@@ -376,6 +376,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             validate_stepdict_list=pipelinedict['validatedictlist']
         else:
             validate_stepdict_list=[None for _ in range(len(model_run_stepdict_list))]
+        self.logger.debug(f'mastermaster has validate_stepdict_list:{validate_stepdict_list}')
         for i,stepdict in enumerate(model_run_stepdict_list):
             
             #stepfolders=stepdict['stepfolders']
@@ -401,7 +402,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
                     self.logger.info(f'valstep:{i} completed with val_runmasterresult:{val_runmasterresult}')
                     
             except:
-                self.logger.exception('')
+                self.logger.exception('valstep error')
                 assert False,'halt, valstep error'
                 
         self.qdict['saveq'].put('shutdown')

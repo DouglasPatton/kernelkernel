@@ -53,18 +53,18 @@ class KCPisces():
             model_save_list=all_species_model_merge_dict[spec]
             #sorted_condensed_model_list=self.condense_saved_model_list(model_save_list, help_start=0, strict=1,verbose=0,endsort=1,threshold=filterthreshold)
             model_list_losslist=[model_save['loss'] for model_save in model_save_list]
-            self.logger.debug(f'model_list_losslist:{model_list_losslist}')
+            #self.logger.debug(f'model_list_losslist:{model_list_losslist}')
             #if spec_filter_threshold is None:
             #    spec_filter_threshold=1+max(model_list_losslist)
             if type(spec_filter_threshold) is str:
                 if spec_filter_threshold=='naiveloss':
                     spec_filter_threshold=model_save_list[-1]['naiveloss']
-            self.logger.debug(f'spec_filter_threshold:{spec_filter_threshold}')
+            #self.logger.debug(f'spec_filter_threshold:{spec_filter_threshold}')
             if spec_filter_threshold:    
                 sorted_model_list=[model_save_list[pos] for loss,pos in sorted(zip(model_list_losslist,list(range(len(model_list_losslist))))) if loss<spec_filter_threshold]
             else:
                 sorted_model_list=[model_save_list[pos] for loss,pos in sorted(zip(model_list_losslist,list(range(len(model_list_losslist)))))]
-            self.logger.debug(f'model_save_filter after spec_filter_threshold, len(sorted_model_list):{len(sorted_model_list)}, sorted_model_list[0:2]:{sorted_model_list[0:2]}')
+            #self.logger.debug(f'model_save_filter after spec_filter_threshold, len(sorted_model_list):{len(sorted_model_list)}, sorted_model_list[0:2]:{sorted_model_list[0:2]}')
             #help_start applies do_partial_match and will eliminate models with higher nwtloss and only a partial match of parameters.
             if bestshare:
                 fullcount=len(sorted_model_list)
@@ -76,7 +76,7 @@ class KCPisces():
                 new_model_save_list.extend(sorted_model_list[0:bestcount])
             else:
                 new_model_save_list.extend(sorted_model_list)
-            self.logger.debug(f'for spec:{spec} len(new_model_save_list):{len(new_model_save_list)}')    
+            #self.logger.debug(f'for spec:{spec} len(new_model_save_list):{len(new_model_save_list)}')    
         return new_model_save_list
         
         
