@@ -210,6 +210,12 @@ class kNdtool(Ndiff,MyKernHelper):
         return tuple(slicelist)
         
     def do_batchnorm_crossval(self,KDEregtup,fixed_or_free_paramdict,modeldict):
+        '''
+        i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation. 
+        if i is 1, @j=0, j<i istart:iend::0-nin from batch 0, which does not have its own data in 0-nin, since that was skipped for cross-val (not masked either).
+        if i is 1, @j=2, j>i istart:iend::nin-2nin from batch 2
+        if i is 1, @j=3, "                       " from batch 3
+        '''
         try:
             #modifying to index numpy arrays instead of lists, requiring slices of all dims
             batchcount=self.batchcount
@@ -221,17 +227,13 @@ class kNdtool(Ndiff,MyKernHelper):
             #trueybatch=[]
             
             for i in range(batchcount):
-                '''
-                i is indexing the batchcount chunks of npr that show up batchcount-1 times in crossvalidation. if i is 1, @j=0, j<i istart:iend::0-nin from batch 0, which doesn' have its own data in 0-nin, since that was skipped for cross-val.
-                if i is 1, @j=2, j>i istart:iend::nin-2nin from batch 2
-                if i is 1, @j=3, "                       " from batch 3
-                '''
+                
                 #ybatchlist=[]
                 wtbatchlist=[]
                 youtbatchlist=[]
                 #trueybatchlist=[]
                 for j in range(batchcount):
-                    if j>i or self.validate
+                    if j>i or self.validate:
                         istart=(i)*nin
                         iend=istart+nin
                     elif j<i:
@@ -246,6 +248,8 @@ class kNdtool(Ndiff,MyKernHelper):
 
                 dimcount=np.ndim(wtbatchlist[0])
                 wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
+                youtbatch.append(np.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
+                #   leaving rhs dim as nin*(batchcoun-1)=npr
 
             wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
             youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
@@ -511,10 +515,10 @@ class kNdtool(Ndiff,MyKernHelper):
                     data_tup=batchdata_dict_i[key]
                     datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
                     args.append(np.concatenate(datalist,axis=-1))
-                args.extend([modeldict,fixed_or_free_paramdict])
+                args.extend([modeldict,fixed_or_free_paramdict]) 
                 yhat_unstd_outtup=self.batchKDEpredict(*args)
                 #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
-                if modeldict['residual_treatment'][-9:]=='batchnorm':
+                if modeldict['residual_treatment']=='batchnorm_crossval':
                     if self.validate:
                         all_y=np.repeat(np.array(batchdata_dict_i['ylist']),batchcount)
                     else:
@@ -523,10 +527,8 @@ class kNdtool(Ndiff,MyKernHelper):
                     all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict)
 
                 else:
-                    if batchcount>1:
-                        yhat_unstd,cross_errors=zip(*yhat_unstd_outtup_list)
-                    else:
-                        yhat_unstd,cross_errors=yhat_unstd_outtup_list
+                    self.logger.critical(f'residual_treatment is not batchnorm_crossval')
+                    yhat_unstd,cross_errors=yhat_unstd_outtup
 
                 if modeldict['residual_treatment']=='batch_crossval':
                     assert False, 'not developed'
@@ -671,7 +673,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
             [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
-        if validate:
+        if self.validate:
             yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
             #     batchbatch worth of validation data at a time
             ylist,xpredict=zip(*[yxtup for yxtup in yxtup_list_stdval])
@@ -694,8 +696,11 @@ class kNdtool(Ndiff,MyKernHelper):
     
     
     def buildbatchdatadict(self,yxtup_listlist,xkerngrid,ykerngrid,modeldict,xpredict=None):
-        #load up the data for each batch into a dictionary full of tuples
-        # with each tuple item containing data for a batch from 0 to batchcount-1
+        '''
+        load up the data for each batch into a dictionary full of tuples
+        batchnorm_crossval: each tuple item contains data for a batch with predictions for all but own batch
+        validate: predictions are for out of sample data, repeated for each batch
+        '''
         batchcount=self.batchcount
         batchdata_dictlist=[]
         for  yxtup_list in yxtup_listlist:
@@ -711,7 +716,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 xpredict_array=np.array(xpredict)
                 
                 xpri=[xpredict for _ in range(batchcount)]
-            elif modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval'):
+            elif modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval':
                 #the equivalent condition for the y values in the kernelloss function does not apply to batchnorm_crossval
                 xpri=[]
                 for i in range(batchcount):
@@ -788,7 +793,6 @@ class kNdtool(Ndiff,MyKernHelper):
         try:
             y=np.array(ylist)
             ymean=np.mean(y)
-            self.ymean=ymean
             if ymean>0.5:yhat=1
             else: yhat=0
             err=y-ymean

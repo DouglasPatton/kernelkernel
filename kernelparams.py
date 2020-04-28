@@ -7,7 +7,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[64]
+        self.batchcount_variation_list=[16]
         self.do_minimize=0
         self.maxiter=2
         
@@ -16,7 +16,7 @@ class KernelParams:
         even if step0 is skipped, include it in the step count
         '''
         self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, skipstep0:{skipstep0},len(bestshare_list):{len(bestshare_list)}')
-        pipelinedict
+        pipelinedict={}
         stepdictlist=[]
 
         if not bestshare_list:
@@ -84,9 +84,9 @@ class KernelParams:
                 validatedictlist[step]=valdict
         return validatedictlist
     
-    def convertStepToValDict(stepdict):
+    def convertStepToValDict(self,stepdict):
         #adds to every step the kwarg: 'validate':1
-        valdict=deepcopy(stepdict)
+        valdict=stepdict.copy()#{key:val for key,val in stepdict.items()}#new dict not a pointer, no copy b/c queue in funcs
         functiontup_list=valdict['functions']
         for functiontup in functiontup_list:
             kwargs=functiontup[2]
@@ -164,12 +164,12 @@ class KernelParams:
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
-        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.3,.9,3)))
-        #Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.array([0.5])))
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
-        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
-        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
+        #Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.3,.9,3)))
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.array([0.5])))
+        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
+        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
         
                                   
         NWnorm_variations=('modeldict:NWnorm',['none'])
