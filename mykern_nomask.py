@@ -488,8 +488,6 @@ class kNdtool(Ndiff,MyKernHelper):
             print(f'residual_treatment not found in modeldict')
             residual_treatment=None
         iscrossloss=residual_treatment[0:8]=='crossloss'
-        if self.validate:
-            val_y=[]
         
         if self.source=='monte': 
             yxtup_list=self.datagen_obj.yxtup_list
@@ -524,10 +522,10 @@ class kNdtool(Ndiff,MyKernHelper):
                 #self.logger.info(f'yhat_unstd_outtup_list: {yhat_unstd_outtup_list}')
                 if modeldict['residual_treatment']=='batchnorm_crossval':
                     if self.validate:
-                        all_y=np.repeat(np.array(batchdata_dict_i['ylist']),batchcount)
+                        all_y_list=batchdata_dict_i['ylist']
                     else:
                         all_y_list=[yxvartup[0] for yxvartup in yxtup_list]
-                        all_y=np.concatenate(all_y_list,axis=0)
+                    all_y=np.concatenate(all_y_list,axis=0)
                     all_yhat,cross_errors=self.do_batchnorm_crossval(yhat_unstd_outtup, fixed_or_free_paramdict, modeldict)
 
                 else:
@@ -548,11 +546,12 @@ class kNdtool(Ndiff,MyKernHelper):
                     #all_y_err=all_y-all_yhat    
                     if type(cross_errors[0]) is np.ndarray:
                         cross_errors=np.concatenate(cross_errors,axis=0)
-
                 else:
                     ybatch=[tup[0] for tup in yxtup_list]#the original yx data is a list of tupples
-                ylist=[];yhatlist=[]
+                    
+                
                 if not modeldict['residual_treatment']=='batchnorm_crossval':
+                    ylist=[];yhatlist=[]
                     for batch_i in range(batchcount):
                         y_batch_i=ybatch[batch_i]
                         ylist.append(y_batch_i)
@@ -681,7 +680,8 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.validate:
             yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
             #     batchbatch worth of validation data at a time
-            ylist,xpredict=zip(*[yxtup for yxtup in yxtup_list_stdval])
+            ylist,xpredict=zip(*yxtup_list_stdval)
+            self.logger.debug(f'len(xpredict):{len(xpredict)}, shape xpredict[0]:{xpredict[0].shape}')
         else:xpredict=None    
         self.do_naiveloss(ylist)
         #p#rint('buildbatcdatadict')
@@ -718,7 +718,7 @@ class kNdtool(Ndiff,MyKernHelper):
             xprtup = ()
             youttup = ()
             if self.validate:
-                xpredict_array=np.array(xpredict)
+                xpredict_array=np.concatenate(xpredict,axis=0) #flatten across batches and nin so prediction data is npr,p,1 where npr is batch_n*batchcount
                 
                 xpri=[xpredict_array for _ in range(batchcount)]
             elif modeldict['residual_treatment']=='batch_crossval' or modeldict['residual_treatment']=='batchnorm_crossval':
