@@ -51,7 +51,7 @@ class MyKernHelper:
                 savedict['binary_y_result']=[]
             else:
                 savedict['binary_y_result']=binary_y_loss_list.copy()
-                savedict['binary_y_result'].extend((f'ymean:{self.ymean}, 0.5',self.naivebinaryloss))
+                savedict['binary_y_result'].extend((f'sample_ymean:{self.sample_ymean}, 0.5',self.naivebinaryloss))
         except:
             self.logger.exception('')
         savedict['modeldict']=modeldict
@@ -356,15 +356,6 @@ class MyKernHelper:
         if form[0]=='binary':
             return np.linspace(0,1,count)
             
-    
-    '''def standardize_yx(self,xdata,ydata):
-        self.xmean=np.mean(xdata,axis=0)
-        self.ymean=np.mean(ydata,axis=0)
-        self.xstd=np.std(xdata,axis=0)
-        self.ystd=np.std(ydata,axis=0)
-        standard_x=(xdata-self.xmean)/self.xstd
-        standard_y=(ydata-self.ymean)/self.ystd
-        return standard_x,standard_y'''
 
     def standardize_yxtup(self,yxtup_list,modeldict):
         #yxtup_list=deepcopy(yxtup_list_unstd)

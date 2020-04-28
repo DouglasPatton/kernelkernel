@@ -1,5 +1,5 @@
 import os
-#os.environ["OMP_NUM_THREADS"] = "4"
+#os.environ['MKL_NUM_THREADS'] = '1' #set globally in mykern_nomask
 import numpy as np
 import logging,logging.config
 

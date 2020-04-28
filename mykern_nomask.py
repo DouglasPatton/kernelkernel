@@ -10,6 +10,8 @@ import os
 from time import strftime, sleep
 import datetime
 import pickle
+#https://software.intel.com/en-us/articles/using-intel-distribution-for-python-with-anaconda
+os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
@@ -252,10 +254,12 @@ class kNdtool(Ndiff,MyKernHelper):
                 #   leaving rhs dim as nin*(batchcoun-1)=npr
 
             wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
+            #self.logger.debug(f'wtstack:{wtstack}')
             youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
             wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
             wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
-            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=[0,1])# add back in the two lhs collapsed axes
+            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=0)# add back in the two lhs collapsed axes
+            wtstacksumsum=np.expand_dims(wtstacksumsum,axis=0)
             wtstacksumsum=np.broadcast_to(wtstacksumsum,wtstack.shape) # return to the original dimensions
             #self.logger.info(f'wtstacksumsum.shape:{wtstacksumsum.shape}')
             #self.logger.info(f'wtstacksumsum:{wtstacksumsum}')
@@ -793,6 +797,7 @@ class kNdtool(Ndiff,MyKernHelper):
         try:
             y=np.array(ylist)
             ymean=np.mean(y)
+            self.sample_ymean=ymean
             if ymean>0.5:yhat=1
             else: yhat=0
             err=y-ymean
@@ -807,20 +812,8 @@ class kNdtool(Ndiff,MyKernHelper):
 
     
 class optimize_free_params(kNdtool):
-    """"This is the method for iteratively running kernelkernel to optimize hyper parameters
-    optimize dict contains starting values for free parameters, hyper-parameter structure(is flexible),
-    and a model dict that describes which model to run including how hyper-parameters enter (quite flexible)
-    speed and memory usage is a big goal when writing this. I pre-created masks to exclude the increasing
-    list of centered data points. see mykern_core for an example and explanation of dictionaries.
-    Flexibility is also a goal. max_bw_Ndiff is the deepest the model goes.
-    ------------------
-    attributes created
-    self.n,self.p
-    self.xdata,self.ydata contain the original data
-    self.xdata_std, self.xmean,self.xstd
-    self.ydata_std,self.ymean,self.ystd
-    self.Ndiff_list_of_masks - a list of progressively higher dimension (len=nin)
-        masks to broadcast(views) Ndiff to.
+    """
+    
     """
 
     def __init__(self,kcsavedir=None,myname=None):
@@ -837,7 +830,9 @@ class optimize_free_params(kNdtool):
         self.nodesavepath=None
         self.naiveloss=None
         self.naivemse=None
-        self.ymean=None
+        self.ymean=None #all sumstats for pipelines comes from biggest step
+        self.ystd=None
+        self.sample_ymean=None
         self.naivebinaryloss=None
         self.loss_function=None
         self.validate=None
