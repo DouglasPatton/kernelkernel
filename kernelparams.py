@@ -7,7 +7,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[16]
+        self.batchcount_variation_list=[64]
         self.do_minimize=0
         self.maxiter=2
         
@@ -192,12 +192,12 @@ class KernelParams:
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
-        #Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.3,.9,3)))
-        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.array([0.5])))
-        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
-        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
-        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
-        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
+        Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.3,.9,3)))
+        #Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.array([0.5])))
+        Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
+        #Ndiff_outer_x_bw_startingvalue_variations=('hyper_param_dict:outer_x_bw',[np.array([.5])])
+        Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([i]) for i in np.linspace(.3,.9,3)])
+        #Ndiff_outer_y_bw_startingvalue_variations=('hyper_param_dict:outer_y_bw',[np.array([.5])])
         
                                   
         NWnorm_variations=('modeldict:NWnorm',['none'])
@@ -294,9 +294,9 @@ class KernelParams:
                 self.specieslist=pdh12.returnspecieslist()
             
                 
-            #species_variations=('species',self.specieslist)
+            species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            species_variations=('species',[self.specieslist[i] for i in range(0,2)])
+            #species_variations=('species',[self.specieslist[i] for i in range(0,2)])
             #species_variations=('species',[self.specieslist[i] for i in range(0,10)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
