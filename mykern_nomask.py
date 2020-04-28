@@ -917,6 +917,9 @@ class optimize_free_params(kNdtool):
             valdatalist=datagen_obj.yxtup_batchbatch_val
             bbv=len(valdatalist)
             for v in range(bbv):
+                printstring=f'validating {v+1}/{bbv}'
+                self.logger.debug(printstring)
+                print(printstring)
                 valdata=valdatalist[v]
                 transformed_free_params,args_tuple=self.prep_KDEreg(
                     datagen_obj,modeldict,param_valdict,self.source,valdata=valdata)
