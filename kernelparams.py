@@ -458,8 +458,8 @@ class KernelParams:
             }
         optiondict_p={'maxiter':self.maxiter}
         optimizer_settings_dict1={
-            'method':'Nelder-Mead',#'Powell',#'BFGS',#'
-            'options':optiondict_NM,#optiondict_p,
+            'method':'Powell',#'Nelder-Mead',#'BFGS',#'
+            'options':optiondict_p,#optiondict_NM,#
             'loss_threshold':None,#1,#'naiveloss',
             'help_start':0,
             'partial_match':0,

@@ -108,7 +108,7 @@ class SaveQDumper(mp.Process):
                     with open(nodesavepath,'wb') as f:
                         pickle.dump(model_save_list,f)
             except:
-                self.logger.exception('unexpeted error in SaveQDumper while outer try')
+                self.logger.exception('unexpected error in SaveQDumper while outer try')
             
             
             
