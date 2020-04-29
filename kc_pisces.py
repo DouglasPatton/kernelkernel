@@ -185,8 +185,9 @@ class KCPisces():
             assert False, 'Halt'
     
     
-    def print_pisces_all_species_model_merge_dict(self,shortlist=[]):
-        all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
+    def print_pisces_all_species_model_merge_dict(self,shortlist=[],startpath=None):
+        if startpath is None:
+            all_species_model_merge_dict=self.getpickle(self.all_species_model_merge_dict_path)
         speciescount=len(all_species_model_merge_dict)
         for i,species in enumerate(all_species_model_merge_dict):
             model_list=all_species_model_merge_dict[species]
