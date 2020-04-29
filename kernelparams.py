@@ -7,7 +7,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[64]
+        self.batchcount_variation_list=[128]
         self.do_minimize=0
         self.maxiter=2
         
@@ -21,7 +21,7 @@ class KernelParams:
             stepdictlist=[]
 
             if not bestshare_list:
-                bestshare_list=[16,4,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+                bestshare_list=[32,8,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
 
             filterthreshold_list=[None for _ in range(stepcount-1)]
             if type(threshcutstep) is int:
@@ -251,7 +251,7 @@ class KernelParams:
             #standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2])
+            ykern_grid_variations=('modeldict:ykern_grid',[5])
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),('norm1',)])#
