@@ -21,7 +21,7 @@ class KernelParams:
             stepdictlist=[]
 
             if not bestshare_list:
-                bestshare_list=[32,8,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+                bestshare_list=[32,1,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
 
             filterthreshold_list=[None for _ in range(stepcount-1)]
             if type(threshcutstep) is int:
