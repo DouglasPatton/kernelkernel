@@ -183,7 +183,7 @@ class RunNode(mp.Process,BaseManager):
         self.qdict=qdict
         self.source=source
         if not local_run:
-            self.netaddress=('10.42.0.66',50000)#('192.168.1.100',50002)
+            self.netaddress=('192.168.1.100',50002)
             self.BaseManager=BaseManager
         super(RunNode,self).__init__()
         
