@@ -29,15 +29,15 @@ class KernelParams:
 
             loss_threshold_list=[None for _ in range(stepcount-1)]
 
-            maxiter_list=[1,1,4,4]
+            maxiter_list=[1,2,4,4]
 
-            maxbatchbatchcount_list=[2,4,4,8]
+            maxbatchbatchcount_list=[2,2,2,4]
 
             self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is 
             #     used for standardizing variables across steps 
             #     and later to divide training from validation data
 
-            do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
+            do_minimize_list=[0,1,1,1]#[1 for _ in range(stepcount-1)]
 
             do_validate_list=[0]+do_minimize_list.copy()
 
