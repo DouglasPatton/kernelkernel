@@ -11,7 +11,7 @@ from time import strftime, sleep
 import datetime
 import pickle
 #https://software.intel.com/en-us/articles/using-intel-distribution-for-python-with-anaconda
-os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '2'
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
