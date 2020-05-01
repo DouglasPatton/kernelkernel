@@ -7,7 +7,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[64]
+        self.batchcount_variation_list=[128]
         self.do_minimize=0
         self.maxiter=2
         
@@ -21,7 +21,7 @@ class KernelParams:
             stepdictlist=[]
 
             if not bestshare_list:
-                bestshare_list=[16,4,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
+                bestshare_list=[32,1,1,1]#[0.04]+[0.5 for _ in range(stepcount-2)]
 
             filterthreshold_list=[None for _ in range(stepcount-1)]
             if type(threshcutstep) is int:
@@ -29,15 +29,15 @@ class KernelParams:
 
             loss_threshold_list=[None for _ in range(stepcount-1)]
 
-            maxiter_list=[1,1,4,4]
+            maxiter_list=[1,2,4,4]
 
-            maxbatchbatchcount_list=[2,4,4,8]
+            maxbatchbatchcount_list=[2,2,2,4]
 
             self.max_maxbatchbatchcount=max(maxbatchbatchcount_list) # this is 
             #     used for standardizing variables across steps 
             #     and later to divide training from validation data
 
-            do_minimize_list=[0,0,1,1]#[1 for _ in range(stepcount-1)]
+            do_minimize_list=[0,1,1,1]#[1 for _ in range(stepcount-1)]
 
             do_validate_list=[0]+do_minimize_list.copy()
 
@@ -251,7 +251,7 @@ class KernelParams:
             #standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[2])
+            ykern_grid_variations=('modeldict:ykern_grid',[5])
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),('norm1',)])#
