@@ -771,16 +771,14 @@ class kNdtool(Ndiff,MyKernHelper):
             err=y-yhat
             if lssfn=='mse':
                 loss=np.mean(np.power(err,2))
-            elif lssfn=='mae':
+            if lssfn=='mae':
                 loss=np.mean(np.abs(err))
-            elif lssfn=='splithinge':
+            if lssfn=='splithinge':
                 if pthreshold is None:
                     threshold=self.pthreshold
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
-                loss=np.mean((threshold-yhat)*(y-yhat_01))  
-            else:
-                assert False, 'lossfn not recognized. lssfn:{lssfn}'
+                loss=np.mean((threshold-yhat)*(y-yhat_01))      
             return loss
         except FloatingPointError:
             self.nperror=1
