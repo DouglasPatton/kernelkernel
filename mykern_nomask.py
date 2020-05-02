@@ -20,7 +20,6 @@ import logging
 
 #import logging.config
 import yaml
-import psutil
 
 
 class kNdtool(Ndiff,MyKernHelper):
@@ -37,8 +36,6 @@ class kNdtool(Ndiff,MyKernHelper):
         self.savedir=savedir
         self.pname=myname
 
-        self.cores=int(psutil.cpu_count(logical=False)-1)
-        self.batch_process_count=1#self.cores
         Ndiff.__init__(self,)
         MyKernHelper.__init__(self,)
         
@@ -160,14 +157,14 @@ class kNdtool(Ndiff,MyKernHelper):
                 prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
                 prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
 
-                KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout_scaled,modeldict)
+                KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout,modeldict)
                 if modeldict['residual_treatment']=='batchnorm_crossval':
                     return KDEregtup
                 else:
                     yhat_raw=KDEregtup[0]
                     cross_errors=KDEregtup[1]
 
-                yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+                yhat_std=yhat_raw#no longer needed. *y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
 
             std_data=modeldict['std_data']
 
@@ -269,9 +266,9 @@ class kNdtool(Ndiff,MyKernHelper):
             #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
             yhat_raw=yhat_raw.flatten(order='F')
 
-            y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict)
+            #y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict) #  removed on 5/2 since NW takes yout not yout_scaled as arg
 
-            yhat_std=yhat_raw*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+            yhat_std=yhat_raw# no longer needed*y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
 
             std_data=modeldict['std_data']
             if type(std_data) is str:
