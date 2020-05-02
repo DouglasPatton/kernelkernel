@@ -187,6 +187,8 @@ class KernelParams:
             startarray[i]=0.99
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
+	y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([i]) for i in [.5,1,2])
+
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor1*np.array([1,1]) for factor1 in [.4,.5,.75,1]])
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
@@ -273,7 +275,8 @@ class KernelParams:
                                       Ndiff_start_variations,
                                       standardization_variations,
                                       spatialtransform_variations,
-                                      maxbatchbatchcount_variations,x_bandscale_startingvalue_variations
+                                      maxbatchbatchcount_variations,
+                                      x_bandscale_startingvalue_variations,y_bandscale_startingvalue_variations
                                      ]
             #hyper_param_form_dict_variations,
         return optdict_variation_list
@@ -439,7 +442,7 @@ class KernelParams:
                 'Ndiff_depth_bw':'non-neg',
                 'outer_x_bw':'non-neg',
                 'outer_y_bw':'non-neg',
-                'y_bandscale':'fixed',#'fixed'
+                'y_bandscale':'non-neg',#'fixed'
                 }
             }
         
