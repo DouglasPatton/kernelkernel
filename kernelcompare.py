@@ -1,6 +1,11 @@
 from kc_helpers import KCHelper
 from kc_pisces import KCPisces
 from helpers import Helper
+from pipe import PipeLine
+from kernelparams import KernelParams
+import datagen as dg
+import mykern_nomask as mk
+
 
 import traceback
 from copy import deepcopy
@@ -8,20 +13,14 @@ from time import strftime
 import numpy as np
 import pickle
 import os
-
-import datagen as dg
-
-#import mykern_nomask as mk
-import mykern_nomask as mk
-
 import re
 import logging,traceback
 import yaml
-from kernelparams import KernelParams
-#import datetime
 
-class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces):
+
+class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
     def __init__(self,directory=None,myname=None):
+        self.max_maxbatchbatchcount=None
         if directory==None:
             self.kc_savedirectory=os.getcwd
         else:

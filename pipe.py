@@ -1,8 +1,10 @@
+import os
 
-class PipeLine:
+class PipeLine():
 
     def __init__(self,):
-            
+        pass
+        
     def build_pipeline(self,stepcount=5,threshcutstep=None,skipstep0=0,bestshare_list=[]):
         '''
         even if step0 is skipped, include it in the step count
