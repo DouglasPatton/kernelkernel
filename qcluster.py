@@ -369,8 +369,14 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         if self.qdict is None:
             self.qdict=self.getqdict()
-        
-        pipelinedict=self.build_pipeline() #parameters set in kernelparams
+        pipe_rundicts,pipesteps=self.build_pipeline()
+        for stepdict in pipesteps
+                
+            
+        if 'mainstep' in pipeplanedict:
+            pipeplanedict
+            
+        ##pipelinedict=self.build_pipeline() #parameters set in kernelparams
         self.logger.debug(f'pipelinedict:{pipelinedict}')
         model_run_stepdict_list=pipelinedict['stepdictlist']
         if 'validatedictlist' in pipelinedict:
@@ -388,7 +394,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
                     runmasterresult=self.runmaster(list_of_run_dicts)
                     #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
                 else:
-                    list_of_run_dicts=self.doPipeStep(stepdict) #in KernelParams
+                    list_of_run_dicts=self.doPipeStep(stepdict) 
                     runmasterresult=self.runmaster(list_of_run_dicts)
                 self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
             except:
