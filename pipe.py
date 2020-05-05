@@ -20,7 +20,7 @@ class PipeLine():
                 'overrides':[]
                 }
             }
-        self.sidestep_runlist=[[('modeldict:lossfn',lf)] for lf in ['mae','splithinge']]
+        self.sidestep_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae','splithinge']]
         
     def buildsidestepdictlist(self,sidestep_runlist,mainstepdict,startstep=1):
         count=len(sidestep_runlist)
@@ -35,7 +35,7 @@ class PipeLine():
             sidestepdictlist.append(sidestepdict)
         return sidestepdictlist
                 
-    def build_pipeline(self,mainstepdict=None,sidestep_runlist=None,order='depth_first'):
+    def build_pipeline(self,mainstepdict=None,sidestep_runlist=None,order='breadth_first'):
         
         if mainstepdict is None:
             mainstepdict=self.mainstepdict
@@ -44,25 +44,49 @@ class PipeLine():
             sidestep_runlist=self.sidestep_runlist
         sidestepdictlist=self.buildsidestepdictlist(sidestep_runlist,mainstepdict)
         maxstepcount=max([maxstepcount,max([sidestepdict['stepcount'] for sidestepdict in sidestepdictlist])])
-        self.pipestepdict={
+        self.pipelinestepdict={
             'mainstep':[self.build_pipesteps(mainstepdict)],
             'sidesteplist':[self.build_pipesteps(sidestepdict) for sidestepdict in sidestepdictlist],
             'order':order
             }
-        steps0idx=['mainstepdict','sidesteplist']
+        
+        pipesteps_idxlist=[]
+        steptype_idx=['mainstepdict','sidesteplist']
         if order=='depth_first':
-            pipesteps_idxlist=[([key][i][step_idx]) for key in steps0idx for side_idx in range(len(self.pipestepdict[key])) for step_idx in range(self.pipestepdict[key][side_idx]['stepcount']) if step_idx>=self.pipestepdict[key][side_idx]['startstep'])]
-        else:
-            for key in steps0idx:
-                for step_idx in range(maxstepcount)
-                    for side_idx in range(len(sidestep_runlist)):
+            
+            for key in steptype_idx:
+                stepdictlist=self.pipelinestepdict[key]
+                for side_idx,pipestepdict in enumerate(stepdictlist):
+                    for step_idx in pipestepdict['steps']:
+                        nextpipestep=pipestepdict['stepdictlist'][step_idx]
+                            pipelinesteps.append(nextpipestep)
+                            if 'validatedictlist' in pipestepdict:
+                                valpipestep=pipestepdict['validatedictlist'][step_idx]
+                                if valpipestep:
+                                    pipelinesteps.append(valpipestep)
                         
-            pipesteps_idxlist=[([key][i][step_idx])  for step_idx in range(self.pipestepdict[key]['stepcount']) for i in range(len(self.pipestepdict[key])) if self.pipestepdict[key]>step_idx>=self.pipestepdict[key]['startstep']]
-        pipelinesteps=[self.pipestepdict[idx] for idx in pipesteps_idxlist]
+        elif order=='breadth_first':
+            for step_idx in range(maxstepcount):
+                for key in steptype_idx:
+                    
+                    stepdictlist=self.pipelinestepdict[key]
+                    for side_idx,pipestepdict in enumerate(stepdictlist):
+                        if step_idx in pipestepdict['steps']: 
+                            nextpipestep=pipestepdict['stepdictlist'][step_idx]
+                            pipelinesteps.append(nextpipestep)
+                            if 'validatedictlist' in pipestepdict:
+                                valpipestep=pipestepdict['validatedictlist'][step_idx]
+                                if valpipestep:
+                                    pipelinesteps.append(valpipestep)
+                        
+        else: assert False, f'not expecting order:{order}'
+                        
+            
+        #pipelinesteps=[self.pipestepdict[i0][i1][i2] for i0,i1,i2 in pipesteps_idxlist] #creating flat lists
         
         return pipelinesteps
         
-    def build_pipesteps(self,*args,**kwargs):
+    def build_pipesteps(self,**kwargs):
         '''
         even if step0 is skipped, include it in the step count
         '''
@@ -99,16 +123,18 @@ class PipeLine():
             if not startstep: # could be None or 0
                 optdict_variation_list=self.getoptdictvariations(source=self.source)
                 datagen_variation_list=self.getdatagenvariations(source=self.source)
-                step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
+                step0={'variations':{'optdict_variation_list':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}} #do not change keys b/c used as kwargs in qcluster
                 stepdictlist.append(step0)
                 startstep=1
                 steplist=[0]
             else:steplist=[]
             for step in range(startstep,stepcount):
                 steplist.append(step)
-                prior_step=step-1
+                
                 if sidestep and step>startstep:
                     prior_step=sidestep+str(step-1)#not applied at startstep
+                else:
+                    prior_step=step-1
                     
                 step_idx=step-1 # for pulling from it's mainstepdict or sidestepdict
                 filter_kwargs={'filterthreshold':filterthreshold_list[step_idx],
@@ -197,17 +223,20 @@ class PipeLine():
         return newstring
     
     
-    def doPipeStep(self,stepdict):
+    def processPipeStep(self,stepdict):
         resultslist=[]
         try:
-            for functup in stepdict['functions']:
-                args=functup[1]
-                if args==[]:
-                    args=[resultslist[-1]]
-                kwargs=functup[2]
-                result=functup[0](*args,**kwargs)
-                resultslist.append(result)
-            list_of_run_dicts=resultslist[-1]
+            if 'variations' in stepdict:
+                list_of_run_dicts=self.generate_rundicts_from_variations(**stepdict['variations'])
+            else:
+                for functup in stepdict['functions']:
+                    args=functup[1]
+                    if args==[]:
+                        args=[resultslist[-1]]
+                    kwargs=functup[2]
+                    result=functup[0](*args,**kwargs)
+                    resultslist.append(result)
+                list_of_run_dicts=resultslist[-1]
             return list_of_run_dicts
             self.logger.debug(f'step:{i} len(list_of_run_dicts):{len(list_of_run_dicts)}')
         except:

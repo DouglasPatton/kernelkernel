@@ -92,7 +92,7 @@ class SaveQDumper(mp.Process):
                 except:
                     if queue.empty():
                         self.logger.debug('SaveQDumper saveq is empty')
-                        break
+                        sleep(5)
                     else:
                         self.logger.exception('SaveQDumper unexpected error!')
                 if success:
@@ -101,10 +101,6 @@ class SaveQDumper(mp.Process):
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
                     nodesavepath=last_model_save['savepath']
-                    '''mastersavepath=os.path.join('master_save',nodesavepath)
-                    mastersavedir,stem=os.path.split(mastersavepath)
-                    if not os.path.exists(mastersavedir):os.makedirs(mastersavedir)
-                    self.logger.debug(f'saveqdumper saving to mastersavepath:{mastersavepath}')'''
                     with open(nodesavepath,'wb') as f:
                         pickle.dump(model_save_list,f)
             except:
@@ -322,13 +318,17 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         self.mastermaster() 
         
 
-    def generate_rundicts_from_variations(self,step=None):
-        if self.optdict_variation_list is None:
-            self.optdict_variation_list=self.getoptdictvariations(source=self.source)
-        if self.datagen_variation_list is None:
-            self.datagen_variation_list=self.getdatagenvariations(source=self.source)
+    def generate_rundicts_from_variations(self,step=None,optdict_variation_list=None,datagen_variation_list=None):
+        if optdict_variation_list is None:
+            if self.optdict_variation_list is None:
+                optdict_variation_list=self.getoptdictvariations(source=self.source)
+            else:optdict_variaton_list=self.optdict_variation_list
+        if datagen_variation_list is None:
+            if self.datagen_variation_list is None:
+                self.datagen_variation_list=self.getdatagenvariations(source=self.source)
+            else: datagen_variation_list=self.datagen_variation_list
         initial_datagen_dict=self.setdata(self.source)
-        list_of_run_dicts=self.prep_model_list(optdict_variation_list=self.optdict_variation_list,datagen_variation_list=self.datagen_variation_list,datagen_dict=initial_datagen_dict)
+        list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,datagen_variation_list=datagen_variation_list,datagen_dict=initial_datagen_dict)
         #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
         self.setup_save_paths(list_of_run_dicts,step=step)
         #p#rint(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
@@ -369,45 +369,20 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         if self.qdict is None:
             self.qdict=self.getqdict()
+        saveqdumper=SaveQDumper(self.qdict['saveq'])
+        saveqdumper.run()
         pipelinesteps=self.build_pipeline()
         for pipestepdict in pipelinesteps:
-            
             self.logger.debug(f'pipestepdict:{pipestepdict}')
-            model_run_stepdict_list=pipestepdict['stepdictlist']
-            if 'validatedictlist' in pipestepdict:
-                validate_stepdict_list=pipestepdict['validatedictlist']
-            else:
-                validate_stepdict_list=[None for _ in range(len(model_run_stepdict_list))]
-            self.logger.debug(f'mastermaster has validate_stepdict_list:{validate_stepdict_list}')
-            for i,stepdict in enumerate(model_run_stepdict_list):
-
-                #stepfolders=stepdict['stepfolders']
-                try:
-                    self.logger.debug(f'i:{i},stepdict:{stepdict}')
-                    if 'variations' in stepdict:
-                        list_of_run_dicts=self.generate_rundicts_from_variations()
-                        runmasterresult=self.runmaster(list_of_run_dicts)
-                        #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-                    else:
-                        list_of_run_dicts=self.doPipeStep(stepdict) 
-                        runmasterresult=self.runmaster(list_of_run_dicts)
-                    self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-                except:
-                    self.logger.exception(f'i:{i},stepdict:{stepdict}')
-                    assert False,'halt'
-
-                try:
-                    val_stepdict=validate_stepdict_list[i]
-                    if val_stepdict:
-                        list_of_run_dicts=self.doPipeStep(val_stepdict)
-                        val_runmasterresult=self.runmaster(list_of_run_dicts)
-                        self.logger.info(f'valstep:{i} completed with val_runmasterresult:{val_runmasterresult}')
-
-                except:
-                    self.logger.exception('valstep error')
-                    assert False,'halt, valstep error'
-
-            self.qdict['saveq'].put('shutdown')
+            try:
+                list_of_run_dicts=self.processPipeStep(pipestepdict)
+                self.logger.debug(f'after processPipeStep, len(list_of_run_dicts):{len(list_of_run_dicts)}')
+                runmasterresult=self.runmaster(list_of_run_dicts)
+                self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
+            except:
+                self.logger.exception(f'i:{i},stepdict:{stepdict}')
+                assert False,'halt'
+        self.qdict['saveq'].put('shutdown')
         #saveqdumper.join()
                 
                 
@@ -416,23 +391,19 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         try:
             pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts]
             self.logger.debug(f"len(pathlist):{len(pathlist)}")
-            
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
             jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
-            #jobqfiller.start()
-            #jobqfiller.join()
             jobqfiller.run()
-            self.logger.debug('back from jobqfiller')
-            saveqdumper=SaveQDumper(self.qdict['saveq'])
+            self.logger.debug('back from jobqfiller.run()')
             while pathlist:
                 sleep(5)
-                saveqdumper.run()
                 pathcount1=len(pathlist)
                 pathlist=self.savecheck(pathlist)
                 pathcount2=len(pathlist)
                 if pathcount1>pathcount2:
-                    self.logger.debug(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
-                    print(f'saveqdumper returned {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}')
+                    status_string=f'pathlist has {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}'
+                    self.logger.debug(status_string)
+                    print(status_string)
             return
         except:
             self.logger.exception('')

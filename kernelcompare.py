@@ -770,30 +770,6 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
                 
                 
-            
-            '''try: 
-                dg_validate_batchcount=datagen_dict['validate_batchcount']
-                validate=1
-            else: 
-                dg_validate_batchcount=None
-                validate=0
-            if dg_validate_batchcount in ['none',None]:
-                validate_batchcount=batchcount
-            elif type(dg_validate_batchcount) is int:
-                validate_batchcount=dg_validate_batchcount
-            else: validate_batchcount=0
-                
-            
-            try: 
-                dg_validate_batchbatchcount=datagen_dict['validate_batchbatchcount']
-            except:
-                dg_validate_batchbatchcount=1
-            if type(dg_validate_batchbatchcount) is int:
-                validate_batchbatchcount=dg_validate_batchbatchcount
-            elif dg_validate_batchbatchcount=='remaining'
-            '''
-                
-                
             if spec in species_n_dict:
                 spec_n=species_n_dict[spec]
             else:

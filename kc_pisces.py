@@ -91,6 +91,12 @@ class KCPisces():
             for model_save in model_save_list:
                 new_opt_dict={}
                 modeldict=model_save['modeldict']
+                if overrides:
+                    for str_dict_tup in overrides:
+                        override_dict=self.build_override_dict_from_str(*overrides)
+                        self.logger.debug(f'opt_job_builder override_dict:{override_dict}')
+                        modeldict=self.do_dict_override(modeldict,override_dict)
+                    
                 opt_settings_dict=model_save['opt_settings_dict']
                 expanded_datagen_dict=model_save['datagen_dict']
                 if not maxbatchbatchcount is None:
