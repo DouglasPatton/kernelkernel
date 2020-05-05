@@ -1,25 +1,24 @@
 import os
+import re
 
-class PipeLine():
+class PipeLine(object):
 
     def __init__(self,):
         self.pipestepdict=None
         self.mainstepdict={
-            'args':[],
-            'kwargs':{
-                'stepcount':5,
-                'startstep':0,
-                'bestshare_list':[32,1,1,1],
-                'threshcutstep':None,
-                'loss_threshold_list':None,
-                'do_minimize_list':[0,1,1,1],
-                'maxiter_list':[1,2,4,4],
-                'maxbatchbatchcount_list':[2,2,2,4],
-                'do_validate_list':[0,1,1,1],
-                'sidestep':0,
-                'overrides':[]
-                }
+            'stepcount':5,
+            'startstep':0,
+            'bestshare_list':[32,1,1,1],
+            'threshcutstep':None,
+            'loss_threshold_list':None,
+            'do_minimize_list':[0,1,1,1],
+            'maxiter_list':[1,2,4,4],
+            'maxbatchbatchcount_list':[2,2,2,4],
+            'do_validate_list':[0,1,1,1],
+            'sidestep':0,
+            'overrides':[]
             }
+        
         self.sidestep_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae','splithinge']]
         
     def buildsidestepdictlist(self,sidestep_runlist,mainstepdict,startstep=1):
@@ -27,11 +26,12 @@ class PipeLine():
         sidestepdictlist=[]
         for run_idx in range(count):
             sidestepdict=mainstepdict.copy()
-            stepname=''
+            stepname='sidestep'
             for strtup in sidestep_runlist[run_idx]:
-                stepname+='_'+''.join([char for char in strtup if char!=':'])
-            sidestepdict['sidestep':stepname]
-            sidestepdict['overrides':sidestep_runlist[run_idx]]
+                stepname+='_'+re.split(':',strtup[0])[-1]+str(strtup[1])
+            self.logger.debug(f'stepname:{stepname}')
+            sidestepdict['sidestep']=stepname
+            sidestepdict['overrides']=sidestep_runlist[run_idx]
             sidestepdictlist.append(sidestepdict)
         return sidestepdictlist
                 
@@ -44,14 +44,18 @@ class PipeLine():
             sidestep_runlist=self.sidestep_runlist
         sidestepdictlist=self.buildsidestepdictlist(sidestep_runlist,mainstepdict)
         maxstepcount=max([maxstepcount,max([sidestepdict['stepcount'] for sidestepdict in sidestepdictlist])])
+        self.logger.debug(f'building mainstep:{mainstepdict}')
+        mainstep=[self.build_pipesteps(**mainstepdict)]
+        self.logger.debug('building sidesteplist')
+        sidesteplist=[self.build_pipesteps(**sidestepdict) for sidestepdict in sidestepdictlist]
         self.pipelinestepdict={
-            'mainstep':[self.build_pipesteps(mainstepdict)],
-            'sidesteplist':[self.build_pipesteps(sidestepdict) for sidestepdict in sidestepdictlist],
+            'mainstep':mainstep,
+            'sidesteplist':sidesteplist,
             'order':order
             }
         
-        pipesteps_idxlist=[]
-        steptype_idx=['mainstepdict','sidesteplist']
+        pipelinesteps=[]
+        steptype_idx=['mainstep','sidesteplist']
         if order=='depth_first':
             
             for key in steptype_idx:
@@ -86,10 +90,22 @@ class PipeLine():
         
         return pipelinesteps
         
-    def build_pipesteps(self,**kwargs):
+    def build_pipesteps(self,stepcount=None,
+            startstep=None,
+            bestshare_list=None,
+            threshcutstep=None,
+            loss_threshold_list=None,
+            do_minimize_list=None,
+            maxiter_list=None,
+            maxbatchbatchcount_list=None,
+            do_validate_list=None,
+            sidestep=None,
+            overrides=None):
         '''
         even if step0 is skipped, include it in the step count
         '''
+        
+        print(stepcount)
         try:sidestep
         except:sidestep=0
         try:overrides
@@ -173,9 +189,10 @@ class PipeLine():
     def makeValidateDictList(self,stepdictlist,do_validate_list):
         try:    
             steps=len(stepdictlist)
+            step0=steps-len(do_validate_list)
             validatedictlist=[None for _ in range(steps)]
-            for step in range(steps):
-                if do_validate_list[step]:
+            for step in range(step0,steps): #if there is a step0, this will be 1, and step 0 is skipped
+                if do_validate_list[step-step0]:
                     self.logger.debug(f'making validatedict for step:{step}')
                     stepdict=stepdictlist[step]
                     valdict=self.convertStepToValDict(stepdict)
