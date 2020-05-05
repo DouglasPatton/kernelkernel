@@ -380,9 +380,8 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
                     list_of_run_dicts=self.processPipeStep(pipestepdict)
                     self.logger.debug(f'after processPipeStep, len(list_of_run_dicts):{len(list_of_run_dicts)}')
                     runmasterresult=self.runmaster(list_of_run_dicts)
-                    self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
                 except:
-                    self.logger.exception(f'i:{i},stepdict:{stepdict}')
+                    self.logger.exception(f'error in mastermaster. pipestepdict:{pipestepdict}')
                     assert False,'halt'
             self.qdict['saveq'].put('shutdown')
         except:

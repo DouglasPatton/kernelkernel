@@ -7,7 +7,7 @@ class KernelParams:
     
     def __init__(self,):
         self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[32]
+        self.batchcount_variation_list=[16]
         self.do_minimize=0
         self.maxiter=2
     

@@ -191,12 +191,12 @@ class PipeLine(object):
             steps=len(stepdictlist)
             step0=steps-len(do_validate_list)
             validatedictlist=[None for _ in range(steps)]
-            for step in range(step0,steps): #if there is a step0, this will be 1, and step 0 is skipped
-                if do_validate_list[step-step0]:
+            for step in range(steps-step0): #if there is a step0, this will be 1, and step 0 is skipped
+                if do_validate_list[step]:
                     self.logger.debug(f'making validatedict for step:{step}')
-                    stepdict=stepdictlist[step]
+                    stepdict=stepdictlist[step+1]
                     valdict=self.convertStepToValDict(stepdict)
-                    validatedictlist[step]=valdict
+                    validatedictlist[step+1]=valdict
             return validatedictlist
         except:
             self.logger.exception('makeValidateDictList error')
@@ -214,7 +214,7 @@ class PipeLine(object):
             oldargs=functiontup[1]
             if f_idx==0:
                 startpath=oldargs[0]
-                newstartpath=self.incrementStringEndDigits(startpath)
+                newstartpath=self.incrementStringEndDigits(startpath)#incremented,b/c not starting with step before
                 newargs=[newstartpath]
             else:
                 newargs=oldargs
