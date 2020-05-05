@@ -16,7 +16,7 @@ class PipeLine():
                 'maxiter_list':[1,2,4,4],
                 'maxbatchbatchcount_list':[2,2,2,4],
                 'do_validate_list':[0,1,1,1],
-                'sidestep':0
+                'sidestep':0,
                 'overrides':[]
                 }
             }
@@ -28,7 +28,7 @@ class PipeLine():
         for run_idx in range(count):
             sidestepdict=mainstepdict.copy()
             stepname=''
-            for strtup in sidestep_runlist[run_idx]
+            for strtup in sidestep_runlist[run_idx]:
                 stepname+='_'+''.join([char for char in strtup if char!=':'])
             sidestepdict['sidestep':stepname]
             sidestepdict['overrides':sidestep_runlist[run_idx]]
@@ -59,11 +59,11 @@ class PipeLine():
                 for side_idx,pipestepdict in enumerate(stepdictlist):
                     for step_idx in pipestepdict['steps']:
                         nextpipestep=pipestepdict['stepdictlist'][step_idx]
-                            pipelinesteps.append(nextpipestep)
-                            if 'validatedictlist' in pipestepdict:
-                                valpipestep=pipestepdict['validatedictlist'][step_idx]
-                                if valpipestep:
-                                    pipelinesteps.append(valpipestep)
+                        pipelinesteps.append(nextpipestep)
+                        if 'validatedictlist' in pipestepdict:
+                            valpipestep=pipestepdict['validatedictlist'][step_idx]
+                            if valpipestep:
+                                pipelinesteps.append(valpipestep)
                         
         elif order=='breadth_first':
             for step_idx in range(maxstepcount):
@@ -150,7 +150,7 @@ class PipeLine():
                     'loss_threshold':loss_threshold_list[step_idx],
                     'maxiter':maxiter_list[step_idx],
                     'do_minimize':do_minimize_list[step_idx],
-                    'maxbatchbatchcount':maxbatchbatchcount_list[step_idx]
+                    'maxbatchbatchcount':maxbatchbatchcount_list[step_idx],
                     'overrides':overrides
                 }
                 advance_path_kwargs={'i':prior_step,'stepfolders':stepfolders}

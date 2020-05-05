@@ -78,7 +78,7 @@ class SaveQDumper(mp.Process):
             try:
                 success=0
                 try:
-                    model_save_list=queue.get_nowait()
+                    model_save_list=queue.get(True,5)
                     success=1
                     last_model_save=model_save_list[-1]
                     #self.logger.debug(f'SaveQDumper got: {model_save_list}')
@@ -91,8 +91,8 @@ class SaveQDumper(mp.Process):
                     self.logger.debug(message)
                 except:
                     if queue.empty():
-                        self.logger.debug('SaveQDumper saveq is empty')
-                        sleep(5)
+                        self.logger.debug('SaveQDumper saveq is empty, returning')
+                        return
                     else:
                         self.logger.exception('SaveQDumper unexpected error!')
                 if success:
@@ -315,6 +315,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         
     def run(self,):
+        self.logger.debug('mastermaster starting up')
         self.mastermaster() 
         
 
@@ -363,26 +364,30 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         return {'saveq':saveq,'jobq':jobq}    
             
     def mastermaster(self,):
-        if not self.dosteps:
-            list_of_run_dicts=self.generate_rundicts_from_variations()
-            return self.runmaster(list_of_run_dicts)
-        
-        if self.qdict is None:
-            self.qdict=self.getqdict()
-        saveqdumper=SaveQDumper(self.qdict['saveq'])
-        saveqdumper.run()
-        pipelinesteps=self.build_pipeline()
-        for pipestepdict in pipelinesteps:
-            self.logger.debug(f'pipestepdict:{pipestepdict}')
-            try:
-                list_of_run_dicts=self.processPipeStep(pipestepdict)
-                self.logger.debug(f'after processPipeStep, len(list_of_run_dicts):{len(list_of_run_dicts)}')
-                runmasterresult=self.runmaster(list_of_run_dicts)
-                self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-            except:
-                self.logger.exception(f'i:{i},stepdict:{stepdict}')
-                assert False,'halt'
-        self.qdict['saveq'].put('shutdown')
+        try:
+            if not self.dosteps:
+                list_of_run_dicts=self.generate_rundicts_from_variations()
+                return self.runmaster(list_of_run_dicts)
+
+            if self.qdict is None:
+                self.qdict=self.getqdict()
+            
+            self.logger.debug('saveQdumper started, now building pipeline')
+            pipelinesteps=self.build_pipeline()
+            for pipestepdict in pipelinesteps:
+                self.logger.debug(f'pipestepdict:{pipestepdict}')
+                try:
+                    list_of_run_dicts=self.processPipeStep(pipestepdict)
+                    self.logger.debug(f'after processPipeStep, len(list_of_run_dicts):{len(list_of_run_dicts)}')
+                    runmasterresult=self.runmaster(list_of_run_dicts)
+                    self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
+                except:
+                    self.logger.exception(f'i:{i},stepdict:{stepdict}')
+                    assert False,'halt'
+            self.qdict['saveq'].put('shutdown')
+        except:
+            self.logger.exception('')
+            assert False, 'Halt'
         #saveqdumper.join()
                 
                 
@@ -394,9 +399,12 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
             jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
             jobqfiller.run()
+            saveqdumper=SaveQDumper(self.qdict['saveq'])
+            
             self.logger.debug('back from jobqfiller.run()')
             while pathlist:
                 sleep(5)
+                saveqdumper.run()
                 pathcount1=len(pathlist)
                 pathlist=self.savecheck(pathlist)
                 pathcount2=len(pathlist)
