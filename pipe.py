@@ -3,7 +3,7 @@ import os
 class PipeLine():
 
     def __init__(self,):
-        self.pipeplanedict=None
+        self.pipestepdict=None
         self.mainstepdict={
             'args':[],
             'kwargs':{
@@ -12,45 +12,67 @@ class PipeLine():
                 'bestshare_list':[32,1,1,1],
                 'threshcutstep':None,
                 'loss_threshold_list':None,
-                'do_minimize_lis't:[0,1,1,1],
+                'do_minimize_list':[0,1,1,1],
                 'maxiter_list':[1,2,4,4],
                 'maxbatchbatchcount_list':[2,2,2,4],
-                'do_validate_list':[0,1,1,1]
+                'do_validate_list':[0,1,1,1],
+                'sidestep':0
+                'overrides':[]
                 }
             }
-        self.sidestep_runlist=[{'modeldict:lossfn':lf} for lf in ['mae','splithinge']]
+        self.sidestep_runlist=[[('modeldict:lossfn',lf)] for lf in ['mae','splithinge']]
         
-        
-        
+    def buildsidestepdictlist(self,sidestep_runlist,mainstepdict,startstep=1):
+        count=len(sidestep_runlist)
+        sidestepdictlist=[]
+        for run_idx in range(count):
+            sidestepdict=mainstepdict.copy()
+            stepname=''
+            for strtup in sidestep_runlist[run_idx]
+                stepname+='_'+''.join([char for char in strtup if char!=':'])
+            sidestepdict['sidestep':stepname]
+            sidestepdict['overrides':sidestep_runlist[run_idx]]
+            sidestepdictlist.append(sidestepdict)
+        return sidestepdictlist
+                
     def build_pipeline(self,mainstepdict=None,sidestep_runlist=None,order='depth_first'):
+        
         if mainstepdict is None:
             mainstepdict=self.mainstepdict
+            maxstepcount=mainstepdict['stepcount']
         if sidestep_runlist is None:
             sidestep_runlist=self.sidestep_runlist
-        sidestepdictlist=self.buildsidestepdictlist(sidestep_runlist)
-        self.pipeplanedict={
-            'mainstep':mainstepdict,
-            'sidesteplist':sidestepdictlist,
+        sidestepdictlist=self.buildsidestepdictlist(sidestep_runlist,mainstepdict)
+        maxstepcount=max([maxstepcount,max([sidestepdict['stepcount'] for sidestepdict in sidestepdictlist])])
+        self.pipestepdict={
+            'mainstep':[self.build_pipesteps(mainstepdict)],
+            'sidesteplist':[self.build_pipesteps(sidestepdict) for sidestepdict in sidestepdictlist],
             'order':order
             }
-        outersteps=[key for key in self.pipeplanedict]
-        innersteps=[[[] for _ in range(self.pipeplanedict[key]['stepcount'])] for key in outersteps]
-        pipesteps=[]
+        steps0idx=['mainstepdict','sidesteplist']
         if order=='depth_first':
-            for o_idx in range(len(outersteps)):
-                for i_idx in range(len(innersteps[o_idx])):
-                    pipesteps.append(self.pipeplanedict[outersteps[o_idx]])
-            pipesteps=
-        pipe_rundicts={key:[[] for _ in range(self.pipeplanedict[key]['stepcount'])] for key in }
-        return pipeplanedict,pipe_rundicts,pipesteps
+            pipesteps_idxlist=[([key][i][step_idx]) for key in steps0idx for side_idx in range(len(self.pipestepdict[key])) for step_idx in range(self.pipestepdict[key][side_idx]['stepcount']) if step_idx>=self.pipestepdict[key][side_idx]['startstep'])]
+        else:
+            for key in steps0idx:
+                for step_idx in range(maxstepcount)
+                    for side_idx in range(len(sidestep_runlist)):
+                        
+            pipesteps_idxlist=[([key][i][step_idx])  for step_idx in range(self.pipestepdict[key]['stepcount']) for i in range(len(self.pipestepdict[key])) if self.pipestepdict[key]>step_idx>=self.pipestepdict[key]['startstep']]
+        pipelinesteps=[self.pipestepdict[idx] for idx in pipesteps_idxlist]
         
-    def build_stepdict(self,*args,sidestep=0,**kwargs):
+        return pipelinesteps
+        
+    def build_pipesteps(self,*args,**kwargs):
         '''
         even if step0 is skipped, include it in the step count
         '''
+        try:sidestep
+        except:sidestep=0
+        try:overrides
+        except:overrides=[]
         try:
             self.logger.info(f'stepcount:{stepcount},threshcutstep:{threshcutstep}, startstep:{startstep},len(bestshare_list):{len(bestshare_list)}')
-            pipelinedict={}
+            pipestepdict={}
             stepdictlist=[]
 
             if not bestshare_list:
@@ -80,10 +102,13 @@ class PipeLine():
                 step0={'variations':{'optdictvariations':optdict_variation_list, 'datagen_variation_list':datagen_variation_list}}
                 stepdictlist.append(step0)
                 startstep=1
+                steplist=[0]
+            else:steplist=[]
             for step in range(startstep,stepcount):
+                steplist.append(step)
                 prior_step=step-1
                 if sidestep and step>startstep:
-                    prior_step=sidestep+str(step-1)
+                    prior_step=sidestep+str(step-1)#not applied at startstep
                     
                 step_idx=step-1 # for pulling from it's mainstepdict or sidestepdict
                 filter_kwargs={'filterthreshold':filterthreshold_list[step_idx],
@@ -100,6 +125,7 @@ class PipeLine():
                     'maxiter':maxiter_list[step_idx],
                     'do_minimize':do_minimize_list[step_idx],
                     'maxbatchbatchcount':maxbatchbatchcount_list[step_idx]
+                    'overrides':overrides
                 }
                 advance_path_kwargs={'i':prior_step,'stepfolders':stepfolders}
                 stepdict={'functions':[
@@ -109,10 +135,11 @@ class PipeLine():
                     (self.rundict_advance_path,[],advance_path_kwargs)
                 ]}
                 stepdictlist.append(stepdict)
-            pipelinedict['stepdictlist']=stepdictlist
+            pipestepdict['stepdictlist']=stepdictlist
             validatedictlist=self.makeValidateDictList(stepdictlist,do_validate_list)
-            pipelinedict['validatedictlist']=validatedictlist
-            return pipelinedict
+            pipestepdict['validatedictlist']=validatedictlist
+            pipestepdict['steps']=steplist
+            return pipestepdict
         except:
             self.logger.exception('build_pipeline error')
             

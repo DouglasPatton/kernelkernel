@@ -52,6 +52,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
         self.helper=Helper()
         KCHelper.__init__(self)
         KCPisces.__init__(self)
+        PipeLine.__init__(self)
         
         
         mk.optimize_free_params.__init__(self,kcsavedir=self.kc_savedirectory,myname=myname)

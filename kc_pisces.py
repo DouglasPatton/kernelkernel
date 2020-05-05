@@ -80,7 +80,7 @@ class KCPisces():
         return new_model_save_list
         
         
-    def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,loss_threshold=None,maxiter=None,do_minimize=None, validate=0):
+    def opt_job_builder(self,model_save_list,maxbatchbatchcount=None,loss_threshold=None,maxiter=None,do_minimize=None, validate=0,overrides=None):
         '''
         
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 

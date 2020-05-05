@@ -369,50 +369,45 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         if self.qdict is None:
             self.qdict=self.getqdict()
-        pipe_rundicts,pipesteps=self.build_pipeline()
-        for stepdict in pipesteps
-                
+        pipelinesteps=self.build_pipeline()
+        for pipestepdict in pipelinesteps:
             
-        if 'mainstep' in pipeplanedict:
-            pipeplanedict
-            
-        ##pipelinedict=self.build_pipeline() #parameters set in kernelparams
-        self.logger.debug(f'pipelinedict:{pipelinedict}')
-        model_run_stepdict_list=pipelinedict['stepdictlist']
-        if 'validatedictlist' in pipelinedict:
-            validate_stepdict_list=pipelinedict['validatedictlist']
-        else:
-            validate_stepdict_list=[None for _ in range(len(model_run_stepdict_list))]
-        self.logger.debug(f'mastermaster has validate_stepdict_list:{validate_stepdict_list}')
-        for i,stepdict in enumerate(model_run_stepdict_list):
-            
-            #stepfolders=stepdict['stepfolders']
-            try:
-                self.logger.debug(f'i:{i},stepdict:{stepdict}')
-                if 'variations' in stepdict:
-                    list_of_run_dicts=self.generate_rundicts_from_variations()
-                    runmasterresult=self.runmaster(list_of_run_dicts)
-                    #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-                else:
-                    list_of_run_dicts=self.doPipeStep(stepdict) 
-                    runmasterresult=self.runmaster(list_of_run_dicts)
-                self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
-            except:
-                self.logger.exception(f'i:{i},stepdict:{stepdict}')
-                assert False,'halt'
-            
-            try:
-                val_stepdict=validate_stepdict_list[i]
-                if val_stepdict:
-                    list_of_run_dicts=self.doPipeStep(val_stepdict)
-                    val_runmasterresult=self.runmaster(list_of_run_dicts)
-                    self.logger.info(f'valstep:{i} completed with val_runmasterresult:{val_runmasterresult}')
-                    
-            except:
-                self.logger.exception('valstep error')
-                assert False,'halt, valstep error'
-                
-        self.qdict['saveq'].put('shutdown')
+            self.logger.debug(f'pipestepdict:{pipestepdict}')
+            model_run_stepdict_list=pipestepdict['stepdictlist']
+            if 'validatedictlist' in pipestepdict:
+                validate_stepdict_list=pipestepdict['validatedictlist']
+            else:
+                validate_stepdict_list=[None for _ in range(len(model_run_stepdict_list))]
+            self.logger.debug(f'mastermaster has validate_stepdict_list:{validate_stepdict_list}')
+            for i,stepdict in enumerate(model_run_stepdict_list):
+
+                #stepfolders=stepdict['stepfolders']
+                try:
+                    self.logger.debug(f'i:{i},stepdict:{stepdict}')
+                    if 'variations' in stepdict:
+                        list_of_run_dicts=self.generate_rundicts_from_variations()
+                        runmasterresult=self.runmaster(list_of_run_dicts)
+                        #self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
+                    else:
+                        list_of_run_dicts=self.doPipeStep(stepdict) 
+                        runmasterresult=self.runmaster(list_of_run_dicts)
+                    self.logger.info(f'step#:{i} completed, runmasterresult:{runmasterresult}')
+                except:
+                    self.logger.exception(f'i:{i},stepdict:{stepdict}')
+                    assert False,'halt'
+
+                try:
+                    val_stepdict=validate_stepdict_list[i]
+                    if val_stepdict:
+                        list_of_run_dicts=self.doPipeStep(val_stepdict)
+                        val_runmasterresult=self.runmaster(list_of_run_dicts)
+                        self.logger.info(f'valstep:{i} completed with val_runmasterresult:{val_runmasterresult}')
+
+                except:
+                    self.logger.exception('valstep error')
+                    assert False,'halt, valstep error'
+
+            self.qdict['saveq'].put('shutdown')
         #saveqdumper.join()
                 
                 
