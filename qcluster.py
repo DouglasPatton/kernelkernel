@@ -65,7 +65,51 @@ class SaveQDumper(mp.Process):
         self.logger.info('SaveQDumper starting')
         #self.BaseManager=BaseManager
         super(SaveQDumper,self).__init__()
-        
+    
+    def summarizeModelSaveList(self,model_save_list):
+        model0=model_save_list[0]
+        model_save_summary={}
+        model_save_summary['savepath']=model0['savepath']
+        model_save_summary['naiveloss']=model0['naiveloss']
+        modeldict0=model0['modeldict']
+        loss_function=modeldict0['loss_function']
+        lossdictlist=[savedict['lossdict'] for savedict in model_save_list]
+        try:
+            validate=modeldict0['validate']
+        except:
+            validate=0
+        if not validate:
+            losslist=[lossdict[loss_function] for lossdict in lossdictlist]
+            minloss=min(losslist)
+            minlosspos=losslist.index(minloss)
+            model_save_summary['loss']=minloss
+            model_save_summary['lossdict']=lossdictlist[minlosspos]
+            model_save_summary['binary_y_result']=model_save_list[minlosspos]['binary_y_result']
+        else:
+            keylist=[key for key in lossdictlist[0]]
+            meanlossdict={key:np.mean(np.array([lossdict[key] for lossdict in lossdictlist]))for key in keylist}
+            meanloss=meanlossdict[loss_function]
+            
+            by_keylist=[key for key,_ in model_save_list[0]['binary_y_result']]
+            meanbinary_y_result=[]
+            for k,key in enumerate(by_keylist):
+                resultlist=[]
+                for modelsave in model_save_list:
+                    byr=modelsave['binary_y_result'][k]
+                    resultlist.append(byr)
+                    meanresult=np.mean(np.array(resultlist))
+                meanbinary_y_result.append((key,meanresult))
+            model_save_summary['loss']=meanloss
+            model_save_summary['lossdict']=meanlossdict
+            model_save_summary['binary_y_result']=meanbinary_y_result
+        return model_save_summary
+                    
+                
+            
+            {key:np.mean(np.array([modelsave[key] ]))}
+            
+            
+    
     def run(self):
         #self.BaseManager.register('saveq')
         #m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
@@ -79,14 +123,15 @@ class SaveQDumper(mp.Process):
                 success=0
                 try:
                     model_save_list=queue.get(True,5)
+                    
                     success=1
-                    last_model_save=model_save_list[-1]
+                    model_save_summary=self.summarizeModelSaveList(model_save_list)
                     #self.logger.debug(f'SaveQDumper got: {model_save_list}')
-                    loss=last_model_save['loss']
-                    lossdict=last_model_save['lossdict']
-                    naiveloss=last_model_save['naiveloss']
-                    binary_y_result=last_model_save['binary_y_result']
-                    message=f"SaveQDumper has {last_model_save['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
+                    loss=model_save_summary['loss']
+                    lossdict=model_save_summary['lossdict']
+                    naiveloss=model_save_summary['naiveloss']
+                    binary_y_result=model_save_summary['binary_y_result']
+                    message=f"SaveQDumper has {model_save_summary['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
                     print(message)
                     self.logger.debug(message)
                 except:
@@ -100,7 +145,7 @@ class SaveQDumper(mp.Process):
                         if model_save_list=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    nodesavepath=last_model_save['savepath']
+                    nodesavepath=model_save_summary['savepath']
                     with open(nodesavepath,'wb') as f:
                         pickle.dump(model_save_list,f)
             except:
