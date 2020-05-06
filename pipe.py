@@ -227,6 +227,10 @@ class PipeLine(object):
         return valdict
     
     def incrementStringEndDigits(self,oldstring,decrement=0):
+        if type(oldstring) is int:
+            if decrement:oldstring-=1
+            else:oldstring+=1
+            return str(oldstring)
         end_digits=''
         for char in oldstring[::-1]:
             if char.isdigit():
@@ -264,17 +268,15 @@ class PipeLine(object):
                
     def rundict_advance_path(self,list_of_rundicts,i=None,stepfolders=None,validate=0):
         self.logger.info(f'len(list_of_rundicts):{len(list_of_rundicts)},i:{i},stepfolders:{stepfolders}, validate:{validate}')
-        next_i=self.incrementStringEndDigits(i)
         savefolderpath=stepfolders['savedir']
         jobfolderpath=stepfolders['jobdir']
-        charcount=len(str(i))+4 # 4 for 'step'
         if validate:
-            next_i+='_val'
-            #savefolderpath=self.incrementStringEndDigits(savefolderpath)
-            #jobfolderpath=self.incrementStringEndDigits(jobfolderpath)
-        newjobfolderpath=jobfolderpath[:-charcount]+'step'+next_i
+            valstring='_val'
+        else:
+            valstring=''
+        newjobfolderpath=self.incrementStringEndDigits(jobfolderpath)+valstring
         if not os.path.exists(newjobfolderpath):os.mkdir(newjobfolderpath)
-        newsavefolderpath=savefolderpath[:-charcount]+'step'+next_i
+        newsavefolderpath=self.incrementStringEndDigits(savefolderpath)+valstring
         if not os.path.exists(newsavefolderpath):os.mkdir(newsavefolderpath)
         self.logger.debug(f'newjobfolderpath:{newjobfolderpath}, newsavefolderpath:{newsavefolderpath}')
         for rundict in list_of_rundicts:
