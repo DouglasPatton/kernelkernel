@@ -6,13 +6,13 @@ import datetime
 import kernelcompare 
 import traceback
 import shutil
-from numpy import log
 from random import randint,seed,shuffle
 import logging
 from helpers import Helper
 import multiprocessing as mp
 from multiprocessing.managers import BaseManager
 from queue import Queue
+import numpy as np
 
 #class QueueManager(BaseManager): pass
 
@@ -67,48 +67,46 @@ class SaveQDumper(mp.Process):
         super(SaveQDumper,self).__init__()
     
     def summarizeModelSaveList(self,model_save_list):
-        model0=model_save_list[0]
-        model_save_summary={}
-        model_save_summary['savepath']=model0['savepath']
-        model_save_summary['naiveloss']=model0['naiveloss']
-        modeldict0=model0['modeldict']
-        loss_function=modeldict0['loss_function']
-        lossdictlist=[savedict['lossdict'] for savedict in model_save_list]
         try:
-            validate=modeldict0['validate']
+            model0=model_save_list[0]
+            model_save_summary={}
+            model_save_summary['savepath']=model0['savepath']
+            model_save_summary['naiveloss']=model0['naiveloss']
+            modeldict0=model0['modeldict']
+            loss_function=modeldict0['loss_function']
+            lossdictlist=[savedict['lossdict'] for savedict in model_save_list]
+            try:
+                validate=modeldict0['validate']
+            except:
+                validate=0
+            if not validate:
+                losslist=[lossdict[loss_function] for lossdict in lossdictlist]
+                minloss=min(losslist)
+                minlosspos=losslist.index(minloss)
+                model_save_summary['loss']=minloss
+                model_save_summary['lossdict']=lossdictlist[minlosspos]
+                model_save_summary['binary_y_result']=model_save_list[minlosspos]['binary_y_result']
+            else:
+                keylist=[key for key in lossdictlist[0]]
+                meanlossdict={key:np.mean(np.array([lossdict[key] for lossdict in lossdictlist]))for key in keylist}
+                meanloss=meanlossdict[loss_function]
+
+                by_keylist=[res[0] for res in model_save_list[0]['binary_y_result']]
+                meanbinary_y_result=[]
+                for k,key in enumerate(by_keylist):
+                    resultlist=[]
+                    for modelsave in model_save_list:
+                        byr=modelsave['binary_y_result'][k]
+                        resultlist.append(byr)
+                        meanresult=np.mean(np.array(resultlist))
+                    meanbinary_y_result.append((key,meanresult))
+                model_save_summary['loss']=meanloss
+                model_save_summary['lossdict']=meanlossdict
+                model_save_summary['binary_y_result']=meanbinary_y_result
+            return model_save_summary
         except:
-            validate=0
-        if not validate:
-            losslist=[lossdict[loss_function] for lossdict in lossdictlist]
-            minloss=min(losslist)
-            minlosspos=losslist.index(minloss)
-            model_save_summary['loss']=minloss
-            model_save_summary['lossdict']=lossdictlist[minlosspos]
-            model_save_summary['binary_y_result']=model_save_list[minlosspos]['binary_y_result']
-        else:
-            keylist=[key for key in lossdictlist[0]]
-            meanlossdict={key:np.mean(np.array([lossdict[key] for lossdict in lossdictlist]))for key in keylist}
-            meanloss=meanlossdict[loss_function]
-            
-            by_keylist=[key for key,_ in model_save_list[0]['binary_y_result']]
-            meanbinary_y_result=[]
-            for k,key in enumerate(by_keylist):
-                resultlist=[]
-                for modelsave in model_save_list:
-                    byr=modelsave['binary_y_result'][k]
-                    resultlist.append(byr)
-                    meanresult=np.mean(np.array(resultlist))
-                meanbinary_y_result.append((key,meanresult))
-            model_save_summary['loss']=meanloss
-            model_save_summary['lossdict']=meanlossdict
-            model_save_summary['binary_y_result']=meanbinary_y_result
-        return model_save_summary
+            self.logger.exception('summary error')
                     
-                
-            
-            {key:np.mean(np.array([modelsave[key] ]))}
-            
-            
     
     def run(self):
         #self.BaseManager.register('saveq')

@@ -54,7 +54,7 @@ class MyKernHelper:
                 savedict['binary_y_result']=[]
             else:
                 savedict['binary_y_result']=this_binary_y_loss_list.copy()
-                savedict['binary_y_result'].extend((f'sample_ymean:{self.sample_ymean}, 0.5',self.naivebinaryloss))
+                savedict['binary_y_result'].append((f'sample_ymean:{self.sample_ymean}p=0.5:',self.naivebinaryloss))
         except:
             self.logger.exception('')
         savedict['modeldict']=modeldict
