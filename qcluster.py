@@ -374,6 +374,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             
             self.logger.debug('saveQdumper started, now building pipeline')
             pipelinesteps=self.build_pipeline()
+            self.logger.debug(f'pipelinesteps:{pipelinesteps}')
             for pipestepdict in pipelinesteps:
                 self.logger.debug(f'pipestepdict:{pipestepdict}')
                 try:

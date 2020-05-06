@@ -253,7 +253,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
             assert False, 'halt'
 
     def merge_and_condense_saved_models(self,merge_directory=None,pathlist=None,species_name='',
-                                        save_directory=None,condense=None,recondense=None,verbose=None,recursive=None,returnlist=0):
+                                        save_directory=None,condense=None,recondense=None,verbose=None,recursive=None,returnlist=0,loss_function=None):
         try:
             if not merge_directory==None:
                 if not os.path.exists(merge_directory):
@@ -319,14 +319,14 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
 
                 if saved_model_list:    
                     if condense:
-                        condense_saved_model_list=self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose,endsort=1)
+                        condense_saved_model_list=self.condense_saved_model_list(saved_model_list, help_start=0, strict=1,verbose=verbose,endsort=1,loss_function=loss_function)
                         self.logger.debug(f'for file_i:{file_i}, len(condense_saved_model_list):{len(condense_saved_model_list)}')
                         list_of_saved_models.extend(condense_saved_model_list[:condense])
                     else:
                         list_of_saved_models.extend(saved_model_list)
 
             if recondense:
-                list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose)
+                list_of_saved_models=self.condense_saved_model_list(list_of_saved_models,help_start=0,strict=1,verbose=verbose,loss_function=loss_function)
 
             if returnlist:
                 return list_of_saved_models
@@ -340,10 +340,11 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
             return merged_path
         except:self.logger.exception('')
 
-    def get_nwt_loss(self,saved_model_list):
+    def get_nwt_loss(self,saved_model_list,loss_function=None):
         nwt_list=[]
         for full_model_i in saved_model_list:
-            loss_function=full_model_i['modeldict']['loss_function']
+            if loss_function is None:
+                loss_function=full_model_i['modeldict']['loss_function']
             loss_i=full_model_i['lossdict'][loss_function]
             try:
                 i_naiveloss=full_model_i['naiveloss']
@@ -361,7 +362,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
             nwt_list.append(self.do_nwt_loss(loss_i,i_n,i_batchcount,naiveloss=i_naiveloss,batchbatchcount=i_batchbatchcount))
         return nwt_list
     
-    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0,threshold=None):
+    def condense_saved_model_list(self,saved_model_list,help_start=1,strict=None,verbose=None,endsort=0,threshold=None,loss_function=None):
         try:
             if saved_model_list==None:
                 return []
@@ -371,7 +372,7 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
             if strict=='yes':strict=1
             if strict=='no':strict=0
 
-            nwt_list=self.get_nwt_loss(saved_model_list)
+            nwt_list=self.get_nwt_loss(saved_model_list,loss_function=loss_function)
 
 
             modelcount=len(saved_model_list)        

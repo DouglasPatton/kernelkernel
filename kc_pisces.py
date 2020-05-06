@@ -135,12 +135,19 @@ class KCPisces():
             
 
         
-    def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0,validate=0):
+    def process_pisces_models(self,startpath,condense=0,recondense=0,recondense2=0,merge_with_existing=0,validate=0,overrides=None):
         '''
         kernelparamsbuild_stepdict_list creates calls for mycluster.mastermaster to run this in sequence so 
         do not change args,kwargs here without changing there
         '''
         #species_model_save_path_dict_list=[]
+        loss_function=None #if not set by override, comes from model_save modeldict:loss_function
+        if overrides:
+            for override_tup in overrides:
+                if re.search('loss_function',override_tup[0]):
+                    loss_function=override_tup[1]
+                    break
+                
         if validate:
             #startpath=self.incrementstartpath(startpath) # moved to creation of valdict in kernelparams
             condense=1;recondense=0;recondense2=0
@@ -170,14 +177,15 @@ class KCPisces():
                     species_name=species,
                     pathlist=pathlist,
                     condense=condense,#first condensing addresses iterations
-                    recondense=recondense,returnlist=1
+                    recondense=recondense,returnlist=1,
+                    loss_function=loss_function
                     )
                 self.logger.debug(f'len(mergedlist):{len(mergedlist)}')
                 if species not in all_species_model_merge_dict:
                     all_species_model_merge_dict[species]=[]
                 all_species_model_merge_dict[species].extend(mergedlist)
                 if recondense2:
-                    all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0)
+                    all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0,loss_function=loss_function)
             self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
             if merge_with_existing:
                 assert False, 'not developed'
