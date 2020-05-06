@@ -182,6 +182,8 @@ class datagen(PiscesDataTool):
                 return
             else:
                 self.logger.warning(f'build_sumstats_dict recalculating. old_train_n:{old_train_n}, self.summary_stats_dict:{self.summary_stats_dict}')
+        except KeyError:
+            pass
         except:
             self.logger.info(f'build sumstats dict building',exc_info=True)        
         xdata=xdata[0:max_train_n,:]

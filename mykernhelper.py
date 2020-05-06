@@ -33,24 +33,27 @@ class MyKernHelper:
         
         losslist=[lossdict[lossfn] for lossdict,paramdict in lossdict_and_paramdict_list]
         minloss=min(losslist)
+        thisloss=losslist[-1]
         bestiter_pos=losslist.index(minloss)
         bestlossdict,bestparams=lossdict_and_paramdict_list[bestiter_pos]
+        thislossdict,thisparams=lossdict_and_paramdict_list[-1]
         savedict={}
-        savedict['lossdict']=bestlossdict
-        savedict['loss']=minloss
+        savedict['lossdict']=thislossdict
+        savedict['loss']=thisloss
         savedict['naiveloss']=self.naiveloss
         #savedict['xdata']=self.xdata
         #savedict['ydata']=self.ydata
-        savedict['params']=bestparams
+        savedict['params']=thisparams
         #if binary_y_loss_list is None:
             
-        binary_y_loss_list=self.binary_y_loss_list_list[bestiter_pos]
+        best_binary_y_loss_list=self.binary_y_loss_list_list[bestiter_pos]
+        this_binary_y_loss_list=self.binary_y_loss_list_list[-1]
         #self.logger.debug(f'len(self.binary_y_loss_list_list):{len(self.binary_y_loss_list_list)}, self.binary_y_loss_list_list:{self.binary_y_loss_list_list}')
         try:
             if modeldict['binary_y'] is None:
                 savedict['binary_y_result']=[]
             else:
-                savedict['binary_y_result']=binary_y_loss_list.copy()
+                savedict['binary_y_result']=this_binary_y_loss_list.copy()
                 savedict['binary_y_result'].extend((f'sample_ymean:{self.sample_ymean}, 0.5',self.naivebinaryloss))
         except:
             self.logger.exception('')
@@ -93,7 +96,7 @@ class MyKernHelper:
                     pickle.dump(modellist,thefile)
                 donestring=(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
                     f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},'
-                    f'and this binary_y_loss_list:{binary_y_loss_list}')
+                    f'and best_binary_y_loss_list:{best_binary_y_loss_list}')
                 print(donestring)
                 print(f'bestparams:{bestparams}')
                 self.logger.info(donestring)
