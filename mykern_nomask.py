@@ -602,20 +602,9 @@ class kNdtool(Ndiff,MyKernHelper):
             return 
         # self.return_param_name_and_value(fixed_or_free_paramdict,modeldict)
 
-        t_format = "%Y%m%d-%H%M%S"
-        self.iter_start_time_list.append(strftime(t_format))
-
-        if self.call_iter == 3:
-            tdiff = np.abs(
-                datetime.datetime.strptime(self.iter_start_time_list[-1], t_format) - datetime.datetime.strptime(
-                    self.iter_start_time_list[-2], t_format))
-            self.save_interval = 1#int(max([15 - np.round(np.log(tdiff.total_seconds() + 1) ** 3, 0),
-            #                              1]))  # +1 to avoid negative and max to make sure save_interval doesn't go below 1
-            self.logger.info(f'save_interval changed to {self.save_interval}')
-
-        if self.call_iter % self.save_interval == 0:
-            bestlossdict,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict)
-            bestloss=bestlossdict[self.loss_function]
+        
+        bestlossdict,bestparams=self.sort_then_saveit(self.lossdict_and_paramdict_list, modeldict)
+        bestloss=bestlossdict[self.loss_function]
 
         if self.loss_threshold and self.iter==3 and bestloss>self.loss_threshold:
             self.forcefail=bestloss
@@ -861,7 +850,6 @@ class optimize_free_params(kNdtool):
         self.iter=0
         self.lossdict_and_paramdict_list=[]#will contain a tuple of  (lossdict, fixed_or_free_paramdict) at each call
         self.binary_y_loss_list_list=[]
-        self.iter_start_time_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
         self.source=self.datagen_dict['source']
