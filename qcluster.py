@@ -96,7 +96,7 @@ class SaveQDumper(mp.Process):
                 for k,key in enumerate(by_keylist):
                     resultlist=[]
                     for modelsave in model_save_list:
-                        byr=modelsave['binary_y_result'][k]
+                        byr=modelsave['binary_y_result'][k][1]
                         resultlist.append(byr)
                         meanresult=np.mean(np.array(resultlist))
                     meanbinary_y_result.append((key,meanresult))
