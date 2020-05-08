@@ -179,6 +179,7 @@ class JobQFiller(mp.Process):
         #queue = m.jobq()
         queue=self.q
         jobcount=len(self.joblist)
+        shuffle(self.joblist)
         i=1
         while self.joblist:
             job=self.joblist.pop()
