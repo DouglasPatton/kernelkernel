@@ -15,7 +15,7 @@ os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
-from sklearn.linear_model import LogisticRegression
+#from sklearn.linear_model import LogisticRegression
 import logging
 
 #import logging.config

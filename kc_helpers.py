@@ -2,7 +2,7 @@
 import pickle
 import os
 import logging
-import pandas as pd
+#import pandas as pd
 import logging
 
 class KCHelper():
