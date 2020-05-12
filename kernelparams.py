@@ -6,6 +6,7 @@ from copy import deepcopy
 class KernelParams:
     
     def __init__(self,):
+        self.logger=logging.getLogger(__name__)
         self.n=8 #used to generate variations datagen-batch_n 
         self.batchcount_variation_list=[128]
         self.do_minimize=0

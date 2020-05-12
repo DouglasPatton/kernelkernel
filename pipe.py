@@ -4,6 +4,7 @@ import re
 class PipeLine(object):
 
     def __init__(self,):
+        self.logger=logging.getLogger(__name__)
         self.pipestepdict=None
         self.mainstep_setupdict={
             'stepcount':5,

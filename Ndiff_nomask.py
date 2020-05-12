@@ -8,7 +8,7 @@ import yaml
 
 class Ndiff:
     def __init__(self,):
-        pass
+        self.logger=logging.getLogger(__name__)
             
         
     def Ndiff_datastacker(self,indiffs,outdiffs,depth):
