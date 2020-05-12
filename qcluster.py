@@ -170,7 +170,7 @@ class JobQFiller(mp.Process):
         self.logger.info('JobQFiller starting')
         super(JobQFiller,self).__init__()
     
-    def run(self):
+    '''def run(self):
         #QueueManager.register('jobq')
         #m = QueueManager(address=self.netaddress, authkey=b'qkey')
         #m.connect()
@@ -182,7 +182,7 @@ class JobQFiller(mp.Process):
         savedset=set(os.listdir(savedir))
         print(f'len(savedset):{len(savedset)}')
         
-        print('creating notsavedlist')
+        print('creating notsavedset')
         notsaved_joblist=[job for job in self.joblist if os.path.split(job['savepath'])[-1] not in savedset]
         print(f'len(notsaved_joblist):{len(notsaved_joblist)}')
         print(f'notsaved_joblist[0]:{notsaved_joblist[0]}')
@@ -205,9 +205,9 @@ class JobQFiller(mp.Process):
                     self.logger.exception(f'jobq error for i:{i}')
         self.logger.debug('all jobs added to jobq.')
         print('all jobs added to jobq.')
-        return
+        return'''
     
-    """def run(self):
+    def run(self):
         #QueueManager.register('jobq')
         #m = QueueManager(address=self.netaddress, authkey=b'qkey')
         #m.connect()
@@ -217,21 +217,14 @@ class JobQFiller(mp.Process):
         a_rundict=self.joblist[-1]
         a_savepath=a_rundict['savepath']
         savedir=os.path.split(a_savepath)[0]
-        savedlist=os.listdir(savedir)
-        print(f'len(savedlist):{len(savedlist)}')
-        #pathlist=[rundict['savepath'] for rundict in self.joblist]
-        
-        
-        '''print('creating notsavedlist')
-        notsavedlist=np.setdiff1d(pathlist,savedlist,assume_unique=True).tolist()
-        print(f'len(notsavedlist):{len(notsavedlist)}')
-        print(f'notsavedlist[0:5]:{notsavedlist[0:5]}')'''
+        savedset=set(os.listdir(savedir))
+        print(f'len(savedset):{len(savedset)}')
         shuffle(self.joblist)
         i=1
         while len(self.joblist):
             job=self.joblist.pop()
             savepath=job['savepath']
-            if savepath not in savedlist:
+            if os.path.split(savepath)[1] not in savedset:
             #if not os.path.exists(savepath):
                 #with open(job['jobpath'],'wb') as f:
                 #    pickle.dump(job,f)
@@ -250,7 +243,7 @@ class JobQFiller(mp.Process):
             else:
                 self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job["savepath"]}')
         self.logger.debug('all jobs added to jobq.')
-        return"""
+        return
 
                 
 
