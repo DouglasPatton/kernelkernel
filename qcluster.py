@@ -161,11 +161,11 @@ class JobQFiller(mp.Process):
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'JobQFiller-log')
-        logging.basicConfig(
+        '''logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
             level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
+            datefmt='%Y-%m-%dT%H:%M:%S')'''
         self.logger = logging.getLogger(handlername)
         self.logger.info('JobQFiller starting')
         super(JobQFiller,self).__init__()

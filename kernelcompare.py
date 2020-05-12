@@ -15,7 +15,7 @@ import pickle
 import os
 import re
 import logging,traceback
-import yaml
+#import yaml
 
 
 class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):

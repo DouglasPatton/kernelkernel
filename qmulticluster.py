@@ -1,11 +1,11 @@
 from time import sleep
 import multiprocessing as mp
 from random import randint,seed
-import os,sys,psutil
+import os,sys#,psutil
 import qcluster
 from datetime import datetime
 import logging,logging.config
-import yaml
+#import yaml
 from numpy import log
 
 
