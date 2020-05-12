@@ -161,16 +161,14 @@ class JobQFiller(mp.Process):
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         handlername=os.path.join(logdir,f'JobQFiller-log')
-        '''logging.basicConfig(
+        logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
             level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')'''
+            datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('JobQFiller starting')
         super(JobQFiller,self).__init__()
-    
-    
     
     def run(self):
         #QueueManager.register('jobq')
@@ -178,16 +176,65 @@ class JobQFiller(mp.Process):
         #m.connect()
         #queue = m.jobq()
         queue=self.q
+        a_rundict=self.joblist[-1]
+        a_savepath=a_rundict['savepath']
+        savedir=os.path.split(a_savepath)[0]
+        savedset=set(os.listdir(savedir))
+        print(f'len(savedset):{len(savedset)}')
+        
+        print('creating notsavedlist')
+        notsaved_joblist=[job for job in self.joblist if os.path.split(job['savepath'])[-1] not in savedset]
+        print(f'len(notsaved_joblist):{len(notsaved_joblist)}')
+        print(f'notsaved_joblist[0]:{notsaved_joblist[0]}')
+        shuffle(notsaved_joblist)
+        jobcount=len(notsaved_joblist)
+        i=1
+        while len(notsaved_joblist):
+            job=notsaved_joblist.pop()
+            try:
+                self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
+                queue.put(job)
+                self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
+                i+=1
+            except:
+                notsaved_joblist.append(job)
+                if queue.full():
+                    self.logger.warning('jobq full, waiting 4s')
+                    sleep(4)
+                else:
+                    self.logger.exception(f'jobq error for i:{i}')
+        self.logger.debug('all jobs added to jobq.')
+        print('all jobs added to jobq.')
+        return
+    
+    """def run(self):
+        #QueueManager.register('jobq')
+        #m = QueueManager(address=self.netaddress, authkey=b'qkey')
+        #m.connect()
+        #queue = m.jobq()
+        queue=self.q
         jobcount=len(self.joblist)
+        a_rundict=self.joblist[-1]
+        a_savepath=a_rundict['savepath']
+        savedir=os.path.split(a_savepath)[0]
+        savedlist=os.listdir(savedir)
+        print(f'len(savedlist):{len(savedlist)}')
+        #pathlist=[rundict['savepath'] for rundict in self.joblist]
+        
+        
+        '''print('creating notsavedlist')
+        notsavedlist=np.setdiff1d(pathlist,savedlist,assume_unique=True).tolist()
+        print(f'len(notsavedlist):{len(notsavedlist)}')
+        print(f'notsavedlist[0:5]:{notsavedlist[0:5]}')'''
         shuffle(self.joblist)
         i=1
-        while self.joblist:
+        while len(self.joblist):
             job=self.joblist.pop()
             savepath=job['savepath']
-            #masterpath=os.path.join('master_save',savepath)
-            if not os.path.exists(savepath):
-                with open(job['jobpath'],'wb') as f:
-                    pickle.dump(job,f)
+            if savepath not in savedlist:
+            #if not os.path.exists(savepath):
+                #with open(job['jobpath'],'wb') as f:
+                #    pickle.dump(job,f)
                 try:
                     self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
                     queue.put(job)
@@ -195,14 +242,15 @@ class JobQFiller(mp.Process):
                     i+=1
                 except:
                     self.joblist.append(job)
-                    if queue.empty():
+                    if queue.full():
+                        self.logger.warning('jobq full, waiting 4s')
                         sleep(4)
                     else:
                         self.logger.exception(f'jobq error for i:{i}')
             else:
                 self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job["savepath"]}')
         self.logger.debug('all jobs added to jobq.')
-        return
+        return"""
 
                 
 

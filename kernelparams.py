@@ -9,7 +9,7 @@ class KernelParams:
     def __init__(self,):
         self.logger=logging.getLogger(__name__)
         self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[128]
+        self.batchcount_variation_list=[8]
         self.do_minimize=0
         self.maxiter=2
     
@@ -145,7 +145,7 @@ class KernelParams:
                 
             species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            #species_variations=('species',[self.specieslist[i] for i in range(0,2)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,2)])
             #species_variations=('species',[self.specieslist[i] for i in range(0,10)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)

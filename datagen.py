@@ -238,7 +238,7 @@ class datagen(PiscesDataTool):
                 self.expand_datagen_dict('max_maxbatchbatchcount',1)
                 batchbatchcount_train=1
                 batchbatchcount_val=0
-                self.logger.warning(f'cannot validate self.species:{self.species} due to batchbatchcount:{batchbatchcount}')
+                self.logger.warning(f'without restructuring, cannot validate self.species:{self.species} due to batchbatchcount:{batchbatchcount}')
         self.batchbatchcount=batchbatchcount_train
         self.expand_datagen_dict('batchbatchcount',self.batchbatchcount)
         fullbatchbatch_n_train=batchbatchcount_train*batchsize
