@@ -792,7 +792,7 @@ class kNdtool(Ndiff,MyKernHelper):
             
             self.naiveloss=self.doLoss(y,ymean)
             self.naivemse=self.doLoss(y,ymean,lssfn='mse')
-            self.naivebinaryloss=self.doLoss(y,yhat)
+            self.naivebinaryloss=self.doLoss(y,yhat,lssfn='mae')
         except:
             self.logger.exception('')
         
