@@ -785,8 +785,8 @@ class kNdtool(Ndiff,MyKernHelper):
             y=np.array(ylist)
             ymean=np.mean(y)
             self.sample_ymean=ymean
-            if ymean>0.5:yhat=1
-            else: yhat=0
+            if ymean>0.5:yhat=np.ones(y.shape)
+            else: yhat=np.zeros(y.shape)
             err=y-ymean
             err2=y-yhat
             
