@@ -10,7 +10,7 @@ class KernelParams:
         self.logger=logging.getLogger(__name__)
         self.n=8 #used to generate variations datagen-batch_n 
         self.batchcount_variation_list=[128]
-        self.do_minimize=1
+        self.do_minimize=0
         self.maxiter=1
     
         
