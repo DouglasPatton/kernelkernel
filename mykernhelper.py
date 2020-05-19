@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import os
 from time import strftime,sleep
@@ -96,11 +97,13 @@ class MyKernHelper:
                     pickle.dump(modellist,thefile)
                 donestring=(f'saved to {fullpath_filename} at about {strftime("%Y%m%d-%H%M%S")} naiveloss,'
                     f'loss={(self.naiveloss,minloss)} and naivemse,mse,{(self.naivemse,bestlossdict["mse"])},'
-                    f'and best_binary_y_loss_list:{best_binary_y_loss_list}')
+                    f'and best_binary_y_loss_list:{best_binary_y_loss_list},this_binary_y_loss_list:{this_binary_y_loss_list}')
                 print(donestring)
                 print(f'bestparams:{bestparams}')
+                print(f'thislossdict:{thislossdict}, thisparams:{thisparams}')
                 self.logger.info(donestring)
                 self.logger.debug(f'bestparams:{bestparams}')
+                self.logger.debug(f'thislossdict:{thislossdict}, thisparams:{thisparams}')
                 break
             except:
                 if i==9:
@@ -155,16 +158,23 @@ class MyKernHelper:
             
             value=fixed_or_free_paramdict[f'{form}_params'][start:end]
             if const=='non-neg':
-                const=f'{const}'+':'+f'{np.abs(value)}'
+                const=f'{const}'+':'+f'{np.abs(value)} error not developed'
             params[param]={'value':value,'const':const}
         return params
     
     
     def insert_detransformed_freeparams(self, fixed_or_free_paramdict,free_params):
         for param_name,param_feature_dict in fixed_or_free_paramdict.items():
-            if not param_name in ['fixed_params','free_params'] and param_feature_dict['const']=='non-neg':
-                for i in range(*param_feature_dict['location_idx']):
-                    free_params[i]=np.abs(free_params[i])
+            if not param_name in ['fixed_params','free_params']:
+                const_val=param_feature_dict['const']
+                if const_val=='non-neg':
+                    for i in range(*param_feature_dict['location_idx']):
+                        free_params[i]=np.exp(free_params[i])
+                elif const_val[:4]=='ball': #https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19760004646.pdf
+                    for i in range(*param_feature_dict['location_idx']):
+                        free_params[i]=self.doball(free_params[i],const_val,transform=-1)
+                    
+                    
         fixed_or_free_paramdict['free_params']=free_params
         return fixed_or_free_paramdict
     
@@ -178,6 +188,7 @@ class MyKernHelper:
         if fixed_or_free_paramdict[param_name]['fixed_or_free']=='free':
             the_param_values=fixed_or_free_paramdict['free_params'][start:end]#end already includes +1 to make range inclusive of the end value
         if transform==1:
+            assert False,'no longer relevant'
             if fixed_or_free_paramdict[param_name]['const']=='non-neg':#transform variable with e^(.) if there is a non-negative constraint
                 the_param_values=np.abs(the_param_values)
         return the_param_values
@@ -226,7 +237,11 @@ class MyKernHelper:
                 param_feature_dict['location_idx']=(len(free_params),len(free_params)+len(param_val))
                     #start and end indices, with end already including +1 to make python slicing inclusive of end in start:end
                 if param_form == 'non-neg':
-                    param_val=np.abs(param_val)
+                    param_val=np.log(param_val)
+                if param_form[:4]=='ball': #https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19760004646.pdf
+                    param_val=self.doball(param_val,param_form,transform=1)
+                    
+                
                 free_params=np.concatenate([free_params,param_val],axis=0)
                 fixed_or_free_paramdict[param_name]=param_feature_dict
         fixed_or_free_paramdict['free_params']='outside'
@@ -234,6 +249,20 @@ class MyKernHelper:
         
         #self.logger.info(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
         return free_params,fixed_or_free_paramdict
+    
+    def doball(self,val,ballstring,transform=1):
+        self.logger.debug(f'val,ballstring,transform:{val,ballstring,transform}')
+        endstring=ballstring[5:]#dropping ball_
+        a,b=re.split('_',endstring)
+        a=float(a)
+        b=float(b)
+        scale=(b-a)/2
+        shift=(b+a)/2
+        if transform==1:
+            return np.arcsin((val-shift)/scale)*2/np.pi
+        elif transform==-1:
+            return scale*np.sin(np.pi/2*val)+shift
+        else: assert False, f"unexpected transform:{transform}"
 
     
     def makediffmat_itoj(self,x1,x2,spatial=None,spatialtransform=None):
