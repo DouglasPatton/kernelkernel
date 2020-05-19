@@ -17,7 +17,7 @@ class mypool:
         handlername=os.path.join(logdir,f'multicluster.log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=100)],
-                level=logging.DEBUG,
+                level=logging.WARNING,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
       
