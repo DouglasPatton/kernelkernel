@@ -21,7 +21,7 @@ class PipeLine(object):
             'overrides':[]
             }
         
-        self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae','splithinge']]
+        self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae']]
         
     def buildsidestep_setupdictlist(self,sidestep_override_runlist,mainstep_setupdict,startstep=1):
         count=len(sidestep_override_runlist)
