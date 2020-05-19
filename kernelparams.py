@@ -39,7 +39,7 @@ class KernelParams:
         y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([1.0])])
 
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([f1,f2])*f3 for f1 in [1,-1,0.5,-0.5] for f2 in [1,-1,0.5,-0.5]])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([f1,f2]) for f1 in [1,-1,0.5,-0.5] for f2 in [1,-1,0.5,-0.5]])
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
