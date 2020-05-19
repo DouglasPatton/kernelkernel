@@ -136,7 +136,7 @@ class MyKernHelper:
 
                     binary_yhat=np.zeros(yhat.shape)
                     binary_yhat[yhat>threshold_i]=1
-                    threshloss=self.doLoss(y,binary_yhat,lossfn='mae')#(np.mean(np.power(y-binary_yhat,2)))
+                    threshloss=self.doLoss(y,binary_yhat,lssfn='mae')#(np.mean(np.power(y-binary_yhat,2)))
                     this_binary_y_loss_list.append((threshold_i,threshloss))
                     #self.logger.debug(f'this_binary_y_loss_list:{this_binary_y_loss_list}')
                 self.binary_y_loss_list_list.append(this_binary_y_loss_list)
