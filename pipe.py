@@ -10,13 +10,13 @@ class PipeLine(object):
         self.mainstep_setupdict={
             'stepcount':5,
             'startstep':0,
-            'bestshare_list':[32,1,1,1],
+            'bestshare_list':[1,1,1,1],
             'threshcutstep':None,
             'loss_threshold_list':None,
-            'do_minimize_list':[0,1,1,1],
-            'maxiter_list':[1,2,4,4],
-            'maxbatchbatchcount_list':[2,2,2,4],
-            'do_validate_list':[0,1,1,1],
+            'do_minimize_list':[1,1,1,1],
+            'maxiter_list':[2,2,4,4],
+            'maxbatchbatchcount_list':[32,64,128,256],
+            'do_validate_list':[1,1,1,1],
             'sidestep':0,
             'overrides':[]
             }

@@ -8,8 +8,8 @@ class KernelParams:
     
     def __init__(self,):
         self.logger=logging.getLogger(__name__)
-        self.n=8 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[128]
+        self.n=32 #used to generate variations datagen-batch_n 
+        self.batchcount_variation_list=[3]
         self.do_minimize=0
         self.maxiter=2
     
@@ -34,10 +34,12 @@ class KernelParams:
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
         y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([i]) for i in [1,2.5,5]])
+        #x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',[np.ones([4,],dtype=np.float64)])
+        #y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([1.0])])
 
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor1*np.array([1,1]) for factor1 in [.4,.5,.75,1]])
-        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[factor1*np.array([1,1]) for factor1 in [.4,.5,.75,1]])
+        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
         Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.3,.9,3)))
@@ -68,7 +70,7 @@ class KernelParams:
         #product_kern_norm_variations = ('modeldict:product_kern_norm', ['none','own_n'])
         #normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n','none'])
         normalize_Ndiffwtsum_variations = ('modeldict:normalize_Ndiffwtsum', ['own_n'])
-        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[1])
+        maxbatchbatchcount_variations=('modeldict:maxbatchbatchcount',[8])
         
         if source=='monte':
             standardization_variations=('modeldict:std_data',['all'])
@@ -145,7 +147,7 @@ class KernelParams:
                 
             species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
-            #species_variations=('species',[self.specieslist[i] for i in range(0,2)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,5)])
             #species_variations=('species',[self.specieslist[i] for i in range(0,10)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
