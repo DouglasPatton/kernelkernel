@@ -15,7 +15,7 @@ class PiscesDataTool():
     def __init__(self,):
         #logging.basicConfig(level=logging.INFO)
         logging.basicConfig(level=logging.INFO)
-        self.savedir=os.path.join(os.getcwd(),'data_tool')
+        self.savedir=os.path.join(os.getcwd(),'data_tool2')
         
         if not os.path.exists(self.savedir):
             os.mkdir(self.savedir)
@@ -193,10 +193,12 @@ class PiscesDataTool():
                 self.specieslist=speciestup[0]
                 self.speciesoccurencelist=speciestup[1]
                 self.speciescomidlist=speciestup[2] 
-                self.specieshuclist=speciestup[3]
-                self.huclist_survey=speciestup[4]
-                self.huccomidlist_survey=speciestup[5]
-                self.specieshuclist_survey_idx=speciestup[6]
+                self.speciescomidstrlist=speciestup[3]
+                self.specieshuclist=speciestup[4]
+                self.huclist_survey=speciestup[5]
+                self.huccomidlist_survey=speciestup[6]
+                self.huccomidstrlist_survey=speciestup[7]
+                self.specieshuclist_survey_idx=speciestup[8]
                 
                 print(f'opening {specieslistpath} with length:{len(speciestup)} and type:{type(speciestup)}')
                 return
@@ -205,10 +207,10 @@ class PiscesDataTool():
                 
         try:self.fishsurveydata
         except: self.getfishdata()
-        (longlist,huclist,comidlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
-        comidlist=[''.join([char for char in comidi if char.isdigit()]) for comidi in comidlist]
-        shortlist=[];occurencelist=[];speciescomidlist=[];specieshuclist=[]
-        shorthuclist=[];huccomidlist=[];specieshuclist=[];specieshuclist_survey_idx=[]
+        (longlist,huclist,comidstrlist)=zip(*[(obs['genus_species'],obs['HUC'],obs['COMID']) for obs in self.fishsurveydata])
+        comidlist=[''.join([char for char in comidi if char.isdigit()]) for comidi in comidstrlist]
+        shortlist=[];occurencelist=[];speciescomidlist=[];speciescomidstrlist=[];specieshuclist=[]
+        shorthuclist=[];huccomidlist=[];huccomidstrlist=[];specieshuclist=[];specieshuclist_survey_idx=[]
         print('building specieslist')
         length=len(longlist)
         for idx,fish in enumerate(longlist):
@@ -222,15 +224,17 @@ class PiscesDataTool():
             except ValueError:
                 shortidx=len(shortlist)#-1 not needed since not yet appended to end of shortlist
                 shortlist.append(fish)
-                specieshuclist.append([])
+                #specieshuclist.append([])
                 specieshuclist_survey_idx.append([])
                 occurencelist.append([idx])
                 speciescomidlist.append([comidlist[idx]])
+                speciescomidstrlist.append([comidstrlist[idx]])
                 specieshuclist.append([huclist[idx]])
                 #p#rint(f'new fish:{fish}')
             if found==1:
                 occurencelist[shortidx].append(idx)
                 speciescomidlist[shortidx].append(comidlist[idx])
+                speciescomidstrlist[shortidx].append(comidstrlist[idx])
                 specieshuclist[shortidx].append(huclist[idx])
                 
             hucfound=0
@@ -249,13 +253,18 @@ class PiscesDataTool():
                 hucshortidx=len(shorthuclist)#this will be its address after appending
                 shorthuclist.append(huc)
                 huccomidlist.append([comidlist[idx]])
+                huccomidstrlist.append([comidstrlist[idx]])
                 specieshuclist[shortidx].append(huc)
                 specieshuclist_survey_idx[shortidx].append(hucshortidx)
             if found==1:
                 
                 comid_i=comidlist[idx]
+                comidstr_i=comidstrlist[idx]
                 try: huccomidlist[hucshortidx].index(comid_i)
                 except ValueError: huccomidlist[hucshortidx].append(comid_i)
+                try: huccomidstrlist[hucshortidx].index(comidstr_i)
+                except ValueError: huccomidlist[hucshortidx].append(comid_i)
+                    
                 try: specieshuclist[shortidx].index(huc)
                 except ValueError: specieshuclist[shortidx].append(huc)
                 try: specieshuclist_survey_idx[shortidx].index(hucshortidx)
@@ -264,18 +273,20 @@ class PiscesDataTool():
         print(f'buildspecieslist found {len(shortlist)} unique strings')
         
         with open(specieslistpath,'wb') as f:
-            pickle.dump((shortlist,occurencelist,speciescomidlist,specieshuclist,shorthuclist,huccomidlist,specieshuclist_survey_idx),f)
+            pickle.dump((shortlist,occurencelist,speciescomidlist,speciescomidstrlist,specieshuclist,shorthuclist,huccomidlist,huccomidstrlist,specieshuclist_survey_idx),f)
         
         self.specieslist=shortlist#a list of unique species
         #next lists have an item for each species in self.specieslist
         self.speciesoccurencelist=occurencelist#for each species, a list of indices from the original long list of species
         self.speciescomidlist=speciescomidlist#for each species, a list of comids where the species was observed
+        self.speciescomidstrlist=speciescomidstrlist # some comids were visited multiple times and have a string comid wtih a letter appended to teh end... A,B,C,... for 1st,2nd,3rd... visit
         self.specieshuclist=specieshuclist#for each species, a list of huc8s where the species was observed 
         
         
         #next 2 lists are not for each species
         self.huclist_survey=shorthuclist#self.huclist_survey is a list of unique huc8's
         self.huccomidlist_survey=huccomidlist#or each huc in self.huclist_survey, a list of comids in that huc that were found in the survey
+        self.huccomidstrlist_survey=huccomidstrlist
         
         self.specieshuclist_survey_idx=specieshuclist_survey_idx#for each species, a list of idx for self.huclist_survey indicating hucs that species appeared in
 
@@ -374,12 +385,12 @@ class PiscesDataTool():
             if idx%(length//33)==0:
                 print(str(round(100*idx/length))+'%',sep=',')
             found=0
+            comid_digits=''.join([char for char in comid if char.isdigit()])
             try:
-                shortidx=shortlist.index(comid_i)
+                shortidx=shortlist.index(comid_digits)
                 found=1
                 #p#rint(f'old comid:{comid}')
             except:
-                comid_digits=''.join([char for char in comid if char.isdigit()])
                 shortlist.append(comid_digits)
                 occurencelist.append([idx])
             if found==1:
@@ -389,7 +400,7 @@ class PiscesDataTool():
             pickle.dump((shortlist,occurencelist),f)
         
         self.comidlist=shortlist  
-        self.comidoccurenclist=occurencelist
+        self.comidoccurencelist=occurencelist
     
     
 
@@ -585,8 +596,9 @@ class PiscesDataTool():
             full_list=0
             species_searchcount=len(species_idx_list)
         species01list=[[] for _ in range(species_searchcount)]
+        species0to1list=[[] for _ in range(species_searchcount)]
         specieshuc_allcomid=[[] for _ in range(species_searchcount)]
-        
+        specieshuc_allcomidstr=[[] for _ in range(species_searchcount)]
         for i,idx in enumerate(species_idx_list):
             try:
                 if i%(species_searchcount//2)==0:
@@ -598,9 +610,10 @@ class PiscesDataTool():
             
             print(f'idx:{idx}',end='. ')
             foundincomidlist=self.speciescomidlist[idx]
+            foundincomidstrlist=self.speciescomidstrlist
             hucidxlist=self.specieshuclist_survey_idx[idx]
             try:
-                hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx])
+                hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx]) # add huc8's from separate list or species range
             except:
                 self.logger1.exception('error appending new hucs.')
             species_huc_count=len(hucidxlist)
@@ -611,14 +624,20 @@ class PiscesDataTool():
                     if j%(species_huc_count//10)==0:
                         print(f'{round(100*j/species_huc_count,1)}%',end=',')
                 except:pass
-                allhuccomids=self.huccomidlist_survey[hucidx]
+                allhuccomids=self.huccomidlist_survey[hucidx] # find all comids in the huc8 that were included in the survey
+                allhuccomidstrs=self.huccomidstrlist_survey[hucidx]
                 specieshuc_allcomid[i].extend(allhuccomids)
+                specieshuc_allcomidstr[i].extend(allhuccomidstrs)
                 #p#rint('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
                 for comid in allhuccomids:
+                    comid_found_count=[1 for ]
                     if comid in foundincomidlist:
                         species01list[i].append(1)
                     else:
                         species01list[i].append(0)
+                
+                    
+                    
         #print('len(species01list)',len(species01list))
         #print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
         #print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
