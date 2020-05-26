@@ -1,5 +1,6 @@
 import os
 import csv
+import re
 #import traceback
 import numpy as np
 import pickle
@@ -401,6 +402,7 @@ class PiscesDataTool():
         
         self.comidlist=shortlist  
         self.comidoccurencelist=occurencelist
+        self.comid_visit_count_dict={comid:len([True for comidstr in longlist if re.search(str(comid),comidstr)])}
     
     
 
@@ -611,6 +613,11 @@ class PiscesDataTool():
             print(f'idx:{idx}',end='. ')
             foundincomidlist=self.speciescomidlist[idx]
             foundincomidstrlist=self.speciescomidstrlist
+            foundincomidstrcount_dict={comid:len([1 for comidstr in foundincomidstrlist if re.search(str(comid),comidstr)]) for comid in foundincomidlist}
+            
+            
+            
+            
             hucidxlist=self.specieshuclist_survey_idx[idx]
             try:
                 hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx]) # add huc8's from separate list or species range
@@ -629,12 +636,19 @@ class PiscesDataTool():
                 specieshuc_allcomid[i].extend(allhuccomids)
                 specieshuc_allcomidstr[i].extend(allhuccomidstrs)
                 #p#rint('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
-                for comid in allhuccomids:
-                    comid_found_count=[1 for ]
+                for c,comid in enumerate(allhuccomids):
+                    comid_visit_count=self.comid_visit_count_dict[comid]
+                    try:comid_found_count=foundincomidstrcount_dict[comid]
+                    except KeyError: comid_found_count=0
+                    except: 
+                        self.logger.exception(unexpected error)
+                        assert False, 'unexpected error'
+                    species0to1list[i].append(comid_found_count/comid_visit_count)
                     if comid in foundincomidlist:
                         species01list[i].append(1)
                     else:
                         species01list[i].append(0)
+                    
                 
                     
                     
