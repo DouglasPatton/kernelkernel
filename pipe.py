@@ -11,7 +11,7 @@ class PipeLine(object):
             'stepcount':5,
             'startstep':0,
             'bestshare_list':[32,1,1,1],
-            'threshcutstep':None,
+            'threshcutstep':4,
             'loss_threshold_list':None,
             'do_minimize_list':[0,1,1,1],
             'maxiter_list':[1,2,4,4],
