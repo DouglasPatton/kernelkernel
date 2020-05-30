@@ -736,7 +736,7 @@ class PiscesDataTool():
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
                     species_n=len(specieshuc_allcomid)
-                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid]
+                    varcountlist=[len(self.sitedatacomid_dict[comidk]) for comidk in specieshuc_allcomid]
                     varcount=max(varcountlist)
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
                     keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
