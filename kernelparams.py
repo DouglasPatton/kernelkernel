@@ -33,14 +33,14 @@ class KernelParams:
             startarray[i]=0.99
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
-        #x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',[np.ones([4,],dtype=np.float64)])
+        x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',[np.ones([4,],dtype=np.float64)])
         
         y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([i]) for i in [1,2.5,5]])
         y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([1.0])])
 
         #hyper_param_form_dict_variations=('modeldict:hyper_param_form_dict:x_bandscale',['fixed'])
         Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([f1,f2]) for f1 in [1,-1,0.5,-0.5] for f2 in [1,-1,0.5,-0.5]])
-        #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
+        Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([1,1])])
        
         #Ndiff_exponentstartingvalue_variations=('hyper_param_dict:Ndiff_exponent',[np.array([0,0])])
         Ndiff_depth_bwstartingvalue_variations=('hyper_param_dict:Ndiff_depth_bw',list(np.linspace(.3,.9,3)))
@@ -152,7 +152,7 @@ class KernelParams:
             species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
             #species_variations=('species',[self.specieslist[i] for i in range(5,10)])
-            #species_variations=('species',[self.specieslist[i] for i in range(0,10)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,10)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
