@@ -33,7 +33,7 @@ class KernelParams:
             startarray[i]=0.99
             arraylist.append(startarray)
         x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',arraylist)
-        x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',[np.ones([4,],dtype=np.float64)])
+        #x_bandscale_startingvalue_variations=('hyper_param_dict:x_bandscale',[np.ones([4,],dtype=np.float64)])
         
         y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([i]) for i in [1,2.5,5]])
         y_bandscale_startingvalue_variations=('hyper_param_dict:y_bandscale',[np.array([1.0])])
