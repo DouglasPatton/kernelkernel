@@ -5,10 +5,10 @@ import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
-#import geopandas as gpd
+import geopandas as gpd
 import logging
 import traceback
-#import pandas as pd
+import pandas as pd
 
 
 class PiscesDataTool():
@@ -23,13 +23,17 @@ class PiscesDataTool():
         logdir=os.path.join(self.savedir,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
         
-        try: logging.getLogger(__name__)
+        try: self.logger
         except:
-            handlername='PiDataTool.log'
-            handler=logging.FileHandler(os.path.join(logdir,handlername))
-            self.logger1 = logging.getLogger(__name__)
-            self.logger1.addHandler(handler)
-
+            logdir=os.path.join(os.getcwd(),'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,f'multicluster.log')
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=100)],
+                    level=logging.WARNING,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
                 
             
         
@@ -72,7 +76,7 @@ class PiscesDataTool():
                 print(self.NHDplus)
                 return
             except:
-                self.logger1.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
+                self.logger.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
                 
     
     def getNHDplus(self,):
@@ -91,7 +95,7 @@ class PiscesDataTool():
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
         
-        filename=os.path.join(os.getcwd(),'fishfiles','huc12_pu_comids_conus.dbf')
+        filename=os.path.join(os.getcwd(),'fishfiles','HUC12_PU_COMIDs_CONUS.dbf')
         
         #dbf = gpd.GeoDataFrame.from_file(filename)
         print(f'starting read of {filename}')
@@ -118,7 +122,7 @@ class PiscesDataTool():
             with open(savefilename,'wb') as f:
                 pickle.dump((self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist),f)
         except:
-            self.logger1.exception('problem saving NHDplus:')
+            self.logger.exception('problem saving NHDplus:')
         
         
         
@@ -332,13 +336,13 @@ class PiscesDataTool():
                     huclist_survey_idx=self.huclist_survey.index(huc8_i)
                     try: self.specieshuclist[specieslist_idx].index(huc8_i)
                     except ValueError: 
-                        self.logger1.info(f'{spec_i} has new huc:{huc8_i}')
+                        self.logger.info(f'{spec_i} has new huc:{huc8_i}')
                         self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)
                         self.specieshuclist_survey_idx_newhucs[specieslist_idx].append(huclist_survey_idx)
 
                 except ValueError: 
                     self.otherhuclist.append(huc8_i)
-                    self.logger1.info(f'{spec_i} has new huc:{huc8_i}, but it does not show up in survey, so not relevant')
+                    self.logger.info(f'{spec_i} has new huc:{huc8_i}, but it does not show up in survey, so not relevant')
  
                 
             
@@ -360,7 +364,7 @@ class PiscesDataTool():
                 print(f'opening {comidlistpath} with length:{len(comidtup)} and has first item length: {len(self.comidlist)} and type:{type(self.comidlist)}')
                 return
             except:
-                self.logger1.exception(f'error when opening {comidlistpath}')
+                self.logger.exception(f'error when opening {comidlistpath}')
             
         try: self.fishsurveydata
         except: self.getfishdata()
@@ -375,7 +379,7 @@ class PiscesDataTool():
                 print(str(round(100*idx/length))+'%',sep=',')
             found=0
             try:
-                shortidx=shortlist.index(comid_i)
+                shortidx=shortlist.index(comid)
                 found=1
                 #p#rint(f'old comid:{comid}')
             except:
@@ -384,7 +388,7 @@ class PiscesDataTool():
                 occurencelist.append([idx])
             if found==1:
                 occurencelist[shortidx].append(idx)
-        self.logger1.info(f'buildCOMIDlist found {len(shortlist)}')
+        self.logger.info(f'buildCOMIDlist found {len(shortlist)}')
         with open(comidlistpath,'wb') as f:
             pickle.dump((shortlist,occurencelist),f)
         
@@ -421,8 +425,8 @@ class PiscesDataTool():
             try:
                 with open(filepath,'rb') as f:
                     savefile=pickle.load(f)
-                self.logger1.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
-                self.logger1.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
+                self.logger.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
+                self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
                 
                 self.sitedatacomid_dict=savefile[0]
                 self.comidsitedataidx=savefile[1]
@@ -432,7 +436,7 @@ class PiscesDataTool():
                 self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
                 return
             except:
-                self.logger1.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
                 
         else:
             print(f'{filepath} does not exist, building COMID site info')   
@@ -451,7 +455,7 @@ class PiscesDataTool():
 
             
             starttime=time()
-            self.logger1.info(f'pool starting at {starttime}')
+            self.logger.info(f'pool starting at {starttime}')
             with mp.Pool(processes=self.processcount) as pool:
                 outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
                 sleep(2)
@@ -459,7 +463,7 @@ class PiscesDataTool():
                 pool.join()
             self.outlist=outlist
             endtime=time()
-            self.logger1.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
+            self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
             comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
             self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
             self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
@@ -468,7 +472,7 @@ class PiscesDataTool():
 
             self.comidsitedataidx=[]
             for i in range(self.processcount):
-                self.logger1.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
+                self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
                 self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
         else:
             outlist=self.mpsearchcomidhuc12(self.comidlist)
@@ -483,13 +487,13 @@ class PiscesDataTool():
         if sum(self.comidsiteinfofindfaillist)>0:
             for i in range(comidcount):
                 if self.comidsiteinfofindfaillist[i]==1:
-                    self.logger1.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
+                    self.logger.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
                     self.comidsiteinfofindfail.append(self.comidlist[i])
                 
         if sum(self.huc12findfaillist)>0:
             for i in range(comidcount):
                 if self.huc12findfaillist[i]==1:
-                    self.logger1.warning(f'huc12find failed for comid:{self.comidlist[i]}')
+                    self.logger.warning(f'huc12find failed for comid:{self.comidlist[i]}')
                     self.huc12findfail.append([self.comidlist[i]])
 
         return
@@ -602,7 +606,7 @@ class PiscesDataTool():
             try:
                 hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx])
             except:
-                self.logger1.exception('error appending new hucs.')
+                self.logger.exception('error appending new hucs.')
             species_huc_count=len(hucidxlist)
             #p#rint('huc_count:',species_huc_count,sep=',')
             
