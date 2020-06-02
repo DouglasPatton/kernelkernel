@@ -10,13 +10,13 @@ class PipeLine(object):
         self.mainstep_setupdict={
             'stepcount':5,
             'startstep':0,
-            'bestshare_list':[16,1,1,1],
+            'bestshare_list':[128,32,8,1],
             'threshcutstep':3,
             'loss_threshold_list':None,
-            'do_minimize_list':[0,1,1,1],
-            'maxiter_list':[1,2,4,4],
-            'maxbatchbatchcount_list':[2,2,2,4],
-            'do_validate_list':[0,1,1,1],
+            'do_minimize_list':[0,0,0,1],
+            'maxiter_list':[0,0,0,4],
+            'maxbatchbatchcount_list':[2,4,8,16],
+            'do_validate_list':[0,0,0,1],
             'sidestep':0,
             'overrides':[]
             }
@@ -122,7 +122,8 @@ class PipeLine(object):
 
             filterthreshold_list=[None for _ in range(stepcount-1)]
             if type(threshcutstep) is int:
-                filterthreshold_list[threshcutstep-1]='naiveloss'
+                for i in range(threshcutstep-1:stepcount-1):
+                    filterthreshold_list[i]='naiveloss'
                 
             if loss_threshold_list is None:
                 loss_threshold_list=[None for _ in range(stepcount-1)]
