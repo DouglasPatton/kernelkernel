@@ -122,7 +122,7 @@ class PipeLine(object):
 
             filterthreshold_list=[None for _ in range(stepcount-1)]
             if type(threshcutstep) is int:
-                for i in range(threshcutstep-1:stepcount-1):
+                for i in range(threshcutstep-1,stepcount-1):
                     filterthreshold_list[i]='naiveloss'
                 
             if loss_threshold_list is None:
