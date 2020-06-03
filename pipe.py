@@ -10,7 +10,7 @@ class PipeLine(object):
         self.mainstep_setupdict={
             'stepcount':5,
             'startstep':0,
-            'bestshare_list':[128,32,8,1],
+            'bestshare_list':[64,32,8,1],
             'threshcutstep':3,
             'loss_threshold_list':None,
             'do_minimize_list':[0,0,0,1],
