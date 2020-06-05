@@ -252,17 +252,20 @@ class JobQFiller(mp.Process):
 
 class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
-        
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'RunNode-log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
-        self.logger.info('RunNode logging')
+        try:
+            self.logger=logging.getLogger(__name__)
+            self.logger.info('starting RunNode object')
+        except:
+            logdir=os.path.join(os.getcwd(),'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,f'RunNode-log')
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
+                level=logging.WARNING,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
+            self.logger.info('RunNode logging')
         
         self.qdict=qdict
         self.source=source
@@ -289,7 +292,7 @@ class RunNode(mp.Process,BaseManager):
             m.connect()
             jobq = m.jobq()
             saveq = m.saveq()
-        kc=kernelcompare.KernelCompare(source=self.source)
+        kc=kernelcompare.KernelCompare(source=self.source) # a new one every run
         while True:
             try:
                 havejob=0
@@ -346,15 +349,19 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
     '''
     
     def __init__(self,source=None,optdict_variation_list=None,datagen_variation_list=None,dosteps=1,local_run=None,nodecount=0,qdict=None):
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'mycluster_.log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
+        try:
+            self.logger=logging.getLogger(__name__)
+            self.logger.info('starting RunCluster object')
+        except:
+            logdir=os.path.join(os.getcwd(),'log')
+            if not os.path.exists(logdir): os.mkdir(logdir)
+            handlername=os.path.join(logdir,f'mycluster_.log')
+            logging.basicConfig(
+                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
+                level=logging.WARNING,
+                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+                datefmt='%Y-%m-%dT%H:%M:%S')
+            self.logger = logging.getLogger(handlername)
         
         self.qdict=qdict 
         if local_run:
