@@ -271,7 +271,7 @@ class MyKernHelper:
             result=scale*np.sin(np.pi/2*val)+shift
             if result.min()<a or result.max()>b:
                 self.logger.error(f'outside range! {result} from val:{val},a:{a},b:{b}!')
-            return 
+            return result
         else: assert False, f"unexpected transform:{transform}"
 
     
