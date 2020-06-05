@@ -85,6 +85,7 @@ class SaveQDumper(mp.Process):
                 minlosspos=losslist.index(minloss)
                 model_save_summary['loss']=minloss
                 model_save_summary['lossdict']=lossdictlist[minlosspos]
+                model_save_summary['params']=model_save_list[minlosspos]['params']
                 model_save_summary['binary_y_result']=model_save_list[minlosspos]['binary_y_result']
             else:
                 keylist=[key for key in lossdictlist[0]]
@@ -103,6 +104,7 @@ class SaveQDumper(mp.Process):
                 model_save_summary['loss']=meanloss
                 model_save_summary['lossdict']=meanlossdict
                 model_save_summary['binary_y_result']=meanbinary_y_result
+                model_save_summary['params']=model_save_list[0]['params'] #should all have same params for validation
             return model_save_summary
         except:
             self.logger.exception('summary error')
@@ -129,7 +131,8 @@ class SaveQDumper(mp.Process):
                     lossdict=model_save_summary['lossdict']
                     naiveloss=model_save_summary['naiveloss']
                     binary_y_result=model_save_summary['binary_y_result']
-                    message=f"SaveQDumper has {model_save_summary['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result}"
+                    params=model_save_summary['params']
+                    message=f"SaveQDumper has {model_save_summary['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result} for params:{params}"
                     print(message)
                     self.logger.debug(message)
                 except:

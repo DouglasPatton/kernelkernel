@@ -214,7 +214,7 @@ class KCPisces():
         
     def split_pisces_model_save_path_dict(self,startdir):
         self.logger.debug('starting to add species names')
-        self.addspecies_name_and_resave(startdir=startdir)
+        #self.addspecies_name_and_resave(startdir=startdir)
         self.logger.debug('finished adding species names')
         
         
@@ -256,7 +256,10 @@ class KCPisces():
         if filepath is None:
             model_save_pathlist=self.recursive_build_model_save_pathlist(startdir)
         else:
+            if type(filepath) is str:
+                filepath=[filepath]
             model_save_pathlist=[filepath]
+            
         #self.logger.debug(f'model_save_pathlist:{model_save_pathlist}')
         species_model_dictlist={}
         species_save_path_toformat=os.path.join(os.path.split(startdir)[0],'species-{}_model_save')

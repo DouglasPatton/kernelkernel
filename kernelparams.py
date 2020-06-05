@@ -306,15 +306,15 @@ class KernelParams:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.005,
-            'fatol':.001,
-            'adaptive':True,
+            'xatol':0.05,
+            'fatol':.0001,
+            'adaptive':False,
             'maxiter':self.maxiter
             }
         optiondict_p={'maxiter':self.maxiter}
         optimizer_settings_dict1={
-            'method':'Powell',#'Nelder-Mead',#'BFGS',#'
-            'options':optiondict_p,#optiondict_NM,#
+            'method':'Nelder-Mead',#'Powell',#'BFGS',#'
+            'options':optiondict_NM,#optiondict_p,#
             'loss_threshold':None,#1,#'naiveloss',
             'help_start':0,
             'partial_match':0,

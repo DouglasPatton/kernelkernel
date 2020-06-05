@@ -156,7 +156,7 @@ class KCHelper():
                 break
             except:
                 if j==9:
-                    self.logger.exception(f'error in {__name__}')
+                    self.logger.exception(f'error with {filename}')
                     return
         override_dict=self.build_override_dict_from_str(flatdict_tup[0],flatdict_tup[1])
         if not type(overwrite_condition) is tuple:
