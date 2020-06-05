@@ -309,7 +309,7 @@ class KernelParams:
             'xatol':0.05,
             'fatol':.0001,
             'adaptive':False,
-            'maxiter':self.maxiter
+            'maxiter':self.maxiter*100
             }
         optiondict_p={'maxiter':self.maxiter}
         optimizer_settings_dict1={
