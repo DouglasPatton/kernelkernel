@@ -174,6 +174,8 @@ class KCPisces():
                     all_species_model_merge_dict=self.getpickle(savepath)
                     self.logger.warning(f'using existing all_species_model_merge_dict from {startpath}')
                     return all_species_model_merge_dict
+            except:
+                self.logger.exception(f'error when opening all_species_model_merge_dict at {startpath}')
 
             speciescount=len(species_model_save_path_dict)
 
