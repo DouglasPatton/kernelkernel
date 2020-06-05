@@ -163,8 +163,17 @@ class KCPisces():
                 except:
                     self.logger.exception('')
                     assert False, 'unexpected exception'
+                    
+                assert False, 'not developed'
+                savepath=self.all_species_model_merge_dict_path
             else:
+                savepath=os.path.join(startpath,'all_species_model_merge.pickle')
                 all_species_model_merge_dict={}
+            try:
+                if os.path.exists(savepath):
+                    all_species_model_merge_dict=self.getpickle(savepath)
+                    self.logger.warning(f'using existing all_species_model_merge_dict from {startpath}')
+                    return all_species_model_merge_dict
 
             speciescount=len(species_model_save_path_dict)
 
@@ -187,12 +196,7 @@ class KCPisces():
                 if recondense2:
                     all_species_model_merge_dict[species]=self.condense_saved_model_list(all_species_model_merge_dict[species], help_start=0, strict=1,verbose=0,loss_function=loss_function)
             self.logger.debug(f'len(all_species_model_merge_dict):{len(all_species_model_merge_dict)}')
-            if merge_with_existing:
-                assert False, 'not developed'
-                savepath=self.all_species_model_merge_dict_path
-            else:
-                _,stem=os.path.split(self.all_species_model_merge_dict_path)
-                savepath=os.path.join(startpath,stem)
+
             self.savepickle(all_species_model_merge_dict,savepath)
             return all_species_model_merge_dict
         except:

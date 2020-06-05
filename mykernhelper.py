@@ -259,9 +259,15 @@ class MyKernHelper:
         scale=(b-a)/2
         shift=(b+a)/2
         if transform==1:
-            return np.arcsin((val-shift)/scale)*2/np.pi
+            result=np.arcsin((val-shift)/scale)*2/np.pi
+            if result in [np.nan,np.inf]:
+                self.logger.critical(f'{result} from val:{val},a:{a},b:{b}!')
+            return result
         elif transform==-1:
-            return scale*np.sin(np.pi/2*val)+shift
+            result=scale*np.sin(np.pi/2*val)+shift
+            if result<a or result>b:
+                self.logger.critical(f'outside range! {result} from val:{val},a:{a},b:{b}!')
+            return 
         else: assert False, f"unexpected transform:{transform}"
 
     
