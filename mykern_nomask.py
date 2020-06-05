@@ -32,7 +32,10 @@ class kNdtool(Ndiff,MyKernHelper):
             savedir=os.getcwd()
         #logdir=os.path.join(savedir,'log')
         #if not os.path.exists(logdir):os.mkdir(logdir)
-        self.logger=logging.getLogger(__name__)
+        try:
+            self.logger
+        except:
+            self.logger=logging.getLogger(__name__)
         self.savedir=savedir
         self.pname=myname
 
