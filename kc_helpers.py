@@ -60,7 +60,7 @@ class KCHelper():
             add_tuple_list=[add_tuple_list]
         if not os.path.exists(startdirectory):
             startdirectory=os.path.join(os.getcwd,startdirectory)
-        if overwrite==1:
+        if not overwrite:
             save_directory=os.path.join(startdirectory,'add_dict_files')
             if not os.path.exists(save_directory):
                 os.mkdir(save_directory)

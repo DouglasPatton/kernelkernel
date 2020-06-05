@@ -241,10 +241,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
         try:
             model_save_pathlist=[]
             for rootpath,subdirs,files in os.walk(startdirectory):
-                for newroot in subdirs:
-                    model_save_pathlist.extend(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))
+                '''for newroot in subdirs:
+                    model_save_pathlist.extend(self.recursive_build_model_save_pathlist(os.path.join(rootpath,newroot)))'''
                 for file in files:
-                    if re.search('model_save',file):
+                    if re.search('_model_save_',file):
                         model_save_pathlist.append(os.path.join(rootpath,file))
             self.logger.debug(f'len(model_save_pathlist):{len(model_save_pathlist)}')
             return model_save_pathlist
