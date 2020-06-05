@@ -9,9 +9,11 @@ from math import log
 
 class MyKernHelper:
     def __init__(self,):
-        self.logger=logging.getLogger(__name__)
-        self.logger.debug('MyKernHelper is logging')
-    
+        try: self.logger
+        except:
+            self.logger=logging.getLogger(__name__)
+        self.logger.critical('MyKernHelper is logging')
+
     
     def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,getname=0):
 
@@ -164,18 +166,20 @@ class MyKernHelper:
     
     
     def insert_detransformed_freeparams(self, fixed_or_free_paramdict,free_params):
+        new_params=np.empty(free_params.shape,dtype=np.float64)
         for param_name,param_feature_dict in fixed_or_free_paramdict.items():
             if not param_name in ['fixed_params','free_params']:
                 const_val=param_feature_dict['const']
                 if const_val=='non-neg':
                     for i in range(*param_feature_dict['location_idx']):
-                        free_params[i]=np.exp(free_params[i])
+                        new_params[i]=np.exp(free_params[i])
                 elif const_val[:4]=='ball': #https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19760004646.pdf
                     for i in range(*param_feature_dict['location_idx']):
-                        free_params[i]=self.doball(free_params[i],const_val,transform=-1)
+                        new_params[i]=self.doball(free_params[i],const_val,transform=-1)
+                
                     
-                    
-        fixed_or_free_paramdict['free_params']=free_params
+        print(f'free_params:{free_params},new_params:{new_params}')    
+        fixed_or_free_paramdict['free_params']=new_params
         return fixed_or_free_paramdict
     
     def pull_value_from_fixed_or_free(self,param_name,fixed_or_free_paramdict,transform=None):
@@ -250,8 +254,8 @@ class MyKernHelper:
         #self.logger.info(f'setup_fixed_or_free_paramdict:{fixed_or_free_paramdict}')
         return free_params,fixed_or_free_paramdict
     
-    def doball(self,val,ballstring,transform=1):
-        self.logger.debug(f'val,ballstring,transform:{val,ballstring,transform}')
+    def doball(self,val,ballstring,transform=0):
+        #self.logger.debug(f'val,ballstring,transform:{val,ballstring,transform}')
         endstring=ballstring[5:]#dropping ball_
         a,b=re.split('_',endstring)
         a=float(a)
@@ -260,13 +264,13 @@ class MyKernHelper:
         shift=(b+a)/2
         if transform==1:
             result=np.arcsin((val-shift)/scale)*2/np.pi
-            if result in [np.nan,np.inf]:
-                self.logger.critical(f'{result} from val:{val},a:{a},b:{b}!')
+            if np.isnan(result).any() or np.isinf(result).any():
+                self.logger.error(f'{result} from val:{val},a:{a},b:{b}!')
             return result
         elif transform==-1:
             result=scale*np.sin(np.pi/2*val)+shift
-            if result<a or result>b:
-                self.logger.critical(f'outside range! {result} from val:{val},a:{a},b:{b}!')
+            if result.min()<a or result.max()>b:
+                self.logger.error(f'outside range! {result} from val:{val},a:{a},b:{b}!')
             return 
         else: assert False, f"unexpected transform:{transform}"
 
