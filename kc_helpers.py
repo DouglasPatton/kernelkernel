@@ -158,23 +158,30 @@ class KCHelper():
                 if j==9:
                     self.logger.exception(f'error with {filename}')
                     return
-        override_dict=self.build_override_dict_from_str(flatdict_tup[0],flatdict_tup[1])
-        if not type(overwrite_condition) is tuple:
-            condition_dict=override_dict
-        else: 
-            condition_dict=self.build_override_dict_from_str(overwrite_condition[0],overwrite_condition[1])
-            overwrite_condition=overwrite_condition[1]
-        new_modelsave_list=[]
-        for savedict in modelsave_list:
-            if not overwrite_condition==None:
-                current_value=self.pull_nested_key(savedict,condition_dict)
-                if current_value==overwrite_condition:
-                    new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
+        if type(flatdict_tup) is tuple:
+            flatdictlist=[flatdict_tup]
+        else:
+            flatdictlist=flatdict_tup
+        for flatdict_tup in flatdictlist:
+            override_dict=self.build_override_dict_from_str(flatdict_tup[0],flatdict_tup[1])
+            if not type(overwrite_condition) is tuple:
+                condition_dict=override_dict
+            else: 
+                condition_dict=self.build_override_dict_from_str(overwrite_condition[0],overwrite_condition[1])
+                overwrite_condition=overwrite_condition[1]
+            new_modelsave_list=[]
+            for savedict in modelsave_list:
+                if not overwrite_condition==None:
+                    current_value=self.pull_nested_key(savedict,condition_dict)
+                    if current_value==overwrite_condition:
+                        new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
+                    else:
+                        print(current_value,'not overriden b/c does not match condition:',overwrite_condition)
+                        new_modelsave_list.append(savedict)
                 else:
-                    print(current_value,'not overriden b/c does not match condition:',overwrite_condition)
-                    new_modelsave_list.append(savedict)
-            else:
-                new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
+                    new_modelsave_list.append(self.do_dict_override(savedict,override_dict,replace=1,verbose=verbose))
+            if len(flatdictlist)>1:
+                modelsave_list=new_modelsave_list
         for j in range(10):
             try:
                 with open(os.path.join(self.kc_savedirectory,writefilename),'wb') as modelsavefile:
