@@ -20,16 +20,16 @@ import logging,traceback
 
 class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
     def __init__(self,directory=None,myname=None):
-        self.max_maxbatchbatchcount=None
+        self.max_maxbatchbatchcount=None # only used by master in step 0. instantiated so it can be set by build_pipeline and access by datagen for creating initial datagen_dicts that work for small_n species
         if directory==None:
             self.kc_savedirectory=os.getcwd
         else:
             self.kc_savedirectory=directory
-        self.species_model_save_path_dict=os.path.join(self.kc_savedirectory,'species_model_save_path_dict.pickle')
+        #self.species_model_save_path_dict=os.path.join(self.kc_savedirectory,'species_model_save_path_dict.pickle')
         
         #mk.kNdtool.__init__(self,savedir=self.kc_savedirectory,myname=myname)
-        self.Ndiff_list_of_masks_x=None
-        self.Ndiff_list_of_masks_y=None
+        #self.Ndiff_list_of_masks_x=None
+        #self.Ndiff_list_of_masks_y=None
         
         try:
             self.logger=logging.getLogger(__name__)

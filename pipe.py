@@ -20,8 +20,10 @@ class PipeLine(object):
             'sidestep':0,
             'overrides':[]
             }
-        
+        # a list of sidesteps has each sidestep containing 
+        #     a list of tuples with each tuple containing an override for the optimizedict set in kernelparms
         self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae']]
+        more_side_steps=[[('modeldict',{'estimator':est,'loss_function':lf})] for est in ['logit','xgboost','linear_svc','svc'] for lf in ['mse','mae']]
         
     def buildsidestep_setupdictlist(self,sidestep_override_runlist,mainstep_setupdict,startstep=1):
         count=len(sidestep_override_runlist)
@@ -39,7 +41,8 @@ class PipeLine(object):
         return sidestep_setupdictlist
                 
     def build_pipeline(self,mainstep_setupdict=None,sidestep_override_runlist=None,order='breadth_first'):
-        
+        '''pipeline is a linear sequence of pipes. pipes are a linear sequence of steps
+        '''
         if mainstep_setupdict is None:
             mainstep_setupdict=self.mainstep_setupdict
             maxstepcount=mainstep_setupdict['stepcount']

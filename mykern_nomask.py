@@ -130,7 +130,7 @@ class kNdtool(Ndiff,MyKernHelper):
             xbw=xbw*hx
 
 
-            if modeldict['regression_model']=='logistic':
+            if modeldict['regression_model']=='kernel_logistic':
                 xoutdiffs=diffdict['outdiffs']
                 prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
 

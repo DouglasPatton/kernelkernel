@@ -268,6 +268,7 @@ class KernelParams:
             #'validate':0, # if int - i, validate upto i batchbatches.
             #     if string - 'remaining' , validate all remaining batchbatches 
             #     and store average of results as well as separate list of all results
+            'estimator':'kernelkernel'
             'pthreshold':0.5, # used for assigning phat to yhat=1 or 0
             'binary_y':None, # if not None, then specifies the threshold of p(y=1|x) for predicting 1, e.g., 0.5... 
             #     if tuple of floats 0 to 1, calculates mse/mae for (binary) yhat-y
