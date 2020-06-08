@@ -119,9 +119,9 @@ class KCPisces():
                 #new_opt_dict['datagen_dict']=expanded_datagen_dict
                 defaultoptimizedict=self.build_optdict(param_count=None,species=None)
                 optimizedict=self.do_dict_override(defaultoptimizedict,new_opt_dict)
-                best_fof_paramdict=model_save['params']
-                self.logger.debug(f'opt_job_builder has best_fof_paramdict:{best_fof_paramdict}')
-                optimizedict=self.rebuild_hyper_param_dict(optimizedict,best_fof_paramdict,verbose=0)
+                fof_paramdict=model_save['params']
+                self.logger.debug(f'opt_job_builder has fof_paramdict:{fof_paramdict}')
+                optimizedict=self.rebuild_hyper_param_dict(optimizedict,fof_paramdict,verbose=0)
                 self.logger.debug(f'after rebuild hyper param dict, optimizedict:{optimizedict}')
                 optmodel_run_dict={'optimizedict':optimizedict,'datagen_dict':expanded_datagen_dict}  
                 optmodel_run_dict['savepath']=model_save['savepath']
