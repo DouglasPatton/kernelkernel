@@ -8,15 +8,15 @@ class PipeLine(object):
         self.logger=logging.getLogger(__name__)
         self.pipestepdict=None
         self.mainstep_setupdict={
-            'stepcount':5,
+            'stepcount':6,
             'startstep':0,
-            'bestshare_list':[32,16,8,1],
+            'bestshare_list':[32,16,8,1,1],
             'threshcutstep':3,
             'loss_threshold_list':None,
-            'do_minimize_list':[0,0,0,1],
-            'maxiter_list':[0,0,0,400],
-            'maxbatchbatchcount_list':[2,4,8,16],
-            'do_validate_list':[0,0,0,1],
+            'do_minimize_list':[0,0,0,1,1],
+            'maxiter_list':[0,0,0,400,800],
+            'maxbatchbatchcount_list':[2,4,8,16,16],
+            'do_validate_list':[0,0,0,1,1],
             'sidestep':0,
             'overrides':[]
             }
