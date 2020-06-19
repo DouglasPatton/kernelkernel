@@ -855,7 +855,7 @@ class optimize_free_params(kNdtool):
         self.binary_y_loss_list_list=[]
         self.save_interval=1
         self.datagen_dict=optimizedict['datagen_dict']
-        self.source=self.datagen_dict['source']
+        self.source=self.datagen_dict['source']n
         
         try:
             self.logger=logging.getLogger(__name__)

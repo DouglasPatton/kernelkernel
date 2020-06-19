@@ -292,7 +292,7 @@ class RunNode(mp.Process,BaseManager):
             m.connect()
             jobq = m.jobq()
             saveq = m.saveq()
-        kc=kernelcompare.KernelCompare(source=self.source) # a new one every run
+        kc=kernelcompare.KernelCompare(source=self.source) # NOT a new one every run
         while True:
             try:
                 havejob=0
