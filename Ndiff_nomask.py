@@ -120,7 +120,9 @@ class Ndiff:
         try:
             result=np.power(
                         self.Ndiffsum_then_normalize_bw(
-                            self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw),normalize,depth,x_or_y),Ndiff_exp)
+                            self.do_Ndiffbw_kern(Ndiff_bw_kern, masked_data,deeper_bw)
+                            ,normalize,depth,x_or_y)
+                ,Ndiff_exp)
             return result
         except FloatingPointError:
             self.nperror=1
@@ -135,12 +137,14 @@ class Ndiff:
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize,depth,x_or_y):
         try:
-            self.logger.critical(f'deeper_bw:{deeper_bw}')
-            kernelized=self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)
-            self.logger.critical(f'kernelized:{kernelized}')
+            
             result=np.power(
                 self.Ndiffsum_then_normalize_bw(
-                    kernelized*deeper_bw,normalize,depth,x_or_y),Ndiff_exp)
+                    self.do_Ndiffbw_kern(
+                        Ndiff_bw_kern,masked_data,Ndiff_bw)
+                    *deeper_bw,normalize,depth,x_or_y)
+                ,Ndiff_exp)
+            return result
         except FloatingPointError:
             self.nperror=1
             self.logger.exception('nperror set to 1 to trigger error and big loss')
