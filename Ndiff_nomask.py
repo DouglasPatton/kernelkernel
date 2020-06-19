@@ -135,9 +135,12 @@ class Ndiff:
     
     def Ndiff_product(self,masked_data,deeper_bw,Ndiff_exp,Ndiff_bw,Ndiff_bw_kern,normalize,depth,x_or_y):
         try:
+            self.logger.critical(f'deeper_bw:{deeper_bw}')
+            kernelized=self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)
+            self.logger.critical(f'kernelized:{kernelized}')
             result=np.power(
                 self.Ndiffsum_then_normalize_bw(
-                    self.do_Ndiffbw_kern(Ndiff_bw_kern,masked_data,Ndiff_bw)*deeper_bw,normalize,depth,x_or_y),Ndiff_exp)
+                    kernelized*deeper_bw,normalize,depth,x_or_y),Ndiff_exp)
         except FloatingPointError:
             self.nperror=1
             self.logger.exception('nperror set to 1 to trigger error and big loss')
@@ -204,6 +207,7 @@ class Ndiff:
 
                     if Ndiff_type=='product':
                         this_depth_bw=self.Ndiff_product(this_depth_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
+                        self.logger.critical(f'depth:{depth}, deeper_depth_bw:{deeper_depth_bw},this_depth_bw:{this_depth_bw}')
                     if Ndiff_type=='recursive':
                         if depth==max_bw_Ndiff:deeper_depth_bw=Ndiff_depth_bw_params[0]
                         this_depth_bw=self.Ndiff_recursive(this_depth_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)

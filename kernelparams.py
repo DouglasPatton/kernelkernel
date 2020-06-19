@@ -65,7 +65,8 @@ class KernelParams:
         #cross_mse,cross_mse2
         #loss_function_variations=('modeldict:loss_function',['batch_crossval'])
         #Ndiff_type_variations = ('modeldict:Ndiff_type', ['product','recursive'])
-        Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
+        #Ndiff_type_variations = ('modeldict:Ndiff_type', ['recursive'])
+        Ndiff_type_variations = ('modeldict:Ndiff_type', ['product'])
         max_bw_Ndiff_variations = ('modeldict:max_bw_Ndiff', [max_bw_Ndiff])
         Ndiff_start_variations = ('modeldict:Ndiff_start', [1])
         product_kern_norm_variations = ('modeldict:product_kern_norm', ['none'])
@@ -152,7 +153,7 @@ class KernelParams:
             species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
             #species_variations=('species',[self.specieslist[i] for i in range(5,10)])
-            #species_variations=('species',[self.specieslist[i] for i in range(0,10)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,1)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
