@@ -581,16 +581,22 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
         
         vstring=''
         if new_dict==None or new_dict=={}:
-            if verbose==1:
+            if verbose:
                 print(f'vstring:{vstring}, and done1')
             return old_dict_copy
         for key,val in new_dict.items():
             if verbose==1:
                 vstring=vstring+f":key({key})"
             if type(val) is dict:
-                if verbose==1:print(f'val is dict in {key}, recursive call')
-                old_dict_copy[key],vstring2=self.do_dict_override(old_dict_copy[key],val,recursive=1,verbose=verbose,replace=replace)
-                vstring=vstring+vstring2
+                if verbose:print(f'val is dict in {key}, recursive call')
+                if (not key in old_dict_copy) or (not type(old_dict_copy[key]) is dict):
+                    old_dict_copy[key]=val
+                    
+                else:
+                    old_dict_copy[key],vstring2=self.do_dict_override(
+                        old_dict_copy[key],val,recursive=1,verbose=verbose,replace=replace
+                    )
+                    if verbose: vstring=vstring+vstring2
                 #p#rint('made it back from recursive call')
             elif type(val) is None and deletekey==1:
                 try: 
