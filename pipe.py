@@ -14,7 +14,7 @@ class PipeLine(object):
             'threshcutstep':3,
             'loss_threshold_list':None,
             'do_minimize_list':[0,0,0,1,1],
-            'maxiter_list':[0,0,0,400,800],
+            'maxiter_list':[0,0,0,4,8],
             'maxbatchbatchcount_list':[2,4,8,16,16],
             'do_validate_list':[0,0,0,1,1],
             'sidestep':0,
