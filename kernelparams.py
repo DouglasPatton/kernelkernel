@@ -290,7 +290,7 @@ class KernelParams:
             'regression_model':'NW',
             'product_kern_norm':'self',
             'hyper_param_form_dict':{
-                'Ndiff_exponent':'ball_-2_2',
+                'Ndiff_exponent':'ball_-5_5',
                 'x_bandscale':'ball_0_10',#'non-neg',
                 'Ndiff_depth_bw':'non-neg',
                 'outer_x_bw':'non-neg',
@@ -314,8 +314,8 @@ class KernelParams:
             }
         optiondict_p={'maxiter':self.maxiter}
         optimizer_settings_dict1={
-            'method':'Powell',#'Nelder-Mead',#'BFGS',#'
-            'options':optiondict_p,#optiondict_NM,#
+            'method':'Nelder-Mead',#'Powell',#'BFGS',#'
+            'options':optiondict_NM,#optiondict_p,#
             'loss_threshold':None,#1,#'naiveloss',
             'help_start':0,
             'partial_match':0,
