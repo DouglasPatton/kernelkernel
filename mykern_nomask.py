@@ -571,6 +571,10 @@ class kNdtool(Ndiff,MyKernHelper):
                 batchbatch_all_yhat.append(all_yhat)
             batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
             batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
+            self.logger.debug(f'batchbatch_all_y.shape:{batchbatch_all_y.shape}')
+            self.logger.debug(f'batchbatch_all_y:{batchbatch_all_y}')
+            self.logger.debug(f'batchbatch_all_yhat.shape:{batchbatch_all_yhat.shape}')
+            self.logger.debug(f'batchbatch_all_yhat:{batchbatch_all_yhat}')
             
             binary_threshold=modeldict['binary_y']
             
@@ -798,7 +802,7 @@ class kNdtool(Ndiff,MyKernHelper):
             return
         except:
             if not self.nperror:
-                self.logger.exception(f'y:{y},yhat:{yhat}')
+                self.logger.exception(f'y:{y},yhat:{yhat} for self.datagen_dict:{self.datagen_dict}')
                 assert False,'unexpected error'
             else:
                 return
@@ -886,7 +890,7 @@ class optimize_free_params(kNdtool):
             handlername=os.path.join(logdir,f'optimize_free_params-{self.pname}.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
+                level=logging.DEBUG,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
 
