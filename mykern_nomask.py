@@ -15,6 +15,7 @@ os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
+from sklearn import metrics
 #from sklearn.linear_model import LogisticRegression
 import logging
 
@@ -575,10 +576,13 @@ class kNdtool(Ndiff,MyKernHelper):
             
             #batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
-            mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
+            lossdict={'mse':None,'mae':None,'f1':None,'f2':None, 'splithinge':None, 'logloss':None, 'avg_prec_sc':None}
+            for lf in lossdict:
+                lossdict[lf]=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn=lf)
+            ''' mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
             mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
             splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
-            lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}
+            lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}'''
             self.logger.info(f'lossdict:{lossdict}, self.sample_ymean:{self.sample_ymean},n:{batchbatch_all_yhat.shape}')
 
             if mse<0:
@@ -596,7 +600,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.nperror==1:
             self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
             self.nperror=0
-            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
+            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge','f1']}
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
         self.logger.debug(f'len(self.binary_y_loss_list_list): {len(self.binary_y_loss_list_list)},len(self.lossdict_and_paramdict_list):{len(self.lossdict_and_paramdict_list)}')
@@ -762,10 +766,18 @@ class kNdtool(Ndiff,MyKernHelper):
             if not lssfn:lssfn=self.loss_function
             err=y-yhat
             if lssfn=='mse':
-                loss=np.mean(np.power(err,2))
-            if lssfn=='mae':
-                loss=np.mean(np.abs(err))
-            if lssfn=='splithinge':
+                loss=metrics.mean_squared_error(y,yhat)
+            if lssfn=='f1':
+                loss=metrics.f1_score(y,yhat)
+            elif lssfn=='mae':
+                loss=metrics.mean_absolute_error(y,yhat)
+            elif lossfn=='logloss':
+                loss=metrics.log_loss(y,yhat)
+            elif lossfn=='f2':
+                loss=metrics.fbeta_score(y,yhat,beta=2)
+            elif lossfn=='avg_prec_sc':
+                loss=metrics.average_precision_score(y,yhat,average='micro')
+            elif lssfn=='splithinge':
                 if pthreshold is None:
                     threshold=self.pthreshold
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
