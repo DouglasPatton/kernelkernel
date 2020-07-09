@@ -82,6 +82,10 @@ class datagen(PiscesDataTool):
             missing=datagen_dict['missing']
             species=datagen_dict['species']
             self.species=species
+            if datagen_dict['sample']=='y-even'
+                self.ysample='even'
+            else:
+                self.ysample=None
             
             
             

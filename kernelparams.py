@@ -248,6 +248,7 @@ class KernelParams:
                 'floatselecttup':floatselecttup,
                 'spatialselecttup':spatialselecttup,
                 'param_count':param_count,
+                'sample':'y-even'
                 #'validate_batchcount':'none', # 'none'->same as batchcount
                 #'validate_batchbatchcount':1 # 'remaining'-> all batchbatches left after training 
             }
