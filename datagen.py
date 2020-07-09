@@ -270,9 +270,14 @@ class datagen(PiscesDataTool):
                 batchbatchlist[i][j]=(ydataarrayselect,xdataarrayselect)
                 #print('ydatashape:',batchbatchlist[i][j][0].shape,'xdatashape:',batchbatchlist[i][j][1].shape)
         #print('end',end,'fullbatchbatch_n',fullbatchbatch_n)
-        self.yxtup_batchbatch=batchbatchlist[:batchbatchcount_train]
-        self.yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_train+batchbatchcount_val]
         
+        yxtup_batchbatch=batchbatchlist[:batchbatchcount_train]
+        yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_train+batchbatchcount_val]
+        if self.sample_y:
+            yxtup_batchbatch=self.doSampleY(yxtup_batchbatch)
+            yxtup_batchbatch_val=self.doSampleY(yxtup_batchbatch_val)
+        self.yxtup_batchbatch=yxtup_batchbatch
+        self.yxtup_batchbatch_val=yxtup_batchbatch_val
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         '''
