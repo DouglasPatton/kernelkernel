@@ -578,7 +578,9 @@ class kNdtool(Ndiff,MyKernHelper):
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
             lossdict={'mse':None,'mae':None,'f1':None,'f2':None, 'splithinge':None, 'logloss':None, 'avg_prec_sc':None}
             for lf in lossdict:
+                
                 lossdict[lf]=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn=lf)
+            mse=lossdict['mse']
             ''' mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
             mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
             splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
@@ -764,22 +766,28 @@ class kNdtool(Ndiff,MyKernHelper):
     def doLoss(self,y,yhat,pthreshold=None,lssfn=None):
         try:
             if not lssfn:lssfn=self.loss_function
-            err=y-yhat
+            if pthreshold is None:
+                    threshold=self.pthreshold    
+            
             if lssfn=='mse':
                 loss=metrics.mean_squared_error(y,yhat)
             if lssfn=='f1':
-                loss=metrics.f1_score(y,yhat)
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=metrics.f1_score(y,yhat_01)
             elif lssfn=='mae':
                 loss=metrics.mean_absolute_error(y,yhat)
-            elif lossfn=='logloss':
-                loss=metrics.log_loss(y,yhat)
-            elif lossfn=='f2':
-                loss=metrics.fbeta_score(y,yhat,beta=2)
-            elif lossfn=='avg_prec_sc':
+            elif lssfn=='logloss':
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=metrics.log_loss(y,yhat_01)
+            elif lssfn=='f2':
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=metrics.fbeta_score(y,yhat_01,beta=2)
+            elif lssfn=='avg_prec_sc':
                 loss=metrics.average_precision_score(y,yhat,average='micro')
             elif lssfn=='splithinge':
-                if pthreshold is None:
-                    threshold=self.pthreshold
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
                 loss=np.mean((threshold-yhat)*(y-yhat_01))      
@@ -790,7 +798,7 @@ class kNdtool(Ndiff,MyKernHelper):
             return
         except:
             if not self.nperror:
-                self.logger.exception('')
+                self.logger.exception(f'y:{y},yhat:{yhat}')
                 assert False,'unexpected error'
             else:
                 return
