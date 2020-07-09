@@ -799,14 +799,15 @@ class kNdtool(Ndiff,MyKernHelper):
         try:
             y=np.array(ylist)
             ymean=np.mean(y)
+            ymeanvec=np.broadcast_to(ymean,y.shape)
             self.sample_ymean=ymean
             if ymean>0.5:yhat=np.ones(y.shape)
             else: yhat=np.zeros(y.shape)
             err=y-ymean
             err2=y-yhat
             
-            self.naiveloss=self.doLoss(y,ymean)
-            self.naivemse=self.doLoss(y,ymean,lssfn='mse')
+            self.naiveloss=self.doLoss(y,ymeanvec)
+            self.naivemse=self.doLoss(y,ymeanvec,lssfn='mse')
             self.naivebinaryloss=self.doLoss(y,yhat,lssfn='mae')
         except:
             self.logger.exception('')
