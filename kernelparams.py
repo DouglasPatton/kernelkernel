@@ -105,7 +105,7 @@ class KernelParams:
             #standardization_variations=('modeldict:std_data',[([],'float'),([0],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             standardization_variations=('modeldict:std_data',[([],'float')])#[i] means standardize the ith variable. for y it can only be [0] or [] for no std
             ykerngrid_form_variations=('modeldict:ykerngrid_form',[('binary',)])
-            ykern_grid_variations=('modeldict:ykern_grid',[5])
+            ykern_grid_variations=('modeldict:ykern_grid',[2])
             regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #regression_model_variations=('modeldict:regression_model',['NW'])#add logistic when developed fully
             #spatialtransform_variations=('modeldict:spatialtransform',[('ln1',),('norm1',)])#
@@ -307,8 +307,8 @@ class KernelParams:
         
         #optimization settings for Nelder-Mead optimization algorithm
         optiondict_NM={
-            'xatol':0.05,
-            'fatol':.0001,
+            'xatol':0.005,
+            'fatol':.00001,
             'adaptive':False,
             'maxiter':self.maxiter*100
             }
