@@ -215,9 +215,7 @@ class datagen(PiscesDataTool):
         
     def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing):
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
-        selectlist=[i for i in range(n)]
-        random.shuffle(selectlist)
-        #print('selectlist',selectlist)
+        
         batchsize=batch_n*batchcount
         if sample_replace:
             batchbatchcount=-(-n//batchsize) # ceiling divide
@@ -254,7 +252,13 @@ class datagen(PiscesDataTool):
             random.shuffle(selectfill)
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
         #assert len(selectlist)==fullbatchbatch_n'''
+        selectlist=[i for i in range(n)]
         
+        
+        
+        
+        random.shuffle(selectlist)
+        #print('selectlist',selectlist)
         batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
             for j in range(batchcount):
@@ -264,15 +268,18 @@ class datagen(PiscesDataTool):
                 ydataarrayselect=ydataarray[selectionlist]
                 xdataarrayselect=xdataarray[selectionlist,:]
                 batchbatchlist[i][j]=(ydataarrayselect,xdataarrayselect)
-                #print('ydatashape:',batchbatchlist[i][j][0].shape,'xdatashape:',batchbatchlist[i][j][1].shape)
-        #print('end',end,'fullbatchbatch_n',fullbatchbatch_n)
-        self.yxtup_batchbatch=batchbatchlist[:batchbatchcount_train]
-        self.yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_train+batchbatchcount_val]
+        yxtup_batchbatch=batchbatchlist[:batchbatchcount_train]
+        yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_train+batchbatchcount_val]
+        self.yxtup_batchbatchself,self.yxtup_batchbatch_val=self.balanceOneCheck(yxtup_batchbatch,yxtup_batchbatch_val)
         
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         '''
         return
+    
+    def balanceOneCheck(self,batchbatch_train,batchbatch_val):
+        datalist=[batchbatch_train,batchbatch_val]
+        for batch
             
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
