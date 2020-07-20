@@ -275,14 +275,25 @@ class datagen(PiscesDataTool):
         yxtup_batchbatch_val=batchbatchlist[batchbatchcount_train:batchbatchcount_train+batchbatchcount_val]
         if self.sample_y:
             yxtup_batchbatch=self.doSampleY(yxtup_batchbatch)
-            yxtup_batchbatch_val=self.doSampleY(yxtup_batchbatch_val)
+            #yxtup_batchbatch_val=self.doSampleY(yxtup_batchbatch_val)
         self.yxtup_batchbatch=yxtup_batchbatch
         self.yxtup_batchbatch_val=yxtup_batchbatch_val
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         '''
         return
-            
+    def doSampleY(self,yxtup_batchbatch):
+        bb_count=len(yxtup_batchbatch)
+        y_idx_1tracker=[[] for _ in range(bb_count)]
+        bb_b_1counter=[[] for _ in range bb_count] # batchbatch-batch
+        if bb_count>1:
+            for i in range(bb_count):
+                for j in len(yxtup_batchbatch[i]):
+                    y_idx_1tracker[i].append([])
+                    y=yxtup_batchbatch[i][j][0]
+                    bb_b_1counter[i].append(y.size)
+                    y_idx_1tracker[i][j]=np.arange()
+                
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if ftype==None:
