@@ -291,8 +291,8 @@ class datagen(PiscesDataTool):
                 for j in len(yxtup_batchbatch[i]):
                     y_idx_1tracker[i].append([])
                     y=yxtup_batchbatch[i][j][0]
-                    bb_b_1counter[i].append(y.size)
-                    y_idx_1tracker[i][j]=np.arange()
+                    bb_b_1counter[i].append(y.sum)
+                    y_idx_1tracker[i][j]=np.argsort(y.sum)
                 
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
