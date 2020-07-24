@@ -176,7 +176,8 @@ class datagen(PiscesDataTool):
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
-        self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray,batch_n,batchcount,sample_replace,missing)
+        self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray,batch_n,batchcount,y_min=1)
+        self.genpisces_test_batchbatchlist(ytestarray,xtestarray,batch_n,self.batchcount)
         return
         
         
@@ -224,7 +225,7 @@ class datagen(PiscesDataTool):
                 
         
         
-    def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing,min_y=1):
+    def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,min_y=1):
         # test data already removed
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
         ycount=ydataarray.sum()
@@ -233,29 +234,32 @@ class datagen(PiscesDataTool):
         else:
             order=-1
             ycount=n-ycount # if we're worried about not enough 0's
-        splits=n//batch_n
+        splits=-(-n//batch_n)
         if not min_y is None:
             if min_y<1:
                 min_y=int(batch_n*min_y)
             
-            if ycount<splits//min_y:
-                splits=ycount//min_y
-            if batchcount<ycount//min_y:
-                batchcount=ycount//min_y
-
-            batchbatchcount=self.max_maxbatchbatchcount
-            batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
-            RSKF=RepeatedStratifiedKFold(n_splits=splits , n_repeats=batchbatchcount)
-            for j,train_index,test_index in enumerate(RSKF.split(xdataarray,ydataarray)):
-                j+=1
-                if j%batchcount==0:
-                    i+=1;j=0
-                    if i==batchbatchcount:
-                        break
-                ydata_ij=ydataarray[test_index]
+            if ycount<splits*min_y:
+                splits=-(-ycount//min_y)
+            if batchcount>splits:
+                batchcount=splits
+        else:
+            sortidx=np.arange(batch_n)
+        #print('splits',splits,'batchcount',batchcount)
+        batchbatchcount=self.max_maxbatchbatchcount
+        batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
+        RSKF=RepeatedStratifiedKFold(n_splits=splits,n_repeats=batchbatchcount)
+        i=0;j=0
+        for train_index,test_index in RSKF.split(xdataarray,ydataarray):
+            ydata_ij=ydataarray[test_index]
+            if not min_y is None:
                 sortidx=np.argsort(ydata_ij)[::-order][:batch_n] # order is 1 if we're woried about including enough 1's 
-                yselect=ydata_ij
-                batchbatchlist[i][j]=(ydata_ij[sortidx],xdataarray[test_index[sortidx],:])
+            batchbatchlist[i][j]=(ydata_ij[sortidx],xdataarray[test_index[sortidx],:])
+            j+=1
+            if j==batchcount:
+                i+=1;j=0
+                if i==batchbatchcount:
+                    break
         batchsize=batch_n*batchcount
         self.batchcount=batchcount
         self.expand_datagen_dict('batchcount',self.batchcount)
@@ -264,11 +268,18 @@ class datagen(PiscesDataTool):
         fullbatchbatch_n=batchbatchcount*batchsize
         self.fullbatchbatch_n=fullbatchbatch_n
         self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
+        self.yx_tupbatchbatch=batchbatchlist
+        
+    def genpisces_test_batchbatchlist(self,y,x,batch_n,batchcount):
+        n=y.size
+        batchbatchcount=-(-n//(batch_n*batchcount))
+        batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
+        for i in range(batchbatchcount):
+            for j in range(batchcount):
                 
+            
         
-        
-        
-        
+        """
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
         selectlist=[i for i in range(n)]
         random.shuffle(selectlist)
@@ -299,7 +310,7 @@ class datagen(PiscesDataTool):
         fullbatchbatch_n_train=batchbatchcount_train*batchsize
         fullbatchbatch_n=batchbatchcount*batchsize
         self.fullbatchbatch_n=fullbatchbatch_n_train
-        self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
+        self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)"""
 
         '''fullbatchbatch_shortby=fullbatchbatch_n-n
         self.fullbatchbatch_shortby=fullbatchbatch_shortby
@@ -310,7 +321,7 @@ class datagen(PiscesDataTool):
             selectlist=selectlist+selectfill[:fullbatchbatch_shortby]
         #assert len(selectlist)==fullbatchbatch_n'''
         
-        batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
+        """batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
         for i in range(batchbatchcount):
             for j in range(batchcount):
                 start=(i*batchsize)+(j)*batch_n
@@ -332,7 +343,7 @@ class datagen(PiscesDataTool):
         '''all_y=[ii for i in yxtup_list for ii in i[0]]
         all_x=[ii for i in yxtup_list for ii in i[1]]
         '''
-        return
+        return"""
     '''def doSampleY(self,yxtup_batchbatch):
         bb_count=len(yxtup_batchbatch)
         y_idx_1tracker=[[] for _ in range(bb_count)]

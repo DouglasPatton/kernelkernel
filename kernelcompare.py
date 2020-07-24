@@ -771,8 +771,8 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                     datagen_dict['max_maxbatchbatchcount']=self.max_maxbatchbatchcount
             
             
-                    
-            min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
+                   
+            #min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
                 
                 
             if spec in species_n_dict:
