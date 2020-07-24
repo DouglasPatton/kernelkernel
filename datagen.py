@@ -3,7 +3,8 @@ import random
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 import os
-
+import sklearn
+from sklearn.model_selection import RepeatedStratifiedKFold,train_test_split
 class datagen(PiscesDataTool):
     '''
     
@@ -146,7 +147,7 @@ class datagen(PiscesDataTool):
         self.xvarname_list.extend([self.fullvarlist[i]+'(spatial)' for i in spatialselecttup])
         self.expand_datagen_dict('xvarnamelist',self.xvarname_list)
         self.logger.info(f'self.xvarname_list: {self.xvarname_list}')
-        try: self.xdataarray=np.array(speciesdata[:,1:],dtype=float)
+        try: xdata=np.array(speciesdata[:,1:],dtype=float)
         except ValueError:
             k=speciesdata.shape[1]
             for row in range(n):
@@ -164,7 +165,13 @@ class datagen(PiscesDataTool):
         '''
         
         
-        self.ydataarray=np.array(speciesdata[:,0],dtype='uint8')
+        ydata=np.array(speciesdata[:,0],dtype='uint8')
+        xtrain,xtest,ytrain,ytest=train_test_split(xdata,ydata,stratify=ydata,test_size=0.2,random_state=0)
+        self.xdataarray=xtrain
+        self.ydataarray=ytrain    
+        self.xtestarray=xtest
+        self.ytestarray=ytest
+        sss.split(xdata,ydata)
         #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
@@ -217,7 +224,51 @@ class datagen(PiscesDataTool):
                 
         
         
-    def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing):
+    def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,sample_replace,missing,min_y=1):
+        # test data already removed
+        n=ydataarray.shape[0]; p=xdataarray.shape[1]
+        ycount=ydataarray.sum()
+        if ycount/n<0.5:
+            order=1 # if we're worried about not enough 1's
+        else:
+            order=-1
+            ycount=n-ycount # if we're worried about not enough 0's
+        splits=n//batch_n
+        if not min_y is None:
+            if min_y<1:
+                min_y=int(batch_n*min_y)
+            
+            if ycount<splits//min_y:
+                splits=ycount//min_y
+            if batchcount<ycount//min_y:
+                batchcount=ycount//min_y
+
+            batchbatchcount=self.max_maxbatchbatchcount
+            batchbatchlist=[[[] for b in range(batchcount)] for _ in range(batchbatchcount)]
+            RSKF=RepeatedStratifiedKFold(n_splits=splits , n_repeats=batchbatchcount)
+            for j,train_index,test_index in enumerate(RSKF.split(xdataarray,ydataarray)):
+                j+=1
+                if j%batchcount==0:
+                    i+=1;j=0
+                    if i==batchbatchcount:
+                        break
+                ydata_ij=ydataarray[test_index]
+                sortidx=np.argsort(ydata_ij)[::-order][:batch_n] # order is 1 if we're woried about including enough 1's 
+                yselect=ydata_ij
+                batchbatchlist[i][j]=(ydata_ij[sortidx],xdataarray[test_index[sortidx],:])
+        batchsize=batch_n*batchcount
+        self.batchcount=batchcount
+        self.expand_datagen_dict('batchcount',self.batchcount)
+        self.batchbatchcount=batchbatchcount
+        self.expand_datagen_dict('batchbatchcount',self.batchbatchcount)
+        fullbatchbatch_n=batchbatchcount*batchsize
+        self.fullbatchbatch_n=fullbatchbatch_n
+        self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
+                
+        
+        
+        
+        
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
         selectlist=[i for i in range(n)]
         random.shuffle(selectlist)
@@ -282,7 +333,7 @@ class datagen(PiscesDataTool):
         all_x=[ii for i in yxtup_list for ii in i[1]]
         '''
         return
-    def doSampleY(self,yxtup_batchbatch):
+    '''def doSampleY(self,yxtup_batchbatch):
         bb_count=len(yxtup_batchbatch)
         y_idx_1tracker=[[] for _ in range(bb_count)]
         bb_b_1counter=[[] for _ in range bb_count] # batchbatch-batch
@@ -293,7 +344,7 @@ class datagen(PiscesDataTool):
                     y=yxtup_batchbatch[i][j][0]
                     bb_b_1counter[i].append(y.sum)
                     y_idx_1tracker[i][j]=np.argsort(y.sum)
-                
+                '''
             
     def gen_montecarlo(self,seed=None,ftype=None,evar=None,batch_n=None,param_count=None,batchcount=None,validate_batchcount=None):
         if ftype==None:
