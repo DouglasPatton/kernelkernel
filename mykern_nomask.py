@@ -902,7 +902,7 @@ class optimize_free_params(kNdtool):
         self.iter=0
         
         if self.validate:
-            valdatalist=datagen_obj.yxtup_batchbatch_val
+            valdatalist=datagen_obj.yxtup_batchbatch_testf
             bbv=len(valdatalist)
             for v in range(bbv):
                 printstring=f'validating {v+1}/{bbv}'

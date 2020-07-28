@@ -274,8 +274,14 @@ class datagen(PiscesDataTool):
         n=y.size
         batchbatchcount=-(-n//(batch_n*batchcount))
         batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
+        idx=0
         for i in range(batchbatchcount):
             for j in range(batchcount):
+                start=idx
+                stop=idx+batch_n
+                if stop>n:stop=n
+                batchbatchlist[i][j]=(y[start:stop],x[start:stop,:])
+        self.yx_tupbatchbatch_test=batchbatchlist
                 
             
         

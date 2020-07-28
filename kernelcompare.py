@@ -757,7 +757,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         newmodelrundictlist=[]
         species_n_dict={}
         for model_run_dict in model_run_dict_list:
-            toosmall=0
+            
             datagen_dict=model_run_dict['datagen_dict']
             spec=datagen_dict['species']
             
@@ -773,23 +773,16 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             
                    
             #min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
-                
+            min_n=-(-batch_n*2//0.8)
                 
             if spec in species_n_dict:
                 spec_n=species_n_dict[spec]
             else:
                 datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed suffle
-                spec_n=datagen_obj.species_n
+                spec_n=datagen_obj.species_n # all data regardless of test/val status
                 datagen_dict=datagen_obj.datagen_dict_expanded
                 species_n_dict[spec]=spec_n
-            if spec_n<min_n:
-                newbatchcount=spec_n//(batch_n*(1+validate)) # ensuring at least 2 batchbatches
-                self.logger.info(f'for species:{spec}, newbatccount:{newbatchcount}')
-                if newbatchcount>1:
-                    datagen_dict['batchcount']=newbatchcount
-                else:
-                    toosmall=1
-            if not toosmall:
+            if spec_n>=min_n:
                 model_run_dict['datagen_dict']=datagen_dict
                 newmodelrundictlist.append(model_run_dict)
             else:
