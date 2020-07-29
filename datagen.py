@@ -83,8 +83,10 @@ class datagen(PiscesDataTool):
             missing=datagen_dict['missing']
             species=datagen_dict['species']
             self.species=species
-            if datagen_dict['sample']=='y-even'
-                self.ysample='even'
+            if datagen_dict['sample'][0]=='y':
+                if datagen_dict['sample'][2:]=='balanced':
+                    self.min_y=0.5
+                else: assert False,'not developed'
             else:
                 self.ysample=None
             
@@ -165,19 +167,19 @@ class datagen(PiscesDataTool):
         '''
         
         
-        ydata=np.array(speciesdata[:,0],dtype='uint8')
+        ydata=np.array(speciesdata[:,0],dtype=np.int8)
         xtrain,xtest,ytrain,ytest=train_test_split(xdata,ydata,stratify=ydata,test_size=0.2,random_state=0)
         self.xdataarray=xtrain
         self.ydataarray=ytrain    
         self.xtestarray=xtest
         self.ytestarray=ytest
-        sss.split(xdata,ydata)
+        #sss.split(xdata,ydata)
         #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
         modeldict_data_std_tup=([],[i for i in floatselecttup])
         
-        self.genpiscesbatchbatchlist(self.ydataarray,self.xdataarray,batch_n,batchcount,y_min=1)
-        self.genpisces_test_batchbatchlist(ytestarray,xtestarray,batch_n,self.batchcount)
+        self.genpiscesbatchbatchlist(ytrain,xtrain,batch_n,batchcount,min_y=self.min_y)
+        self.genpisces_test_batchbatchlist(ytest,xtest,batch_n,self.batchcount)
         return
         
         
@@ -228,25 +230,28 @@ class datagen(PiscesDataTool):
     def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,min_y=1):
         # test data already removed
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
-        ycount=ydataarray.sum()
+        ycount=int(ydataarray.sum())
         if ycount/n<0.5:
             order=1 # if we're worried about not enough 1's
         else:
             order=-1
             ycount=n-ycount # if we're worried about not enough 0's
         splits=-(-n//batch_n)
+        #self.logger.warning(f'splits:{splits}, n:{n}, batch_n:{batch_n},ycount:{ycount},order:{order}')
         if not min_y is None:
             if min_y<1:
                 min_y=int(batch_n*min_y)
             
             if ycount<splits*min_y:
-                splits=-(-ycount//min_y)
+                splits= -(-ycount//min_y)
+                #self.logger.warning(f'splits:{splits},ycount:{ycount},min_y:{min_y},int()-(-ycount//min_y):{-(-int(ycount)//int(min_y))},type:ycount:{type(ycount)},type:min_y:{type(min_y)}')
             if batchcount>splits:
                 batchcount=splits
         else:
             sortidx=np.arange(batch_n)
         #print('splits',splits,'batchcount',batchcount)
         batchbatchcount=self.max_maxbatchbatchcount
+        self.logger.warning(f'batchcount:{batchcount},batchbatchcount:{batchbatchcount}')
         batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
         RSKF=RepeatedStratifiedKFold(n_splits=splits,n_repeats=batchbatchcount)
         i=0;j=0
@@ -268,7 +273,7 @@ class datagen(PiscesDataTool):
         fullbatchbatch_n=batchbatchcount*batchsize
         self.fullbatchbatch_n=fullbatchbatch_n
         self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
-        self.yx_tupbatchbatch=batchbatchlist
+        self.yxtup_batchbatch=batchbatchlist
         
     def genpisces_test_batchbatchlist(self,y,x,batch_n,batchcount):
         n=y.size
@@ -281,7 +286,7 @@ class datagen(PiscesDataTool):
                 stop=idx+batch_n
                 if stop>n:stop=n
                 batchbatchlist[i][j]=(y[start:stop],x[start:stop,:])
-        self.yx_tupbatchbatch_test=batchbatchlist
+        self.yxtup_batchbatch_test=batchbatchlist
                 
             
         

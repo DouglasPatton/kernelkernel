@@ -153,7 +153,7 @@ class KernelParams:
             species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
             #species_variations=('species',[self.specieslist[i] for i in range(5,10)])
-            #species_variations=('species',[self.specieslist[i] for i in range(0,1)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,1)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
@@ -248,7 +248,7 @@ class KernelParams:
                 'floatselecttup':floatselecttup,
                 'spatialselecttup':spatialselecttup,
                 'param_count':param_count,
-                'sample':'y-even'
+                'sample':'y-balanced'
                 #'validate_batchcount':'none', # 'none'->same as batchcount
                 #'validate_batchbatchcount':1 # 'remaining'-> all batchbatches left after training 
             }
