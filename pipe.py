@@ -14,14 +14,14 @@ class PipeLine(object):
             'threshcutstep':3,
             'loss_threshold_list':None,
             'do_minimize_list':[0,0,0,1,1],
-            'maxiter_list':[0,0,0,400,800],
+            'maxiter_list':[0,0,0,800,800], # None for default
             'maxbatchbatchcount_list':[2,4,8,16,16],
             'do_validate_list':[0,0,0,1,1],
             'sidestep':0,
             'overrides':[]
             }
         
-        self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae']]
+        self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae','logloss','f1','f2']]
         
     def buildsidestep_setupdictlist(self,sidestep_override_runlist,mainstep_setupdict,startstep=1):
         count=len(sidestep_override_runlist)
@@ -110,7 +110,7 @@ class PipeLine(object):
         even if step0 is skipped, include it in the step count
         '''
         
-        print(stepcount)
+        #print(stepcount)
         try:sidestep
         except:sidestep=0
         try:overrides

@@ -15,6 +15,7 @@ os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 #from numba import jit
 from scipy.optimize import minimize
+from sklearn import metrics
 #from sklearn.linear_model import LogisticRegression
 import logging
 
@@ -570,15 +571,24 @@ class kNdtool(Ndiff,MyKernHelper):
                 batchbatch_all_yhat.append(all_yhat)
             batchbatch_all_y=np.concatenate(batchbatch_all_y,axis=0)
             batchbatch_all_yhat=np.concatenate(batchbatch_all_yhat,axis=0)
+            self.logger.debug(f'batchbatch_all_y.shape:{batchbatch_all_y.shape}')
+            self.logger.debug(f'batchbatch_all_y:{batchbatch_all_y}')
+            self.logger.debug(f'batchbatch_all_yhat.shape:{batchbatch_all_yhat.shape}')
+            self.logger.debug(f'batchbatch_all_yhat:{batchbatch_all_yhat}')
             
             binary_threshold=modeldict['binary_y']
             
             #batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
-            mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
+            lossdict={'mse':None,'mae':None,'f1':None,'f2':None, 'splithinge':None, 'logloss':None, 'avg_prec_sc':None}
+            for lf in lossdict:
+                
+                lossdict[lf]=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn=lf)
+            mse=lossdict['mse']
+            ''' mse = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mse')
             mae = self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='mae')
             splithinge=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn='splithinge')
-            lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}
+            lossdict={'mse':mse,'mae':mae,'splithinge':splithinge}'''
             self.logger.info(f'lossdict:{lossdict}, self.sample_ymean:{self.sample_ymean},n:{batchbatch_all_yhat.shape}')
 
             if mse<0:
@@ -596,7 +606,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.nperror==1:
             self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
             self.nperror=0
-            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge']}
+            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge','f1']}
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
         self.logger.debug(f'len(self.binary_y_loss_list_list): {len(self.binary_y_loss_list_list)},len(self.lossdict_and_paramdict_list):{len(self.lossdict_and_paramdict_list)}')
@@ -760,14 +770,28 @@ class kNdtool(Ndiff,MyKernHelper):
     def doLoss(self,y,yhat,pthreshold=None,lssfn=None):
         try:
             if not lssfn:lssfn=self.loss_function
-            err=y-yhat
+            if pthreshold is None:
+                    threshold=self.pthreshold    
+            
             if lssfn=='mse':
-                loss=np.mean(np.power(err,2))
-            if lssfn=='mae':
-                loss=np.mean(np.abs(err))
-            if lssfn=='splithinge':
-                if pthreshold is None:
-                    threshold=self.pthreshold
+                loss=metrics.mean_squared_error(y,yhat)
+            if lssfn=='f1':
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=metrics.f1_score(y,yhat_01)
+            elif lssfn=='mae':
+                loss=metrics.mean_absolute_error(y,yhat)
+            elif lssfn=='logloss':
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=metrics.log_loss(y,yhat_01)
+            elif lssfn=='f2':
+                yhat_01=np.zeros(y.shape,dtype=np.float64)
+                yhat_01[yhat>threshold]=1
+                loss=metrics.fbeta_score(y,yhat_01,beta=2)
+            elif lssfn=='avg_prec_sc':
+                loss=metrics.average_precision_score(y,yhat,average='micro')
+            elif lssfn=='splithinge':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
                 loss=np.mean((threshold-yhat)*(y-yhat_01))      
@@ -778,7 +802,7 @@ class kNdtool(Ndiff,MyKernHelper):
             return
         except:
             if not self.nperror:
-                self.logger.exception('')
+                self.logger.exception(f'y:{y},yhat:{yhat} for self.datagen_dict:{self.datagen_dict}')
                 assert False,'unexpected error'
             else:
                 return
@@ -787,14 +811,15 @@ class kNdtool(Ndiff,MyKernHelper):
         try:
             y=np.array(ylist)
             ymean=np.mean(y)
+            ymeanvec=np.broadcast_to(ymean,y.shape)
             self.sample_ymean=ymean
             if ymean>0.5:yhat=np.ones(y.shape)
             else: yhat=np.zeros(y.shape)
             err=y-ymean
             err2=y-yhat
             
-            self.naiveloss=self.doLoss(y,ymean)
-            self.naivemse=self.doLoss(y,ymean,lssfn='mse')
+            self.naiveloss=self.doLoss(y,ymeanvec)
+            self.naivemse=self.doLoss(y,ymeanvec,lssfn='mse')
             self.naivebinaryloss=self.doLoss(y,yhat,lssfn='mae')
         except:
             self.logger.exception('')
@@ -866,7 +891,7 @@ class optimize_free_params(kNdtool):
             handlername=os.path.join(logdir,f'optimize_free_params-{self.pname}.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
+                level=logging.DEBUG,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
 

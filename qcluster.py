@@ -29,7 +29,7 @@ class TheQManager(mp.Process,BaseManager):
         handlername=os.path.join(logdir,f'TheQManager-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
-            level=logging.WARNING,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -58,7 +58,7 @@ class SaveQDumper(mp.Process):
         handlername=os.path.join(logdir,f'SaveQDumper-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -166,7 +166,7 @@ class JobQFiller(mp.Process):
         handlername=os.path.join(logdir,f'JobQFiller-log')
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
@@ -202,7 +202,7 @@ class JobQFiller(mp.Process):
             except:
                 notsaved_joblist.append(job)
                 if queue.full():
-                    self.logger.warning('jobq full, waiting 4s')
+                    self.logger.DEBUG('jobq full, waiting 4s')
                     sleep(4)
                 else:
                     self.logger.exception(f'jobq error for i:{i}')
@@ -239,7 +239,7 @@ class JobQFiller(mp.Process):
                 except:
                     self.joblist.append(job)
                     if queue.full():
-                        self.logger.warning('jobq full, waiting 4s')
+                        self.logger.DEBUG('jobq full, waiting 4s')
                         sleep(4)
                     else:
                         self.logger.exception(f'jobq error for i:{i}')
@@ -261,7 +261,7 @@ class RunNode(mp.Process,BaseManager):
             handlername=os.path.join(logdir,f'RunNode-log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
+                level=logging.DEBUG,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
@@ -270,7 +270,7 @@ class RunNode(mp.Process,BaseManager):
         self.qdict=qdict
         self.source=source
         if not local_run:
-            self.netaddress=('192.168.1.100',50002)
+            self.netaddress=('192.168.1.45',50002)
             self.BaseManager=BaseManager
         super(RunNode,self).__init__()
         
@@ -358,7 +358,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             handlername=os.path.join(logdir,f'mycluster_.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
+                level=logging.DEBUG,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
@@ -367,7 +367,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
-            self.netaddress=('192.168.1.100',50002)
+            self.netaddress=('192.168.1.45',50002)
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)

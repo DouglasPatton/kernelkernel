@@ -114,27 +114,27 @@ class KCHelper():
             writefilename = filename + '-overwrite_dict'
         else:
             writefilename = filename
-        for j in range(10):
+        for j in range(2):
             try:
-                with open(os.path.join(self.kc_savedirectory,filename),'rb') as modelsavefile:
+                with open(filename,'rb') as modelsavefile:
                     modelsave_list=pickle.load(modelsavefile)
                 break
             except:
-                if j==9:
+                if j==1:
                     self.logger.exception(f'error in {__name__}')
                     return
                 
         delete_dict=self.build_override_dict_from_str(flatdictstring,None)
         new_modelsave_list=[]
         for savedict in modelsave_list:
-            new_modelsave_list.extend(self.do_dict_override(savedict,delete_dict,deletekey=1,verbose=verbose))
-        for j in range(10):
+            new_modelsave_list.append(self.do_dict_override(savedict,delete_dict,deletekey=1,verbose=verbose))
+        for j in range(2):
             try:
                 with open(os.path.join(self.kc_savedirectory,writefilename),'wb') as modelsavefile:
                     pickle.dump(new_modelsave_list,modelsavefile)
                 return
             except:
-                if j==9:
+                if j==1:
                     self.logger.exception(f'error in {__name__}')
                     return
         

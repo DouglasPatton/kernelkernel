@@ -211,7 +211,7 @@ class Ndiff:
 
                     if Ndiff_type=='product':
                         this_depth_bw=self.Ndiff_product(this_depth_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
-                        self.logger.critical(f'depth:{depth}, deeper_depth_bw:{deeper_depth_bw},this_depth_bw:{this_depth_bw}')
+                        #self.logger.critical(f'depth:{depth}, deeper_depth_bw:{deeper_depth_bw},this_depth_bw:{this_depth_bw}')
                     if Ndiff_type=='recursive':
                         if depth==max_bw_Ndiff:deeper_depth_bw=Ndiff_depth_bw_params[0]
                         this_depth_bw=self.Ndiff_recursive(this_depth_data,deeper_depth_bw,this_depth_exponent,this_depth_bw_param,Ndiff_bw_kern,normalize,depth,x_or_y)
