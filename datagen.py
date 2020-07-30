@@ -175,9 +175,9 @@ class datagen(PiscesDataTool):
         self.ytestarray=ytest
         
         test_n=self.ydataarray.shape[0]
-        self.logger.info(f'species_n:{test_n}')
-        self.species_n=test_n
-        self.expand_datagen_dict('species_n',self.species_n)
+        self.logger.info(f'test_n:{test_n}')
+        self.test_n=test_n
+        self.expand_datagen_dict('test_n',self.species_n)
         #sss.split(xdata,ydata)
         #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
