@@ -784,12 +784,17 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             if spec in species_n_dict:
                 spec_n=species_n_dict[spec]
             else:
-                datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed suffle
-                spec_n=datagen_obj.species_n # all data regardless of test/val status
-                datagen_dict=datagen_obj.datagen_dict_expanded
+                try:
+                    datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed suffle
+                    spec_n=datagen_obj.species_n # all data regardless of test/val status
+                    
+                except:
+                    self.logger.exception(f'error generating data for species:{spec}')
+                    spec_n=0
                 species_n_dict[spec]=spec_n
+                
             if spec_n>=min_n:
-                model_run_dict['datagen_dict']=datagen_dict
+                model_run_dict['datagen_dict']=datagen_obj.datagen_dict_expanded
                 newmodelrundictlist.append(model_run_dict)
             else:
                 self.logger.info(f'for species:{spec_n} is too small!')

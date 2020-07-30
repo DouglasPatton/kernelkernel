@@ -173,6 +173,11 @@ class datagen(PiscesDataTool):
         self.ydataarray=ytrain    
         self.xtestarray=xtest
         self.ytestarray=ytest
+        
+        test_n=self.ydataarray.shape[0]
+        self.logger.info(f'species_n:{test_n}')
+        self.species_n=test_n
+        self.expand_datagen_dict('species_n',self.species_n)
         #sss.split(xdata,ydata)
         #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
@@ -249,6 +254,7 @@ class datagen(PiscesDataTool):
                 batchcount=splits
         else:
             sortidx=np.arange(batch_n)
+        
         #print('splits',splits,'batchcount',batchcount)
         batchbatchcount=self.max_maxbatchbatchcount
         self.logger.warning(f'batchcount:{batchcount},batchbatchcount:{batchbatchcount}')
