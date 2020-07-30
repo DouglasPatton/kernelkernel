@@ -778,7 +778,7 @@ class kNdtool(Ndiff,MyKernHelper):
             if lssfn=='f1':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
-                loss=metrics.f1_score(y,yhat_01)
+                loss=-metrics.f1_score(y,yhat_01)
             elif lssfn=='mae':
                 loss=metrics.mean_absolute_error(y,yhat)
             elif lssfn=='logloss':
@@ -788,9 +788,9 @@ class kNdtool(Ndiff,MyKernHelper):
             elif lssfn=='f2':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
-                loss=metrics.fbeta_score(y,yhat_01,beta=2)
+                loss=-metrics.fbeta_score(y,yhat_01,beta=2)
             elif lssfn=='avg_prec_sc':
-                loss=metrics.average_precision_score(y,yhat,average='micro')
+                loss=-metrics.average_precision_score(y,yhat,average='micro')
             elif lssfn=='splithinge':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1

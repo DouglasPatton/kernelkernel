@@ -11,7 +11,7 @@ class PipeLine(object):
             'stepcount':6,
             'startstep':0,
             'bestshare_list':[32,16,8,1,1],
-            'threshcutstep':3,
+            'threshcutstep':None,
             'loss_threshold_list':None,
             'do_minimize_list':[0,0,0,1,1],
             'maxiter_list':[0,0,0,800,800], # None for default
@@ -21,7 +21,7 @@ class PipeLine(object):
             'overrides':[]
             }
         
-        self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae','logloss','f1','f2']]
+        self.sidestep_override_runlist=[[('modeldict:loss_function',lf)] for lf in ['mae','logloss','f1']]
         
     def buildsidestep_setupdictlist(self,sidestep_override_runlist,mainstep_setupdict,startstep=1):
         count=len(sidestep_override_runlist)
