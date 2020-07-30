@@ -761,7 +761,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
         if not, batchcount reduced as low as 2 and if species still don't have enough observations, they are dropped.
         '''
         newmodelrundictlist=[]
-        species_n_dict={}
+        species_train_n_dict={}
         for model_run_dict in model_run_dict_list:
             
             datagen_dict=model_run_dict['datagen_dict']
@@ -781,19 +781,19 @@ class KernelCompare(KernelOptModelTools,KernelParams):
             #min_n=batchcount*batch_n*(1+validate) # in order to validate, we must have at least 2 batchbatches.    
             min_n=-(-batch_n*2//0.8)
                 
-            if spec in species_n_dict:
-                spec_n=species_n_dict[spec]
+            if spec in species_train_n_dict:
+                train_n=species_train_n_dict[spec]
             else:
                 try:
                     datagen_obj=dg.datagen(datagen_dict) # create a new object each time, in part to reseed suffle
-                    spec_n=datagen_obj.species_n # all data regardless of test/val status
+                    train_n=datagen_obj.train_n # all data regardless of test/val status
                     
                 except:
                     self.logger.exception(f'error generating data for species:{spec}')
-                    spec_n=0
-                species_n_dict[spec]=spec_n
+                    train_n=0
+                species_train_n_dict[spec]=train_n
                 
-            if spec_n>=min_n:
+            if train_n>=min_n:
                 model_run_dict['datagen_dict']=datagen_obj.datagen_dict_expanded
                 newmodelrundictlist.append(model_run_dict)
             else:

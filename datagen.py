@@ -174,10 +174,10 @@ class datagen(PiscesDataTool):
         self.xtestarray=xtest
         self.ytestarray=ytest
         
-        test_n=self.ydataarray.shape[0]
-        self.logger.info(f'test_n:{test_n}')
-        self.test_n=test_n
-        self.expand_datagen_dict('test_n',self.species_n)
+        train_n=self.ydataarray.shape[0]
+        self.logger.info(f'train_n:{train_n}')
+        self.train_n=train_n
+        self.expand_datagen_dict('train_n',train_n)
         #sss.split(xdata,ydata)
         #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
