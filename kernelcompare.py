@@ -60,9 +60,6 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
        
                 
     def do_monte_opt(self,optimizedict,datagen_dict,force_start_params=None):
-        '''if self.max_maxbatchbatchcount:
-            if not max_maxbatchbatchcount in datagen_dict:
-                datagen_dict['max_maxbatchbatchcount']=self.max_maxbatchbatchcount'''
         optimizedict['datagen_dict']=datagen_dict
         
         if force_start_params==None or force_start_params=='no':
@@ -75,10 +72,10 @@ class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
         
         datagen_obj=dg.datagen(datagen_dict)
         
-        if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
+        '''if datagen_obj.species_n<datagen_obj.batch_n*datagen_obj.batchcount:
             print(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < datagen_obj.batch_n*datagen_obj.batchcount:{datagen_obj.batch_n*datagen_obj.batchcount}')
             self.logger.info(f'skipping {datagen_obj.species} b/c species_n:{datagen_obj.species_n} < fullbatchbatch_n:{datagen_obj.fullbatchbatch_n}')
-            return
+            return'''
             
         # naiveloss=self.do_naiveloss(datagen_obj)
         # print('naiveloss:',naiveloss)
@@ -797,7 +794,7 @@ class KernelCompare(KernelOptModelTools,KernelParams):
                 model_run_dict['datagen_dict']=datagen_obj.datagen_dict_expanded
                 newmodelrundictlist.append(model_run_dict)
             else:
-                self.logger.info(f'for species:{spec_n} is too small!')
+                self.logger.info(f'for species:{spec} is too small!')
         return newmodelrundictlist
     
     

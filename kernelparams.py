@@ -154,7 +154,7 @@ class KernelParams:
             species_variations=('species',self.specieslist)
             #species_variations=('species',[self.specieslist[i] for i in range(300,len(self.specieslist))])    
             #species_variations=('species',[self.specieslist[i] for i in range(5,10)])
-            #species_variations=('species',[self.specieslist[i] for i in range(0,1)])
+            species_variations=('species',[self.specieslist[i] for i in range(0,1)])
             #species_variations=('species',[self.specieslist[i] for i in range(20,100,2)])
             # print('species_variations',species_variations)
             #species_variations=('species',[self.specieslist[i] for i in range(0,len(self.specieslist)-11,11)])
@@ -240,6 +240,7 @@ class KernelParams:
                 'batch_n':self.n,
                 'batchcount':8, #for batch_crossval and batchnorm_crossval, this specifies the number of groups of batch_n observations to be used for cross-validation. 
                 #'batchbatchcount' this has never been part of the dict. it is determined by maxbatchbatchcount in modeldict as well as the available batchbatches.
+                
                 'sample_replace':0, #if 1 (formerly 'no') , batches are created until all data is sampled, and sampling with replacement used to fill up the last batchbatch
                 #if 0 then drop any observations that don't fit into a batchbatch 
                 # need to implement this on training vs. validation subset of data

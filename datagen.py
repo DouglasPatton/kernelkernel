@@ -4,7 +4,7 @@ import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 import os
 import sklearn
-from sklearn.model_selection import RepeatedStratifiedKFold,train_test_split
+from sklearn.model_selection import StratifiedKFold,train_test_split
 class datagen(PiscesDataTool):
     '''
     
@@ -26,11 +26,6 @@ class datagen(PiscesDataTool):
         self.logger.info('starting new datagen log')
         
         
-        try:
-            self.max_maxbatchbatchcount=datagen_dict['max_maxbatchbatchcount'] # determines the cut-off between training and validation data
-        except:
-            self.logger.exception('max_maxbatchbatchcount error')
-            self.max_maxbatchbatchcount=None
         #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
         self.logger = logging.getLogger(__name__)
         #self.logger.addHandler(handler)
@@ -79,6 +74,7 @@ class datagen(PiscesDataTool):
             self.batch_n=batch_n
             batchcount=datagen_dict['batchcount']
             self.batchcount=batchcount
+            self.batchbatchcount=datagen_dict['max_maxbatchbatchcount']
             sample_replace=datagen_dict['sample_replace']
             missing=datagen_dict['missing']
             species=datagen_dict['species']
@@ -186,27 +182,17 @@ class datagen(PiscesDataTool):
         self.genpiscesbatchbatchlist(ytrain,xtrain,batch_n,batchcount,min_y=self.min_y)
         self.genpisces_test_batchbatchlist(ytest,xtest,batch_n,self.batchcount)
         return
+    
+    
         
         
     def build_sumstats_dict(self,ydata,xdata):
-        batchbatchcount=min(self.batchbatchcount,self.max_maxbatchbatchcount)
-        batchcount=self.batchcount
-        batch_n=self.batch_n
-        max_train_n=batchbatchcount*batchcount*batch_n
         try:
             existing_sum_stats_dict=self.initial_datagen_dict['summary_stats_dict']
-            old_train_n=existing_sum_stats_dict['max_train_n']
-            if old_train_n>=max_train_n:
-                self.summary_stats_dict=existing_sum_stats_dict
-                return
-            else:
-                self.logger.warning(f'build_sumstats_dict recalculating. old_train_n:{old_train_n}, self.summary_stats_dict:{self.summary_stats_dict}')
-        except KeyError:
-            pass
+            self.summary_stats_dict=existing_sum_stats_dict
+            return
         except:
             self.logger.info(f'build sumstats dict building',exc_info=True)        
-        xdata=xdata[0:max_train_n,:]
-        ydata=ydata[0:max_train_n]
         self.xmean=np.mean(xdata,axis=0)
         self.ymean=np.mean(ydata,axis=0)
         self.xstd=np.std(xdata,axis=0)
@@ -215,7 +201,7 @@ class datagen(PiscesDataTool):
                                 'ymean':self.ymean,
                                 'ystd':self.ystd,
                                 'xstd':self.xstd,
-                                'max_train_n':max_train_n}
+                                'max_train_n':ydata.shape[0]} # remove this too?
         self.expand_datagen_dict('summary_stats_dict',self.summary_stats_dict)
         
     def processmissingvalues(self,nparray,missing_treatment):
@@ -234,48 +220,54 @@ class datagen(PiscesDataTool):
         
     def genpiscesbatchbatchlist(self, ydataarray,xdataarray,batch_n,batchcount,min_y=1):
         # test data already removed
+        batchbatchcount=self.batchbatchcount
         n=ydataarray.shape[0]; p=xdataarray.shape[1]
-        ycount=int(ydataarray.sum())
-        if ycount/n<0.5:
-            order=1 # if we're worried about not enough 1's
+        onecount=int(ydataarray.sum())
+        zerocount=n-onecount
+        countlist=[zerocount,onecount]
+        if onecount<zerocount:
+            smaller=1
         else:
-            order=-1
-            ycount=n-ycount # if we're worried about not enough 0's
-        splits=-(-n//batch_n)
-        #self.logger.warning(f'splits:{splits}, n:{n}, batch_n:{batch_n},ycount:{ycount},order:{order}')
+            smaller=0
+        
         if not min_y is None:
             if min_y<1:
                 min_y=int(batch_n*min_y)
-            
-            if ycount<splits*min_y:
-                splits= -(-ycount//min_y)
-                #self.logger.warning(f'splits:{splits},ycount:{ycount},min_y:{min_y},int()-(-ycount//min_y):{-(-int(ycount)//int(min_y))},type:ycount:{type(ycount)},type:min_y:{type(min_y)}')
-            if batchcount>splits:
-                batchcount=splits
+            batch01_n=[None,None]
+            batch01_n[smaller]=min_y # this makes it max_y too....
+            batch01_n[1-smaller]=batch_n-min_y
+            max_batchcount=countlist[smaller]//min_y
+            if max_batchcount<batchcount:
+                #self.logger.info(f'for {self.species} batchcount changed from {batchcount} to {max_batchcount}')
+                batchcount=max_batchcount
+            subsample_n=batchcount*batch_n
+            oneidx=np.arange(n)[ydataarray==1]
+            zeroidx=np.arange(n)[ydataarray==0]
+            bb_select_list=[]
+            for bb_idx in range(batchbatchcount):
+                ones=np.random.choice(oneidx,size=batch01_n[1]*batchcount,replace=False)
+                zeros=np.random.choice(zeroidx,size=batch01_n[0]*batchcount,replace=False)
+                bb_select_list.append(np.concatenate([ones,zeros],axis=0))
         else:
-            sortidx=np.arange(batch_n)
-        
-        #print('splits',splits,'batchcount',batchcount)
-        batchbatchcount=self.max_maxbatchbatchcount
-        self.logger.warning(f'batchcount:{batchcount},batchbatchcount:{batchbatchcount}')
+            max_batchcount=n//batch_n
+            if max_batchcount<batchcount:
+                #self.logger.info(f'for {self.species} batchcount changed from {batchcount} to {max_batchcount}')
+                batchcount=max_batchcount
+            subsample_n=batchcount*batch_n
+            for bb_idx in range(batchbatchcount):
+                bb_select_list.append(np.random.choice(np.arange(n),size=subsample_n))
         batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
-        RSKF=RepeatedStratifiedKFold(n_splits=splits,n_repeats=batchbatchcount)
-        i=0;j=0
-        for train_index,test_index in RSKF.split(xdataarray,ydataarray):
-            ydata_ij=ydataarray[test_index]
-            if not min_y is None:
-                sortidx=np.argsort(ydata_ij)[::-order][:batch_n] # order is 1 if we're woried about including enough 1's 
-            batchbatchlist[i][j]=(ydata_ij[sortidx],xdataarray[test_index[sortidx],:])
-            j+=1
-            if j==batchcount:
-                i+=1;j=0
-                if i==batchbatchcount:
-                    break
+        SKF=StratifiedKFold(n_splits=batchcount, shuffle=False)
+        for bb_idx in range(batchbatchcount):
+            bb_x_subsample=xdataarray[bb_select_list[bb_idx]]
+            bb_y_subsample=ydataarray[bb_select_list[bb_idx]]
+            for j,(train_index,test_index) in enumerate(SKF.split(bb_x_subsample,bb_y_subsample)):
+                batchbatchlist[bb_idx][j]=(bb_y_subsample[test_index],bb_x_subsample[test_index,:])
         batchsize=batch_n*batchcount
+        
+        
         self.batchcount=batchcount
         self.expand_datagen_dict('batchcount',self.batchcount)
-        self.batchbatchcount=batchbatchcount
-        self.expand_datagen_dict('batchbatchcount',self.batchbatchcount)
         fullbatchbatch_n=batchbatchcount*batchsize
         self.fullbatchbatch_n=fullbatchbatch_n
         self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
@@ -283,7 +275,7 @@ class datagen(PiscesDataTool):
         
     def genpisces_test_batchbatchlist(self,y,x,batch_n,batchcount):
         n=y.size
-        batchbatchcount=-(-n//(batch_n*batchcount))
+        batchbatchcount=-(-n//(batch_n*batchcount)) # ceiling divide
         batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
         idx=0
         for i in range(batchbatchcount):
