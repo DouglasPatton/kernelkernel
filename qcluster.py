@@ -88,6 +88,7 @@ class SaveQDumper(mp.Process):
                 model_save_summary['params']=model_save_list[minlosspos]['params']
                 model_save_summary['binary_y_result']=model_save_list[minlosspos]['binary_y_result']
             else:
+                model_save_summary['other_estimator_test_loss_dict']=model0['other_estimator_test_loss_dict']
                 keylist=[key for key in lossdictlist[0]]
                 meanlossdict={key:np.mean(np.array([lossdict[key] for lossdict in lossdictlist]))for key in keylist}
                 meanloss=meanlossdict[loss_function]
@@ -133,6 +134,8 @@ class SaveQDumper(mp.Process):
                     binary_y_result=model_save_summary['binary_y_result']
                     params=model_save_summary['params']
                     message=f"SaveQDumper has {model_save_summary['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result} for params:{params}"
+                    try:message+=model_save_summary['other_estimator_test_loss_dict']
+                    except:pass
                     print(message)
                     self.logger.debug(message)
                 except:

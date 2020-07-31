@@ -13,7 +13,15 @@ class MyKernHelper:
         except:
             self.logger=logging.getLogger(__name__)
         self.logger.critical('MyKernHelper is logging')
-
+        
+    def process_predictions(y,yhatdict):
+        resultsdict={}
+        for model_name,yhat in yhatdict:
+            resultsdict[model_name]={}
+            for lf in self.lossdict: #just the keys
+                resultsdict[model_name][lf]=self.doLoss(y,yhat,lssfn=lf)
+        return resultsdict
+    
     
     def sort_then_saveit(self,lossdict_and_paramdict_list,modeldict,getname=0):
 
@@ -67,6 +75,8 @@ class MyKernHelper:
         savedict['savepath']=self.savepath
         savedict['jobpath']=self.jobpath
         savedict['opt_settings_dict']=self.opt_settings_dict
+        if self.other_estimator_test_loss_dict:
+            savedict['other_estimator_test_loss_dict']=self.other_estimator_test_loss_dict
         
         try:#this is only relevant after optimization completes
             savedict['minimize_obj']=self.minimize_obj
@@ -404,7 +414,7 @@ class MyKernHelper:
         p=yxtup_list[0][1].shape[1]
         modelstd=modeldict['std_data']
 
-        self.xmean=self.datagen_obj.summary_stats_dict['xmean'] # if using pipline, sumstats built off largest batchbatch size
+        self.xmean=self.datagen_obj.summary_stats_dict['xmean'] # sumstats built off training data
         self.ymean=self.datagen_obj.summary_stats_dict['ymean']
         self.xstd=self.datagen_obj.summary_stats_dict['xstd']
         self.ystd=self.datagen_obj.summary_stats_dict['ystd']

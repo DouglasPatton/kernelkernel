@@ -580,7 +580,7 @@ class kNdtool(Ndiff,MyKernHelper):
             
             #batchbatch_all_y_err=np.concatenate([batchbatch_all_y_err],axis=0)
             #def doLoss(self,y,yhat,pthreshold=None,lssfn=None):f
-            lossdict={'mse':None,'mae':None,'f1':None,'f2':None, 'splithinge':None, 'logloss':None, 'avg_prec_sc':None}
+            lossdict=deepcopy(self.lossdict)
             for lf in lossdict:
                 
                 lossdict[lf]=self.doLoss(batchbatch_all_y,batchbatch_all_yhat,lssfn=lf)
@@ -851,6 +851,8 @@ class optimize_free_params(kNdtool):
         self.naivebinaryloss=None
         self.loss_function=None
         self.validate=None
+        self.other_estimator_test_loss_dict=None
+        self.lossdict={'mse':None,'mae':None,'f1':None,'f2':None, 'logloss':None, 'avg_prec_sc':None}
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.pname=myname
         
@@ -927,7 +929,9 @@ class optimize_free_params(kNdtool):
         self.iter=0
         
         if self.validate:
-            valdatalist=datagen_obj.yxtup_batchbatch_testf
+            valdatalist=datagen_obj.yxtup_batchbatch_test
+            yhatdict=sk_tool.skTool(datagen_obj.xdataarray,datagen_obj.xtestarray,datagen_obj.ydataarray,datagen_obj.ytestarray)
+            self.other_estimator_test_loss_dict=self.process_predictions(y,yhatdict) # in mykernhelper
             bbv=len(valdatalist)
             for v in range(bbv):
                 printstring=f'validating {v+1}/{bbv}'
