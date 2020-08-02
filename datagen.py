@@ -5,14 +5,15 @@ from pisces_data_huc12 import PiscesDataTool
 import os
 import sklearn
 from sklearn.model_selection import StratifiedKFold,train_test_split
+from sklearn.preprocessing import StandardScaler
 class datagen(PiscesDataTool):
     '''
     
     generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,datagen_dict):
-        
+    def __init__(self,datagen_dict,std_data=None):
+        self.std_data=std_data
         
         logdir=os.path.join(os.getcwd(),'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
@@ -99,7 +100,7 @@ class datagen(PiscesDataTool):
             seed=1
             
             self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup)
-            self.build_sumstats_dict(self.ydataarray,self.xdataarray)
+            #self.build_sumstats_dict(self.ydataarray,self.xdataarray) # moved inside gen_piscesdata01
             
             pass
         
@@ -165,10 +166,13 @@ class datagen(PiscesDataTool):
         
         ydata=np.array(speciesdata[:,0])
         xtrain,xtest,ytrain,ytest=train_test_split(xdata,ydata,stratify=ydata,test_size=0.2,random_state=0)
+        self.build_sumstats_dict(xtrain,ytrain) 
+        xtrain,xtest,ytrain,ytest=self.standardize_yxtraintest(xtrain,xtest,ytrain,ytest,std_data=self.std_data)
         self.xdataarray=xtrain
         self.ydataarray=ytrain    
         self.xtestarray=xtest
         self.ytestarray=ytest
+        
         
         train_n=self.ydataarray.shape[0]
         self.logger.info(f'train_n:{train_n}')
@@ -177,7 +181,7 @@ class datagen(PiscesDataTool):
         #sss.split(xdata,ydata)
         #print('self.ydataarray',self.ydataarray,type(self.ydataarray))
         
-        modeldict_data_std_tup=([],[i for i in floatselecttup])
+        
         
         self.genpiscesbatchbatchlist(ytrain,xtrain,batch_n,batchcount,min_y=self.min_y)
         self.genpisces_test_batchbatchlist(ytest,xtest,batch_n,self.batchcount)
@@ -186,7 +190,7 @@ class datagen(PiscesDataTool):
     
         
         
-    def build_sumstats_dict(self,ydata,xdata):
+    def build_sumstats_dict(self,xdata,ydata):
         try:
             existing_sum_stats_dict=self.initial_datagen_dict['summary_stats_dict']
             self.summary_stats_dict=existing_sum_stats_dict
@@ -351,3 +355,54 @@ class datagen(PiscesDataTool):
         y=np.matmul(x, b)+self.e
         #return y and the original x variables, not the squared terms or constant
         return (y,xvars)
+
+    
+    def standardize_yxtraintest(self,xtrain,xtest,ytrain,ytest,std_data=None):
+        if std_data is None:
+            std_data=([],'float')
+        #yxtup_list=deepcopy(yxtup_list_unstd)
+        #p=yxtup_list[0][1].shape[1]
+        p=xtrain.shape[1]
+        """#already set by buildsumstatsdict....
+        self.xmean=self.datagen_obj.summary_stats_dict['xmean'] # sumstats built off training data
+        self.ymean=self.datagen_obj.summary_stats_dict['ymean']
+        self.xstd=self.datagen_obj.summary_stats_dict['xstd']
+        self.ystd=self.datagen_obj.summary_stats_dict['ystd']
+        """
+        
+        if type(std_data) is str: 
+            if  std_data=='all':
+                x_stdlist=[i for i in range(p)]
+                y_stdlist=[0]
+            else:
+                assert False, f'modeldict:std_data is {std_data} but expected "all"'
+        elif type(std_data) is tuple:
+            xmodelstd=std_data[1]
+            ymodelstd=std_data[0]
+            floatselecttup=self.floatselecttup
+            spatialselecttup=self.spatialselecttup
+            if type(xmodelstd) is str:
+                if xmodelstd=='float':
+                    x_stdlist=[i for i in range(len(floatselecttup))]
+                if xmodelstd=='all':
+                    x_stdlist=[i for i in range(p)]
+            if type(xmodelstd) is list:
+                x_stdlist=xmodelstd
+            if type(ymodelstd) is list:
+                y_stdlist=ymodelstd
+            #xstdselect=modelstd[1]
+            #x_stdlist[modelstd[1]]=1
+        
+        if x_stdlist:
+            xscaler = StandardScaler()
+            xscaler.fit(xtrain[:,x_stdlist])                                                   
+            xtrain[:,x_stdlist]=xscaler.transform(xtrain[:,x_stdlist])
+            xtest[:,x_stdlist]=xscaler.transform(xtest[:,x_stdlist])
+        if y_stdlist:
+            self.logger.warning(f'y is being standardized!')
+            yscaler = StandardScaler()
+            yscaler.fit(ytrain)                                                   
+            ytrain=yscaler.transform(ytrain)
+            ytest=yscaler.transform(ytest)                                                      
+                                                
+        return xtrain,xtest,ytrain,ytest

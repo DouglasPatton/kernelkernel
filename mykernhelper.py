@@ -411,56 +411,7 @@ class MyKernHelper:
             return np.linspace(0,1,count)
             
 
-    def standardize_yxtup(self,yxtup_list,modeldict):
-        #yxtup_list=deepcopy(yxtup_list_unstd)
-        p=yxtup_list[0][1].shape[1]
-        modelstd=modeldict['std_data']
-
-        self.xmean=self.datagen_obj.summary_stats_dict['xmean'] # sumstats built off training data
-        self.ymean=self.datagen_obj.summary_stats_dict['ymean']
-        self.xstd=self.datagen_obj.summary_stats_dict['xstd']
-        self.ystd=self.datagen_obj.summary_stats_dict['ystd']
-
-        
-        if type(modelstd) is str: 
-            if  modelstd=='all':
-                x_stdlist=[i for i in range(p)]
-                y_stdlist=[0]
-            else:
-                assert False, f'modeldict:std_data is {modelstd} but expected "all"'
-        elif type(modelstd) is tuple:
-            xmodelstd=modelstd[1]
-            ymodelstd=modelstd[0]
-            floatselecttup=self.datagen_obj.floatselecttup
-            spatialselecttup=self.datagen_obj.spatialselecttup
-            if xmodelstd=='float':
-                x_stdlist=[i for i in range(len(floatselecttup))]
-            if xmodelstd=='all':
-                x_stdlist=[i for i in range(p)]
-            if ymodelstd==[0]:
-                y_stdlist=[0]
-            if ymodelstd==[]:
-                y_stdlist=[]
-            #xstdselect=modelstd[1]
-            #x_stdlist[modelstd[1]]=1
-        
-        tupcount=len(yxtup_list)#should be same as batchcount
-        
-        for i in range(tupcount):
-            
-            xarray=yxtup_list[i][1]
-            for j in x_stdlist:
-                if self.xstd[j]>0:
-                    xarray[:,j]=(xarray[:,j]-self.xmean[j])/self.xstd[j]
-            
-            yarray=yxtup_list[i][0]
-            if y_stdlist!=[]:
-                self.logger.warning(f'y is being standardized!')
-                yarray=(yarray-self.ymean)/self.ystd
-            yxtup_list[i]=(yarray,xarray)
-        self.logger.info(f'self.xmean:{self.xmean},self.xstd,{self.xstd},self.ymean:{self.ymean},self.ystd:{self.ystd}')    
-        self.logger.info(f'after standardizing, xmeans: {np.mean(np.concatenate([yxtup[1] for yxtup in yxtup_list], axis=0),axis=0)}')
-        return yxtup_list
+    
 
 
     

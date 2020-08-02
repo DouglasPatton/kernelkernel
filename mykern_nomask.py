@@ -669,28 +669,30 @@ class kNdtool(Ndiff,MyKernHelper):
 
         if self.source=='monte':
             yxtup_list=datagen_obj.yxtup_list
-        yxtup_listlist_std=[]
-        ylist=[]
-        for batchbatchidx in range(self.batchbatchcount):
-            if self.source=='pisces':
-                yxtup_list=datagen_obj.yxtup_batchbatch[batchbatchidx]
-            [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
-            yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
+        #yxtup_listlist_std=[] # standardization happens inside datagen as of 8/2/2020
+        #ylist=[]
+        #for batchbatchidx in range(self.batchbatchcount):
+        if self.source=='pisces':
+            yxtup_listlist=datagen_obj.yxtup_batchbatch
+            ylist=[yxtup[0] for yxtuplist in yxtup_listlist for yxtup in yxtuplist] 
+            #yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
         if self.validate:
             neg_infs=[np.sum(np.isinf(arr)) for yxtup in valdata for arr in yxtup]
-            if neg_infs:self.logger.critical(f'before standardize -infinitis in data: {neg_infs}')
-            yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
-            neg_infs=[np.sum(np.isinf(arr)) for yxtup in yxtup_list_stdval for arr in yxtup]
+            if neg_infs:self.logger.critical(f'in prep kde-infinitis in data: {neg_infs}')
+            #yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
+            neg_infs=[np.sum(np.isinf(arr)) for yxtup in valdata for arr in yxtup]
             if neg_infs:self.logger.critical(f'after standardize -infinitis in data: {neg_infs}')
             #     batchbatch worth of validation data at a time
-            ylist,xpredict=zip(*yxtup_list_stdval)
+            #ylist,xpredict=zip(valdata)
+            ylist,xpredict=zip(*[yxtup for yxtuplist in valdata for yxtup in yxtuplist] )
             self.logger.debug(f'len(xpredict):{len(xpredict)}, shape xpredict[0]:{xpredict[0].shape}')
         else:xpredict=None    
         self.do_naiveloss(ylist)
         #p#rint('buildbatcdatadict')
         batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict,xpredict=xpredict)
-        for batchdata_dict in batchdata_dictlist:
-            batchdata_dict['ylist']=ylist
+        if self.validate:
+            for batchdata_dict in batchdata_dictlist:
+                batchdata_dict['ylist']=ylist
         #p#rint('for validation buildbatcdatadict')
         #val_batchdata_dict=self.buildbatchdatadict(val_yxtup_list_std,xkerngrid,ykerngrid,modeldict)
         self.npr=len(batchdata_dictlist[0]['xprtup'][0])
@@ -933,16 +935,27 @@ class optimize_free_params(kNdtool):
         self.iter=0
         
         if self.validate:
-            valdatalist=datagen_obj.yxtup_batchbatch_test
+            valdatalistlist=datagen_obj.yxtup_batchbatch_test
             skt=sk_tool.skTool()
             yhatdict=skt.predictY(datagen_obj.xdataarray,datagen_obj.xtestarray,datagen_obj.ydataarray,datagen_obj.ytestarray)
             self.other_estimator_test_loss_dict=self.process_predictions(datagen_obj.ytestarray,yhatdict) # in mykernhelper
-            bbv=len(valdatalist)
-            for v in range(bbv):
-                printstring=f'validating {v+1}/{bbv}'
+            bbv=len(valdatalistlist)
+            #for v in range(bbv):
+            if len(bbv)>10:
+                chunks=10
+            else:
+                chunks=bbv
+            bites=-(-bbv//chunks) # bites per chunk!
+            b_idx=0 
+            for ch in range(chunks):
+                printstring=f'bbv={bbv}. validating chunk {ch+1}/{chunks}'
                 self.logger.debug(printstring)
                 print(printstring)
-                valdata=valdatalist[v]
+                if (b_idx+bites)>=bbv:
+                    bites=bbv-b_idx
+                    assert ch==chunks-1,f'ch:{ch}, chunks:{chunks} but expecting ch==chunks-1'
+                valdata=valdatalistlist[b_idx:b_idx+bites]
+                b_idx+=bites
                 transformed_free_params,args_tuple=self.prep_KDEreg(
                     datagen_obj,modeldict,param_valdict,self.source,valdata=valdata)
                 self.MY_KDEpredictloss(transformed_free_params,*args_tuple,predict=1)
