@@ -163,7 +163,7 @@ class datagen(PiscesDataTool):
         '''
         
         
-        ydata=np.array(speciesdata[:,0],dtype=np.int8)
+        ydata=np.array(speciesdata[:,0])
         xtrain,xtest,ytrain,ytest=train_test_split(xdata,ydata,stratify=ydata,test_size=0.2,random_state=0)
         self.xdataarray=xtrain
         self.ydataarray=ytrain    
@@ -211,10 +211,13 @@ class datagen(PiscesDataTool):
             for row in nparray:
                 keep=1
                 for val in row:
-                    if val=='999999' or val=='':keep=0
+                    if val == '999999' or val=='' :keep=0
                 if keep==1:outlist.append(row)
-        return np.array(outlist)
-                
+        arr= np.array(outlist,dtype=np.float64)
+        neg_infs=np.sum(np.isinf(arr))
+        if neg_infs:
+            self.logger.critical(f'processing missing -infinitis in data: {neg_infs}')
+        return arr     
                 
         
         

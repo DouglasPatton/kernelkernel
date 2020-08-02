@@ -14,9 +14,9 @@ class MyKernHelper:
             self.logger=logging.getLogger(__name__)
         self.logger.critical('MyKernHelper is logging')
         
-    def process_predictions(y,yhatdict):
+    def process_predictions(self,y,yhatdict):
         resultsdict={}
-        for model_name,yhat in yhatdict:
+        for model_name,yhat in yhatdict.items():
             resultsdict[model_name]={}
             for lf in self.lossdict: #just the keys
                 resultsdict[model_name][lf]=self.doLoss(y,yhat,lssfn=lf)
@@ -292,7 +292,9 @@ class MyKernHelper:
             #    self.logger.debug(f'spatial_p:{spatial_p}')
             #x1_ex=np.abs(np.expand_dims(x1, axis=1))
             #x2_ex=np.abs(np.expand_dims(x2, axis=0))#x1.size,x2.size,p,batch
-            
+            self.logger.info(f'spatial:{spatial},spatialtransform:{spatialtransform}')
+            self.logger.info(f'x1:{x1}')
+            self.logger.info(f'x2:{x2}')
             diffs= np.abs(np.expand_dims(x1, axis=1) - np.expand_dims(x2, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
         
             if spatial:
@@ -448,13 +450,16 @@ class MyKernHelper:
             
             xarray=yxtup_list[i][1]
             for j in x_stdlist:
-                xarray[:,j]=(xarray[:,j]-self.xmean[j])/self.xstd[j]
+                if self.xstd[j]>0:
+                    xarray[:,j]=(xarray[:,j]-self.xmean[j])/self.xstd[j]
             
             yarray=yxtup_list[i][0]
             if y_stdlist!=[]:
+                self.logger.warning(f'y is being standardized!')
                 yarray=(yarray-self.ymean)/self.ystd
             yxtup_list[i]=(yarray,xarray)
-                
+        self.logger.info(f'self.xmean:{self.xmean},self.xstd,{self.xstd},self.ymean:{self.ymean},self.ystd:{self.ystd}')    
+        self.logger.info(f'after standardizing, xmeans: {np.mean(np.concatenate([yxtup[1] for yxtup in yxtup_list], axis=0),axis=0)}')
         return yxtup_list
 
 

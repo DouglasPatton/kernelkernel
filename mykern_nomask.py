@@ -677,7 +677,11 @@ class kNdtool(Ndiff,MyKernHelper):
             [ylist.extend(yxtup[0]) for yxtup in yxtup_list] 
             yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
         if self.validate:
+            neg_infs=[np.sum(np.isinf(arr)) for yxtup in valdata for arr in yxtup]
+            if neg_infs:self.logger.critical(f'before standardize -infinitis in data: {neg_infs}')
             yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
+            neg_infs=[np.sum(np.isinf(arr)) for yxtup in yxtup_list_stdval for arr in yxtup]
+            if neg_infs:self.logger.critical(f'after standardize -infinitis in data: {neg_infs}')
             #     batchbatch worth of validation data at a time
             ylist,xpredict=zip(*yxtup_list_stdval)
             self.logger.debug(f'len(xpredict):{len(xpredict)}, shape xpredict[0]:{xpredict[0].shape}')
@@ -930,8 +934,9 @@ class optimize_free_params(kNdtool):
         
         if self.validate:
             valdatalist=datagen_obj.yxtup_batchbatch_test
-            yhatdict=sk_tool.skTool(datagen_obj.xdataarray,datagen_obj.xtestarray,datagen_obj.ydataarray,datagen_obj.ytestarray)
-            self.other_estimator_test_loss_dict=self.process_predictions(y,yhatdict) # in mykernhelper
+            skt=sk_tool.skTool()
+            yhatdict=skt.predictY(datagen_obj.xdataarray,datagen_obj.xtestarray,datagen_obj.ydataarray,datagen_obj.ytestarray)
+            self.other_estimator_test_loss_dict=self.process_predictions(datagen_obj.ytestarray,yhatdict) # in mykernhelper
             bbv=len(valdatalist)
             for v in range(bbv):
                 printstring=f'validating {v+1}/{bbv}'
