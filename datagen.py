@@ -262,11 +262,11 @@ class datagen(PiscesDataTool):
                 batchcount=max_batchcount
             subsample_n=batchcount*batch_n
             for bb_idx in range(batchbatchcount):
-                bb_select_list.append(np.random.choice(np.arange(n),size=subsample_n))
-        batchbatchlist=[[None for b in range(batchcount)] for _ in range(batchbatchcount)]
+                bb_select_list.append(np.random.choice(np.arange(n),size=subsample_n),replace=False)
+        batchbatchlist=[[None for __ in range(batchcount)] for _ in range(batchbatchcount)]
         SKF=StratifiedKFold(n_splits=batchcount, shuffle=False)
         for bb_idx in range(batchbatchcount):
-            bb_x_subsample=xdataarray[bb_select_list[bb_idx]]
+            bb_x_subsample=xdataarray[bb_select_list[bb_idx],:]
             bb_y_subsample=ydataarray[bb_select_list[bb_idx]]
             for j,(train_index,test_index) in enumerate(SKF.split(bb_x_subsample,bb_y_subsample)):
                 batchbatchlist[bb_idx][j]=(bb_y_subsample[test_index],bb_x_subsample[test_index,:])
@@ -278,6 +278,7 @@ class datagen(PiscesDataTool):
         fullbatchbatch_n=batchbatchcount*batchsize
         self.fullbatchbatch_n=fullbatchbatch_n
         self.expand_datagen_dict('fullbatchbatch_n',self.fullbatchbatch_n)
+        self.logger.info(f'yxtup shapes:{[(yxtup[0].shape,yxtup[1].shape) for yxtuplist in batchbatchlist for yxtup in yxtuplist]}')
         self.yxtup_batchbatch=batchbatchlist
         
     def genpisces_test_batchbatchlist(self,y,x,batch_n,batchcount):

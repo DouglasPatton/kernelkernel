@@ -677,19 +677,21 @@ class kNdtool(Ndiff,MyKernHelper):
             ylist=[yxtup[0] for yxtuplist in yxtup_listlist for yxtup in yxtuplist] 
             #yxtup_listlist_std.append(self.standardize_yxtup(yxtup_list,modeldict))
         if self.validate:
-            neg_infs=[np.sum(np.isinf(arr)) for yxtup in valdata for arr in yxtup]
+            neg_infs=[[np.sum(np.isinf(arr)) for arr in yxtup] for yxtuplist in valdata for yxtup in yxtuplist]
             if neg_infs:self.logger.critical(f'in prep kde-infinitis in data: {neg_infs}')
             #yxtup_list_stdval=self.standardize_yxtup(valdata,modeldict)# just one 
-            neg_infs=[np.sum(np.isinf(arr)) for yxtup in valdata for arr in yxtup]
-            if neg_infs:self.logger.critical(f'after standardize -infinitis in data: {neg_infs}')
+            #neg_infs=[np.sum(np.isinf(arr)) for yxtup in valdata for arr in yxtup]
+            #if neg_infs:self.logger.critical(f'after standardize -infinitis in data: {neg_infs}')
             #     batchbatch worth of validation data at a time
             #ylist,xpredict=zip(valdata)
             ylist,xpredict=zip(*[yxtup for yxtuplist in valdata for yxtup in yxtuplist] )
+            #ylist=np.concatenate(ylist,axis=0)
+            xpredict=np.concatenate(xpredict,axis=0)
             self.logger.debug(f'len(xpredict):{len(xpredict)}, shape xpredict[0]:{xpredict[0].shape}')
         else:xpredict=None    
         self.do_naiveloss(ylist)
         #p#rint('buildbatcdatadict')
-        batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist_std,xkerngrid,ykerngrid,modeldict,xpredict=xpredict)
+        batchdata_dictlist=self.buildbatchdatadict(yxtup_listlist,xkerngrid,ykerngrid,modeldict,xpredict=xpredict)
         if self.validate:
             for batchdata_dict in batchdata_dictlist:
                 batchdata_dict['ylist']=ylist
@@ -815,7 +817,12 @@ class kNdtool(Ndiff,MyKernHelper):
 
     def do_naiveloss(self,ylist):
         try:
-            y=np.array(ylist)
+            if type(ylist) is list:
+                y=np.array(ylist)
+            elif type(ylist) is np.ndarray:
+                y=ylist
+            else:
+                assert False,f'unexpected type for ylist:{ylist}'
             ymean=np.mean(y)
             ymeanvec=np.broadcast_to(ymean,y.shape)
             self.sample_ymean=ymean
@@ -940,8 +947,7 @@ class optimize_free_params(kNdtool):
             yhatdict=skt.predictY(datagen_obj.xdataarray,datagen_obj.xtestarray,datagen_obj.ydataarray,datagen_obj.ytestarray)
             self.other_estimator_test_loss_dict=self.process_predictions(datagen_obj.ytestarray,yhatdict) # in mykernhelper
             bbv=len(valdatalistlist)
-            #for v in range(bbv):
-            if len(bbv)>10:
+            if bbv>10:
                 chunks=10
             else:
                 chunks=bbv
