@@ -615,7 +615,7 @@ class kNdtool(Ndiff,MyKernHelper):
         if self.nperror==1:
             self.logger.info(f'resetting nperror to 0 and setting loss to:{0.999*10**275}')
             self.nperror=0
-            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge','f1']}
+            lossdict={key:0.999*10**275 for key in ['mse','mae','splithinge','f1_score']}
         self.lossdict_and_paramdict_list.append((deepcopy(lossdict), deepcopy(fixed_or_free_paramdict)))
         self.doBinaryThreshold(batchbatch_all_y,batchbatch_all_yhat,threshold=binary_threshold)
         self.logger.debug(f'len(self.binary_y_loss_list_list): {len(self.binary_y_loss_list_list)},len(self.lossdict_and_paramdict_list):{len(self.lossdict_and_paramdict_list)}')
@@ -793,7 +793,7 @@ class kNdtool(Ndiff,MyKernHelper):
             
             if lssfn=='mse':
                 loss=metrics.mean_squared_error(y,yhat)
-            if lssfn=='f1':
+            if lssfn=='f1_score':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
                 loss=-metrics.f1_score(y,yhat_01)
@@ -803,7 +803,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
                 loss=metrics.log_loss(y,yhat_01)
-            elif lssfn=='f2':
+            elif lssfn=='f2_score':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
                 loss=-metrics.fbeta_score(y,yhat_01,beta=2)
@@ -875,7 +875,7 @@ class optimize_free_params(kNdtool):
         self.loss_function=None
         self.validate=None
         self.other_estimator_test_loss_dict=None
-        self.lossdict={'mse':None,'mae':None,'f1':None,'f2':None, 'logloss':None, 'avg_prec_sc':None}
+        self.lossdict={'mse':None,'mae':None,'f1_score':None,'f2_score':None, 'logloss':None, 'avg_prec_sc':None}
         kNdtool.__init__(self,savedir=kcsavedir,myname=myname)
         self.pname=myname
         
