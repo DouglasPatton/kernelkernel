@@ -225,14 +225,16 @@ class kNdtool(Ndiff,MyKernHelper):
             #modifying to index numpy arrays instead of lists, requiring slices of all dims
             batchcount=self.batchcount
             yout,wt_stack,cross_errors=KDEregtup# yout dims:(nout,batch), wt_stack dims:(nout?,npr,bc)
+            self.logger.info(f'yout.shape:{yout.shape}, wt_stack.shape:{wt_stack.shape},')
             nin=self.nin;
             #ybatch=[]
             wtbatch=[]
             youtbatch=[]
             #trueybatch=[]
             if self.validate:
-                wtstack= np.concatenate(np.transpose(wt_stack,[2,0,1])) # wt_stack dims:(nout,npr,batchcount), wtstackdims (bc,nout,npr)
-                youtstack=np.broadcast_to(np.expand_dims(np.transpose(yout,[1,0]),axis=-1),wt_stack.shape) # yout dims: (noutXbatchcount), youtstack dims (bc,nout,npr)
+                wtstack= wt_stack # wt_stack dims:(nout,npr,batchcount) # transpose after broadcasting yout
+                youtstack=np.transpose(np.broadcast_to(np.expand_dims(yout,axis=-2),wt_stack.shape),[2,0,1]) # yout dims: (noutXbatchcount), youtstack dims (bc,nout,npr)
+                wtstack=np.transpose(wtstack,[2,0,1]) # leavng dims (bc,nout,npr)
             else:
                 for i in range(batchcount):
 
@@ -420,7 +422,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 wt_cross_errors=np.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
                 cross_errors=wt_cross_errors
             if modeldict['residual_treatment']=='batchnorm_crossval':
-                self.logger.info(f'returning from my_NW_kde_reg: yout.shape:{yout.shape}', wt_stack.shape:{wt_stack.shape}')
+                self.logger.info(f'returning from my_NW_kde_reg: yout.shape:{yout.shape}, wt_stack.shape:{wt_stack.shape}')
                 return (yout,wt_stack,cross_errors)
             return (yhat,cross_errors)
         except FloatingPointError:
