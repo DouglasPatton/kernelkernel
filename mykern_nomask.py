@@ -101,6 +101,7 @@ class kNdtool(Ndiff,MyKernHelper):
             diffmat_scaled=diffmat*x_bandscale_params[:,None]
             outdiffs_scaled_l2norm=np.power(np.sum(np.power(diffmat_scaled,2),axis=2),.5)
             indiffs_scaled_l2norm=np.power(np.sum(np.power(self.makediffmat_itoj(xin,xin,spatial=spatial,spatialtransform=spatialtransform)*x_bandscale_params[:,None],2),axis=2),.5) # [:,None] for broadcasting to batch dim at -1
+            self.logger.info(f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} expecting ninXnprXbatchcount:({self.nin},{self.npr},{self.batchcount})')
             assert outdiffs_scaled_l2norm.shape==(xin.shape[0],xpr.shape[0],self.batchcount),f'outdiffs_scaled_l2norm has shape:{outdiffs_scaled_l2norm.shape} not shape:({self.nin},{self.npr},{self.batchcount})'
 
             diffdict={}
@@ -146,9 +147,9 @@ class kNdtool(Ndiff,MyKernHelper):
                 ykern_grid=modeldict['ykern_grid'];xkern_grid=modeldict['xkern_grid']
                 if True:#type(ykern_grid) is int and xkern_grid=='no':
                     xoutdifftup=xoutdiffs.shape[:-2]+(self.nout,)+xoutdiffs.shape[-2:]# self.nout dimension inserted third from rhs not 2nd b/c batchcount.
-                    #p#rint('xoutdiffs.shape',xoutdiffs.shape,'xbw.shape',xbw.shape)
-                    xoutdiffs_stack=np.broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3
-                    xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-3),xoutdifftup)#fro -2 to -3
+                    self.logger.info(f'xoutdiffs.shape:{xoutdiffs.shape},xbw.shape:{xbw.shape}')
+                    xoutdiffs_stack=np.broadcast_to(np.expand_dims(xoutdiffs,axis=-3),xoutdifftup)#from -2 to -3 # nout dim added only for prob_yx
+                    xbw_stack=np.broadcast_to(np.expand_dims(xbw,axis=-3),xoutdifftup)#from -2 to -3
                 newaxis=-1
                 yx_outdiffs_endstack=np.concatenate(
                     (np.expand_dims(xoutdiffs_stack,axis=newaxis),np.expand_dims(youtdiffs,newaxis)),axis=newaxis)
@@ -160,7 +161,8 @@ class kNdtool(Ndiff,MyKernHelper):
 
                 prob_x = self.do_KDEsmalln(xoutdiffs, xbw, modeldict)
                 prob_yx = self.do_KDEsmalln(yx_outdiffs_endstack, yx_bw_endstack,modeldict)#
-
+                
+                self.logger.info(f'prob_x.shape:{prob_x.shape}, prob_yx.shape:{prob_yx.shape}')
                 KDEregtup = self.my_NW_KDEreg(prob_yx,prob_x,yout,modeldict)
                 if modeldict['residual_treatment']=='batchnorm_crossval':
                     return KDEregtup
@@ -222,41 +224,44 @@ class kNdtool(Ndiff,MyKernHelper):
         try:
             #modifying to index numpy arrays instead of lists, requiring slices of all dims
             batchcount=self.batchcount
-            yout,wt_stack,cross_errors=KDEregtup# dims:(nout,nin,batch)???
+            yout,wt_stack,cross_errors=KDEregtup# yout dims:(nout,batch), wt_stack dims:(nout?,npr,bc)
             nin=self.nin;
             #ybatch=[]
             wtbatch=[]
             youtbatch=[]
             #trueybatch=[]
-            
-            for i in range(batchcount):
-                
-                #ybatchlist=[]
-                wtbatchlist=[]
-                youtbatchlist=[]
-                #trueybatchlist=[]
-                for j in range(batchcount):
-                    if j>i or self.validate:
-                        istart=(i)*nin
-                        iend=istart+nin
-                    elif j<i:
-                        istart=(i-1)*nin
-                        iend=istart+nin
-                    if j!=i or self.validate:
-                        batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
-                        wt_i_from_batch_j=wt_stack[batchslicer]
-                        yout_batchj=np.broadcast_to(np.expand_dims(yout[:,j],axis=-1),(self.nout,self.nin)) # 
-                        wtbatchlist.append(wt_i_from_batch_j)
-                        youtbatchlist.append(yout_batchj)
+            if self.validate:
+                wtstack= np.concatenate(np.transpose(wt_stack,[2,0,1])) # wt_stack dims:(nout,npr,batchcount), wtstackdims (bc,nout,npr)
+                youtstack=np.broadcast_to(np.expand_dims(np.transpose(yout,[1,0]),axis=-1),wt_stack.shape) # yout dims: (noutXbatchcount), youtstack dims (bc,nout,npr)
+            else:
+                for i in range(batchcount):
 
-                dimcount=np.ndim(wtbatchlist[0])
-                wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
-                youtbatch.append(np.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
-                #   leaving rhs dim as nin*(batchcoun-1)=npr
+                    #ybatchlist=[]
+                    wtbatchlist=[]
+                    youtbatchlist=[]
+                    #trueybatchlist=[]
+                    for j in range(batchcount):
+                        if j>i or self.validate:
+                            istart=(i)*nin
+                            iend=istart+nin
+                        elif j<i:
+                            istart=(i-1)*nin
+                            iend=istart+nin
+                        if j!=i or self.validate:
+                            batchslicer=self.slicetup(wt_stack.ndim,[-2,-1],[slice(istart,iend),j])
+                            wt_i_from_batch_j=wt_stack[batchslicer]
+                            yout_batchj=np.broadcast_to(np.expand_dims(yout[:,j],axis=-1),(self.nout,self.nin)) # 
+                            wtbatchlist.append(wt_i_from_batch_j)
+                            youtbatchlist.append(yout_batchj)
 
-            wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
-            #self.logger.debug(f'wtstack:{wtstack}')
-            youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
+                    dimcount=np.ndim(wtbatchlist[0])
+                    wtbatch.append(np.concatenate([wtbatchj[None,:,:]for wtbatchj in wtbatchlist],axis=0)) # 2/20b adding lhs axis for batchcoun-1 predictions
+                    youtbatch.append(np.concatenate([youtbatchj[None,:,:] for youtbatchj in youtbatchlist],axis=0)) #2/20b each i has batch_n values to predict 2/20a same as above,
+                    #   leaving rhs dim as nin*(batchcoun-1)=npr
+
+                wtstack=np.concatenate([wtbatchi[:,:,:,None] for wtbatchi in wtbatch],axis=-1)#adding new rhs axis for stacking batches(i)
+                #self.logger.debug(f'wtstack:{wtstack}')
+                youtstack=np.concatenate([youtbatchi[:,:,:,None] for youtbatchi in youtbatch],axis=-1)
             wtstacksum=np.sum(wtstack,axis=0)#summed over batchj axis for each batchi
             wtstacksumsum=np.sum(wtstacksum,axis=0)# summed over the yout axis for each batchi
             wtstacksumsum=np.expand_dims(wtstacksumsum,axis=0)# add back in the two lhs collapsed axes
@@ -267,7 +272,7 @@ class kNdtool(Ndiff,MyKernHelper):
             wtstacknorm=np.zeros(wtstack.shape,dtype=np.float64)
             wtstacknorm[wtstacksumsum>0]=wtstack[wtstacksumsum>0]/wtstacksumsum[wtstacksumsum>0]
             yhat_raw=np.sum(np.sum(wtstacknorm*youtstack,axis=0),axis=0)
-            #print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
+            print(f'yhat_raw.shape:{yhat_raw.shape}, expected:(nin,batchcount):{(nin,batchcount)}')
             yhat_raw=yhat_raw.flatten(order='F')
 
             #y_bandscale_params=self.pull_value_from_fixed_or_free('y_bandscale',fixed_or_free_paramdict) #  removed on 5/2 since NW takes yout not yout_scaled as arg
@@ -362,7 +367,8 @@ class kNdtool(Ndiff,MyKernHelper):
             #yout_stack=np.broadcast_to(np.ma.expand_dims(yout,1),(self.nout,self.npr))
             yout_stack=np.expand_dims(yout,1)
             prob_x_stack_tup=prob_x.shape[:-2]+(self.nout,)+prob_x.shape[-2:] # -1 to -2 b/c batchcount
-            prob_x_stack=np.broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup)
+            prob_x_stack=np.broadcast_to(np.expand_dims(prob_x,yout_axis),prob_x_stack_tup) # needed b/c only done above for prob_yx
+            
             NWnorm=modeldict['NWnorm']
 
             residual_treatment=modeldict['residual_treatment']
@@ -382,10 +388,10 @@ class kNdtool(Ndiff,MyKernHelper):
                 yhat=np.sum(yout_stack*wt_stack,axis=yout_axis)#yout axis should be -2 # -3 b/c batchcount
 
             else:
-                #self.logger.debug(f'prob_yx.shape:{prob_yx.shape}')
-                #self.logger.debug(f'prob_yx:{prob_yx}')
-                #self.logger.debug(f'prob_x_stack.shape:{prob_x_stack.shape}')
-                #self.logger.debug(f'prob_x_stack:{prob_x_stack}')
+                self.logger.debug(f'prob_yx.shape:{prob_yx.shape}')
+                self.logger.debug(f'prob_yx:{prob_yx}')
+                self.logger.debug(f'prob_x_stack.shape:{prob_x_stack.shape}')
+                self.logger.debug(f'prob_x_stack:{prob_x_stack}')
                 wt_stack=np.zeros(prob_yx.shape,dtype=np.float64)
                 wt_stack[prob_x_stack>0]=prob_yx[prob_x_stack>0]/prob_x_stack[prob_x_stack>0]
                 if NWnorm=='across':
@@ -414,6 +420,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 wt_cross_errors=np.sum(crosswt_stack*cross_errors,axis=1)#weights normalized to sum to 1, then errors summed to 1 per nin
                 cross_errors=wt_cross_errors
             if modeldict['residual_treatment']=='batchnorm_crossval':
+                self.logger.info(f'returning from my_NW_kde_reg: yout.shape:{yout.shape}', wt_stack.shape:{wt_stack.shape}')
                 return (yout,wt_stack,cross_errors)
             return (yhat,cross_errors)
         except FloatingPointError:
@@ -514,7 +521,7 @@ class kNdtool(Ndiff,MyKernHelper):
                 #self.MY_KDEpredict(yin, yout, xin, xpr, modeldict, fixed_or_free_paramdict)
                 keylist=['yintup','youttup','xintup','xprtup']
                 args=[]
-                for key in keylist:
+                for key in keylist: # stacking batches at new axis -1
                     data_tup=batchdata_dict_i[key]
                     datalist=[np.expand_dims(data_array,axis=-1) for data_array in data_tup]
                     args.append(np.concatenate(datalist,axis=-1))
@@ -686,7 +693,7 @@ class kNdtool(Ndiff,MyKernHelper):
             #ylist,xpredict=zip(valdata)
             ylist,xpredict=zip(*[yxtup for yxtuplist in valdata for yxtup in yxtuplist] )
             #ylist=np.concatenate(ylist,axis=0)
-            xpredict=np.concatenate(xpredict,axis=0)
+            #xpredict=np.concatenate(xpredict,axis=0)
             self.logger.debug(f'len(xpredict):{len(xpredict)}, shape xpredict[0]:{xpredict[0].shape}')
         else:xpredict=None    
         self.do_naiveloss(ylist)
@@ -760,6 +767,7 @@ class kNdtool(Ndiff,MyKernHelper):
             batchdata_dict={'xintup':xintup,'yintup':yintup,'xprtup':xprtup,'youttup':youttup}
             batchdata_dictlist.append(batchdata_dict)
         #p#rint([f'{key}:{type(val)},{type(val[0])}' for key,val in batchdata_dict.items()])
+        #self.logger.info(f'batchdata_dictlist key,shape: {[[(key,val.shape) for key,val in batchdict.items()] for batchdict in batchdata_dictlist]}')
         return batchdata_dictlist
     
     
@@ -817,12 +825,12 @@ class kNdtool(Ndiff,MyKernHelper):
 
     def do_naiveloss(self,ylist):
         try:
-            if type(ylist) is list:
+            if type(ylist) in [list, tuple]:
                 y=np.array(ylist)
             elif type(ylist) is np.ndarray:
                 y=ylist
             else:
-                assert False,f'unexpected type for ylist:{ylist}'
+                assert False,f'unexpected type for ylist:{type(ylist)} and ylist: {ylist}'
             ymean=np.mean(y)
             ymeanvec=np.broadcast_to(ymean,y.shape)
             self.sample_ymean=ymean

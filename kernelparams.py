@@ -8,8 +8,8 @@ class KernelParams:
     
     def __init__(self,):
         self.logger=logging.getLogger(__name__)
-        self.n=2 #used to generate variations datagen-batch_n 
-        self.batchcount_variation_list=[2]#[64]
+        self.n=3 #used to generate variations datagen-batch_n 
+        self.batchcount_variation_list=[5]#[64]
         self.do_minimize=0
         self.maxiter=1
     

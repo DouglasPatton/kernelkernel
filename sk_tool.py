@@ -12,7 +12,8 @@ class skTool:
         pass
         
     def predictY(self,xtrain,xtest,ytrain,ytest):
-        
+        xtrain=xtrain[:,:-1]# drop the spatial variable
+        xtest=xtest[:,:-1]
         try:
             self.logger=logging.getLogger(__name__)
             self.logger.info('started sk_tool object')

@@ -295,7 +295,7 @@ class MyKernHelper:
             self.logger.info(f'spatial:{spatial},spatialtransform:{spatialtransform}')
             self.logger.info(f'x1.shape:{x1.shape},x1:{x1}')
             self.logger.info(f'x2.shape:{x2.shape},x2:{x2}')
-            diffs= np.abs(np.expand_dims(x1, axis=1) - np.expand_dims(x2, axis=0))#should return ninXnoutXp if xin an xpr were ninXp and noutXp
+            diffs= np.abs(np.expand_dims(x1, axis=1) - np.expand_dims(x2, axis=0))#should return ninXnoutXpxbatchcount if xin an xpr were ninXpXbatchcount and noutXpXbatchcount
         
             if spatial:
                 #assuming the spatial variable is always the last one
