@@ -32,14 +32,25 @@ class skTool:
         try:
             linear_regression=make_pipeline(StandardScaler(),LinearRegression())
             elastic_net = make_pipeline(StandardScaler(), ElasticNetCV())
+            
             #linear_svr = make_pipeline(StandardScaler(),GridSearchCV(LinearSVR(random_state=0,tol=1e-3,max_iter=5000),n_jobs=1,param_grid={'C':np.linspace(-1,4,8)}))
-            linear_svr = make_pipeline(StandardScaler(),LinearSVR(random_state=0,tol=1e-4,max_iter=5000,C=1))
-            rbf_svr=make_pipeline(StandardScaler(),SVR(kernel='rbf',tol=1e-4,max_iter=5000, C=1))
+            linear_svr = Pipeline(('scaler',StandardScaler()),('lin_svr',LinearSVR(random_state=0,tol=1e-4,max_iter=10000,cache_size=2*10**3))
+            lin_svr_param_grid={'lin_svr__C':np.logspace(-2,2,5)}  
+            linear_svr_CV=GridSearchCV(linear_svr,param_grid=lin_svr_param_grid)
+                                  
+            rbf_svr=Pipeline(('scaler',StandardScaler()),('rbf_svr',SVR(kernel='rbf',tol=1e-4,max_iter=10000,random_state=0 cache_size=2*10**3)))
+            rbf_svr_param_grid={'rbf_svr__C':np.logspace(-2,2,5),
+                               'rbf_svr__gamma':np.logspace(-1,0.5,5)} 
+            rbf_svr_CV=GridSearchCV(rbf_svr,param_grid=rbf_svr_param_grid)
+                                  
             gradient_boosting_reg=make_pipeline(GradientBoostingRegressor())
+            
+            P
+            
             model_dict={'linear-regression':linear_regression,
                 'elastic-net':elastic_net, 
-                'linear-svr':linear_svr, 
-                'rbf-svr':rbf_svr, 
+                'linear-svr':linear_svr_CV, 
+                'rbf-svr':rbf_svr_CV, 
                 'gradient-boosting-reg':gradient_boosting_reg}
             loss_fn_dict={'mse':mean_squared_error, 'mae':mean_absolute_error, 'r2':r2_score, 'f1_score':f1_score, 'average_precision_score':average_precision_score}
             yhatdict={}
