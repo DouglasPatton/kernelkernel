@@ -34,18 +34,18 @@ class skTool:
             elastic_net = make_pipeline(StandardScaler(), ElasticNetCV())
             
             #linear_svr = make_pipeline(StandardScaler(),GridSearchCV(LinearSVR(random_state=0,tol=1e-3,max_iter=5000),n_jobs=1,param_grid={'C':np.linspace(-1,4,8)}))
-            linear_svr = Pipeline(('scaler',StandardScaler()),('lin_svr',LinearSVR(random_state=0,tol=1e-4,max_iter=10000,cache_size=2*10**3))
+            linear_svr = Pipeline(steps=[('scaler',StandardScaler()),('lin_svr',LinearSVR(random_state=0,tol=1e-4,max_iter=10000))])
             lin_svr_param_grid={'lin_svr__C':np.logspace(-2,2,5)}  
-            linear_svr_CV=GridSearchCV(linear_svr,param_grid=lin_svr_param_grid)
-                                  
-            rbf_svr=Pipeline(('scaler',StandardScaler()),('rbf_svr',SVR(kernel='rbf',tol=1e-4,max_iter=10000,random_state=0 cache_size=2*10**3)))
+            linear_svr_CV= GridSearchCV(linear_svr,param_grid=lin_svr_param_grid)
+
+            rbf_svr=Pipeline(steps=[('scaler',StandardScaler()),('rbf_svr',SVR(kernel='rbf',tol=1e-4,max_iter=10000, cache_size=2*10**3))])
             rbf_svr_param_grid={'rbf_svr__C':np.logspace(-2,2,5),
                                'rbf_svr__gamma':np.logspace(-1,0.5,5)} 
             rbf_svr_CV=GridSearchCV(rbf_svr,param_grid=rbf_svr_param_grid)
                                   
             gradient_boosting_reg=make_pipeline(GradientBoostingRegressor())
             
-            P
+            
             
             model_dict={'linear-regression':linear_regression,
                 'elastic-net':elastic_net, 
