@@ -134,8 +134,8 @@ class SaveQDumper(mp.Process):
                     binary_y_result=model_save_summary['binary_y_result']
                     params=model_save_summary['params']
                     message=f"SaveQDumper has {model_save_summary['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result} for params:{params}"
-                    try:message+=model_save_summary['other_estimator_test_loss_dict']
-                    except:pass
+                    try:message+=str(model_save_summary['other_estimator_test_loss_dict'])
+                    except:self.logger.exception("error finding model_save_summary['other_estimator_test_loss_dict']")
                     print(message)
                     self.logger.debug(message)
                 except:
