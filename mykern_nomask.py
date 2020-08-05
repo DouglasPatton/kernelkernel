@@ -800,9 +800,9 @@ class kNdtool(Ndiff,MyKernHelper):
             elif lssfn=='mae':
                 loss=metrics.mean_absolute_error(y,yhat)
             elif lssfn=='logloss':
-                yhat_01=np.zeros(y.shape,dtype=np.float64)
-                yhat_01[yhat>threshold]=1
-                loss=metrics.log_loss(y,yhat_01)
+                #yhat_01=np.zeros(y.shape,dtype=np.float64)
+                #yhat_01[yhat>threshold]=1
+                loss=metrics.log_loss(y,yhat,labels=np.arange(1))
             elif lssfn=='f2_score':
                 yhat_01=np.zeros(y.shape,dtype=np.float64)
                 yhat_01[yhat>threshold]=1
