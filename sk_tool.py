@@ -6,6 +6,7 @@ from sklearn.model_selection import cross_validate, train_test_split, RepeatedKF
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score
 from sklearn.ensemble import GradientBoostingRegressor
 import logging
+import numpy as np
 
 class skTool:
     def __init__(self):
