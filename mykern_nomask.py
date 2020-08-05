@@ -170,7 +170,7 @@ class kNdtool(Ndiff,MyKernHelper):
                     yhat_raw=KDEregtup[0]
                     cross_errors=KDEregtup[1]
 
-                yhat_std=yhat_raw#no longer needed. *y_bandscale_params**-1#remove the effect of any parameters applied prior to using y.
+                yhat_std=yhat_raw# yout is not transformed by ybansdcale. 
 
             std_data=modeldict['std_data']
 
