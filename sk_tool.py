@@ -1,4 +1,4 @@
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline,Pipeline
 from sklearn.linear_model import ElasticNetCV, LinearRegression
 from sklearn.svm import LinearSVR, SVR
 from sklearn.preprocessing import StandardScaler
