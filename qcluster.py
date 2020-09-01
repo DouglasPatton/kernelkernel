@@ -311,34 +311,25 @@ class RunNode(mp.Process,BaseManager):
                     if type(rundict) is str:
                         if rundict=='shutdown':
                             return
-                    my_optimizedict=rundict['optimizedict']
-                    my_datagen_dict=rundict['datagen_dict']
-                    my_optimizedict['savepath']=rundict['savepath']
-                    my_optimizedict['jobpath']=rundict['jobpath']
-                    try:
-                        '''jobsavepath=rundict['savepath']
-                        jobsavefolder=os.path.split(jobsavepath)[0]
-                        if not os.path.exists(jobsavefolder):os.makedirs(jobsavefolder)'''
-                        kc.run_model_as_node(my_optimizedict,my_datagen_dict,force_start_params=1)
-                        jobsuccess=1
-                    except:
-                        self.logger.exception('putting job back in jobq with savepath:{jobsavepath}')
-                        jobq.put(rundict)
-                        self.logger.debug('job back in jobq')
-                    if jobsuccess:
-                        with open(kc.nodesavepath,'rb') as f:
-                            model_save_list=pickle.load(f)
+                    model_list,data_list,hash_id_list=self.build_from_rundict(rundict)
+                    M=len(model_list)
+                    for m in range(M):
+                        try:
+                            model_list[m].fit_score(data_list[m])
+                        except:
+                            self.logger.exception('error for rundict:{rundict}')
+                        savetup=(model_list[m],hash_id_list[m])
                         qtry=0
                         while True:
                             self.logger.debug(f'adding model_save_list to saveq, kc.nodesavepath:{kc.nodesavepath}')
                             try:
                                 qtry+=1
-                                saveq.put(model_save_list)
+                                saveq.put(savetup)
                                 self.logger.debug(f'model_save_list sucesfully added to saveq, savepath: {kc.nodesavepath}')
                                 break
                             except:
                                 if not saveq.full() and qtry>3:
-                                    self.logger.exception('')
+                                    self.logger.exception('error adding to saveq')
                                 else:
                                     sleep(1)
                                     
@@ -395,19 +386,11 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         self.savechecktimeout_hours=2
         seed(1)  
         self.nodecount=nodecount
-        self.dosteps=dosteps
-        self.optdict_variation_list=optdict_variation_list
-        self.datagen_variation_list=datagen_variation_list
-        if source is None: source='monte'
+        if source is None: source='pisces'
         self.source=source
         self.savedirectory='results'
         if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
         
-        kernelcompare.KernelCompare.__init__(self,directory=self.savedirectory,source=source)
-        self.jobdirectory=os.path.join(self.savedirectory,'jobs')
-        self.modelsavedirectory=os.path.join(self.savedirectory,'saves')
-        if not os.path.exists(self.jobdirectory): os.mkdir(self.jobdirectory)
-        if not os.path.exists(self.modelsavedirectory): os.mkdir(self.modelsavedirectory)
         super(RunCluster,self).__init__()
         
         
