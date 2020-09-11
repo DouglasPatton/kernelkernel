@@ -13,8 +13,32 @@ import multiprocessing as mp
 from multiprocessing.managers import BaseManager
 from queue import Queue
 import numpy as np
+from sqlitedict import SqliteDict
 
 #class QueueManager(BaseManager): pass
+class DBTool:
+    def __init__(self):
+            
+        resultsdir=os.path.join(os.getcwd(),'results')
+        if not os.path.exists(resultsdir):
+            os.mkdir(resultsdir)
+        self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
+        self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results')
+    
+    
+    
+    def addtoDBdict(self,save_list):
+        db=self.resultsDBdict
+        with db() as dbdict:
+            try:
+                for result in save_list:
+                    for key,val in result.items():
+                        dbdict[key]=val
+            except:
+                self.logger.exception('')
+            dbdict.commit()
+        return  
+        
 
 class TheQManager(mp.Process,BaseManager):
     def __init__(self,address,qdict):
@@ -49,7 +73,7 @@ class TheQManager(mp.Process,BaseManager):
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
-class SaveQDumper(mp.Process):
+class SaveQDumper(mp.Process,DBTool):
     def __init__(self,q):
         self.q=q
         #fself.netaddress=address
@@ -64,52 +88,10 @@ class SaveQDumper(mp.Process):
         self.logger = logging.getLogger(handlername)
         self.logger.info('SaveQDumper starting')
         #self.BaseManager=BaseManager
-        super(SaveQDumper,self).__init__()
+        #super(SaveQDumper,self).__init__()
+        super().__init__()
+        #DBTool.__init__(self)
     
-    def summarizeModelSaveList(self,model_save_list):
-        try:
-            model0=model_save_list[0]
-            model_save_summary={}
-            model_save_summary['savepath']=model0['savepath']
-            model_save_summary['naiveloss']=model0['naiveloss']
-            modeldict0=model0['modeldict']
-            loss_function=modeldict0['loss_function']
-            lossdictlist=[savedict['lossdict'] for savedict in model_save_list]
-            try:
-                validate=modeldict0['validate']
-            except:
-                validate=0
-            if not validate:
-                losslist=[lossdict[loss_function] for lossdict in lossdictlist]
-                minloss=min(losslist)
-                minlosspos=losslist.index(minloss)
-                model_save_summary['loss']=minloss
-                model_save_summary['lossdict']=lossdictlist[minlosspos]
-                model_save_summary['params']=model_save_list[minlosspos]['params']
-                model_save_summary['binary_y_result']=model_save_list[minlosspos]['binary_y_result']
-            else:
-                model_save_summary['other_estimator_test_loss_dict']=model0['other_estimator_test_loss_dict']
-                keylist=[key for key in lossdictlist[0]]
-                meanlossdict={key:np.mean(np.array([lossdict[key] for lossdict in lossdictlist]))for key in keylist}
-                meanloss=meanlossdict[loss_function]
-
-                by_keylist=[res[0] for res in model_save_list[0]['binary_y_result']]
-                meanbinary_y_result=[]
-                for k,key in enumerate(by_keylist):
-                    resultlist=[]
-                    for modelsave in model_save_list:
-                        byr=modelsave['binary_y_result'][k][1]
-                        resultlist.append(byr)
-                        meanresult=np.mean(np.array(resultlist))
-                    meanbinary_y_result.append((key,meanresult))
-                model_save_summary['loss']=meanloss
-                model_save_summary['lossdict']=meanlossdict
-                model_save_summary['binary_y_result']=meanbinary_y_result
-                model_save_summary['params']=model_save_list[0]['params'] #should all have same params for validation
-            return model_save_summary
-        except:
-            self.logger.exception('summary error')
-                    
     
     def run(self):
         #self.BaseManager.register('saveq')
@@ -126,18 +108,6 @@ class SaveQDumper(mp.Process):
                     model_save_list=queue.get(True,5)
                     
                     success=1
-                    model_save_summary=self.summarizeModelSaveList(model_save_list)
-                    #self.logger.debug(f'SaveQDumper got: {model_save_list}')
-                    loss=model_save_summary['loss']
-                    lossdict=model_save_summary['lossdict']
-                    naiveloss=model_save_summary['naiveloss']
-                    binary_y_result=model_save_summary['binary_y_result']
-                    params=model_save_summary['params']
-                    message=f"SaveQDumper has {model_save_summary['savepath']} with lossdict:{lossdict}, naiveloss:{naiveloss}, binary_y_result:{binary_y_result} for params:{params}"
-                    try:message+=str(model_save_summary['other_estimator_test_loss_dict'])
-                    except:self.logger.exception("error finding model_save_summary['other_estimator_test_loss_dict']")
-                    print(message)
-                    self.logger.debug(message)
                 except:
                     if queue.empty():
                         self.logger.debug('SaveQDumper saveq is empty, returning')
@@ -149,9 +119,7 @@ class SaveQDumper(mp.Process):
                         if model_save_list=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    nodesavepath=model_save_summary['savepath']
-                    with open(nodesavepath,'wb') as f:
-                        pickle.dump(model_save_list,f)
+                    self.addtoDBdict(model_save_list)
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
             
@@ -176,42 +144,6 @@ class JobQFiller(mp.Process):
         self.logger.info('JobQFiller starting')
         super(JobQFiller,self).__init__()
     
-    '''def run(self):
-        #QueueManager.register('jobq')
-        #m = QueueManager(address=self.netaddress, authkey=b'qkey')
-        #m.connect()
-        #queue = m.jobq()
-        queue=self.q
-        a_rundict=self.joblist[-1]
-        a_savepath=a_rundict['savepath']
-        savedir=os.path.split(a_savepath)[0]
-        savedset=set(os.listdir(savedir))
-        print(f'len(savedset):{len(savedset)}')
-        
-        print('creating notsavedset')
-        notsaved_joblist=[job for job in self.joblist if os.path.split(job['savepath'])[-1] not in savedset]
-        print(f'len(notsaved_joblist):{len(notsaved_joblist)}')
-        print(f'notsaved_joblist[0]:{notsaved_joblist[0]}')
-        shuffle(notsaved_joblist)
-        jobcount=len(notsaved_joblist)
-        i=1
-        while len(notsaved_joblist):
-            job=notsaved_joblist.pop()
-            try:
-                self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
-                queue.put(job)
-                self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
-                i+=1
-            except:
-                notsaved_joblist.append(job)
-                if queue.full():
-                    self.logger.DEBUG('jobq full, waiting 4s')
-                    sleep(4)
-                else:
-                    self.logger.exception(f'jobq error for i:{i}')
-        self.logger.debug('all jobs added to jobq.')
-        print('all jobs added to jobq.')
-        return'''
     
     def run(self):
         #QueueManager.register('jobq')
@@ -219,41 +151,34 @@ class JobQFiller(mp.Process):
         #m.connect()
         #queue = m.jobq()
         queue=self.q
-        jobcount=len(self.joblist)
+        '''jobcount=len(self.joblist)
         a_rundict=self.joblist[-1]
         a_savepath=a_rundict['savepath']
         savedir=os.path.split(a_savepath)[0]
         savedset=set(os.listdir(savedir))
         print(f'len(savedset):{len(savedset)}')
-        shuffle(self.joblist)
+        shuffle(self.joblist)'''
         i=1
         while len(self.joblist):
             job=self.joblist.pop()
-            savepath=job['savepath']
-            if os.path.split(savepath)[1] not in savedset:
-            #if not os.path.exists(savepath):
-                #with open(job['jobpath'],'wb') as f:
-                #    pickle.dump(job,f)
-                try:
-                    self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
-                    queue.put(job)
-                    self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
-                    i+=1
-                except:
-                    self.joblist.append(job)
-                    if queue.full():
-                        self.logger.DEBUG('jobq full, waiting 4s')
-                        sleep(4)
-                    else:
-                        self.logger.exception(f'jobq error for i:{i}')
-            else:
-                self.logger.info(f'JobQFiller is skipping job b/c saved at savepath:{job["savepath"]}')
+            try:
+                self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
+                queue.put(job)
+                self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
+                i+=1
+            except:
+                self.joblist.append(job)
+                if queue.full():
+                    self.logger.DEBUG('jobq full, waiting 4s')
+                    sleep(4)
+                else:
+                    self.logger.exception(f'jobq error for i:{i}')
         self.logger.debug('all jobs added to jobq.')
         return
 
                 
 
-class RunNode(mp.Process,BaseManager):
+class RunNode(mp.Process,BaseManager,skTool):
     def __init__(self,local_run=None,source=None,qdict=None):
         try:
             self.logger=logging.getLogger(__name__)
@@ -276,7 +201,15 @@ class RunNode(mp.Process,BaseManager):
             self.netaddress=('192.168.1.45',50002)
             self.BaseManager=BaseManager
         super(RunNode,self).__init__()
-        
+    
+    def createEstimator(self,rundict)
+        est=
+    
+    def build_from_rundict(self,rundict):
+        spec=rundict[species]
+        datagen=rundict['datagen'] #how to generate the data
+        est=self.createEstimator(rundict)
+    
     def run(self,):
         self.logger.info('RunNode running')
         platform=sys.platform
@@ -295,7 +228,7 @@ class RunNode(mp.Process,BaseManager):
             m.connect()
             jobq = m.jobq()
             saveq = m.saveq()
-        kc=kernelcompare.KernelCompare(source=self.source) # a new one every run
+        #kc=kernelcompare.KernelCompare(source=self.source) # a new one every run
         while True:
             try:
                 havejob=0
@@ -311,14 +244,14 @@ class RunNode(mp.Process,BaseManager):
                     if type(rundict) is str:
                         if rundict=='shutdown':
                             return
-                    model_list,data_list,hash_id_list=self.build_from_rundict(rundict)
-                    M=len(model_list)
+                    data,estimator_list,hash_id_list=self.build_from_rundict(rundict) # each estimator contains rundict
+                    M=len(estimator_list)
                     for m in range(M):
                         try:
-                            model_list[m].fit_score(data_list[m])
+                            estimator_list[m].fit_score(data)
                         except:
                             self.logger.exception('error for rundict:{rundict}')
-                        savetup=(model_list[m],hash_id_list[m])
+                        savetup=(hash_id_list[m],estimator_list[m])
                         qtry=0
                         while True:
                             self.logger.debug(f'adding model_save_list to saveq, kc.nodesavepath:{kc.nodesavepath}')
@@ -365,23 +298,10 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
-        #self.qdict={'saveq':mp.Queue(),'jobq':mp.Queue()}
-        #qm=TheQManager(self.netaddress,self.qdict)
-        
-        
-        
-        #self.SaveQDumper=SaveQDumper(self.qdict['saveq'])#run by runmaster, never started
-        #saveqdumper=SaveQDumper(self.qdict['saveq'],None)
-        #saveqdumper=SaveQDumper(None,self.netaddress)
-        #saveqdumper.start()
         if nodecount:
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             self.nodelist=[RunNode(source=source,local_run=local_run,qdict=qdict) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
-        #according to the docs:https://docs.python.org/3.7/library/multiprocessing.html#using-a-remote-manager,
-        #     I need to get local queue users started up before getting the network going
-        #qm=TheQManager(self.netaddress,self.qdict)
-        #qm.start()
             
         self.savechecktimeout_hours=2
         seed(1)  
@@ -395,8 +315,8 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         
         
     def run(self,):
-        self.logger.debug('mastermaster starting up')
-        self.mastermaster() 
+        self.logger.debug('master starting up')
+        self.runmaster() 
         
 
     def generate_rundicts_from_variations(self,step=None,optdict_variation_list=None,datagen_variation_list=None):
@@ -443,53 +363,29 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
         saveq = m.saveq()
         return {'saveq':saveq,'jobq':jobq}    
             
-    def mastermaster(self,):
+                
+                
+    def runmaster(self,):
         try:
-            if not self.dosteps:
-                list_of_run_dicts=self.generate_rundicts_from_variations()
-                return self.runmaster(list_of_run_dicts)
-
-            if self.qdict is None:
-                self.qdict=self.getqdict()
-            
-            self.logger.debug('saveQdumper started, now building pipeline')
-            pipelinesteps=self.build_pipeline()
-            self.logger.debug(f'pipelinesteps:{pipelinesteps}')
-            for pipestepdict in pipelinesteps:
-                self.logger.debug(f'pipestepdict:{pipestepdict}')
-                try:
-                    list_of_run_dicts=self.processPipeStep(pipestepdict)
-                    self.logger.debug(f'after processPipeStep, len(list_of_run_dicts):{len(list_of_run_dicts)}')
-                    runmasterresult=self.runmaster(list_of_run_dicts)
-                except:
-                    self.logger.exception(f'error in mastermaster. pipestepdict:{pipestepdict}')
-                    assert False,'halt'
-            self.qdict['saveq'].put('shutdown')
-        except:
-            self.logger.exception('')
-            assert False, 'Halt'
-        #saveqdumper.join()
-                
-                
-                
-    def runmaster(self,list_of_run_dicts):
-        try:
-            pathlist=[run_dict['savepath'] for run_dict in list_of_run_dicts]
-            self.logger.debug(f"len(pathlist):{len(pathlist)}")
+            list_of_run_dicts=self.generate_rundicts_from_variations()
+            str_id_list=self.generate_hash_id(lilst_of_run_dicts)
+        
+            to_do_str_id_list=[run_dict['savepath'] for run_dict in list_of_run_dicts]
+            self.logger.debug(f"len(to_do_str_id_list):{len(to_do_str_id_list)}")
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
             jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
             jobqfiller.run()
             saveqdumper=SaveQDumper(self.qdict['saveq'])
             
             self.logger.debug('back from jobqfiller.run()')
-            while pathlist:
+            while to_do_str_id_list:
                 sleep(5)
                 saveqdumper.run()
-                pathcount1=len(pathlist)
-                pathlist=self.savecheck(pathlist)
-                pathcount2=len(pathlist)
+                pathcount1=len(to_do_str_id_list)
+                to_do_str_id_list=self.savecheck(to_do_str_id_list)
+                pathcount2=len(to_do_str_id_list)
                 if pathcount1>pathcount2:
-                    status_string=f'pathlist has {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}'
+                    status_string=f'to_do_str_id_list has {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}'
                     self.logger.debug(status_string)
                     print(status_string)
             return
@@ -498,17 +394,17 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare):
     
     
     
-    def savecheck(self,pathlist):
+    def savecheck(self,to_do_str_id_list):
         try:
             i=0
             sleeptime=5 # seconds
-            while pathlist:
-                path=pathlist.pop()
+            while to_do_str_id_list:
+                path=status_str_id_list.pop()
                 if not os.path.exists(path):
-                    pathlist.append(path)
-                    return pathlist
+                    status_str_id_list.append(path)
+                    return status_str_id_list
         
-            return pathlist
+            return status_str_id_list
         except:
             self.logger.exception('')
         
