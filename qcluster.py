@@ -14,6 +14,8 @@ from multiprocessing.managers import BaseManager
 from queue import Queue
 import numpy as np
 from sqlitedict import SqliteDict
+import sk_tool
+import datagen as dg
 
 #class QueueManager(BaseManager): pass
 class DBTool:
@@ -178,7 +180,7 @@ class JobQFiller(mp.Process):
 
                 
 
-class RunNode(mp.Process,BaseManager,skTool):
+class RunNode(mp.Process,BaseManager):
     def __init__(self,local_run=None,source=None,qdict=None):
         try:
             self.logger=logging.getLogger(__name__)
@@ -208,7 +210,12 @@ class RunNode(mp.Process,BaseManager,skTool):
     def build_from_rundict(self,rundict):
         spec=rundict[species]
         datagen=rundict['datagen'] #how to generate the data
-        est=self.createEstimator(rundict)
+        data=dg.datagen(datagen)
+        modeldict_list=rundict['model_list']
+        est_dict={}
+        for modeldict in modeldict_list:
+            est_dict[modeldict['hash_id']]=sk_tool(modeldict)
+        return data,est_dict
     
     def run(self,):
         self.logger.info('RunNode running')
@@ -244,11 +251,11 @@ class RunNode(mp.Process,BaseManager,skTool):
                     if type(rundict) is str:
                         if rundict=='shutdown':
                             return
-                    data,estimator_list,hash_id_list=self.build_from_rundict(rundict) # each estimator contains rundict
-                    M=len(estimator_list)
-                    for m in range(M):
+                    data,est_dict=self.build_from_rundict(rundict) # each estimator contains rundict
+                    M=len(est_dict)
+                    for hash_id,est in est_dict.items():
                         try:
-                            estimator_list[m].fit_score(data)
+                            estimator_list[m].fit(data.X_train,data.y_train)
                         except:
                             self.logger.exception('error for rundict:{rundict}')
                         savetup=(hash_id_list[m],estimator_list[m])

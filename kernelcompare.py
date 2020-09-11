@@ -18,7 +18,7 @@ import logging,traceback
 #import yaml
 
 
-class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,PipeLine):
+class KernelOptModelTools(mk.optimize_free_params,KCHelper,KCPisces,):
     def __init__(self,directory=None,myname=None):
         self.max_maxbatchbatchcount=None
         if directory==None:

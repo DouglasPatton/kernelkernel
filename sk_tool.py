@@ -7,20 +7,21 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f
 from sklearn.ensemble import GradientBoostingRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
+from sk_estimators import linRegSupremeClf,linSvcClf, rbfSvcClf, gradientBoostingClf
 import logging
 import numpy as np
 from mylogger import myLogger
 
     
 class skTool(BaseEstimator,TransformerMixin,myLogger,):
-    def __init__(self,rundict):
+    def __init__(self,modeldict):
         myLogger.__init__(self,name='skTool.log')
         self.logger.info('starting skTool logger')
-        self.rundict=rundict
+        self.modeldict=modeldict
         
         
     def fit(self,X,y):
-        modelgen=self.rundict['modelgen']
+        modelgen=self.modeldict['modelgen']
         est_name=modelgen['name']
         self.kwargs=modelgen['kwargs']
         est_dict=self.get_est_dict()
@@ -42,10 +43,12 @@ class skTool(BaseEstimator,TransformerMixin,myLogger,):
             'lin-reg-classifier':linRegSupremeClf,
             'linear-svc':linSvcClf, 
             'rbf-svc':rbfSvcClf, 
-            'gradient-boosting-classifier':gradientBoostingClf}
+            'gradient-boosting-classifier':gradientBoostingClf
+        }
     
         
         
             
     
             
+d
