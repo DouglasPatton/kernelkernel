@@ -13,11 +13,12 @@ import numpy as np
 from mylogger import myLogger
 
     
-class skTool(BaseEstimator,TransformerMixin,myLogger,):
-    def __init__(self,model_gen):
+class SkTool(BaseEstimator,TransformerMixin,myLogger,):
+    def __init__(self,model_gen=None):
         myLogger.__init__(self,name='skTool.log')
         self.logger.info('starting skTool logger')
-        self.model_gen=model_gen
+        if not model_gen is None:
+            self.model_gen=model_gen
         
         
     def fit(self,X,y):

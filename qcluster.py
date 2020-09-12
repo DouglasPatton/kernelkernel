@@ -319,6 +319,8 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
             self.source=source
         if self.source=='pisces':
             self.setup=PiSetup()
+        if self.source='monte':
+            self.setup=MonteSetup()
             
         seed(1)  
         self.nodecount=nodecount
@@ -328,7 +330,25 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         
     def run(self,):
         self.logger.debug('master starting up')
-        self.runmaster() 
+        try:
+            model_setup=self.setup.model_setup
+            data_setup=self.setup.data_setup
+            list_of_run_dicts=self.setupRundictList(model_setup,data_setup)
+        
+            self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
+            jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
+            jobqfiller.run()
+            saveqdumper=SaveQDumper(self.qdict['saveq'])
+            
+            self.logger.debug('back from jobqfiller.run()')
+            check_complete=0
+            while not check_complete:
+                sleep(5)
+                saveqdumper.run()
+                check_complete=self.checkComplete():
+            return
+        except:
+            self.logger.exception('')
         
     def setupRundictList(self,model_setup,data_setup):
         #a run dict has a 
@@ -341,7 +361,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         
         for data_gen in data_gen_list
             model_gen_dict={}
-            model_gen_list=model_setup(data_gen)
+            model_gen_list=model_setup()
             for model_gen in model_gen_list:
                 run_record={'model_gen':model_gen,'data_gen':data_gen}
                 hash_id=joblib.hash(run_record)
@@ -349,12 +369,25 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
                 model_gen_dict[hash_id]=model_gen
             run_dict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
             run_dict_list.append(run_dict)
-                
-        
         self.addToDBDict(run_record_dict,gen=1)
         return run_dict_list
         
         
+    def checkComplete(self,run_dict_list=None):
+        resultsDBdict=self.resultsDBdict()
+        if not run_dict_list:
+            hash_id_iter=self.genDBdict().keys()
+        else:
+            hash_id_iter={hash_id:r for r,rundict in enumerate(run_dict_list) for hash_id in rundict['model_gen_dict'].keys()}
+        for hash_id in hash_id_iter:
+            if hash_id in resultsDBdict:
+                if run_dict_list:
+                    r=hash_id_iter[hash_id]
+                    run_dict_list[r].pop(hash_id)
+            else:
+                if not run_dict_list:
+                    return False
+                    
         
             
     
@@ -370,49 +403,6 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         return {'saveq':saveq,'jobq':jobq}    
             
                 
-                
-    def runmaster(self,):
-        try:
-            model_setup=self.setup.model_setup
-            data_setup=self.setup.data_setup
-            list_of_run_dicts=self.setupRundictList(model_setup,data_setup)
-        
-            self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
-            jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
-            jobqfiller.run()
-            saveqdumper=SaveQDumper(self.qdict['saveq'])
-            
-            self.logger.debug('back from jobqfiller.run()')
-            while to_do_str_id_list:
-                sleep(5)
-                saveqdumper.run()
-                pathcount1=len(to_do_str_id_list)
-                to_do_str_id_list=self.savecheck(to_do_str_id_list)
-                pathcount2=len(to_do_str_id_list)
-                if pathcount1>pathcount2:
-                    status_string=f'to_do_str_id_list has {pathcount1-pathcount2} fewer paths. remaining paths:{pathcount2}'
-                    self.logger.debug(status_string)
-                    print(status_string)
-            return
-        except:
-            self.logger.exception('')
-    
-    
-    
-    def savecheck(self,to_do_str_id_list):
-        try:
-            i=0
-            sleeptime=5 # seconds
-            while to_do_str_id_list:
-                path=status_str_id_list.pop()
-                if not os.path.exists(path):
-                    status_str_id_list.append(path)
-                    return status_str_id_list
-        
-            return status_str_id_list
-        except:
-            self.logger.exception('')
-        
            
 
 if __name__=="__main__":
