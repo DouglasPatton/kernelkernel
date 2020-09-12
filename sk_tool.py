@@ -14,14 +14,14 @@ from mylogger import myLogger
 
     
 class skTool(BaseEstimator,TransformerMixin,myLogger,):
-    def __init__(self,modeldict):
+    def __init__(self,model_gen):
         myLogger.__init__(self,name='skTool.log')
         self.logger.info('starting skTool logger')
-        self.modeldict=modeldict
+        self.model_gen=model_gen
         
         
     def fit(self,X,y):
-        modelgen=self.modeldict['modelgen']
+        modelgen=self.model_gen
         est_name=modelgen['name']
         self.kwargs=modelgen['kwargs']
         est_dict=self.get_est_dict()
@@ -40,6 +40,7 @@ class skTool(BaseEstimator,TransformerMixin,myLogger,):
     
     def get_est_dict(self,):
         estimator_dict={
+            #add logistic with e-net
             'lin-reg-classifier':linRegSupremeClf,
             'linear-svc':linSvcClf, 
             'rbf-svc':rbfSvcClf, 
