@@ -144,7 +144,7 @@ class JobQFiller(mp.Process):
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
         self.logger.info('JobQFiller starting')
-        super(JobQFiller,self).__init__()
+        super().__init__()
     
     
     def run(self):
@@ -202,7 +202,7 @@ class RunNode(mp.Process,BaseManager):
         if not local_run:
             self.netaddress=('192.168.1.45',50002)
             self.BaseManager=BaseManager
-        super(RunNode,self).__init__()
+        super().__init__()
     
     def createEstimator(self,rundict)
         est=
@@ -212,10 +212,10 @@ class RunNode(mp.Process,BaseManager):
         datagen=rundict['datagen'] #how to generate the data
         data=dg.datagen(datagen)
         modeldict_list=rundict['model_list']
-        est_dict={}
+        hash_id_model_dict={}
         for modeldict in modeldict_list:
-            est_dict[modeldict['hash_id']]=sk_tool(modeldict)
-        return data,est_dict
+            hash_id_model_dict[modeldict['hash_id']]=sk_tool(modeldict)
+        return data,hash_id_model_dict
     
     def run(self,):
         self.logger.info('RunNode running')
@@ -251,21 +251,20 @@ class RunNode(mp.Process,BaseManager):
                     if type(rundict) is str:
                         if rundict=='shutdown':
                             return
-                    data,est_dict=self.build_from_rundict(rundict) # each estimator contains rundict
-                    M=len(est_dict)
-                    for hash_id,est in est_dict.items():
+                    data,hash_id_model_dict=self.build_from_rundict(rundict) # each estimator contains rundict
+                    for hash_id,model in hash_id_model_dict.items():
                         try:
-                            estimator_list[m].fit(data.X_train,data.y_train)
+                            model.fit(data.X_train,data.y_train)
                         except:
                             self.logger.exception('error for rundict:{rundict}')
-                        savetup=(hash_id_list[m],estimator_list[m])
+                        savetup=(hash_id,model)
                         qtry=0
                         while True:
-                            self.logger.debug(f'adding model_save_list to saveq, kc.nodesavepath:{kc.nodesavepath}')
+                            self.logger.debug(f'adding model_save_list to saveq')
                             try:
                                 qtry+=1
                                 saveq.put(savetup)
-                                self.logger.debug(f'model_save_list sucesfully added to saveq, savepath: {kc.nodesavepath}')
+                                self.logger.debug(f'model_save_list sucesfully added to saveq')
                                 break
                             except:
                                 if not saveq.full() and qtry>3:
