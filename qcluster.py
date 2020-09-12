@@ -16,6 +16,7 @@ import numpy as np
 from sqlitedict import SqliteDict
 import sk_tool
 import data_gen as dg
+from pisces_params import PiSetup,MonteSetup
 
 #class QueueManager(BaseManager): pass
 class DBTool:
@@ -285,7 +286,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
     '''
     '''
     
-    def __init__(self,source=None,optdict_variation_list=None,data_gen_variation_list=None,dosteps=1,local_run=None,nodecount=0,qdict=None):
+    def __init__(self,source=None,local_run=None,nodecount=0,qdict=None):
         try:
             self.logger=logging.getLogger(__name__)
             self.logger.info('starting RunCluster object')
@@ -312,14 +313,15 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             self.nodelist=[RunNode(source=source,local_run=local_run,qdict=qdict) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
+        if source is None:
+            self.source='pisces'
+        else:
+            self.source=source
+        if self.source=='pisces':
+            self.setup=PiSetup()
             
-        self.savechecktimeout_hours=2
         seed(1)  
         self.nodecount=nodecount
-        if source is None: source='pisces'
-        self.source=source
-        self.savedirectory='results'
-        if not os.path.exists(self.savedirectory):os.mkdir(self.savedirectory)
         
         super(RunCluster,self).__init__()
         
@@ -328,66 +330,34 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         self.logger.debug('master starting up')
         self.runmaster() 
         
-    def setupRundictList(self,model_variations,data_variations):
+    def setupRundictList(self,model_setup,data_setup):
         #a run dict has a 
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
         run_dict_list=[]
         run_record_dict={}
-        for data_name,data_setup in data_variations.items():
-            data_gen=self.buildDataGen
+        data_gen_list=data_setup()
+        
+        for data_gen in data_gen_list
             model_gen_dict={}
-            for model_name,model_setup in model_variations.items():
-                model_gen=self.buildModelGen(model_setup,data_gen)
+            model_gen_list=model_setup(data_gen)
+            for model_gen in model_gen_list:
                 run_record={'model_gen':model_gen,'data_gen':data_gen}
                 hash_id=joblib.hash(run_record)
                 run_record_dict[hash_id]=run_record
                 model_gen_dict[hash_id]=model_gen
-            run_dict_list
+            run_dict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
+            run_dict_list.append(run_dict)
+                
+        
         self.addToDBDict(run_record_dict,gen=1)
-        
-    def buildModelGen(self,model_setup,data_gen):
-        
+        return run_dict_list
         
         
-    def buildDataGen(self,data_setup)    
-        for target in data_setup
         
-        
-    def generate_rundicts_from_variations(self,step=None,optdict_variation_list=None,data_gen_variation_list=None):
-        if optdict_variation_list is None:
-            if self.optdict_variation_list is None:
-                optdict_variation_list=self.getoptdictvariations(source=self.source)
-            else:optdict_variaton_list=self.optdict_variation_list
-        if data_gen_variation_list is None:
-            if self.data_gen_variation_list is None:
-                self.data_gen_variation_list=self.getdata_genvariations(source=self.source)
-            else: data_gen_variation_list=self.data_gen_variation_list
-        initial_data_gen_dict=self.setdata(self.source)
-        list_of_run_dicts=self.prep_model_list(optdict_variation_list=optdict_variation_list,data_gen_variation_list=data_gen_variation_list,data_gen_dict=initial_data_gen_dict)
-        #list_of_run_dicts=list_of_run_dicts[-1::-1]#reverse the order of the list
-        self.setup_save_paths(list_of_run_dicts,step=step)
-        #p#rint(f'list_of_run_dicts[0:2]:{list_of_run_dicts[0:2]},{list_of_run_dicts[-2:]}')
-        return list_of_run_dicts
+            
     
-    
-    def setup_save_paths(self,rundictlist,step=None):
-        if step is None:
-            step=0
-        for idx,rundict in enumerate(rundictlist):
-            jobstepdir=os.path.join(self.jobdirectory,'step'+str(step))
-            if not os.path.exists(jobstepdir): os.mkdir(jobstepdir)
-            jobpath=os.path.join(jobstepdir,str(idx)+'_jobdict')
-            try: species=rundict['data_gen_dict']['species']
-            except: 
-                self.logger.exception('')
-                species=''
-            savestepdir=os.path.join(self.modelsavedirectory,'step'+str(step))
-            if not os.path.exists(savestepdir): os.mkdir(savestepdir)
-            savepath=os.path.join(savestepdir,'species-'+species+'_model_save_'+str(idx))
-            rundict['jobpath']=jobpath
-            rundict['savepath']=savepath
             
             
     def getqdict(self):
@@ -403,11 +373,10 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
                 
     def runmaster(self,):
         try:
-            list_of_run_dicts=self.generate_rundicts_from_variations()
-            str_id_list=self.generate_hash_id(lilst_of_run_dicts)
+            model_setup=self.setup.model_setup
+            data_setup=self.setup.data_setup
+            list_of_run_dicts=self.setupRundictList(model_setup,data_setup)
         
-            to_do_str_id_list=[run_dict['savepath'] for run_dict in list_of_run_dicts]
-            self.logger.debug(f"len(to_do_str_id_list):{len(to_do_str_id_list)}")
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
             jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
             jobqfiller.run()
