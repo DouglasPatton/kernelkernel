@@ -97,25 +97,25 @@ class GeogTool:
                 keycount=len(mkeylist)
                 regex_y2k=re.compile('20[0-9][0-9]')
                 #nlcd_regex_y2k=re.compile('nlcd20[0-9][0-9]')
-                    metrics=[*data]
-                    for metric in metrics:
-                        for k in range(keycount-1):
-                            endstring=metric[-keylengths[k]:]
-                            #self.logger.critical(f'endstring:{endstring} for metric:{metric}')
-                            if endstring==mkeylist[k]:
-                                mkey=mkeylist[k]
-                                break
-                            if k==keycount-2:
-                                mkey='other'
-                        srch_y=re.search(regex_y2k,metric)
-                        if srch_y:
-                            yr=metric[srch_y.start():srch_y.end()]
-                        else:
-                            yr='all'
-                        if not yr in metricdict[mkey]:
-                            metricdict[mkey][yr]={}
-                        metricdict[mkey][yr][metric]=data[metric]
-                        
+                metrics=[*data]
+                for metric in metrics:
+                    for k in range(keycount-1):
+                        endstring=metric[-keylengths[k]:]
+                        #self.logger.critical(f'endstring:{endstring} for metric:{metric}')
+                        if endstring==mkeylist[k]:
+                            mkey=mkeylist[k]
+                            break
+                        if k==keycount-2:
+                            mkey='other'
+                    srch_y=re.search(regex_y2k,metric)
+                    if srch_y:
+                        yr=metric[srch_y.start():srch_y.end()]
+                    else:
+                        yr='all'
+                    if not yr in metricdict[mkey]:
+                        metricdict[mkey][yr]={}
+                    metricdict[mkey][yr][metric]=data[metric]
+
                             
             return outdict
         except:
