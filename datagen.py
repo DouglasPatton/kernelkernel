@@ -6,40 +6,32 @@ import os
 import sklearn
 from sklearn.model_selection import StratifiedKFold,train_test_split
 from sklearn.preprocessing import StandardScaler
-class datagen(PiscesDataTool):
+from mylogger import myLogger
+class datagen(PiscesDataTool,myLogger):
     '''
     
     generates numpy arrays of random training or validation for model: y=xb+e or variants
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,datagen_dict,std_data=None):
-        self.std_data=std_data
-        
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,__name__)
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
+    def __init__(self,datagen_dict,):
+        myLogger.__init__(self,name='datagen.log')
         self.logger.info('starting new datagen log')
         
         
         #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
-        self.logger = logging.getLogger(__name__)
+        #self.logger = logging.getLogger(__name__)
         #self.logger.addHandler(handler)
         
-        try:
-            theseed=datagen_dict['seed'] #just used for montecarlo
-        except:
-            theseed=1
-        if theseed is None:
-            theseed=1
+        
         source=datagen_dict['source']
         self.initial_datagen_dict=datagen_dict
         if source=='monte':
+            try:
+                theseed=datagen_dict['seed'] #just used for montecarlo
+            except:
+                theseed=1
+            if theseed is None:
+                theseed=1
             param_count=datagen_dict['param_count']
             if param_count==None:
                 param_count=1

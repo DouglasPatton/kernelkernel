@@ -4,9 +4,7 @@ from mylogger import myLogger
 import logging
 
 class PiSetup:
-    def __init__(self,myLogger):
-        myLogger.__init__(self,name='PiSetup.log')
-        self.logger.info('starting PiSetup logger')
+    def __init__(self,f
         floatselecttup=(3,5,6)
         spatialselecttup=(8,)
         pdt=PiscesDataTool()

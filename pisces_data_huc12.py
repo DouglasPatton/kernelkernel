@@ -9,7 +9,7 @@ import multiprocessing as mp
 import logging
 import traceback
 import pandas as pd
-
+import geogtools as gt
 
 class PiscesDataTool():
     def __init__(self,):
@@ -149,12 +149,20 @@ class PiscesDataTool():
         self.viewNHDplus_picklefile()
 
     def getsitedata(self,):
-        self.sitedata=self.getcsvfile('siteinfo.csv')
-        self.sitedata_k=len(self.sitedata[0])
-        self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
+        try:
+            self.sitedata=self.getcsvfile('siteinfo_with_streamcat.csv')
+        except:
+            self.sitedata=self.buildSiteDataWithStreamcat()
+        
+        #self.sitedata_k=len(self.sitedata[0])
+        #self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         print(self.sitedata[0:5])
-        
+    
+    def buildSiteDataWithStreamcat(self,)
+        site_data=self.getcsvfile('siteinfo.csv')
+        for 
+    
     def getfishhucs(self,):
         self.fishhucs=self.getcsvfile('fishhucs.csv')
         print(self.fishhucs[0:5])
