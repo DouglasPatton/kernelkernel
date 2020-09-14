@@ -149,19 +149,17 @@ class PiscesDataTool():
         self.viewNHDplus_picklefile()
 
     def getsitedata(self,):
-        try:
+        self.sitedata=self.getcsvfile('siteinfo.csv')
+        '''try:
             self.sitedata=self.getcsvfile('siteinfo_with_streamcat.csv')
         except:
-            self.sitedata=self.buildSiteDataWithStreamcat()
+            self.sitedata=self.buildSiteDataWithStreamcat()'''
         
-        #self.sitedata_k=len(self.sitedata[0])
+        #self.sitedata_k=len(self.sitedata[0])()
         #self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         print(self.sitedata[0:5])
-    
-    def buildSiteDataWithStreamcat(self,)
-        site_data=self.getcsvfile('siteinfo.csv')
-        for 
+
     
     def getfishhucs(self,):
         self.fishhucs=self.getcsvfile('fishhucs.csv')
@@ -505,7 +503,10 @@ class PiscesDataTool():
                     self.huc12findfail.append([self.comidlist[i]])
 
         return
- 
+        
+    def buildSiteDataWithStreamcat(self,comidlist)
+        sc_by_comidlist=
+        for 
     def mpsearchcomidhuc12(self,comidlist):
         
         logdir=os.path.join(self.savedir,'log')
@@ -516,6 +517,7 @@ class PiscesDataTool():
         self.logger.addHandler(handler)
         mypid=os.getpid()
         comidcount=len(comidlist)
+        sc_by_comidlist=gt().pullStreamCatForComidList(comidlist)
         comidsitedataidx=[]
         sitedatacomid_dict={}
         huc12findfaillist=[0 for _ in range(comidcount)]
@@ -544,6 +546,7 @@ class PiscesDataTool():
                 comidsiteinfofindfaillist[i]=1
             if found==1:
                 sitedict=self.sitedata[j]
+                sc_dict=sc_by_comidlist[i]
                 comidsitedataidx.append(j)
                 if type(hucdatadict) is dict:
                     sitedict=self.mergelistofdicts([sitedict,hucdatadict])
