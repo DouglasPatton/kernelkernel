@@ -130,7 +130,7 @@ class GeogTool:
         pathlist=[path for path in os.listdir(self.sc_data_dir) if path[-5:]=='.json']
         SCoutdict={}
         if type(huc2comid_dict) is list:
-            returncomiddict=1
+            returncomiddict=1 # i.e., comd:data rather than a huc8:comid:data dict
             comiddict={}
             comidlist=deepcopy(huc2comid_dict)
             huc2comid_dict={}

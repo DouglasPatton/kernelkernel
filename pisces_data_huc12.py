@@ -404,12 +404,16 @@ class PiscesDataTool():
     
 
 
-    def mergelistofdicts(self,listofdicts):
+    def mergelistofdicts(self,listofdicts,overwrite=0):
         mergedict={}
         for i,dict_i in enumerate(listofdicts):
             for key,val in dict_i.items():
                 
                 if not key in mergedict:
+                    mergedict[key]=val
+                elif overwrite:
+                    oldval=mergedict[key]
+                    self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
                     mergedict[key]=val
                 else:
                     newkey=key+f'_{i}'
@@ -504,9 +508,6 @@ class PiscesDataTool():
 
         return
         
-    def buildSiteDataWithStreamcat(self,comidlist)
-        sc_by_comidlist=
-        for 
     def mpsearchcomidhuc12(self,comidlist):
         
         logdir=os.path.join(self.savedir,'log')
@@ -517,7 +518,7 @@ class PiscesDataTool():
         self.logger.addHandler(handler)
         mypid=os.getpid()
         comidcount=len(comidlist)
-        sc_by_comidlist=gt().pullStreamCatForComidList(comidlist)
+        sc_comid_dict=gt().getstreamcat(comidlist)
         comidsitedataidx=[]
         sitedatacomid_dict={}
         huc12findfaillist=[0 for _ in range(comidcount)]
@@ -546,10 +547,10 @@ class PiscesDataTool():
                 comidsiteinfofindfaillist[i]=1
             if found==1:
                 sitedict=self.sitedata[j]
-                sc_dict=sc_by_comidlist[i]
+                sc_dict=sc_comid_dict[comid_i]
                 comidsitedataidx.append(j)
                 if type(hucdatadict) is dict:
-                    sitedict=self.mergelistofdicts([sitedict,hucdatadict])
+                    sitedict=self.mergelistofdicts([sitedict,sc_dict,hucdatadict],overwrite=1)
                 sitedatacomid_dict[comid_i]=sitedict
             #if i in printselection:print('i==',i,comid_i)
         return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
