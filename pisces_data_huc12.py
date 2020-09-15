@@ -64,7 +64,7 @@ class mpsearchcomidhuc12(mp.Process,myLogger):
                 found=1
             if found:
                 try:
-                    j=self.sitedata_comid_digits.index(int(comid_i))
+                    j=self.sitedata_comid_digits.index(comid_i)
                     sitedict=self.sitedata[j]
                     comidsitedataidx.append(j)
                 except:                
@@ -80,7 +80,7 @@ class mpsearchcomidhuc12(mp.Process,myLogger):
             if found:
                 if type(hucdatadict) is dict:
                     sitedict=self.mergelistofdicts([sitedict,sc_dict,hucdatadict])#,overwrite=1)
-                    self.logger.info(f'sitedict:{sitedict}')
+                    #elf.logger.info(f'sitedict:{sitedict}')
                 sitedatacomid_dict[comid_i]=sitedict
                             
             #if i in printselection:print('i==',i,comid_i)
@@ -127,7 +127,7 @@ class PiscesDataTool(myLogger):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
         self.savedir=os.path.join(os.getcwd(),'data_tool')
-        self.processcount=10
+        self.processcount=11
         try: self.logger
         except:
             logdir=os.path.join(os.getcwd(),'log')
@@ -192,11 +192,22 @@ class PiscesDataTool(myLogger):
         procs=[mpsearchcomidhuc12(*args_list[i]) for i in range(self.processcount)]
         [proc.start() for proc in procs]
         sleep(2)
-        [proc.join() for proc in procs]
+        outlist=['empty' for _ in range(self.processcount)]
+        #roc_tracker=list(range(self.processcount))
+        while any([list_i=='empty' for list_i in outlist]):
+            try:
+                list_i=q.get_nowait()
+                i=list_i[0]
+                outlist[i]=list_i[1]
+                procs[i].join()
+                self.logger.info(f'proc i:{i} completed')
+            except:
+                if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
+                else: sleep(5)
         self.logger.info(f'all procs joined sucessfully')
-        outlist=[q.get_nowait() for _ in range(self.processcount)]
         
-        self.outlist=[outlist[i][1] for _,i in sorted([(outlist[i][0],i) for i in range(self.processcount)])] # sort outlist by its first item
+        self.outlist=outlist
+        #self.outlist=[outlist[i][1] for _,i in sorted([(outlist[i][0],i) for i in range(self.processcount)])] # sort outlist by its first item
         endtime=time()
         self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*self.outlist)
@@ -205,13 +216,13 @@ class PiscesDataTool(myLogger):
 
         sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
         self.sitedatacomid_dict=sitedatacomid_dict#{}
-        for i in range(comidcount):
+        """for i in range(comidcount):
             try:
                 int_comid=int_comidlist[i]
                 self.sitedatacomid_dict[self.comidlist[i]]=sitedatacomid_dict[int_comid]
             except:
                 self.logger.exception(f'sc error for int_comid:{int_comid}')
-
+        """
         self.comidsitedataidx=[]
         for i in range(self.processcount):
             self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
@@ -286,15 +297,15 @@ class PiscesDataTool(myLogger):
                 with open(savefilename, 'rb') as f:
                     (self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist)=pickle.load(f)
                 #print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
-                print(self.NHDplus)
+                #print(self.NHDplus)
 
-                self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
+                #self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
 
                 return
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
         
-        filename=os.path.join(os.getcwd(),'fishfiles','HUC12_PU_COMIDs_CONUS.dbf')
+        filename=os.path.join(os.getcwd(),'NHDplus_data','HUC12_PU_COMIDs_CONUS.dbf')
         
         #dbf = gpd.GeoDataFrame.from_file(filename)
         print(f'starting read of {filename}')
@@ -628,11 +639,11 @@ class PiscesDataTool(myLogger):
 
    
 
-####################################################################
-####################################################################
-##################the next 3 methods run together###################
-####################################################################
-####################################################################
+    ####################################################################
+    ####################################################################
+    ##################the next 3 methods run together###################
+    ####################################################################
+    ####################################################################
         
     def buildspecieshuccomidlist(self,species_idx_list=None):
         if species_idx_list is None:
@@ -770,7 +781,7 @@ class PiscesDataTool(myLogger):
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
                     species_n=len(specieshuc_allcomid)
-                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid]
+                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid if comidk in self.sitedatacomid_dict]
                     varcount=max(varcountlist)
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
                     keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
@@ -779,7 +790,8 @@ class PiscesDataTool(myLogger):
                     speciesdata[:,0]=np.array(species01list)
                     #self.missingvals=[]
                     for j,comidj in enumerate(specieshuc_allcomid):
-                        sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
+                        if comidj in self.sitedatacomid_dict:
+                            sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
                         try: speciesdata[j,1:]=np.array(sitevars)
                         except: 
                             self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')

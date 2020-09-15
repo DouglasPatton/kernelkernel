@@ -213,7 +213,7 @@ class GeogTool(myLogger):
                 if meta: path=path[:-5]+'_meta.json'
                 huc8scdata=self.openjson(path)
                 for comid in comidlist:
-                    self.logger.info(f'comid:{comid}')
+                    #self.logger.info(f'comid:{comid}')
                     try:
                         comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
                     except KeyError:
