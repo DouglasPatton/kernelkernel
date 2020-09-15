@@ -11,114 +11,11 @@ import traceback
 import pandas as pd
 from geogtools import GeogTool as gt
 from mylogger import myLogger
+from pi_data_helper import mp_searchcomidhuc12,mp_buildspeciesdata01_file
 import re
 
-class mpsearchcomidhuc12(mp.Process,myLogger):
-    def __init__(self,i,q,comidlist,NHDplus,NHDpluscomidlist,NHDvarlist,gt,sitedata_comid_digits,sitedata):
-        self.mypid=os.getpid()
-        myLogger.__init__(self,name=f'search_{self.mypid}.log')
-        self.logger.info(f'search_{self.mypid} starting  logger')
-        self.q=q
-        self.NHDplus=NHDplus
-        self.NHDpluscomidlist=NHDpluscomidlist
-        self.NHDvarlist=NHDvarlist
-        self.gt=gt
-        self.sitedata=sitedata
-        self.sitedata_comid_digits=sitedata_comid_digits
-        self.comidlist=comidlist
-        self.i=i
-        super().__init__()
-    
-    def run(self,):
-        comidlist=self.comidlist # a list of comids as strings
-        
-        '''logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'mpsearchcomidhuc12{os.getpid()}.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__+str(os.getpid()))
-        self.logger.addHandler(handler)'''
-        
-        comidcount=len(comidlist)
-        self.logger.info(f'retrieving streamcat')
-        sc_comid_dict=self.gt.getstreamcat(comidlist)
-        
-        comidsitedataidx=[]
-        sitedatacomid_dict={}
-        huc12findfaillist=[0 for _ in range(comidcount)]
-        huc12failcount=0
-        comidsiteinfofindfaillist=[0 for _ in range(comidcount)]
-        
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
-        for i,comid_i in enumerate(comidlist):
-            if i in printselection and i>0:
-                progress=np.round(100.0*i/comidcount,1)
-                failrate=np.round(100.0*huc12failcount/i,5)
-                self.logger.info(f"{self.mypid}'s progress:{progress}%, failrate:{failrate}")
-            hucdatadict=self.findcomidhuc12reach(comid_i)
-            if not type(hucdatadict) is dict or not comid_i in sc_comid_dict : 
-                huc12findfaillist[i]=1
-                huc12failcount+=1
-                found=0
-            else:
-                found=1
-            if found:
-                try:
-                    j=self.sitedata_comid_digits.index(comid_i)
-                    sitedict=self.sitedata[j]
-                    comidsitedataidx.append(j)
-                except:                
-                    #sitedatacomid_dict[comid_i]='Not Found'
-                    #comidsitedataidx.append('Not Found')
-                    found=0
-                    comidsiteinfofindfaillist[i]=1
-            if found:
-                try:
-                    sc_dict=sc_comid_dict[comid_i]
-                except:
-                    found=0
-            if found:
-                if type(hucdatadict) is dict:
-                    sitedict=self.mergelistofdicts([sitedict,sc_dict,hucdatadict])#,overwrite=1)
-                    #elf.logger.info(f'sitedict:{sitedict}')
-                sitedatacomid_dict[comid_i]=sitedict
-                            
-            #if i in printselection:print('i==',i,comid_i)
-        self.logger.info(f'pid:{self.mypid} adding to q')
-        self.q.put([self.i,(comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)])
-        self.logger.info(f'pid:{self.mypid} completed add to q')
-        
-    def mergelistofdicts(self,listofdicts,overwrite=0):
-        mergedict={}
-        for i,dict_i in enumerate(listofdicts):
-            for key,val in dict_i.items():
-                
-                if not key in mergedict:
-                    mergedict[key]=val
-                elif overwrite:
-                    oldval=mergedict[key]
-                    self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
-                    mergedict[key]=val
-                else:
-                    newkey=f'{key}_{i}'
-                    #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
-                    mergedict[newkey]=val
-        return mergedict
-        
-    def findcomidhuc12reach(self,comid):
-        #self.NHDpluscomidlist is a list of strings!
-        #p#rint('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
-        #comid_digits=comid#''.join(filter(str.isdigit,comid))
-        datadict={}
-        try:
-            i=self.NHDpluscomidlist.index(comid)
-            
-        except:
-            print(f'{comid} huc12find failed.',end=',')
-            return None
-        for key in self.NHDvarlist:
-            datadict[key]=self.NHDplus.loc[i,key]
-        return datadict
+
+
 
 
 class PiscesDataTool(myLogger):
@@ -142,111 +39,6 @@ class PiscesDataTool(myLogger):
         self.gt=gt()
                 
     
-        
-    def buildCOMIDsiteinfo(self,):
-        try:self.comidlist
-        except:self.buildCOMIDlist()
-        filepath=os.path.join(self.savedir,'sitedatacomid_dict')
-                #pool.close()
-        if os.path.exists(filepath):
-            try:
-                with open(filepath,'rb') as f:
-                    savefile=pickle.load(f)
-                self.logger.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
-                self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
-                
-                self.sitedatacomid_dict=savefile[0]
-                self.comidsitedataidx=savefile[1]
-                self.comidsiteinfofindfaillist=savefile[2]
-                self.huc12findfaillist=savefile[3]
-                print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
-                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
-                return
-            except:
-                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
-                
-        else:
-            print(f'{filepath} does not exist, building COMID site info')   
-        try: self.sitedata
-        except:self.getsitedata()
-        try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
-        except:self.getNHDplus()   
-        #int_comidlist=[int(''.join([char for char in comid if char.isdigit()])) for comid in self.comidlist]
-        #unique_comids=list(set(int_comidlist))
-        comidcount=len(self.comidlist)
-        #comidcount=len(unique_comids)
-        #comidcount=20
-
-        com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
-        print('com_idx',com_idx)
-
-        comidlistlist=[]
-        for i in range(self.processcount):
-            #comidlistlist.append(unique_comids[com_idx[i]:com_idx[i+1]])
-            comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-
-        starttime=time()
-        self.logger.info(f'pool starting at {starttime}')
-        q=mp.Queue()
-        args_list=[[i,q,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
-        procs=[mpsearchcomidhuc12(*args_list[i]) for i in range(self.processcount)]
-        [proc.start() for proc in procs]
-        sleep(2)
-        outlist=['empty' for _ in range(self.processcount)]
-        #roc_tracker=list(range(self.processcount))
-        while any([list_i=='empty' for list_i in outlist]):
-            try:
-                list_i=q.get_nowait()
-                i=list_i[0]
-                outlist[i]=list_i[1]
-                procs[i].join()
-                self.logger.info(f'proc i:{i} completed')
-            except:
-                if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
-                else: sleep(5)
-        self.logger.info(f'all procs joined sucessfully')
-        
-        self.outlist=outlist
-        #self.outlist=[outlist[i][1] for _,i in sorted([(outlist[i][0],i) for i in range(self.processcount)])] # sort outlist by its first item
-        endtime=time()
-        self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
-        comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*self.outlist)
-        self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
-        self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
-
-        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
-        self.sitedatacomid_dict=sitedatacomid_dict#{}
-        """for i in range(comidcount):
-            try:
-                int_comid=int_comidlist[i]
-                self.sitedatacomid_dict[self.comidlist[i]]=sitedatacomid_dict[int_comid]
-            except:
-                self.logger.exception(f'sc error for int_comid:{int_comid}')
-        """
-        self.comidsitedataidx=[]
-        for i in range(self.processcount):
-            self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
-            self.comidsitedataidx.extend([int(j)+com_idx[i] for j in comidsitedataidx[i]])
-        
-        
-        with open(filepath,'wb') as f:
-            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
-        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
-        self.comidsiteinfofindfail=[];self.huc12findfail=[]
-        if sum(self.comidsiteinfofindfaillist)>0:
-            for i in range(comidcount):
-                if self.comidsiteinfofindfaillist[i]==1:
-                    self.logger.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
-                    self.comidsiteinfofindfail.append(self.comidlist[i])
-                
-        if sum(self.huc12findfaillist)>0:
-            for i in range(comidcount):
-                if self.huc12findfaillist[i]==1:
-                    self.logger.warning(f'huc12find failed for comid:{self.comidlist[i]}')
-                    self.huc12findfail.append([self.comidlist[i]])
-
-        return        
-        
     def retrievespeciesdata(self,species_idx=None,species_name=None):
         try: 
             self.specieslist
@@ -270,11 +62,6 @@ class PiscesDataTool(myLogger):
                 print(traceback.format_exc())
                 return 'sitevarlist not found'
         
-        
-            
-        
-    
-    
     
     def viewNHDplus_picklefile(self,):
         savefilename=os.path.join(self.savedir,'NHDplus.data')
@@ -614,8 +401,6 @@ class PiscesDataTool(myLogger):
         self.comidlist=shortlist # no repeats made of comid_digits, a string
         #self.comidoccurencelist=occurencelist # idx0 is shortlist, idx1 is location in fishsurveydata where that shortlist element is found.
     
-    
-
 
     def mergelistofdicts(self,listofdicts,overwrite=0):
         try:
@@ -637,80 +422,110 @@ class PiscesDataTool(myLogger):
         except: self.logger.exception(f'')
 
 
-   
-
-    ####################################################################
-    ####################################################################
-    ##################the next 3 methods run together###################
-    ####################################################################
-    ####################################################################
-        
-    def buildspecieshuccomidlist(self,species_idx_list=None):
-        if species_idx_list is None:
-            
-            full_list=1
-            species_searchcount=len(self.specieslist)
-            species_idx_list=[i for i in range(species_searchcount)]
-            filepath=os.path.join(self.savedir,'specieshuccomid')
-            if os.path.exists(filepath):
-                try:
-                    with open(filepath,'rb') as f:
-                        specieshuccomidtup=pickle.load(f)
-                    self.specieshuc_allcomid=specieshuccomidtup[0]
-                    self.species01list=specieshuccomidtup[1]
-                    print(f'opening {filepath} with length:{len(specieshuccomidtup)} and has first item length: {len(self.specieshuc_allcomid)} and type:{type(self.specieshuc_allcomid)}')
-                    return
-                except: print(f'error when opening {filepath}, rerunning buildspecieshuccomidlist')
-        else: 
-            full_list=0
-            species_searchcount=len(species_idx_list)
-        species01list=[[] for _ in range(species_searchcount)]
-        specieshuc_allcomid=[[] for _ in range(species_searchcount)]
-        
-        for i,idx in enumerate(species_idx_list):
+    def buildCOMIDsiteinfo(self,):
+        try:self.comidlist
+        except:self.buildCOMIDlist()
+        filepath=os.path.join(self.savedir,'sitedatacomid_dict')
+                #pool.close()
+        if os.path.exists(filepath):
             try:
-                if i%(species_searchcount//2)==0:
-                    print('')
-                    print(f'{round(100*i/species_searchcount,1)}%',end=',')
-            except:
+                with open(filepath,'rb') as f:
+                    savefile=pickle.load(f)
+                self.logger.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
+                self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
                 
-                pass
-            
-            print(f'idx:{idx}',end='. ')
-            foundincomidlist=self.speciescomidlist[idx]
-            hucidxlist=self.specieshuclist_survey_idx[idx]
-            try:
-                hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx])
+                self.sitedatacomid_dict=savefile[0]
+                self.comidsitedataidx=savefile[1]
+                self.comidsiteinfofindfaillist=savefile[2]
+                self.huc12findfaillist=savefile[3]
+                print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
+                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
+                return
             except:
-                self.logger.exception('error appending new hucs.')
-            species_huc_count=len(hucidxlist)
-            #p#rint('huc_count:',species_huc_count,sep=',')
-            
-            for j,hucidx in enumerate(hucidxlist):
-                try:
-                    if j%(species_huc_count//10)==0:
-                        print(f'{round(100*j/species_huc_count,1)}%',end=',')
-                except:pass
-                allhuccomids=self.huccomidlist_survey[hucidx]
-                specieshuc_allcomid[i].extend(allhuccomids)
-                #p#rint('len(specieshuc_allcomid[i])',len(specieshuc_allcomid[i]),'specieshuc_allcomid[i][-1]',specieshuc_allcomid[i][-1],end=',')
-                for comid in allhuccomids:
-                    if comid in foundincomidlist:
-                        species01list[i].append(1)
-                    else:
-                        species01list[i].append(0)
-        #print('len(species01list)',len(species01list))
-        #print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
-        #print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
-        if full_list==1:    
-            self.specieshuc_allcomid=specieshuc_allcomid
-            self.species01list=species01list    
-            with open(filepath,'wb') as f:
-                pickle.dump((specieshuc_allcomid,species01list),f) 
-            return
-        if full_list==0:
-            return specieshuc_allcomid,species01list
+                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+                
+        else:
+            print(f'{filepath} does not exist, building COMID site info')   
+        try: self.sitedata
+        except:self.getsitedata()
+        try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
+        except:self.getNHDplus()   
+        #int_comidlist=[int(''.join([char for char in comid if char.isdigit()])) for comid in self.comidlist]
+        #unique_comids=list(set(int_comidlist))
+        comidcount=len(self.comidlist)
+        #comidcount=len(unique_comids)
+        #comidcount=20
 
+        com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
+        print('com_idx',com_idx)
+
+        comidlistlist=[]
+        for i in range(self.processcount):
+            #comidlistlist.append(unique_comids[com_idx[i]:com_idx[i+1]])
+            comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
+        args_list=[[i,q,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
+        
+        self.logger.info(f'pool starting at {starttime}')
+        outlist=self.runAsMultiProc(mp_searchcomidhuc12,args_list)
+        comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
+        self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
+        self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
+
+        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        self.sitedatacomid_dict=sitedatacomid_dict#{}
+        """for i in range(comidcount):
+            try:
+                int_comid=int_comidlist[i]
+                self.sitedatacomid_dict[self.comidlist[i]]=sitedatacomid_dict[int_comid]
+            except:
+                self.logger.exception(f'sc error for int_comid:{int_comid}')
+        """
+        self.comidsitedataidx=[]
+        for i in range(self.processcount):
+            self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
+            self.comidsitedataidx.extend([int(j)+com_idx[i] for j in comidsitedataidx[i]])
+        
+        
+        with open(filepath,'wb') as f:
+            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
+        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
+        self.comidsiteinfofindfail=[];self.huc12findfail=[]
+        if sum(self.comidsiteinfofindfaillist)>0:
+            for i in range(comidcount):
+                if self.comidsiteinfofindfaillist[i]==1:
+                    self.logger.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
+                    self.comidsiteinfofindfail.append(self.comidlist[i])
+                
+        if sum(self.huc12findfaillist)>0:
+            for i in range(comidcount):
+                if self.huc12findfaillist[i]==1:
+                    self.logger.warning(f'huc12find failed for comid:{self.comidlist[i]}')
+                    self.huc12findfail.append([self.comidlist[i]])
+
+        return         
+
+    def runAsMultiProc(self,the_proc,args_list):
+        starttime=time()
+        q=mp.Queue()
+        procs=[the_proc(*args_list[i]) for i in range(self.processcount)]
+        [proc.start() for proc in procs]
+        outlist=['empty' for _ in range(self.processcount)]
+        while any([list_i=='empty' for list_i in outlist]):
+            try:
+                list_i=q.get_nowait()
+                i=list_i[0]
+                outlist[i]=list_i[1]
+                procs[i].join()
+                self.logger.info(f'proc i:{i} completed')
+            except:
+                if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
+                else: sleep(5)
+        self.logger.info(f'all procs joined sucessfully')
+        endtime=time()
+        self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
+        return outlist
+    
+    
     
     def buildspeciesdata01_file(self,):
         thisdir=self.savedir
@@ -732,24 +547,19 @@ class PiscesDataTool(myLogger):
         speciescount=len(self.specieslist)
         
         split_idx=[int(i) for i in np.linspace(0,speciescount,self.processcount+1)]#+1 to include the end
-        speciesidxlist=[i for i in range(speciescount)]
-        speciesidxlistlist=[]
+        speciesidx_list=[i for i in range(speciescount)]
+        speciesidx_listlist=[]
+        q=mp.Queue()
         for i in range(self.processcount):
-            speciesidxlistlist.append(speciesidxlist[split_idx[i]:split_idx[i+1]])
-        starttime=time()
-        print('pool starting at',starttime)
-        with mp.Pool(self.processcount) as pool:
-            outlist=pool.map(self.mp_buildspeciesdata01_file,speciesidxlistlist)
-            '''sleep(2)
-            i=0
-            while len(outlist)<self.processcount:
-                print(f'len(outlist):{len(outlist)}, i:{i}')
-                sleep(2)'''
-            #pool.close()
-            #pool.join()
-        self.outlist2=outlist
-        endtime=time()
-        print(f'pool complete at {endtime}. time elapsed: {endtime-starttime}, len(outlist)={len(outlist)}')
+            speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
+        args_list=[[
+            i,q,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
+            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,
+            self.huccomidlist_survey
+            ] for i in self.processcount]
+        print('procs starting at',starttime)
+        outlist=self.runAsMultiProc(mp_buildspeciesdata01_file,args_list)
+        self.outlist2=outlist # just for debugging
         print(f'the length of each list in outlist:{[len(item) for item in outlist]}.')
         if self.processcount>1:
             fail_record=zip(*outlist)
@@ -758,79 +568,6 @@ class PiscesDataTool(myLogger):
             fail_record=outlist
         self.buildspeciesdata01_file_fail_record=outlist
         
-    def mp_buildspeciesdata01_file(self,speciesidx_list):
-        datadir=os.path.join(self.savedir,'speciesdata01')
-        logdir=os.path.join(datadir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'pidatahuc12{os.getpid()}.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__+str(os.getpid()))
-        self.logger.addHandler(handler)
-        fail_record=[];recordfailcount=0
-        for i,idx in enumerate(speciesidx_list):
-            spec_i=self.specieslist[idx]
-            try:
-                species_filename=os.path.join(datadir,spec_i+'.data')
-                if not os.path.exists(species_filename):
-                    try: 
-                        self.specieshuc_allcomid
-                        specieshuc_allcomid=self.specieshuc_allcomid[idx]
-                        species01list=self.species01list[idx]
-                    except AttributeError:
-                        specieshuc_allcomid_list,species01list_list=self.buildspecieshuccomidlist(species_idx_list=[idx])
-                        specieshuc_allcomid=specieshuc_allcomid_list[0]
-                        species01list=species01list_list[0]
-                    species_n=len(specieshuc_allcomid)
-                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid if comidk in self.sitedatacomid_dict]
-                    varcount=max(varcountlist)
-                    maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
-                    keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
-                    #p#rint('varcount',varcount)
-                    speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
-                    speciesdata[:,0]=np.array(species01list)
-                    #self.missingvals=[]
-                    for j,comidj in enumerate(specieshuc_allcomid):
-                        if comidj in self.sitedatacomid_dict:
-                            sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
-                        try: speciesdata[j,1:]=np.array(sitevars)
-                        except: 
-                            self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
-                            keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
-                            missingkeys=[]
-                            
-                            for k,key in enumerate(keylist):
-                                try:#added try: to handle missing bmmi values even if key exists
-                                    data_point=self.sitedatacomid_dict[comidj][key]
-                                    speciesdata[j,1+k]=data_point
-                                except:
-                                    missingkeys.append(key)
-                                    speciesdata[j,1+k]='999999'
-                            self.logger.warning(f'missing keys from exception are: {missingkeys}')
-                    with open(species_filename,'wb') as f:
-                        pickle.dump(speciesdata,f)  
-                    self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
-                else:
-                    self.logger.info(f'{species_filename} already exists')
-                fail_record.append(0)
-            except:
-                self.logger.exception(f'problem came up for species number {i},{spec_i}')
-                try: 
-                    fail_record.append((spec_i,missingkeys))
-                except: 
-                    fail_record.append((spec_i,'none'))
-                recordfailcount+=1
-        self.logger.warning(f'succesful completion. len(speciesidx_list): {len(speciesidx_list)}, recordfailcount: {recordfailcount}')
-        return fail_record
-            
-        
-
-        
-        
-        
-        
-        
-
-    
     
 if __name__=='__main__':
     test=PiscesDataTool()
