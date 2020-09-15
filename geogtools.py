@@ -122,7 +122,7 @@ class GeogTool(myLogger):
             return comidlist_datadict
         
         
-    def processStreamCat(self,streamcatdata):
+    def processStreamCat(self,streamcatdata,collapse=1):
         try:
             if type(streamcatdata) is str:
                 self.logger.debug(f'streamcatdata type is a str: {streamcatdata}')
@@ -130,6 +130,7 @@ class GeogTool(myLogger):
             outdict={}
             
             for comid,data in streamcatdata.items():
+                collapse_dict={}
                 metricdict={'Ws':{},'Cat':{},'CatRp100':{},'WsRp100':{},'Rp100':{},'other':{}}
                 metadict=None
                 mkeylist=[*metricdict] #the keys or mkeys
@@ -140,25 +141,39 @@ class GeogTool(myLogger):
                 #nlcd_regex_y2k=re.compile('nlcd20[0-9][0-9]')
                 #metrics=[*data]
                 for metric,data_pt in data.items():
-                    for k in range(keycount-1):
-                        endstring=metric[-keylengths[k]:]
-                        #self.logger.critical(f'endstring:{endstring} for metric:{metric}')
-                        if endstring==mkeylist[k]:
-                            mkey=mkeylist[k]
-                            break
-                        if k==keycount-2:
-                            mkey='other'
+                    
                     srch_y=re.search(regex_y2k,metric)
                     if srch_y:
                         yr=metric[srch_y.start():srch_y.end()]
+                        metric_drop_yr=metric[:srch_y.start]+metric[srch_y.end():]+'_avg' # plus 2 b/c skipping and b/c .end is already big by 1 so it indexes as above.
                     else:
+                        metric_drop_yr=metric
                         yr='all'
-                    if not yr in metricdict[mkey]:
-                        metricdict[mkey][yr]={}
-                        
-                    metricdict[mkey][yr][metric]=data_pt
-
-                outdict[comid]=metricdict
+                    if collapse:
+                        if not metric_drop_yr in collapse_dict:
+                            collapse_dict[metric_dop_year]=[data_pt]
+                        else:
+                            collapse_dict[metric_drop_year].append(data_pt)
+                            
+                    else:
+                        for k in range(keycount-1):
+                            endstring=metric[-keylengths[k]:]
+                            #self.logger.critical(f'endstring:{endstring} for metric:{metric}')
+                            if endstring==mkeylist[k]:
+                                mkey=mkeylist[k]
+                                break
+                            if k==keycount-2:
+                                mkey='other'
+                        if not yr in metricdict[mkey]:
+                            metricdict[mkey][yr]={}
+                        metricdict[mkey][yr][metric]=data_pt
+                    
+                if collapse:
+                    
+                    outdict[comid]={metric:sum(val)/len(val) for metric,val in collapse_dict.items()}
+                    
+                else:
+                    outdict[comid]=metricdict
             return outdict
         except:
             self.logger.exception('streamcat error') 

@@ -463,9 +463,8 @@ class PiscesDataTool(myLogger):
         for i in range(self.processcount):
             #comidlistlist.append(unique_comids[com_idx[i]:com_idx[i+1]])
             comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-        args_list=[[i,q,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
+        args_list=[[i,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
         
-        self.logger.info(f'pool starting at {starttime}')
         outlist=self.runAsMultiProc(MpSearchComidHuc12,args_list)
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
         self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
@@ -507,25 +506,27 @@ class PiscesDataTool(myLogger):
     def runAsMultiProc(self,the_proc,args_list):
         starttime=time()
         q=mp.Queue()
+        q_args_list=[[q,*args] for args in args_list]
         proc_count=len(args_list)
-        procs=[the_proc(*args_list[i]) for i in range(proc_count)]
+        procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
         [proc.start() for proc in procs]
         outlist=['empty' for _ in range(proc_count)]
         countdown=proc_count
         while countdown:
             try:
                 self.logger.info(f'multiproc checking q. countdown:{countdown}')
-                list_i=q.get_nowait()
+                list_i=q.get(True,20)
                 self.logger.info(f'multiproc has something from the q!')
                 i=list_i[0]
                 outlist[i]=list_i[1]
-                procs[i].join()
                 countdown-=1
                 self.logger.info(f'proc i:{i} completed. ')
             except:
                 self.logger.exception('error')
                 if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
                 else: sleep(5)
+        [proc.join() for proc in procs]
+        q.close()
         self.logger.info(f'all procs joined sucessfully')
         endtime=time()
         self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
@@ -555,11 +556,10 @@ class PiscesDataTool(myLogger):
         split_idx=[int(i) for i in np.linspace(0,speciescount,self.processcount+1)]#+1 to include the end
         speciesidx_list=[i for i in range(speciescount)]
         speciesidx_listlist=[]
-        q=mp.Queue()
         for i in range(self.processcount):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
         args_list=[
-            [i,q,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
+            [i,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
             self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
             for i in range(self.processcount)]
         outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)

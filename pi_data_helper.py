@@ -14,7 +14,7 @@ from mylogger import myLogger
 
         
 class MpBuildSpeciesData01(mp.Process,myLogger):       
-    def __init__(self,i,q,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist):
+    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist):
         self.mypid=os.getpid()
         myLogger.__init__(self,name=f'build_{self.mypid}.log')
         super().__init__()
@@ -90,7 +90,6 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
         self.logger.warning(f'succesful completion. len(self.speciesidx_list): {len(self.speciesidx_list)}, recordfailcount: {recordfailcount}')
         self.q.put([self.i,fail_record])
         self.logger.warning(f'i:{self.i} added to builder fail record q')
-        return    
         
 
 
@@ -119,7 +118,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
         
         for i,idx in enumerate(species_idx_list):
             try:
-                if i%(species_searchcount//2)==0:
+                if i%((species_searchcount+1)//2)==0:
                     print('')
                     print(f'{round(100*i/species_searchcount,1)}%',end=',')
             except:
@@ -138,7 +137,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
             
             for j,hucidx in enumerate(hucidxlist):
                 try:
-                    if j%(species_huc_count//10)==0:
+                    if j%((species_huc_count+1)//10)==0:
                         print(f'{round(100*j/species_huc_count,1)}%',end=',')
                 except:pass
                 allhuccomids=self.huccomidlist_survey[hucidx]
@@ -165,7 +164,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
         
 
 class MpSearchComidHuc12(mp.Process,myLogger):
-    def __init__(self,i,q,comidlist,NHDplus,NHDpluscomidlist,NHDvarlist,gt,sitedata_comid_digits,sitedata):
+    def __init__(self,q,i,comidlist,NHDplus,NHDpluscomidlist,NHDvarlist,gt,sitedata_comid_digits,sitedata):
         self.mypid=os.getpid()
         super().__init__()
         myLogger.__init__(self,name=f'search_{self.mypid}.log')
@@ -238,7 +237,6 @@ class MpSearchComidHuc12(mp.Process,myLogger):
         self.logger.info(f'pid:{self.mypid} adding to q')
         self.q.put([self.i,(comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)])
         self.logger.info(f'pid:{self.mypid} completed add to q')
-        return
         
     def mergelistofdicts(self,listofdicts,overwrite=0):
         mergedict={}
