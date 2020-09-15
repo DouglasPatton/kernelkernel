@@ -13,10 +13,10 @@ import pandas as pd
 from mylogger import myLogger
 
         
-class mp_buildspeciesdata01_file(mp.Process,myLogger)       
-    def __init__(self,i,q,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey):
+class MpBuildSpeciesData01(mp.Process,myLogger):       
+    def __init__(self,i,q,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist):
         self.mypid=os.getpid()
-        #myLogger.__init__(self,name=f'build_{self.mypid}.log')
+        myLogger.__init__(self,name=f'build_{self.mypid}.log')
         super().__init__()
         self.logger.info(f'build_{self.mypid} starting  logger')
         self.q=q
@@ -28,6 +28,7 @@ class mp_buildspeciesdata01_file(mp.Process,myLogger)
         self.specieshuclist_survey_idx=specieshuclist_survey_idx
         self.specieshuclist_survey_idx_newhucs=specieshuclist_survey_idx_newhucs
         self.huccomidlist_survey=huccomidlist_survey
+        self.speciescomidlist=speciescomidlist
         
     
     def run(self):
@@ -47,7 +48,8 @@ class mp_buildspeciesdata01_file(mp.Process,myLogger)
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
                     species_n=len(specieshuc_allcomid)
-                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in specieshuc_allcomid if comidk in self.sitedatacomid_dict]
+                    comidlist_i=[comid for comid in specieshuc_allcomid if comid in self.sitedatacomid_dict]
+                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in comidlist_i]
                     varcount=max(varcountlist)
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
                     keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
@@ -87,7 +89,8 @@ class mp_buildspeciesdata01_file(mp.Process,myLogger)
                 recordfailcount+=1
         self.logger.warning(f'succesful completion. len(self.speciesidx_list): {len(self.speciesidx_list)}, recordfailcount: {recordfailcount}')
         self.q.put([self.i,fail_record])
-            
+        self.logger.warning(f'i:{self.i} added to builder fail record q')
+        return    
         
 
 
@@ -161,11 +164,11 @@ class mp_buildspeciesdata01_file(mp.Process,myLogger)
         
         
 
-class mp_searchcomidhuc12(mp.Process,myLogger):
+class MpSearchComidHuc12(mp.Process,myLogger):
     def __init__(self,i,q,comidlist,NHDplus,NHDpluscomidlist,NHDvarlist,gt,sitedata_comid_digits,sitedata):
         self.mypid=os.getpid()
         super().__init__()
-        #myLogger.__init__(self,name=f'search_{self.mypid}.log')
+        myLogger.__init__(self,name=f'search_{self.mypid}.log')
         self.logger.info(f'search_{self.mypid} starting  logger')
         self.q=q
         self.NHDplus=NHDplus
@@ -176,14 +179,13 @@ class mp_searchcomidhuc12(mp.Process,myLogger):
         self.sitedata_comid_digits=sitedata_comid_digits
         self.comidlist=comidlist
         self.i=i
-        super().__init__()
     
     def run(self,):
         comidlist=self.comidlist # a list of comids as strings
         
         '''logdir=os.path.join(self.savedir,'log')
         if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'mp_searchcomidhuc12{os.getpid()}.log'
+        handlername=f'MpSearchComidHuc12{os.getpid()}.log'
         handler=logging.FileHandler(os.path.join(logdir,handlername))
         self.logger = logging.getLogger(__name__+str(os.getpid()))
         self.logger.addHandler(handler)'''
@@ -236,6 +238,7 @@ class mp_searchcomidhuc12(mp.Process,myLogger):
         self.logger.info(f'pid:{self.mypid} adding to q')
         self.q.put([self.i,(comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)])
         self.logger.info(f'pid:{self.mypid} completed add to q')
+        return
         
     def mergelistofdicts(self,listofdicts,overwrite=0):
         mergedict={}

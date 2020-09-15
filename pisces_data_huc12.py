@@ -11,7 +11,7 @@ import traceback
 import pandas as pd
 from geogtools import GeogTool as gt
 from mylogger import myLogger
-from pi_data_helper import mp_searchcomidhuc12,mp_buildspeciesdata01_file
+from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01
 import re
 
 
@@ -466,7 +466,7 @@ class PiscesDataTool(myLogger):
         args_list=[[i,q,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
         
         self.logger.info(f'pool starting at {starttime}')
-        outlist=self.runAsMultiProc(mp_searchcomidhuc12,args_list)
+        outlist=self.runAsMultiProc(MpSearchComidHuc12,args_list)
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
         self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
         self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
@@ -507,17 +507,23 @@ class PiscesDataTool(myLogger):
     def runAsMultiProc(self,the_proc,args_list):
         starttime=time()
         q=mp.Queue()
-        procs=[the_proc(*args_list[i]) for i in range(self.processcount)]
+        proc_count=len(args_list)
+        procs=[the_proc(*args_list[i]) for i in range(proc_count)]
         [proc.start() for proc in procs]
-        outlist=['empty' for _ in range(self.processcount)]
-        while any([list_i=='empty' for list_i in outlist]):
+        outlist=['empty' for _ in range(proc_count)]
+        countdown=proc_count
+        while countdown:
             try:
+                self.logger.info(f'multiproc checking q. countdown:{countdown}')
                 list_i=q.get_nowait()
+                self.logger.info(f'multiproc has something from the q!')
                 i=list_i[0]
                 outlist[i]=list_i[1]
                 procs[i].join()
-                self.logger.info(f'proc i:{i} completed')
+                countdown-=1
+                self.logger.info(f'proc i:{i} completed. ')
             except:
+                self.logger.exception('error')
                 if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
                 else: sleep(5)
         self.logger.info(f'all procs joined sucessfully')
@@ -552,13 +558,11 @@ class PiscesDataTool(myLogger):
         q=mp.Queue()
         for i in range(self.processcount):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
-        args_list=[[
-            i,q,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
-            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,
-            self.huccomidlist_survey
-            ] for i in self.processcount]
-        print('procs starting at',starttime)
-        outlist=self.runAsMultiProc(mp_buildspeciesdata01_file,args_list)
+        args_list=[
+            [i,q,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
+            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
+            for i in range(self.processcount)]
+        outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)
         self.outlist2=outlist # just for debugging
         print(f'the length of each list in outlist:{[len(item) for item in outlist]}.')
         if self.processcount>1:
