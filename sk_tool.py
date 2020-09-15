@@ -53,4 +53,3 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             
     
             
-d

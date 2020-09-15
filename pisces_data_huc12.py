@@ -9,20 +9,125 @@ import geopandas as gpd
 import logging
 import traceback
 import pandas as pd
-import geogtools as gt
+from geogtools import GeogTool as gt
+from mylogger import myLogger
+import re
 
-class PiscesDataTool():
+class mpsearchcomidhuc12(mp.Process,myLogger):
+    def __init__(self,i,q,comidlist,NHDplus,NHDpluscomidlist,NHDvarlist,gt,sitedata_comid_digits,sitedata):
+        self.mypid=os.getpid()
+        myLogger.__init__(self,name=f'search_{self.mypid}.log')
+        self.logger.info(f'search_{self.mypid} starting  logger')
+        self.q=q
+        self.NHDplus=NHDplus
+        self.NHDpluscomidlist=NHDpluscomidlist
+        self.NHDvarlist=NHDvarlist
+        self.gt=gt
+        self.sitedata=sitedata
+        self.sitedata_comid_digits=sitedata_comid_digits
+        self.comidlist=comidlist
+        self.i=i
+        super().__init__()
+    
+    def run(self,):
+        comidlist=self.comidlist # a list of comids as strings
+        
+        '''logdir=os.path.join(self.savedir,'log')
+        if not os.path.exists(logdir): os.mkdir(logdir)
+        handlername=f'mpsearchcomidhuc12{os.getpid()}.log'
+        handler=logging.FileHandler(os.path.join(logdir,handlername))
+        self.logger = logging.getLogger(__name__+str(os.getpid()))
+        self.logger.addHandler(handler)'''
+        
+        comidcount=len(comidlist)
+        self.logger.info(f'retrieving streamcat')
+        sc_comid_dict=self.gt.getstreamcat(comidlist)
+        
+        comidsitedataidx=[]
+        sitedatacomid_dict={}
+        huc12findfaillist=[0 for _ in range(comidcount)]
+        huc12failcount=0
+        comidsiteinfofindfaillist=[0 for _ in range(comidcount)]
+        
+        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
+        for i,comid_i in enumerate(comidlist):
+            if i in printselection and i>0:
+                progress=np.round(100.0*i/comidcount,1)
+                failrate=np.round(100.0*huc12failcount/i,5)
+                self.logger.info(f"{self.mypid}'s progress:{progress}%, failrate:{failrate}")
+            hucdatadict=self.findcomidhuc12reach(comid_i)
+            if not type(hucdatadict) is dict or not comid_i in sc_comid_dict : 
+                huc12findfaillist[i]=1
+                huc12failcount+=1
+                found=0
+            else:
+                found=1
+            if found:
+                try:
+                    j=self.sitedata_comid_digits.index(int(comid_i))
+                    sitedict=self.sitedata[j]
+                    comidsitedataidx.append(j)
+                except:                
+                    #sitedatacomid_dict[comid_i]='Not Found'
+                    #comidsitedataidx.append('Not Found')
+                    found=0
+                    comidsiteinfofindfaillist[i]=1
+            if found:
+                try:
+                    sc_dict=sc_comid_dict[comid_i]
+                except:
+                    found=0
+            if found:
+                if type(hucdatadict) is dict:
+                    sitedict=self.mergelistofdicts([sitedict,sc_dict,hucdatadict])#,overwrite=1)
+                    self.logger.info(f'sitedict:{sitedict}')
+                sitedatacomid_dict[comid_i]=sitedict
+                            
+            #if i in printselection:print('i==',i,comid_i)
+        self.logger.info(f'pid:{self.mypid} adding to q')
+        self.q.put([self.i,(comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)])
+        self.logger.info(f'pid:{self.mypid} completed add to q')
+        
+    def mergelistofdicts(self,listofdicts,overwrite=0):
+        mergedict={}
+        for i,dict_i in enumerate(listofdicts):
+            for key,val in dict_i.items():
+                
+                if not key in mergedict:
+                    mergedict[key]=val
+                elif overwrite:
+                    oldval=mergedict[key]
+                    self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
+                    mergedict[key]=val
+                else:
+                    newkey=f'{key}_{i}'
+                    #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
+                    mergedict[newkey]=val
+        return mergedict
+        
+    def findcomidhuc12reach(self,comid):
+        #self.NHDpluscomidlist is a list of strings!
+        #p#rint('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
+        #comid_digits=comid#''.join(filter(str.isdigit,comid))
+        datadict={}
+        try:
+            i=self.NHDpluscomidlist.index(comid)
+            
+        except:
+            print(f'{comid} huc12find failed.',end=',')
+            return None
+        for key in self.NHDvarlist:
+            datadict[key]=self.NHDplus.loc[i,key]
+        return datadict
+
+
+class PiscesDataTool(myLogger):
     def __init__(self,):
         #logging.basicConfig(level=logging.INFO)
-        logging.basicConfig(level=logging.INFO)
+        myLogger.__init__(self,name='pisces_data_huc12.log')
+        self.logger.info('starting pisces_data_huc12 logger')
         self.savedir=os.path.join(os.getcwd(),'data_tool')
-        
-        if not os.path.exists(self.savedir):
-            os.mkdir(self.savedir)
-        self.processcount=6
-        logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        
+        self.processcount=10
         try: self.logger
         except:
             logdir=os.path.join(os.getcwd(),'log')
@@ -30,12 +135,106 @@ class PiscesDataTool():
             handlername=os.path.join(logdir,f'multicluster.log')
             logging.basicConfig(
                 handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=100)],
-                    level=logging.WARNING,
+                level=logging.debug,
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
+        self.gt=gt()
                 
-            
+    
+        
+    def buildCOMIDsiteinfo(self,):
+        try:self.comidlist
+        except:self.buildCOMIDlist()
+        filepath=os.path.join(self.savedir,'sitedatacomid_dict')
+                #pool.close()
+        if os.path.exists(filepath):
+            try:
+                with open(filepath,'rb') as f:
+                    savefile=pickle.load(f)
+                self.logger.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
+                self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
+                
+                self.sitedatacomid_dict=savefile[0]
+                self.comidsitedataidx=savefile[1]
+                self.comidsiteinfofindfaillist=savefile[2]
+                self.huc12findfaillist=savefile[3]
+                print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
+                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
+                return
+            except:
+                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
+                
+        else:
+            print(f'{filepath} does not exist, building COMID site info')   
+        try: self.sitedata
+        except:self.getsitedata()
+        try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
+        except:self.getNHDplus()   
+        #int_comidlist=[int(''.join([char for char in comid if char.isdigit()])) for comid in self.comidlist]
+        #unique_comids=list(set(int_comidlist))
+        comidcount=len(self.comidlist)
+        #comidcount=len(unique_comids)
+        #comidcount=20
+
+        com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
+        print('com_idx',com_idx)
+
+        comidlistlist=[]
+        for i in range(self.processcount):
+            #comidlistlist.append(unique_comids[com_idx[i]:com_idx[i+1]])
+            comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
+
+        starttime=time()
+        self.logger.info(f'pool starting at {starttime}')
+        q=mp.Queue()
+        args_list=[[i,q,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
+        procs=[mpsearchcomidhuc12(*args_list[i]) for i in range(self.processcount)]
+        [proc.start() for proc in procs]
+        sleep(2)
+        [proc.join() for proc in procs]
+        self.logger.info(f'all procs joined sucessfully')
+        outlist=[q.get_nowait() for _ in range(self.processcount)]
+        
+        self.outlist=[outlist[i][1] for _,i in sorted([(outlist[i][0],i) for i in range(self.processcount)])] # sort outlist by its first item
+        endtime=time()
+        self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
+        comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*self.outlist)
+        self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
+        self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
+
+        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        self.sitedatacomid_dict=sitedatacomid_dict#{}
+        for i in range(comidcount):
+            try:
+                int_comid=int_comidlist[i]
+                self.sitedatacomid_dict[self.comidlist[i]]=sitedatacomid_dict[int_comid]
+            except:
+                self.logger.exception(f'sc error for int_comid:{int_comid}')
+
+        self.comidsitedataidx=[]
+        for i in range(self.processcount):
+            self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
+            self.comidsitedataidx.extend([int(j)+com_idx[i] for j in comidsitedataidx[i]])
+        
+        
+        with open(filepath,'wb') as f:
+            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
+        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
+        self.comidsiteinfofindfail=[];self.huc12findfail=[]
+        if sum(self.comidsiteinfofindfaillist)>0:
+            for i in range(comidcount):
+                if self.comidsiteinfofindfaillist[i]==1:
+                    self.logger.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
+                    self.comidsiteinfofindfail.append(self.comidlist[i])
+                
+        if sum(self.huc12findfaillist)>0:
+            for i in range(comidcount):
+                if self.huc12findfaillist[i]==1:
+                    self.logger.warning(f'huc12find failed for comid:{self.comidlist[i]}')
+                    self.huc12findfail.append([self.comidlist[i]])
+
+        return        
         
     def retrievespeciesdata(self,species_idx=None,species_name=None):
         try: 
@@ -110,11 +309,11 @@ class PiscesDataTool():
         #self.dbf=dbf
         #self.NHDplus=[dbf[var].tolist() for var in varlist]
         
-        self.NHDplus=dbf[self.NHDvarlist]
+        self.NHDplus=dbf.loc[:,self.NHDvarlist] 
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
             self.NHDplus.loc[:,(strvar)]=self.NHDplus.loc[:,(strvar)].to_numpy().astype('str')
-        self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
+        self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy()) # string comid's
 
         print(self.NHDplus)
         
@@ -376,204 +575,58 @@ class PiscesDataTool():
         except: self.getfishdata()
         print('building comidlist')
         longlist=[obs['COMID'] for obs in self.fishsurveydata]
-        
-        shortlist=[];occurencelist=[]
         length=len(longlist)
         i=0
-        for idx,comid in enumerate(longlist):
+        shortlist=list(set([''.join([char for char in comid if char.isdigit()]) for comid in longlist]))
+        self.logger.warning(f'shortlist:{shortlist}')
+        occurencelist=[[] for _ in range(len(shortlist))]
+        """for idx,comid in enumerate(longlist):
             if idx%(length//33)==0:
                 print(str(round(100*idx/length))+'%',sep=',')
+            comid_digits=''.join([char for char in comid if char.isdigit()])
             found=0
             try:
-                shortidx=shortlist.index(comid)
-                found=1
+                shortidx=shortlist.index(comid_digits)
+                occurencelist[shortidx].append(idx)
                 #p#rint(f'old comid:{comid}')
-            except:
-                comid_digits=''.join([char for char in comid if char.isdigit()])
+            except ValueError:
+                
                 shortlist.append(comid_digits)
                 occurencelist.append([idx])
-            if found==1:
-                occurencelist[shortidx].append(idx)
+            except:
+                assert False, f'unexpected error for comid_digits:{comid_digits}'"""
         self.logger.info(f'buildCOMIDlist found {len(shortlist)}')
         with open(comidlistpath,'wb') as f:
+            #pickle.dump((shortlist,occurencelist),f)
             pickle.dump((shortlist,occurencelist),f)
         
-        self.comidlist=shortlist  
-        self.comidoccurenclist=occurencelist
+        self.comidlist=shortlist # no repeats made of comid_digits, a string
+        #self.comidoccurencelist=occurencelist # idx0 is shortlist, idx1 is location in fishsurveydata where that shortlist element is found.
     
     
 
 
     def mergelistofdicts(self,listofdicts,overwrite=0):
-        mergedict={}
-        for i,dict_i in enumerate(listofdicts):
-            for key,val in dict_i.items():
-                
-                if not key in mergedict:
-                    mergedict[key]=val
-                elif overwrite:
-                    oldval=mergedict[key]
-                    self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
-                    mergedict[key]=val
-                else:
-                    newkey=key+f'_{i}'
-                    #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
-                    mergedict[newkey]=val
-        return mergedict
-
-####################################################################
-####################################################################
-##################the next 3 methods run together###################
-####################################################################
-####################################################################
-        
-    def buildCOMIDsiteinfo(self,):
-        try:self.comidlist
-        except:self.buildCOMIDlist()
-        filepath=os.path.join(self.savedir,'sitedatacomid_dict')
-        if os.path.exists(filepath):
-            try:
-                with open(filepath,'rb') as f:
-                    savefile=pickle.load(f)
-                self.logger.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
-                self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
-                
-                self.sitedatacomid_dict=savefile[0]
-                self.comidsitedataidx=savefile[1]
-                self.comidsiteinfofindfaillist=savefile[2]
-                self.huc12findfaillist=savefile[3]
-                print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
-                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
-                return
-            except:
-                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
-                
-        else:
-            print(f'{filepath} does not exist, building COMID site info')   
-        try: self.sitedata
-        except:self.getsitedata()
-            
-        comidcount=len(self.comidlist)
-
-        if self.processcount>1:
-            com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
-            print(com_idx)
-            
-            comidlistlist=[]
-            for i in range(self.processcount):
-                comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-
-            
-            starttime=time()
-            self.logger.info(f'pool starting at {starttime}')
-            with mp.Pool(processes=self.processcount) as pool:
-                outlist=pool.map(self.mpsearchcomidhuc12,comidlistlist)
-                sleep(2)
-                pool.close()
-                pool.join()
-            self.outlist=outlist
-            endtime=time()
-            self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
-            comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
-            self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
-            self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
-
-            self.sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
-
-            self.comidsitedataidx=[]
-            for i in range(self.processcount):
-                self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
-                self.comidsitedataidx.extend([j+com_idx[i] for j in comidsitedataidx[i]])
-        else:
-            outlist=self.mpsearchcomidhuc12(self.comidlist)
-            self.outlist=outlist
-            self.comidsitedataidx,self.sitedatacomid_dict,self.comidsiteinfofindfaillist,self.huc12findfaillist=outlist
-
-        
-        with open(filepath,'wb') as f:
-            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
-        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
-        self.comidsiteinfofindfail=[];self.huc12findfail=[]
-        if sum(self.comidsiteinfofindfaillist)>0:
-            for i in range(comidcount):
-                if self.comidsiteinfofindfaillist[i]==1:
-                    self.logger.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
-                    self.comidsiteinfofindfail.append(self.comidlist[i])
-                
-        if sum(self.huc12findfaillist)>0:
-            for i in range(comidcount):
-                if self.huc12findfaillist[i]==1:
-                    self.logger.warning(f'huc12find failed for comid:{self.comidlist[i]}')
-                    self.huc12findfail.append([self.comidlist[i]])
-
-        return
-        
-    def mpsearchcomidhuc12(self,comidlist):
-        
-        logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'mpsearchcomidhuc12{os.getpid()}.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__+str(os.getpid()))
-        self.logger.addHandler(handler)
-        mypid=os.getpid()
-        comidcount=len(comidlist)
-        sc_comid_dict=gt().getstreamcat(comidlist)
-        comidsitedataidx=[]
-        sitedatacomid_dict={}
-        huc12findfaillist=[0 for _ in range(comidcount)]
-        huc12failcount=0
-        comidsiteinfofindfaillist=[0 for _ in range(comidcount)]
-        
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
-        for i,comid_i in enumerate(comidlist):
-            if i in printselection and i>0:
-                progress=np.round(100.0*i/comidcount,1)
-                failrate=np.round(100.0*huc12failcount/i,5)
-                self.logger.info(f"{mypid}'s progress:{progress}%, failrate:{failrate}")
-            hucdatadict=self.findcomidhuc12reach(comid_i)
-            if hucdatadict==None: 
-                huc12findfaillist[i]=1
-                huc12failcount+=1
-
-            found=0
-            try:
-                j=self.sitedata_comid_digits.index(comid_i)
-                found=1
-            except:                
-                sitedatacomid_dict[comid_i]='Not Found'
-                comidsitedataidx.append('Not Found')
-
-                comidsiteinfofindfaillist[i]=1
-            if found==1:
-                sitedict=self.sitedata[j]
-                sc_dict=sc_comid_dict[comid_i]
-                comidsitedataidx.append(j)
-                if type(hucdatadict) is dict:
-                    sitedict=self.mergelistofdicts([sitedict,sc_dict,hucdatadict],overwrite=1)
-                sitedatacomid_dict[comid_i]=sitedict
-            #if i in printselection:print('i==',i,comid_i)
-        return (comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)
-                
-        
-    def findcomidhuc12reach(self,comid):
-        try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
-        except:
-            self.logger.exception('could not access NHDplus in self')
-            self.getNHDplus()
-        #p#rint('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
-        itemcount=len(self.NHDplus)
-        #comid_digits=comid#''.join(filter(str.isdigit,comid))
-        datadict={}
         try:
-            i=self.NHDpluscomidlist.index(comid)
-            
-        except:
-            print(f'{comid} huc12find failed.',end=',')
-            return None
-        for key in self.NHDvarlist:
-            datadict[key]=self.NHDplus.loc[i,key]
-        return datadict    
+            mergedict={}
+            for i,dict_i in enumerate(listofdicts):
+                for key,val in dict_i.items():
+
+                    if not key in mergedict:
+                        mergedict[key]=val
+                    elif overwrite:
+                        oldval=mergedict[key]
+                        self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
+                        mergedict[key]=val
+                    else:
+                        newkey=key+f'_{i}'
+                        #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
+                        mergedict[newkey]=val
+            return mergedict
+        except: self.logger.exception(f'')
+
+
+   
 
 ####################################################################
 ####################################################################
@@ -674,17 +727,15 @@ class PiscesDataTool():
             speciesidxlistlist.append(speciesidxlist[split_idx[i]:split_idx[i+1]])
         starttime=time()
         print('pool starting at',starttime)
-        with mp.Pool(processes=self.processcount) as pool:
+        with mp.Pool(self.processcount) as pool:
             outlist=pool.map(self.mp_buildspeciesdata01_file,speciesidxlistlist)
-            sleep(2)
+            '''sleep(2)
             i=0
             while len(outlist)<self.processcount:
                 print(f'len(outlist):{len(outlist)}, i:{i}')
-                sleep(2)
-                
-                
-            pool.close()
-            pool.join()
+                sleep(2)'''
+            #pool.close()
+            #pool.join()
         self.outlist2=outlist
         endtime=time()
         print(f'pool complete at {endtime}. time elapsed: {endtime-starttime}, len(outlist)={len(outlist)}')
@@ -760,11 +811,17 @@ class PiscesDataTool():
         return fail_record
             
         
+
         
+        
+        
+        
+        
+
     
     
 if __name__=='__main__':
-    test=DataTool()
+    test=PiscesDataTool()
     test.getfishdata()
     test.getsitedata()
     test.getfishhucs()

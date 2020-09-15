@@ -1,5 +1,5 @@
 import traceback
-#import geopandas as gpd
+import geopandas as gpd
 import requests
 import json,pickle
 import os
@@ -10,9 +10,12 @@ import logging, logging.handlers
 import re
 from copy import deepcopy
 from random import shuffle
+from mylogger import myLogger
 
-class GeogTool:
+class GeogTool(myLogger):
     def __init__(self,sc_data_dir=None):
+        myLogger.__init__(self,name='GeogTool.log')
+        self.logger.info('starting GeogTool logger')
         '''try:
             self.comiddatadir
             
@@ -20,7 +23,7 @@ class GeogTool:
             self.comiddatadir=os.path.join(os.getcwd(),'data','comid_data')
             if not os.path.exists(self.comiddatadir):os.makedirs(self.comiddatadir)'''
         self.cwd=os.getcwd()
-        try:
+        """try:
             self.logger
             self.logger = logging.getLogger(__name__)
             self.logger.info('GeogTool starting')
@@ -35,7 +38,7 @@ class GeogTool:
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
-            self.logger.info('GeogTool starting new logger',exc_info=True)
+            self.logger.info('GeogTool starting new logger',exc_info=True)"""
         try: self.geogdatadir
         except:
             self.geogdatadir=os.path.join(os.getcwd(),'NHDplus_data')
@@ -57,6 +60,7 @@ class GeogTool:
                         assert False, 'cannot locate local streamcat data'
         else: self.sc_data_dir=sc_data_dir
         print("streamcat data directory:",self.sc_data_dir)
+        self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
             
     def getpickle(self,path):
         with open(path,'rb') as f:
@@ -80,7 +84,44 @@ class GeogTool:
             thing=json.load(f)
         return thing     
         
-    
+    def getstreamcat(self,comidlist,process=1,local=1):
+        #url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}&pLandscapeMetricType=Topography"
+        url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}"
+        #url="https://ofmpub.epa.gov/waters10/Watershed_Characterization.Control?pComID={}"
+        if type(comidlist) is str:
+            comidlist=[comidlist]
+        comidcount=len(comidlist)
+        comidlist_datadict={}
+        
+        if local:
+            comidlist_datadict=self.pullStreamCatForComidList(comidlist)
+        else:
+            for idx,comid in enumerate(comidlist):
+                self.logger.info(f'starting {idx}/{comidcount}')
+                result=requests.get(url.format(str(comid)))
+                self.logger.info(f'retrieved {idx}/{comidcount}')
+                success=0
+                self.logger.info(f'type(result):{type(result)}')
+                try:
+                    data=result.text
+                    try:
+                        comiddatadict=json.loads(data)
+                    except:
+                        self.logger.exception(f'failed to json.loads. comid:{comid}')
+                        datadict={'fail':data}
+                except:
+                    self.logger.exception(f'failed to result.text. comid:{comid}')
+                    self.logger.debug(f'{data}')
+                    comiddatadict=result
+                comidlist_datadict[str(comid)]=comiddatadict
+            #infodict={'streamcatdata':comidlist_datadict}
+        if process:
+            streamcatdict=self.processStreamCat(comidlist_datadict)
+            return streamcatdict
+        else: 
+            return comidlist_datadict
+        
+        
     def processStreamCat(self,streamcatdata):
         try:
             if type(streamcatdata) is str:
@@ -97,8 +138,8 @@ class GeogTool:
                 keycount=len(mkeylist)
                 regex_y2k=re.compile('20[0-9][0-9]')
                 #nlcd_regex_y2k=re.compile('nlcd20[0-9][0-9]')
-                metrics=[*data]
-                for metric in metrics:
+                #metrics=[*data]
+                for metric,data_pt in data.items():
                     for k in range(keycount-1):
                         endstring=metric[-keylengths[k]:]
                         #self.logger.critical(f'endstring:{endstring} for metric:{metric}')
@@ -114,9 +155,10 @@ class GeogTool:
                         yr='all'
                     if not yr in metricdict[mkey]:
                         metricdict[mkey][yr]={}
-                    metricdict[mkey][yr][metric]=data[metric]
+                        
+                    metricdict[mkey][yr][metric]=data_pt
 
-                            
+                outdict[comid]=metricdict
             return outdict
         except:
             self.logger.exception('streamcat error') 
@@ -134,12 +176,19 @@ class GeogTool:
             comiddict={}
             comidlist=deepcopy(huc2comid_dict)
             huc2comid_dict={}
+            """if type(comidlist[0]) is str:
+                self.logger.debug(f'converting comids from string to int')
+                comidlist=[int(comid) for comid in comidlist]"""
             for comid in comidlist:
-                huc12=self.rvrs_huc12comiddict[comid]
-                huc2=huc12[0:2]
-                if huc2 in huc2comid_dict:
-                    huc2comid_dict[huc2].append(comid)
-                else: huc2comid_dict[huc2]=[comid]
+                
+                try:
+                    huc12=self.rvrs_huc12comiddict[comid]
+                    huc2=huc12[0:2]
+                    if huc2 in huc2comid_dict:
+                        huc2comid_dict[huc2].append(comid)
+                    else: huc2comid_dict[huc2]=[comid]
+                except:
+                    self.logger.warning(f'no huc12 for comid:{comid}')
         else: returncomiddict=0        
         for huc2,val in huc2comid_dict.items():
             
@@ -164,20 +213,28 @@ class GeogTool:
                 if meta: path=path[:-5]+'_meta.json'
                 huc8scdata=self.openjson(path)
                 for comid in comidlist:
+                    self.logger.info(f'comid:{comid}')
                     try:
-                        comiddata=huc8scdata[str(comid)]
+                        comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
                     except KeyError:
-                        self.logger.exception(f'could not find stream cat for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
-                        if error_lookup:
-                            message=self.checkNHDPlus(comid)
-                            self.logger.critical(message)    
-                        comiddata='error'
+                        try:
+                            comiddata=huc8scdata[comid]
+                        except KeyError:
+                            
+                            self.logger.exception(f'could not find stream cat for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
+                            if error_lookup:
+                                message=self.checkNHDPlus(comid)
+                                self.logger.critical(message)    
+                            comiddata=None
+                        except:
+                            assert False, 'halt, unexpected error'
                     except:
                         assert False, 'halt, unexpected error'
-                    if returncomiddict:
-                        comiddict[comid]=comiddata
-                    else:
-                        huc8comid_dict[huc8][comid]=comiddata
+                    if comiddata:
+                        if returncomiddict:
+                            comiddict[comid]=comiddata # comid as a string
+                        else:
+                            huc8comid_dict[huc8][comid]=comiddata
             if not returncomiddict:
                 SCoutdict[huc2]=huc8comid_dict    
         if returncomiddict:
@@ -403,7 +460,7 @@ class GeogTool:
         huc12dict={}
         for comid_idx,huc12 in enumerate(NHDplusHUC12array):
             if len(huc12)==11:huc12='0'+huc12
-            comid=NHDplus.loc[comid_idx,'COMID']
+            comid=NHDplus.loc[comid_idx,'COMID'].astype(str)
             if huc12 in huc12dict:
                 huc12dict[huc12].append(comid)
             else: 
@@ -419,42 +476,7 @@ class GeogTool:
     
     
     
-    def getstreamcat(self,comidlist,process=1,local=1):
-        #url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}&pLandscapeMetricType=Topography"
-        url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}"
-        #url="https://ofmpub.epa.gov/waters10/Watershed_Characterization.Control?pComID={}"
-        if type(comidlist) is str:
-            comidlist=[comidlist]
-        comidcount=len(comidlist)
-        comidlist_datadict={}
-        if local:
-            comidlist_datadict=self.pullStreamCatForComidList(comidlist)
-        else:
-            for idx,comid in enumerate(comidlist):
-                self.logger.info(f'starting {idx}/{comidcount}')
-                result=requests.get(url.format(str(comid)))
-                self.logger.info(f'retrieved {idx}/{comidcount}')
-                success=0
-                self.logger.info(f'type(result):{type(result)}')
-                try:
-                    data=result.text
-                    try:
-                        comiddatadict=json.loads(data)
-                    except:
-                        self.logger.exception(f'failed to json.loads. comid:{comid}')
-                        datadict={'fail':data}
-                except:
-                    self.logger.exception(f'failed to result.text. comid:{comid}')
-                    self.logger.debug(f'{data}')
-                    comiddatadict=result
-                comidlist_datadict[str(comid)]=comiddatadict
-            #infodict={'streamcatdata':comidlist_datadict}
-        if process:
-            streamcatdict=self.processStreamCat(comidlist_datadict,local=local)
-            return streamcatdict
-        else: 
-            return comidlist_datadict
-        
+
     
     def getNHDplus(self,huc12):
         try: self.NHDplus
