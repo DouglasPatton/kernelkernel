@@ -47,20 +47,21 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                         specieshuc_allcomid_list,species01list_list=self.buildspecieshuccomidlist(species_idx_list=[idx])
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
-                    species_n=len(specieshuc_allcomid)
-                    comidlist_i=[comid for comid in specieshuc_allcomid if comid in self.sitedatacomid_dict]
+                    
+                    comidlist_i,comid_idx=zip*([(comid,idx) for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict])
+                    """species_n=len(specieshuc_allcomid)
                     varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in comidlist_i]
                     varcount=max(varcountlist)
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
                     keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
                     #p#rint('varcount',varcount)
-                    species01=pd.dataframe(data={'presence':species01list})
+                     # only keep entries with a corresponding comid in sitedatacomid_dict
                     #speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
                     #speciesdata[:,0]=np.array(species01list)
-                    #self.missingvals=[]
-                    dflist=[species01]
-                    vardatadict={}
-                    for j,comidj in enumerate(specieshuc_allcomid):
+                    #self.missingvals=[]"""
+                    species01=species01list[comid_idx]
+                    vardatadict={'presence':species01}
+                    for j,comidj in enumerate(comidlist_i):
                         if comidj in self.sitedatacomid_dict:
                             #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
                             for key,val in self.sitedatacomid_dict[comidj].items():
@@ -75,7 +76,8 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                                         vardatadict[key]=vals+['999999' for _ in range(len(vals)-j)]+[val]
                                     else:
                                         vardatadict[key].append(val)
-                                dflist.append(pd.dataframe(data=vardata))
+                    species_df=pd.dataframe(data=vardata),index=comidlist_i)
+                    self.logger.info(f'for species:{species} df describe: {species_df.describe()}')
                             """try: speciesdata[j,1:]=np.array(sitevars)
                             except: 
                                 self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
@@ -90,7 +92,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                                         missingkeys.append(key)
                                         speciesdata[j,1+k]='999999'
                                 self.logger.warning(f'missing keys from exception are: {missingkeys}')"""
-                    speciesdata=pd.concat(dflist,axis=1)
+                    #speciesdata=pd.concat(dflist,axis=1)
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)  
                     self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
