@@ -25,6 +25,7 @@ class datagen(PiscesDataTool,myLogger):
         
         source=datagen_dict['source']
         self.initial_datagen_dict=datagen_dict
+        self.datagen_dict=datagen_dict
         if source=='monte':
             try:
                 theseed=datagen_dict['seed'] #just used for montecarlo
@@ -63,16 +64,16 @@ class datagen(PiscesDataTool,myLogger):
             PiscesDataTool.__init__(self,)
             
             source=datagen_dict['source']
-            batch_n=datagen_dict['batch_n']
+            """batch_n=datagen_dict['batch_n']
             self.batch_n=batch_n
             batchcount=datagen_dict['batchcount']
             self.batchcount=batchcount
             self.batchbatchcount=datagen_dict['max_maxbatchbatchcount']
-            sample_replace=datagen_dict['sample_replace']
-            missing=datagen_dict['missing']
+            sample_replace=datagen_dict['sample_replace']"""
+            #missing=datagen_dict['missing']
             species=datagen_dict['species']
-            self.species=species
-            if datagen_dict['sample'][0]=='y':
+            #self.species=species
+            """if datagen_dict['sample'][0]=='y':
                 if datagen_dict['sample'][2:]=='balanced':
                     self.min_y=0.5
                 else: assert False,'not developed'
@@ -89,9 +90,9 @@ class datagen(PiscesDataTool,myLogger):
             self.spatialselecttup=spatialselecttup
             self.param_count=datagen_dict['param_count']
             
-            seed=1
+            seed=1"""
             
-            self.gen_piscesdata01(seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup)
+            #self.gen_piscesdata01(species,datagen_dict)
             #self.build_sumstats_dict(self.ydataarray,self.xdataarray) # moved inside gen_piscesdata01
             
             pass
@@ -103,7 +104,7 @@ class datagen(PiscesDataTool,myLogger):
 
             
 
-    def gen_piscesdata01(self,seed,batch_n,batchcount,sample_replace,missing,species,floatselecttup,spatialselecttup):
+    def gen_piscesdata01(self,species,datagen_dict):
         
         random.seed(seed)  
         try:self.specieslist

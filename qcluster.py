@@ -158,13 +158,6 @@ class JobQFiller(mp.Process):
         #m.connect()
         #queue = m.jobq()
         queue=self.q
-        '''jobcount=len(self.joblist)
-        a_rundict=self.joblist[-1]
-        a_savepath=a_rundict['savepath']
-        savedir=os.path.split(a_savepath)[0]
-        savedset=set(os.listdir(savedir))
-        print(f'len(savedset):{len(savedset)}')
-        shuffle(self.joblist)'''
         i=1
         while len(self.joblist):
             job=self.joblist.pop()
@@ -219,7 +212,7 @@ class RunNode(mp.Process,BaseManager):
         model_gen_dict=rundict['model_gen_dict']
         hash_id_model_dict={}
         for model_gen in model_gen_dict:
-            hash_id_model_dict[model_gen['hash_id']]=sk_tool(model_gen)
+            hash_id_model_dict[model_gen['hash_id']]=sk_tool(model_gen) # hashid based on model_gen and data_gen
         return data,hash_id_model_dict
     
     def run(self,):

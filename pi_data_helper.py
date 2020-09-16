@@ -54,26 +54,43 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                     maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
                     keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
                     #p#rint('varcount',varcount)
-                    speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
-                    speciesdata[:,0]=np.array(species01list)
+                    species01=pd.dataframe(data={'presence':species01list})
+                    #speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
+                    #speciesdata[:,0]=np.array(species01list)
                     #self.missingvals=[]
+                    dflist=[species01]
+                    vardatadict={}
                     for j,comidj in enumerate(specieshuc_allcomid):
                         if comidj in self.sitedatacomid_dict:
-                            sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
-                        try: speciesdata[j,1:]=np.array(sitevars)
-                        except: 
-                            self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
-                            keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
-                            missingkeys=[]
-                            
-                            for k,key in enumerate(keylist):
-                                try:#added try: to handle missing bmmi values even if key exists
-                                    data_point=self.sitedatacomid_dict[comidj][key]
-                                    speciesdata[j,1+k]=data_point
-                                except:
-                                    missingkeys.append(key)
-                                    speciesdata[j,1+k]='999999'
-                            self.logger.warning(f'missing keys from exception are: {missingkeys}')
+                            #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
+                            for key,val in self.sitedatacomid_dict[comidj].items():
+                                if not key in vardatadict:
+                                    if j>0:
+                                        vardatadict[key]=['999999' for _ in range(j)]+[val]
+                                    else:
+                                        vardatadict[key]=[val]
+                                else:
+                                    vals=vardatadict[key]
+                                    if len(vals)>j:
+                                        vardatadict[key]=vals+['999999' for _ in range(len(vals)-j)]+[val]
+                                    else:
+                                        vardatadict[key].append(val)
+                                dflist.append(pd.dataframe(data=vardata))
+                            """try: speciesdata[j,1:]=np.array(sitevars)
+                            except: 
+                                self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
+                                keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
+                                missingkeys=[]
+
+                                for k,key in enumerate(keylist):
+                                    try:#added try: to handle missing bmmi values even if key exists
+                                        data_point=self.sitedatacomid_dict[comidj][key]
+                                        speciesdata[j,1+k]=data_point
+                                    except:
+                                        missingkeys.append(key)
+                                        speciesdata[j,1+k]='999999'
+                                self.logger.warning(f'missing keys from exception are: {missingkeys}')"""
+                    speciesdata=pd.concat(dflist,axis=1)
                     with open(species_filename,'wb') as f:
                         pickle.dump(speciesdata,f)  
                     self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
@@ -192,6 +209,7 @@ class MpSearchComidHuc12(mp.Process,myLogger):
         comidcount=len(comidlist)
         self.logger.info(f'retrieving streamcat')
         sc_comid_dict=self.gt.getstreamcat(comidlist)
+        self.logger.info(f'type(sc_comid_dict):{type(sc_comid_dict)}')
         
         comidsitedataidx=[]
         sitedatacomid_dict={}

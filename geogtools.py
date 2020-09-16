@@ -145,16 +145,18 @@ class GeogTool(myLogger):
                     srch_y=re.search(regex_y2k,metric)
                     if srch_y:
                         yr=metric[srch_y.start():srch_y.end()]
-                        metric_drop_yr=metric[:srch_y.start]+metric[srch_y.end():]+'_avg' # plus 2 b/c skipping and b/c .end is already big by 1 so it indexes as above.
+                        metric_drop_yr=metric[:srch_y.start()]+metric[srch_y.end():]+'_avg'
                     else:
                         metric_drop_yr=metric
                         yr='all'
                     if collapse:
-                        if not metric_drop_yr in collapse_dict:
-                            collapse_dict[metric_dop_year]=[data_pt]
-                        else:
-                            collapse_dict[metric_drop_year].append(data_pt)
-                            
+                        try:
+                            float_data_pt=float(data_pt)
+                            if not metric_drop_yr in collapse_dict:
+                                collapse_dict[metric_drop_yr]=[float_data_pt]
+                            else:
+                                collapse_dict[metric_drop_yr].append(float_data_pt)
+                        except:self.logger.exception(f'for metric:{metric}can"t float data_pt:{data_pt}, type(data_pt):{type(data_pt)}')
                     else:
                         for k in range(keycount-1):
                             endstring=metric[-keylengths[k]:]
