@@ -1,13 +1,11 @@
 import os
 import csv
-#import traceback
 import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
 import geopandas as gpd
 import logging
-import traceback
 import pandas as pd
 from geogtools import GeogTool as gt
 from mylogger import myLogger
@@ -15,12 +13,8 @@ from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01
 import re
 
 
-
-
-
 class PiscesDataTool(myLogger):
     def __init__(self,):
-        #logging.basicConfig(level=logging.INFO)
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
         self.savedir=os.path.join(os.getcwd(),'data_tool')
@@ -52,14 +46,14 @@ class PiscesDataTool(myLogger):
             species_filename=os.path.join(datadir,species_name+'.data')  
             with open(species_filename, 'rb') as f:
                 species_data=pickle.load(f)
-            return np.asfortranarray(species_data)
+            return species_data
         else:
             try:
                 with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
                     sitevarlist=pickle.load(f)
                 return sitevarlist   
             except: 
-                print(traceback.format_exc())
+                self.logger.exception('')
                 return 'sitevarlist not found'
         
     
@@ -83,30 +77,17 @@ class PiscesDataTool(myLogger):
             try: 
                 with open(savefilename, 'rb') as f:
                     (self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist)=pickle.load(f)
-                #print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
-                #print(self.NHDplus)
-
-                #self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy())
-
                 return
             except: 
                 print(f"{savefilename} exists but could not open, rebuilding")
         
         filename=os.path.join(os.getcwd(),'NHDplus_data','HUC12_PU_COMIDs_CONUS.dbf')
-        
-        #dbf = gpd.GeoDataFrame.from_file(filename)
         print(f'starting read of {filename}')
         dbf=gpd.read_file(filename)
         print('finished read of NHDplus')
         print(f'opened {filename} with length:{len(dbf)} and type:{type(dbf)}')
-        #p#rint(dbf.head())
-        #self.NHDvarlist=dbf.columns.values
         self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
         print('self.NHDvarlist: ',self.NHDvarlist)
-        
-        #self.dbf=dbf
-        #self.NHDplus=[dbf[var].tolist() for var in varlist]
-        
         self.NHDplus=dbf.loc[:,self.NHDvarlist] 
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
@@ -147,13 +128,6 @@ class PiscesDataTool(myLogger):
 
     def getsitedata(self,):
         self.sitedata=self.getcsvfile('siteinfo.csv')
-        '''try:
-            self.sitedata=self.getcsvfile('siteinfo_with_streamcat.csv')
-        except:
-            self.sitedata=self.buildSiteDataWithStreamcat()'''
-        
-        #self.sitedata_k=len(self.sitedata[0])()
-        #self.sitevarkeylist=[key for key,_ in self.sitedata[0].items()]
         self.sitedata_comid_digits=[''.join([char for char in datarow['COMID'] if char.isdigit()]) for datarow in self.sitedata]
         print(self.sitedata[0:5])
 
@@ -176,18 +150,11 @@ class PiscesDataTool(myLogger):
                 with open(specieslistpath,'rb') as f:
                     speciestup=pickle.load(f)
                 self.specieslist=speciestup[0]
-                '''self.speciesoccurencelist=speciestup[1]
-                self.speciescomidlist=speciestup[2] 
-                self.specieshuclist=speciestup[3]
-                self.huclist_survey=speciestup[4]
-                self.huccomidlist_survey=speciestup[5]
-                self.specieshuclist_survey_idx=speciestup[6]'''
                 return self.specieslist
             except:
                 pass
         self.buildspecieslist()
         return self.specieslist
-        
         
         
         
@@ -323,10 +290,7 @@ class PiscesDataTool(myLogger):
                 huc8_i='0'+huc8_i
             assert len(huc8_i)==8,print(f'expecting 8 characters: huc8_i:{huc8_i}')
             if not spec_i==lastspec_i:
-                #print(spec_i)
                 specfound=0
-                #for j,spec_j in enumerate(self.specieslist):
-                #    if spec_i==spec_j:
                 try: 
                     specieslist_idx=self.specieslist.index(spec_i)
                     specfound=1                
@@ -342,13 +306,9 @@ class PiscesDataTool(myLogger):
                         self.logger.info(f'{spec_i} has new huc:{huc8_i}')
                         self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)
                         self.specieshuclist_survey_idx_newhucs[specieslist_idx].append(huclist_survey_idx)
-
                 except ValueError: 
                     self.otherhuclist.append(huc8_i)
                     self.logger.info(f'{spec_i} has new huc:{huc8_i}, but it does not show up in survey, so not relevant')
- 
-                
-            
             lastspec_i=spec_i    
         self.specieshuc8list=specieshuc8list
         with open(huc8listpath,'wb') as f:
@@ -378,28 +338,10 @@ class PiscesDataTool(myLogger):
         shortlist=list(set([''.join([char for char in comid if char.isdigit()]) for comid in longlist]))
         self.logger.warning(f'shortlist:{shortlist}')
         occurencelist=[[] for _ in range(len(shortlist))]
-        """for idx,comid in enumerate(longlist):
-            if idx%(length//33)==0:
-                print(str(round(100*idx/length))+'%',sep=',')
-            comid_digits=''.join([char for char in comid if char.isdigit()])
-            found=0
-            try:
-                shortidx=shortlist.index(comid_digits)
-                occurencelist[shortidx].append(idx)
-                #p#rint(f'old comid:{comid}')
-            except ValueError:
-                
-                shortlist.append(comid_digits)
-                occurencelist.append([idx])
-            except:
-                assert False, f'unexpected error for comid_digits:{comid_digits}'"""
         self.logger.info(f'buildCOMIDlist found {len(shortlist)}')
         with open(comidlistpath,'wb') as f:
-            #pickle.dump((shortlist,occurencelist),f)
             pickle.dump((shortlist,occurencelist),f)
-        
         self.comidlist=shortlist # no repeats made of comid_digits, a string
-        #self.comidoccurencelist=occurencelist # idx0 is shortlist, idx1 is location in fishsurveydata where that shortlist element is found.
     
 
     def mergelistofdicts(self,listofdicts,overwrite=0):
@@ -416,7 +358,6 @@ class PiscesDataTool(myLogger):
                         mergedict[key]=val
                     else:
                         newkey=key+f'_{i}'
-                        #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
                         mergedict[newkey]=val
             return mergedict
         except: self.logger.exception(f'')
@@ -450,18 +391,10 @@ class PiscesDataTool(myLogger):
         except:self.getsitedata()
         try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
         except:self.getNHDplus()   
-        #int_comidlist=[int(''.join([char for char in comid if char.isdigit()])) for comid in self.comidlist]
-        #unique_comids=list(set(int_comidlist))
         comidcount=len(self.comidlist)
-        #comidcount=len(unique_comids)
-        #comidcount=20
-
         com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
-        print('com_idx',com_idx)
-
         comidlistlist=[]
         for i in range(self.processcount):
-            #comidlistlist.append(unique_comids[com_idx[i]:com_idx[i+1]])
             comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
         args_list=[[i,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
         
@@ -472,13 +405,6 @@ class PiscesDataTool(myLogger):
 
         sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
         self.sitedatacomid_dict=sitedatacomid_dict#{}
-        """for i in range(comidcount):
-            try:
-                int_comid=int_comidlist[i]
-                self.sitedatacomid_dict[self.comidlist[i]]=sitedatacomid_dict[int_comid]
-            except:
-                self.logger.exception(f'sc error for int_comid:{int_comid}')
-        """
         self.comidsitedataidx=[]
         for i in range(self.processcount):
             self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
@@ -547,8 +473,6 @@ class PiscesDataTool(myLogger):
         except:self.getsitedata()
         try:self.sitedatacomid_dict,self.comidsitedataidx
         except: self.buildCOMIDsiteinfo()
-        #try: self.species01list,self.specieshuc_allcomid
-        #except: self.buildspecieshuccomidlist()
         with open(os.path.join(datadir,'sitedatakeylist'),'wb') as f:
             pickle.dump(self.sitedatakeylist,f)
         speciescount=len(self.specieslist)
@@ -584,6 +508,5 @@ if __name__=='__main__':
     test.buildspecieshuc8list()
     test.buildCOMIDlist()
     test.buildCOMIDsiteinfo()
-    #test.buildspecieshuccomidlist()
     test.buildspeciesdata01_file()
     

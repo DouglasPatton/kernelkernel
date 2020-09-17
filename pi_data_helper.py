@@ -48,37 +48,47 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
                     
-                    comidlist_i,comid_idx=zip*([(comid,idx) for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict])
+                    comidlist_i=[comid for comid in specieshuc_allcomid if comid in self.sitedatacomid_dict]
+                    comid_idx=[idx for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict]
+                    keylist=[]
+                    for comid in comidlist_i:
+                        keylist.extend(list(self.sitedatacomid_dict[comid].keys()))
+                    keylist=list(set(keylist))
+                    #self.logger.info(f'full keylist:{keylist}')
+                    badvars=['COMID','COMID_2','HUC8','TOHUC','BMMI','IWI',
+                             'WsPctFullRp100','REACHCODE', 'WsAreaSqKmRp100',
+                             'CatAreaSqKmRp100','CatPctFullRp100',]#'WA']
+
+                    keylist=sorted([key for key in keylist if not key in badvars])
+                    keylist=self.drop_multi_version_vars(keylist)
                     """species_n=len(specieshuc_allcomid)
-                    varcountlist=[len(self.sitedatacomid_dict[comidk].items()) for comidk in comidlist_i]
-                    varcount=max(varcountlist)
-                    maxvarcountcomid=specieshuc_allcomid[varcountlist.index(varcount)]
-                    keylist=[key for key,_ in self.sitedatacomid_dict[maxvarcountcomid].items()]
+                    
                     #p#rint('varcount',varcount)
                      # only keep entries with a corresponding comid in sitedatacomid_dict
                     #speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
                     #speciesdata[:,0]=np.array(species01list)
                     #self.missingvals=[]"""
-                    species01=species01list[comid_idx]
+                    species01=[species01list[comid] for comid in comid_idx]
                     vardatadict={'presence':species01}
                     for j,comidj in enumerate(comidlist_i):
-                        if comidj in self.sitedatacomid_dict:
-                            #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
-                            for key,val in self.sitedatacomid_dict[comidj].items():
-                                if not key in vardatadict:
-                                    if j>0:
-                                        vardatadict[key]=['999999' for _ in range(j)]+[val]
-                                    else:
-                                        vardatadict[key]=[val]
-                                else:
-                                    vals=vardatadict[key]
-                                    if len(vals)>j:
-                                        vardatadict[key]=vals+['999999' for _ in range(len(vals)-j)]+[val]
-                                    else:
-                                        vardatadict[key].append(val)
-                    species_df=pd.dataframe(data=vardata),index=comidlist_i)
-                    self.logger.info(f'for species:{species} df describe: {species_df.describe()}')
-                            """try: speciesdata[j,1:]=np.array(sitevars)
+                        #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
+                        comid_data=self.sitedatacomid_dict[comidj]
+                        for key in keylist:
+                            try:
+                                val=comid_data[key]
+                            except KeyError:
+                                val=np.nan
+                            except:
+                                self.logger.exception('')
+                                assert False,'unexpected error'
+                            if not key in vardatadict:
+                                vardatadict[key]=[val]
+                            else:
+                                vardatadict[key].append(val)
+                    species_df=pd.DataFrame(data=vardatadict,index=comidlist_i)
+                    #self.logger.warning(f'created df for species:{spec_i}')
+                    #self.logger.info(f'for species:{spec_i} df.head(): {species_df.head()}')
+                    """try: speciesdata[j,1:]=np.array(sitevars)
                             except: 
                                 self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
                                 keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
@@ -93,9 +103,10 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                                         speciesdata[j,1+k]='999999'
                                 self.logger.warning(f'missing keys from exception are: {missingkeys}')"""
                     #speciesdata=pd.concat(dflist,axis=1)
+                    
                     with open(species_filename,'wb') as f:
-                        pickle.dump(speciesdata,f)  
-                    self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. speciesdata.shape:{speciesdata.shape}')
+                        pickle.dump(species_df,f)  
+                    self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. species_df.shape:{species_df.shape}')
                 else:
                     self.logger.info(f'{species_filename} already exists')
                 fail_record.append(0)
@@ -106,10 +117,46 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                 except: 
                     fail_record.append((spec_i,'none'))
                 recordfailcount+=1
-        self.logger.warning(f'succesful completion. len(self.speciesidx_list): {len(self.speciesidx_list)}, recordfailcount: {recordfailcount}')
-        self.q.put([self.i,fail_record])
-        self.logger.warning(f'i:{self.i} added to builder fail record q')
         
+        if fail_record:
+            self.logger.warning(f'succesful completion. len(self.speciesidx_list): {len(self.speciesidx_list)}, recordfailcount: {recordfailcount}')
+            self.q.put([self.i,fail_record])
+            #self.logger.warning(f'i:{self.i} added to builder fail record q')
+        else:
+            self.logger.warning(f'fail record empty,recordfailcount: {recordfailcount}. i:{self.i} exiting')
+        
+    def drop_multi_version_vars(self,keylist):
+        key_v_dict={}
+        vlist=['_v1','_v2','_v2_1']
+        for k,key in enumerate(keylist):
+            for v in vlist:
+                vl=len(v)
+                if key[-vl:]==v:
+                    raw_key=key[:-vl]
+                    if raw_key in key_v_dict:
+                        key_v_dict[raw_key].append((v,k))
+                    else: key_v_dict[raw_key]=[(v,k)]
+        drop_idx_list=[];kept_v_list=[]
+        for key,vtuplist in key_v_dict.items():
+            vtuplist.sort()
+            for v,k_idx in vtuplist[:-1]:
+                drop_idx_list.append(k_idx)
+            kept_v_list.append(vtuplist[-1][1])
+                                                   
+        keylist2=[key for k,key in enumerate(keylist) if not k in drop_idx_list]
+        dropkeys=[key for k,key in enumerate(keylist) if k in drop_idx_list]
+        keptkeys=[key for k,key in enumerate(keylist) if k in kept_v_list]
+                                                   
+        self.logger.info(f'keptkeys:{keptkeys}')
+        self.logger.info(f'dropkeys:{dropkeys}')                                           
+        return keylist2
+                                                   
+                                                   
+            
+            
+            
+            
+            
 
 
         
