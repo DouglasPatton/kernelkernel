@@ -25,10 +25,9 @@ class datagen(PiscesDataTool,myLogger):
             test_share=0.1
             cv_folds=5
             cv_reps=2
-            stratify='balanced-HUC8'
+            stratify=None#'balanced-HUC8'
             inner_cv_folds=5
             inner_cv_reps=5
-            
-           
             cv_count=cv_folds*cv_reps
+            
         
