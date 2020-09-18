@@ -1,7 +1,31 @@
-class CV_cat_reg_supreme
-    def (self,X_train,y_train,cv_folds=10,cv_reps=2,cat_reg='cat',strategy='balanced'):
-        #needs updating!
+class custom_stratified_cv(myLogger)
+    def __init__(self,cv_folds=10,cv_reps=2,cat_reg='cat',strategy='balanced',groups=5):
+        self.cv_folds=cv_folds
+        self.cv_reps=cv_reps
+        self.cat_reg=cat_reg
+        self.strategy=strategy
+        self.groups=groups
         
+    def split(X,y,groups=None):
+        if self.cat_reg='reg':
+            if self.strategy='balanced':
+                y
+                np.array_split()
+                
+                
+                group_edges=np.quantile(y,np.linspace(0,1,self.groups+1))
+                group_arr=np.zeros(y.shape)
+                for i in range(1,self.groups+1):
+                    if i<self.groups:
+                        shift=0
+                    else:
+                        shift=1 # to make the last index inclusive of the last item.
+                    group_arr[group_edges[i]:group_edges[i+1+shift]]
+                    
+                    
+    
+        
+    def old(self,):
         # test data already removed
         n,k=X_train.shape
         onecount=int(ydataarray.sum())
@@ -15,7 +39,7 @@ class CV_cat_reg_supreme
             
             cat_edges=np.quantile(y_train,np.linspace(0,1,6))
             q=np.quantile(y_train)    
-            bins,_=np.histogram(y_train,bins=q)
+            #bins,_=np.histogram(y_train,bins=q)
         zerocount=n-onecount
         countlist=[zerocount,onecount]
         if onecount<zerocount:
