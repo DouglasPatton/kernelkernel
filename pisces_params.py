@@ -18,9 +18,10 @@ class PiSetup:
                 cv=dict(
                     cv_folds=5,
                     cv_reps=2,
+                    strategy='balanced',
                     ),
                 drop_vars=[],
-                stratify=None,#'balanced-HUC8'
+                ,#'balanced-HUC8'
                 )
             )
     

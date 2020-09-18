@@ -44,6 +44,9 @@ class datagen(PiscesDataTool,myLogger):
         self.X_test=X_test
         self.y_train=y_train
         self.y_test=y_test
+        if self.datagendict['cv']
+        self.cv=self.custom_stratified_cv(**self.datagendict['cv'])
+        
         
 
 

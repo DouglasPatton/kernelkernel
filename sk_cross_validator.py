@@ -1,29 +1,29 @@
-class custom_stratified_cv(myLogger)
-    def __init__(self,cv_folds=10,cv_reps=2,cat_reg='cat',strategy='balanced',groups=5):
-        self.cv_folds=cv_folds
-        self.cv_reps=cv_reps
+from mylogger import myLogger
+class regressor_stratified_cv(myLogger)
+    def __init__(self,cv_folds=10,cv_reps=2,,strategy='balanced',group_count=5,random_state=0,shuffle=True):
+        #self.cv_folds=cv_folds
+        #self.cv_reps=cv_reps
         self.cat_reg=cat_reg
         self.strategy=strategy
-        self.groups=groups
-        
+        self.group_count=group_count
+        #self.random_state=random_state
+        #self.shuffle=shuffle
+        cvkwargs=dict(cv_folds=cv_folds,cv_reps=cv_reps,shuffle=shuffle,random_state=random_state)
+        if strategy=='balanced':
+            self.cv=self.RepeatStratifiedKFold(**cvkwargs)
+        else:
+            self.cv=self.RepeatKFold(**cvkwargs)
+            
     def split(X,y,groups=None):
-        if self.cat_reg='reg':
-            if self.strategy='balanced':
-                y
-                np.array_split()
+        if self.strategy='balanced':
+            ysort_idx=np.argsort(y)
+            split=np.array_split(np.ones(y.shape))
+            groupsplit=[i*split[i] for i in range(self.group_count)]
+            groups=np.concatenate(groupsplit,axis=0)
+        return self.cv.split(X,y,groups)
                 
-                
-                group_edges=np.quantile(y,np.linspace(0,1,self.groups+1))
-                group_arr=np.zeros(y.shape)
-                for i in range(1,self.groups+1):
-                    if i<self.groups:
-                        shift=0
-                    else:
-                        shift=1 # to make the last index inclusive of the last item.
-                    group_arr[group_edges[i]:group_edges[i+1+shift]]
                     
-                    
-    
+    """
         
     def old(self,):
         # test data already removed
@@ -91,4 +91,4 @@ class custom_stratified_cv(myLogger)
         self.logger.info(f'yxtup shapes:{[(yxtup[0].shape,yxtup[1].shape) for yxtuplist in batchbatchlist for yxtup in yxtuplist]}')
         self.yxtup_batchbatch=batchbatchlist
         
-        
+        """
