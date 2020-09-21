@@ -2,9 +2,9 @@ from sklearn.pipeline import make_pipeline,Pipeline
 from sklearn.linear_model import ElasticNet, LinearRegression
 from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler,PolynomialFeatures
-from sklearn.model_selection import cross_validate, train_test_split, RepeatedKFold, GridSearchCV
+from sklearn.model_selection import cross_validate, train_test_split, RepeatedStratifiedKFold, GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingClassifier,HistGradientBoostingClassifier
 from sklearn.datasets import make_regression
 from sklearn.compose import TransformedTargetRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst,binaryYTransformer
@@ -37,8 +37,8 @@ class sk_estimator:
             'regressor__shrink_k1__k_share':list(range(1,gridpoints+1)),
             'regressor__prep__strategy':['impute_middle','impute_knn_10']
         }
-        inner_cv=RepeatedKFold(n_splits=5, n_repeats=5, random_state=0)
-        return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv)
+        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
     
     
     
@@ -58,22 +58,31 @@ class sk_estimator:
             'regressor__reg__gamma':np.logspace(-1,0.5,gridpoints),
             'regressor__prep__strategy':['impute_middle','impute_knn_10']
         }
-        inner_cv=RepeatedKFold(n_splits=5, n_repeats=5, random_state=0)
-        return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv)
+        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
     
-    
-    
+    def histGradientBoostingClf(selfk):
+        est=HistGradientBoostingClassifier()
+        param_grid={'min_samples_leaf':[10,15,20]}
+        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=1, random_state=0)
+        return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
+        
     def gradientBoostingClf(self,):
         steps=[
             ('prep',missingValHandler(strategy='pass-through')),
             #('scaler',StandardScaler()),
-            ('reg',GradientBoostingRegressor(random_state=0,n_estimators=10000,max_depth=4))]
+            ('reg',GradientBoostingClassifier(random_state=0,n_estimators=10000,max_depth=4,ccp_alpha=0))]
         
         inner_pipeline=Pipeline(steps=steps)
         outer_pipeline=TransformedTargetRegressor(transformer=binaryYTransformer(),regressor=inner_pipeline,check_inverse=False)
         
+        param_grid={
+            'regressor__reg__C':np.logspace(-2,2,gridpoints), 
+            'regressor__reg__ccp_alpha':np.logspace(-3,-1,gridpoints),
+        }
+        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
         
-        return outer_pipeline
     
     
     def linRegSupremeClf(self,gridpoints=3,binary_threshold=0):
@@ -88,7 +97,7 @@ class sk_estimator:
             ('reg',LinearSVR(random_state=0,tol=1e-4,max_iter=50000))]
 
         X_T_pipe=Pipeline(steps=steps)
-        inner_cv=RepeatedKFold(n_splits=5, n_repeats=2, random_state=0)
+        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
         
         
         
@@ -103,7 +112,7 @@ class sk_estimator:
         
 
         
-        lin_reg_Xy_transform=GridSearchCV(Y_T_X_T_pipe,param_grid=Y_T__param_grid,cv=inner_cv,n_jobs=-1)
+        lin_reg_Xy_transform=GridSearchCV(Y_T_X_T_pipe,param_grid=Y_T__param_grid,cv=inner_cv,n_jobs=-1,scoring='f1_micro')
 
         return lin_reg_Xy_transform
     

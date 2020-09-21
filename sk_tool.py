@@ -45,7 +45,8 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             'lin-reg-classifier':linRegSupremeClf,
             'linear-svc':linSvcClf, 
             'rbf-svc':rbfSvcClf, 
-            'gradient-boosting-classifier':gradientBoostingClf
+            'gradient-boosting-classifier':gradientBoostingClf,
+            'hist-gradient-boosting-classifier':histGradientBoostingClf
         }
     
         
