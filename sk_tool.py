@@ -7,7 +7,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f
 from sklearn.ensemble import GradientBoostingRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
-from sk_estimators import linRegSupremeClf,linSvcClf, rbfSvcClf, gradientBoostingClf
+#from sk_estimators import linRegSupremeClf,linSvcClf, rbfSvcClf, gradientBoostingClf
+from sk_estimators import sk_estimator
 import logging
 import numpy as np
 from mylogger import myLogger
@@ -42,14 +43,14 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
         return self.model_.predict(X)
     
     def get_est_dict(self,):
+        fit_kwarg_dict={'regressor__clf__sample_weight':'balanced'}# all are the same now
         estimator_dict={
             #add logistic with e-net
-            fit_kwarg_dict={'regressor__clf__sample_weight':'balanced'}# all are the same now
             'lin-reg-classifier':{'estimator':linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
-            'linear-svc':{'estimator':linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,
-            'rbf-svc':{'estimator':rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,
-            'gradient-boosting-classifier':{'estimator':gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,
-            'hist-gradient-boosting-classifier':{'estimator':histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,
+            'linear-svc':{'estimator':linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'rbf-svc':{'estimator':rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'gradient-boosting-classifier':{'estimator':gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'hist-gradient-boosting-classifier':{'estimator':histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
         }
     
     def make_fit_kwargs(self,fit_kwarg_dict,X,y):

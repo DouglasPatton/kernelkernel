@@ -3,7 +3,6 @@ import os,sys,psutil
 import re
 from time import strftime,sleep
 import datetime
-import kernelcompare 
 import traceback
 import shutil
 from random import randint,seed,shuffle
@@ -112,7 +111,7 @@ class SaveQDumper(mp.Process,DBTool):
             try:
                 success=0
                 try:
-                    model_save_list=queue.get(True,5)
+                    save_tup=queue.get(True,5)
                     
                     success=1
                 except:
@@ -122,11 +121,11 @@ class SaveQDumper(mp.Process,DBTool):
                     else:
                         self.logger.exception('SaveQDumper unexpected error!')
                 if success:
-                    if type(model_save_list) is str:
-                        if model_save_list=='shutdown':
+                    if type(save_tup) is str:
+                        if save_tup=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    self.addtoDBdict(model_save_list)
+                    self.addtoDBdict([save_tup])
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
             
@@ -312,7 +311,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
             self.source=source
         if self.source=='pisces':
             self.setup=PiSetup()
-        if self.source='monte':
+        if self.source=='monte':
             self.setup=MonteSetup()
             
         seed(1)  
@@ -338,7 +337,9 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
             while not check_complete:
                 sleep(5)
                 saveqdumper.run()
-                check_complete=self.checkComplete():
+                check_complete=self.checkComplete()
+            jobqfiller.join()
+            saveqdumper.join()
             return
         except:
             self.logger.exception('')
@@ -352,7 +353,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         run_record_dict={}
         data_gen_list=data_setup()
         
-        for data_gen in data_gen_list
+        for data_gen in data_gen_list:
             model_gen_dict={}
             model_gen_list=model_setup()
             for model_gen in model_gen_list:
@@ -367,6 +368,7 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         
         
     def checkComplete(self,run_dict_list=None):
+        #run_dict_list is provided at startup, and if not, useful for checking if all have been saved
         resultsDBdict=self.resultsDBdict()
         if not run_dict_list:
             hash_id_iter=self.genDBdict().keys()

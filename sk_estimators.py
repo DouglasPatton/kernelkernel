@@ -4,6 +4,7 @@ from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler,PolynomialFeatures
 from sklearn.model_selection import cross_validate, train_test_split, RepeatedStratifiedKFold, GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score
+from sklearn.experimental import enable_hist_gradient_boosting
 from sklearn.ensemble import GradientBoostingClassifier,HistGradientBoostingClassifier
 from sklearn.datasets import make_regression
 from sklearn.compose import TransformedTargetRegressor
