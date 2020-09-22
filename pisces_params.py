@@ -15,13 +15,10 @@ class PiSetup:
             species=None, # set in data_setup
             data_split=dict(
                 test_share=0.1,
-                cv=dict(
-                    cv_folds=5,
-                    cv_reps=2,
-                    strategy='balanced',
-                    ),
+                cv=dict(cv_folds=5,cv_reps=2,strategy=None),# e.g., 'balanced-HUC8'
                 drop_vars=[],
-                ,#'balanced-HUC8'
+                loc_vars=['HUC12'],
+                
                 )
             )
     

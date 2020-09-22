@@ -19,7 +19,20 @@ from mylogger import myLogger
 
 class sk_estimator:
     def __init__(self,):
-        pass
+        self.est_dict=self.set_est_dict()
+        
+        
+    def set_est_dict(self,):
+        fit_kwarg_dict={'regressor__clf__sample_weight':'balanced'}# all are the same now
+        estimator_dict={
+            #add logistic with e-net
+            'lin-reg-classifier':{'estimator':sk_est().linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
+            'linear-svc':{'estimator':linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'rbf-svc':{'estimator':rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'gradient-boosting-classifier':{'estimator':gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'hist-gradient-boosting-classifier':{'estimator':histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+        }
+        return estimator_dict
     
     def linSvcClf(self,gridpoints=3):
         steps=[

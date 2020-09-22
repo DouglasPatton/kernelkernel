@@ -1,3 +1,4 @@
+#Not really using this since it's for continuouos data....
 from mylogger import myLogger
 class regressor_q_stratified_cv:
     def __init__(self,n_splits=10,n_repeats=2,group_count=10,random_state=0):

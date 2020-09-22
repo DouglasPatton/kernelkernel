@@ -13,8 +13,8 @@ from multiprocessing.managers import BaseManager
 from queue import Queue
 import numpy as np
 from sqlitedict import SqliteDict
-import sk_tool
-import data_gen as dg
+rom  sk_tool import SKToolInitializer
+import datagen as dg
 from pisces_params import PiSetup,MonteSetup
 
 #class QueueManager(BaseManager): pass
@@ -211,7 +211,7 @@ class RunNode(mp.Process,BaseManager):
         model_gen_dict=rundict['model_gen_dict']
         hash_id_model_dict={}
         for model_gen in model_gen_dict:
-            hash_id_model_dict[model_gen['hash_id']]=sk_tool(model_gen) # hashid based on model_gen and data_gen
+            hash_id_model_dict[model_gen['hash_id']]=SKToolInitializer(model_gen) # hashid based on model_gen and data_gen
         return data,hash_id_model_dict
     
     def run(self,):
@@ -251,7 +251,7 @@ class RunNode(mp.Process,BaseManager):
                     data,hash_id_model_dict=self.build_from_rundict(rundict) # each estimator contains rundict
                     for hash_id,model in hash_id_model_dict.items():
                         try:
-                            model.fit(data.X_train,data.y_train)
+                            model.run(data)
                         except:
                             self.logger.exception('error for rundict:{rundict}')
                         savetup=(hash_id,model)
