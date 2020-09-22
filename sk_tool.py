@@ -36,6 +36,7 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
         myLogger.__init__(self,name='SkTool.log')
         self.logger.info('starting SkTool logger')
         self.model_gen=model_gen
+        self.name=model_gen['name']
         
     def transform(self,X,y=None):
         return self.model_.transform(X,y)
@@ -49,7 +50,8 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
         modelgen=self.model_gen
         est_name=modelgen['name']
         self.model_kwargs=modelgen['kwargs']
-        est_dict=self.get_est_dict()
+        sk_estimator=sk_est()
+        est_dict=sk_estimator.get_est_dict()
         self.est=est_dict[est_name]['estimator']
         fit_kwarg_dict=est_dict[est_name]['fit_kwarg_dict']
         self.fit_kwargs_=self.make_fit_kwargs(fit_kwarg_dict,X,y)

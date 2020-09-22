@@ -1,17 +1,21 @@
-from sk_tool import SkTool
+#from sk_tool import SkTool
+from sk_estimators import sk_estimator
 from pisces_data_huc12 import PiscesDataTool
 from mylogger import myLogger
 import logging
+from copy import copy
+import joblib
 
 class PiSetup:
-    def __init__(self,)
-        pdt=PiscesDataTool()
-        self.modelsetupdict=dict(
+    def __init__(self,):
+        self.pdt=PiscesDataTool()
+        self.model_setup_dict=dict(
             gridpoints=5,
             inner_cv_splits=10,
             inner_cv_reps=2,
             )
         self.initial_datagen_dict=dict(
+            source='Pisces',
             species=None, # set in data_setup
             data_split=dict(
                 test_share=0.1,
@@ -24,7 +28,7 @@ class PiSetup:
     
     def model_setup(self,):
         #sk_tool uses model_gen to create the estimator
-        est_dict=SkTool().get_est_dict()
+        est_dict=sk_estimator().get_est_dict()
         model_gen_list=[]
         for est_name in est_dict.keys():
             kwargs=self.model_setup_dict
@@ -34,9 +38,8 @@ class PiSetup:
             
     
     def data_setup(self,):
-        species_list=pdt.returnspecieslist()
-        cvdict=self.cvdict
-        data_params=self.datagen_dict
+        species_list=self.pdt.returnspecieslist()
+        data_params=self.initial_datagen_dict
         
         data_gen_list=[]
         for species in species_list:
@@ -45,20 +48,39 @@ class PiSetup:
             data_gen_list.append(params)
         return data_gen_list
             
+    
+    def setupRundictList(self,model_setup,data_setup):
+        #a run dict has a 
+        #model_gen_dict of models per instance of data_gen
+        #each of those model-data combos has a hash_id built from
+        #the model_dict and data_gen
+        run_dict_list=[]
+        run_record_dict={}
+        data_gen_list=data_setup()
         
+        for data_gen in data_gen_list:
+            model_gen_dict={}
+            model_gen_list=model_setup()
+            for model_gen in model_gen_list:
+                run_record={'model_gen':model_gen,'data_gen':data_gen}
+                hash_id=joblib.hash(run_record)
+                run_record_dict[hash_id]=run_record
+                model_gen_dict[hash_id]=model_gen
+            run_dict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
+            run_dict_list.append(run_dict)
+        
+        return run_dict_list,run_record_dict
     
     
     
     
-    
-    
-class MonteSetup(self,myLogger):
+class MonteSetup(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='MonteSetup.log')
         self.logger.info('starting MonteSetup logger')
     
     def model_setup(self,):
-        est_dict=SkTool().get_est_dict()
+        est_dict=sk_estimator().get_est_dict()
         model_gen_list=[]
         for est_name in est_dict.keys():
             kwargs={}

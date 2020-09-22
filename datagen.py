@@ -10,7 +10,7 @@ from mylogger import myLogger
 
 
 
-class datagen(PiscesDataTool,myLogger):
+class dataGenerator(PiscesDataTool,myLogger):
     '''
     
     '''
@@ -18,19 +18,19 @@ class datagen(PiscesDataTool,myLogger):
     def __init__(self,datagen_dict,):
         myLogger.__init__(self,name='datagen.log')
         self.logger.info('starting new datagen log')
-        self.datagen_dict=datagen_dic
+        self.datagen_dict=datagen_dict
         source=datagen_dict['source']
         PiscesDataTool.__init__(self,)
         species=datagen_dict['species']
         if type(species) is str:
-            self.df=retrievespeciesdata(species_name=species)
+            self.df=self.retrievespeciesdata(species_name=species)
         elif type(species) is int:
-            self.df=retrievespeciesdata(species_idx=species)
+            self.df=self.retrievespeciesdata(species_idx=species)
     
         data_split_dict=self.datagen_dict['data_split']
         if data_split_dict['cv']:
-            cv_kwargs={key:val for key,val in data_split_dict['cv'] if not val is None}
-            self.cv=RepeatedKFold(n_splits=cv_folds, n_repeats=cv_reps, random_state=rs)    
+            cv_kwargs={key:val for key,val in data_split_dict['cv'].items() if not val is None}
+            self.cv=RepeatedKFold(**cv_kwargs)    
         y_name='presence'
         loc_vars=datagen_dict['loc_vars']
         drop_vars=datagen_dict['drop_vars']

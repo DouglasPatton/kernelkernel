@@ -13,8 +13,8 @@ from multiprocessing.managers import BaseManager
 from queue import Queue
 import numpy as np
 from sqlitedict import SqliteDict
-rom  sk_tool import SKToolInitializer
-import datagen as dg
+from  sk_tool import SKToolInitializer
+from datagen import dataGenerator 
 from pisces_params import PiSetup,MonteSetup
 
 #class QueueManager(BaseManager): pass
@@ -96,7 +96,7 @@ class SaveQDumper(mp.Process,DBTool):
         #self.BaseManager=BaseManager
         #super(SaveQDumper,self).__init__()
         super().__init__()
-        #DBTool.__init__(self)
+        DBTool.__init__(self)
     
     
     def run(self):
@@ -161,6 +161,7 @@ class JobQFiller(mp.Process):
         while len(self.joblist):
             job=self.joblist.pop()
             try:
+                jobcount=len(self.joblist)
                 self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
                 queue.put(job)
                 self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
@@ -207,7 +208,7 @@ class RunNode(mp.Process,BaseManager):
     
     def build_from_rundict(self,rundict):
         data_gen=rundict['data_gen'] #how to generate the data
-        data=dg.data_gen(data_gen)
+        data=dataGenerator(data_gen)
         model_gen_dict=rundict['model_gen_dict']
         hash_id_model_dict={}
         for model_gen in model_gen_dict:
@@ -274,7 +275,7 @@ class RunNode(mp.Process,BaseManager):
                 self.logger.exception('')           
     
     
-class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
+class RunCluster(mp.Process,DBTool):
     '''
     '''
     
@@ -317,7 +318,9 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         seed(1)  
         self.nodecount=nodecount
         
-        super(RunCluster,self).__init__()
+        super().__init__()
+        DBTool.__init__(self)
+        
         
         
     def run(self,):
@@ -325,7 +328,8 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
         try:
             model_setup=self.setup.model_setup
             data_setup=self.setup.data_setup
-            list_of_run_dicts=self.setupRundictList(model_setup,data_setup)
+            list_of_run_dicts,run_record_dict=self.setup.setupRundictList(model_setup,data_setup)
+            self.addToDBDict(run_record_dict,gen=1)
         
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
             jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
@@ -340,31 +344,12 @@ class RunCluster(mp.Process,kernelcompare.KernelCompare,DBTool):
                 check_complete=self.checkComplete()
             jobqfiller.join()
             saveqdumper.join()
+            [node.join() for node in self.nodelist]
             return
         except:
             self.logger.exception('')
         
-    def setupRundictList(self,model_setup,data_setup):
-        #a run dict has a 
-        #model_gen_dict of models per instance of data_gen
-        #each of those model-data combos has a hash_id built from
-        #the model_dict and data_gen
-        run_dict_list=[]
-        run_record_dict={}
-        data_gen_list=data_setup()
-        
-        for data_gen in data_gen_list:
-            model_gen_dict={}
-            model_gen_list=model_setup()
-            for model_gen in model_gen_list:
-                run_record={'model_gen':model_gen,'data_gen':data_gen}
-                hash_id=joblib.hash(run_record)
-                run_record_dict[hash_id]=run_record
-                model_gen_dict[hash_id]=model_gen
-            run_dict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
-            run_dict_list.append(run_dict)
-        self.addToDBDict(run_record_dict,gen=1)
-        return run_dict_list
+ 
         
         
     def checkComplete(self,run_dict_list=None):

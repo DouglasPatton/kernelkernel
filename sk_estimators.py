@@ -17,20 +17,22 @@ from mylogger import myLogger
 
 
 
-class sk_estimator:
+class sk_estimator(myLogger):
     def __init__(self,):
-        self.est_dict=self.set_est_dict()
+        myLogger.__init__(self,name='sk_estimator.log')
+        self.logger.info('starting new sk_estimator log')
+        #self.est_dict=self.get_est_dict()
         
         
-    def set_est_dict(self,):
+    def get_est_dict(self,):
         fit_kwarg_dict={'regressor__clf__sample_weight':'balanced'}# all are the same now
         estimator_dict={
             #add logistic with e-net
-            'lin-reg-classifier':{'estimator':sk_est().linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
-            'linear-svc':{'estimator':linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
-            'rbf-svc':{'estimator':rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
-            'gradient-boosting-classifier':{'estimator':gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
-            'hist-gradient-boosting-classifier':{'estimator':histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'lin-reg-classifier':{'estimator':self.linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
+            'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'gradient-boosting-classifier':{'estimator':self.gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'hist-gradient-boosting-classifier':{'estimator':self.histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
         }
         return estimator_dict
     
@@ -81,11 +83,11 @@ class sk_estimator:
         outer_pipeline=TransformedTargetRegressor(transformer=binaryYTransformer(),regressor=inner_pipeline,check_inverse=False)
         
         param_grid={'regressor__clf__min_samples_leaf':[10,15,20],
-                   'regressor__l2_regularization'=np.logspace(-2,2,gridpoints)}
+                   'regressor__l2_regularization':np.logspace(-2,2,gridpoints)}
         inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
         
-    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):):
+    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):
         steps=[
             ('prep',missingValHandler()),
             #('scaler',StandardScaler()),
@@ -124,7 +126,7 @@ class sk_estimator:
             'regressor__polyfeat__degree':[2],
             'regressor__shrink_k2__selector__alpha':np.logspace(-2,2,gridpoints),
             'regressor__shrink_k2__selector__l1_ratio':np.linspace(0,1,gridpoints),
-            'regressor__shrink_k1__k_share':[1,1/2,1/8]
+            'regressor__shrink_k1__k_share':[1,1/2,1/8],
             'regressor__prep__strategy':['impute_knn_5']
         }
         
