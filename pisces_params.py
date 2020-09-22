@@ -8,14 +8,14 @@ class PiSetup:
         pdt=PiscesDataTool()
         self.modelsetupdict=dict(
             gridpoints=5,
-            inner_cv_folds=5,
-            inner_cv_reps=5,
+            inner_cv_splits=10,
+            inner_cv_reps=2,
             )
         self.initial_datagen_dict=dict(
             species=None, # set in data_setup
             data_split=dict(
                 test_share=0.1,
-                cv=dict(cv_folds=5,cv_reps=2,strategy=None),# e.g., 'balanced-HUC8'
+                cv=dict(n_folds=10,n_reps=2,strategy=None),# e.g., 'balanced-HUC8'
                 drop_vars=[],
                 loc_vars=['HUC12'],
                 

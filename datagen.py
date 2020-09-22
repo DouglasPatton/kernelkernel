@@ -52,7 +52,7 @@ class datagen(PiscesDataTool,myLogger):
         else:
             self.cv=None
             
-        def get_split_iterator(self,):
+    def get_split_iterator(self,):
         if self.cv:
             return self.cv.split(X_train,y_train)
         else:

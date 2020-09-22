@@ -14,21 +14,27 @@ import logging
 import numpy as np
 from mylogger import myLogger
 
-class SKToolInitializer:
+class SKToolInitializer(myLogger):
     def __init__(self,model_gen):
+        myLogger.__init__(self,name='skToolInitializer.log')
+        self.logger.info('starting skToolInitializer logger')
         self.model_gen=model_gen
         self.scorer_list=['f1_micro','precision_micro','recall_micro','accuracy']
         
     def run(self,datagen_obj):
         sktool=SkTool(self.model_gen)
         if datagen_obj.cv:
+            self.logger.info(f'starting cv for sktool.model_gen["name"]{sktool.model_gen["name"]}')
             return cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_list)
+        else:
+            self.logger.info(f'starting simple fit for sktool.model_gen["name"]{sktool.model_gen["name"]}')
+            return sktool.fit(datagen_obj.X_train,datagen_obj.y_train)
 
     
 class SkTool(BaseEstimator,TransformerMixin,myLogger,):
     def __init__(self,model_gen=None):
-        myLogger.__init__(self,name='skTool.log')
-        self.logger.info('starting skTool logger')
+        myLogger.__init__(self,name='SkTool.log')
+        self.logger.info('starting SkTool logger')
         self.model_gen=model_gen
         
     def transform(self,X,y=None):

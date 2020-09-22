@@ -34,7 +34,7 @@ class sk_estimator:
         }
         return estimator_dict
     
-    def linSvcClf(self,gridpoints=3):
+    def linSvcClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):
         steps=[
             ('prep',missingValHandler()),
             ('scaler',StandardScaler()),
@@ -48,16 +48,16 @@ class sk_estimator:
         
         param_grid={
             'regressor__clf__C':np.logspace(-2,1,gridpoints),
-            'regressor__shrink_k1__k_share':list(range(1,gridpoints+1)),
-            'regressor__prep__strategy':['impute_middle','impute_knn_10']
+            'regressor__shrink_k1__k_share':[1,1/2,1/8],
+            'regressor__prep__strategy':['impute_knn_5']
         }
-        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
     
     
     
     
-    def rbfSvcClf(self,gridpoints=6):
+    def rbfSvcClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):
         steps=[
             ('prep',missingValHandler()),
             ('scaler',StandardScaler()),
@@ -70,23 +70,24 @@ class sk_estimator:
         param_grid={
             'regressor__clf__C':np.logspace(-2,2,gridpoints), 
             'regressor__clf__gamma':np.logspace(-1,0.5,gridpoints),
-            'regressor__prep__strategy':['impute_middle','impute_knn_10']
+            'regressor__prep__strategy':['impute_knn_5']
         }
-        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
     
-    def histGradientBoostingClf(selfk):
+    def histGradientBoostingClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):
         steps=[('clf',HistGradientBoostingClassifier())]
         inner_pipeline=Pipeline(steps=steps)
         outer_pipeline=TransformedTargetRegressor(transformer=binaryYTransformer(),regressor=inner_pipeline,check_inverse=False)
         
-        param_grid={'regressor__clf__min_samples_leaf':[10,15,20]}
-        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=1, random_state=0)
+        param_grid={'regressor__clf__min_samples_leaf':[10,15,20],
+                   'regressor__l2_regularization'=np.logspace(-2,2,gridpoints)}
+        inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
         
-    def gradientBoostingClf(self,):
+    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):):
         steps=[
-            ('prep',missingValHandler(strategy='pass-through')),
+            ('prep',missingValHandler()),
             #('scaler',StandardScaler()),
             ('clf',GradientBoostingClassifier(random_state=0,n_estimators=10000,max_depth=4,ccp_alpha=0))]
         
@@ -97,12 +98,12 @@ class sk_estimator:
             'regressor__clf__C':np.logspace(-2,2,gridpoints), 
             'regressor__clf__ccp_alpha':np.logspace(-3,-1,gridpoints),
         }
-        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
         
     
     
-    def linRegSupremeClf(self,gridpoints=3,binary_threshold=0):
+    def linRegSupremeClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,):
         steps=[
             ('prep',missingValHandler()),
             ('scaler',StandardScaler()),
@@ -111,10 +112,10 @@ class sk_estimator:
 
             ('drop_constant',dropConst()),
             ('shrink_k2',shrinkBigKTransformer(selector=ElasticNet())), # pick from all of those options
-            ('clf',LinearSVR(random_state=0,tol=1e-4,max_iter=50000))]
+            ('clf',LinearRegression())]
 
         X_T_pipe=Pipeline(steps=steps)
-        inner_cv=RepeatedStratifiedKFold(n_splits=10, n_repeats=2, random_state=0)
+        inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         
         
         
@@ -123,8 +124,8 @@ class sk_estimator:
             'regressor__polyfeat__degree':[2],
             'regressor__shrink_k2__selector__alpha':np.logspace(-2,2,gridpoints),
             'regressor__shrink_k2__selector__l1_ratio':np.linspace(0,1,gridpoints),
-            'regressor__shrink_k1__k_share':list(range(1,gridpoints+1)),
-            'regressor__prep__strategy':['impute_middle','impute_knn_10']
+            'regressor__shrink_k1__k_share':[1,1/2,1/8]
+            'regressor__prep__strategy':['impute_knn_5']
         }
         
 
