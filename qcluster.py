@@ -152,10 +152,11 @@ class RunNode(mp.Process,BaseManager,myLogger):
     def build_from_rundict(self,rundict):
         data_gen=rundict['data_gen'] #how to generate the data
         data=dataGenerator(data_gen)
-        model_gen_dict=rundict['model_gen_dict']
+        model_gen_dict=rundict['model_gen_dict'] # {hash_id:data_gen...}
         hash_id_model_dict={}
         for hash_id,model_gen in model_gen_dict.items():
-            hash_id_model_dict[hash_id]=SKToolInitializer(model_gen) # hashid based on model_gen and data_gen
+            model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen)
+            hash_id_model_dict[hash_id]=model_dict# hashid based on model_gen and data_gen
         return data,hash_id_model_dict
     
     def run(self,):
@@ -191,21 +192,24 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 if havejob:
                     if type(rundict) is str:
                         if rundict=='shutdown':
+                            jobq.put(rundict)
                             return
                     data,hash_id_model_dict=self.build_from_rundict(rundict) # each estimator contains rundict
-                    for hash_id,model in hash_id_model_dict.items():
+                    for hash_id,model_dict in hash_id_model_dict.items():
                         try:
-                            model.run(data)
+                            success=0
+                            model_dict['model'].run(data)
+                            success=1
                         except:
-                            self.logger.exception('error for rundict:{rundict}')
-                        savetup=(hash_id,model)
+                            self.logger.exception('error for model_dict:{model_dict}')
+                        savetup=(hash_id,model_dict)
                         qtry=0
-                        while True:
-                            self.logger.debug(f'adding model_save_list to saveq')
+                        while success:
+                            self.logger.debug(f'adding save_tup to saveq')
                             try:
                                 qtry+=1
                                 saveq.put(savetup)
-                                self.logger.debug(f'model_save_list sucesfully added to saveq')
+                                self.logger.debug(f'save_tup sucesfully added to saveq')
                                 break
                             except:
                                 if not saveq.full() and qtry>3:
@@ -261,9 +265,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         try:
             if self.qdict is None:
                 self.qdict=self.getqdict()
-            model_setup=self.setup.model_setup
-            data_setup=self.setup.data_setup
-            list_of_run_dicts,run_record_dict=self.setup.setupRundictList(model_setup,data_setup)
+            list_of_run_dicts,run_record_dict=self.setup.setupRundictList()
             self.addToDBDict(run_record_dict,gen=1)
         
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
@@ -271,15 +273,15 @@ class RunCluster(mp.Process,DBTool,myLogger):
             jobqfiller.run()
             saveqdumper=SaveQDumper(self.qdict['saveq'])
             
-            self.logger.debug('back from jobqfiller.run()')
             check_complete=0
             while not check_complete:
                 sleep(5)
                 saveqdumper.run()
                 check_complete=self.checkComplete()
-            jobqfiller.join()
+            jobqfiller.join() 
             saveqdumper.join()
             [node.join() for node in self.nodelist]
+            self.qdict['jobq'].put('shutdown')
             return
         except:
             self.logger.exception('')

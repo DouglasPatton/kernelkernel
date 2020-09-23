@@ -48,18 +48,18 @@ class PiSetup:
         return data_gen_list
             
     
-    def setupRundictList(self,model_setup,data_setup):
+    def setupRundictList(self,):
         #a run dict has a 
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
         run_dict_list=[]
         run_record_dict={}
-        data_gen_list=data_setup()
+        data_gen_list=self.data_setup()
         
         for data_gen in data_gen_list:
             model_gen_dict={}
-            model_gen_list=model_setup()
+            model_gen_list=self.model_setup()
             for model_gen in model_gen_list:
                 run_record={'model_gen':model_gen,'data_gen':data_gen}
                 hash_id=joblib.hash(run_record)
