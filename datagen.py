@@ -26,11 +26,17 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.df=self.retrievespeciesdata(species_name=species)
         elif type(species) is int:
             self.df=self.retrievespeciesdata(species_idx=species)
-    
+        all_vars=list(self.df.columns)
+        
+        col_convert={}
+        for col in all_vars:
+            if self.df[col].dtype=='object':
+                self.logger.warning(f'converting {col} to float')
+                col_convert[col]='float64'
+        self.df=self.df.astype(col_convert)
         data_split_dict=self.datagen_dict['data_split']
-        if data_split_dict['cv']:
-            cv_kwargs={key:val for key,val in data_split_dict['cv'].items() if not val is None}
-            self.cv=RepeatedKFold(**cv_kwargs)    
+        test_share=data_split_dict['test_share']
+        
         y_name='presence'
         loc_vars=datagen_dict['loc_vars']
         drop_vars=datagen_dict['drop_vars']
@@ -40,15 +46,16 @@ class dataGenerator(PiscesDataTool,myLogger):
         X_df=self.df.loc[:,self.x_vars]
         y_df=self.df.loc[:,y_name]
         if test_share:
-            X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=test_share, random_state=rs)
+            X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=test_share, random_state=0)
         else:
             X_train, X_test, y_train, y_test = (X_df, None, y_df, None)
         self.X_train=X_train
         self.X_test=X_test
         self.y_train=y_train
         self.y_test=y_test
-        if self.datagendict['cv']:
-            self.cv=self.RepeatedStratifiedKFold(**self.datagendict['cv'])
+        if data_split_dict['cv']:
+            cv_kwargs={key:val for key,val in data_split_dict['cv'].items() if not val is None}
+            self.cv=RepeatedKFold(**cv_kwargs)    
         else:
             self.cv=None
             

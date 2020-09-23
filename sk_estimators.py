@@ -25,7 +25,7 @@ class sk_estimator(myLogger):
         
         
     def get_est_dict(self,):
-        fit_kwarg_dict={'regressor__clf__sample_weight':'balanced'}# all are the same now
+        fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now
         estimator_dict={
             #add logistic with e-net
             'lin-reg-classifier':{'estimator':self.linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
@@ -83,7 +83,7 @@ class sk_estimator(myLogger):
         outer_pipeline=TransformedTargetRegressor(transformer=binaryYTransformer(),regressor=inner_pipeline,check_inverse=False)
         
         param_grid={'regressor__clf__min_samples_leaf':[10,15,20],
-                   'regressor__l2_regularization':np.logspace(-2,2,gridpoints)}
+                   'regressor__clf__l2_regularization':np.logspace(-2,2,gridpoints)}
         inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
         
@@ -91,13 +91,13 @@ class sk_estimator(myLogger):
         steps=[
             ('prep',missingValHandler()),
             #('scaler',StandardScaler()),
-            ('clf',GradientBoostingClassifier(random_state=0,n_estimators=10000,max_depth=4,ccp_alpha=0))]
+            ('clf',GradientBoostingClassifier(random_state=0,n_estimators=500,max_depth=4,ccp_alpha=0))]
         
         inner_pipeline=Pipeline(steps=steps)
         outer_pipeline=TransformedTargetRegressor(transformer=binaryYTransformer(),regressor=inner_pipeline,check_inverse=False)
         
         param_grid={
-            'regressor__clf__C':np.logspace(-2,2,gridpoints), 
+            #'regressor__clf__C':np.logspace(-2,2,gridpoints), 
             'regressor__clf__ccp_alpha':np.logspace(-3,-1,gridpoints),
         }
         inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
@@ -132,7 +132,7 @@ class sk_estimator(myLogger):
         
 
         
-        lin_reg_Xy_transform=GridSearchCV(Y_T_X_T_pipe,param_grid=Y_T__param_grid,cv=inner_cv,n_jobs=-1,scoring='f1_micro')
+        lin_reg_Xy_transform=GridSearchCV(Y_T_X_T_pipe,param_grid=Y_T__param_grid,cv=inner_cv,scoring='f1_micro')
 
         return lin_reg_Xy_transform
     
@@ -144,16 +144,21 @@ if __name__=="__main__":
     y01=binaryYTransformer().fit(y).transform(y)
     X_train, X_test, y_train, y_test = train_test_split(X, y01, test_size=0.2, random_state=0)
     
-    lrs=sk_estimator().gradient_boosting_classifier()                                                                          
+    sk_est=sk_estimator()
+    est_dict=sk_est.get_est_dict()
+    for est_name,est_setup_dict in est_dict.items():
+        est=est_setup_dict['estimator']()
+        est.fit(X_train,y_train)
+        s=est.score(X_train,y_train)
+        s_out=est.score(X_test,y_test)
+        print(f'for {est_name}')
+        print(f'    fit r2 score: {s}')
+        print(f'    test r2 score: {s_out}')
+    
     #lrs=sk_estimator().rbf_svc_cv(gridpoints=3)                                                                          
     #lrs=sk_estimator().linear_svc_cv(gridpoints=3)                                     
     #lrs=sk_estimator().binLinRegSupreme(gridpoints=3)
-    lrs.fit(X_train,y_train)
-    s=lrs.score(X_train,y_train)
     
-    s_out=lrs.score(X_test,y_test)
-    print(f'fit r2 score: {s}')
-    print(f'test r2 score: {s_out}')
     #cv=cross_validate(lrs,X,y01,scoring='r2',cv=2)
     #print(cv)
     #print(cv['test_score'])    

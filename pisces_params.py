@@ -11,19 +11,18 @@ class PiSetup:
         self.pdt=PiscesDataTool()
         self.model_setup_dict=dict(
             gridpoints=5,
-            inner_cv_splits=10,
-            inner_cv_reps=2,
+            inner_cv_splits=5,
+            inner_cv_reps=1,
             )
         self.initial_datagen_dict=dict(
             source='Pisces',
             species=None, # set in data_setup
             data_split=dict(
                 test_share=0.1,
-                cv=dict(n_folds=10,n_reps=2,strategy=None),# e.g., 'balanced-HUC8'
-                drop_vars=[],
-                loc_vars=['HUC12'],
-                
-                )
+                cv=dict(n_splits=5,n_repeats=1,strategy=None),# e.g., 'balanced-HUC8'
+            ),
+            drop_vars=[],
+            loc_vars=['HUC12'],
             )
     
     def model_setup(self,):

@@ -18,8 +18,11 @@ from datagen import dataGenerator
 from pisces_params import PiSetup,MonteSetup
 
 #class QueueManager(BaseManager): pass
-class DBTool:
+class DBTool(myLogger):
     def __init__(self):
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
         resultsdir=os.path.join(os.getcwd(),'results')
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
@@ -36,17 +39,21 @@ class DBTool:
         with db() as dbdict:
             try:
                 if type(save_list) is dict:
-                    save_list=[save_list]
-                for result in save_list:
-                    for key,val in result.items():
+                    for key,val in save_list.items():
                         dbdict[key]=val
+                if type(save_list) is list:
+                    if type(save_list[0]) is tuple:
+                        for key,val in save_list:
+                            dbdict[key]=val
+                    else:
+                        assert False, f'expecting tuple for save_list first item, but type(save_list[0]):{type(save_list[0])}'
             except:
                 self.logger.exception('')
             dbdict.commit()
         return  
         
 
-class TheQManager(mp.Process,BaseManager):
+class TheQManager(mp.Process,BaseManager,myLogger):
     def __init__(self,address,qdict):
         self.netaddress=address
         self.qdict=qdict
@@ -54,15 +61,9 @@ class TheQManager(mp.Process,BaseManager):
         super(TheQManager,self).__init__()
         
     def run(self):
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'TheQManager-log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**6, backupCount=20)],
-            level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
         #for qname in self.qdict:
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
@@ -79,20 +80,13 @@ class TheQManager(mp.Process,BaseManager):
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
-class SaveQDumper(mp.Process,DBTool):
+class SaveQDumper(mp.Process,DBTool,myLogger):
     def __init__(self,q):
         self.q=q
         #fself.netaddress=address
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'SaveQDumper-log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
-        self.logger.info('SaveQDumper starting')
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
         #self.BaseManager=BaseManager
         #super(SaveQDumper,self).__init__()
         super().__init__()
@@ -125,29 +119,22 @@ class SaveQDumper(mp.Process,DBTool):
                         if save_tup=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    self.addtoDBdict([save_tup])
+                    self.addToDBDict([save_tup])
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
             
             
             
-class JobQFiller(mp.Process):
+class JobQFiller(mp.Process,myLogger):
     '''
     runmaster calls this and passes the full list_of_rundicts to it
     '''
     def __init__(self,q,joblist):
         self.q=q
         self.joblist=joblist
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'JobQFiller-log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-        self.logger = logging.getLogger(handlername)
-        self.logger.info('JobQFiller starting')
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
         super().__init__()
     
     
@@ -178,27 +165,15 @@ class JobQFiller(mp.Process):
 
                 
 
-class RunNode(mp.Process,BaseManager):
+class RunNode(mp.Process,BaseManager,myLogger):
     def __init__(self,local_run=None,source=None,qdict=None):
-        try:
-            self.logger=logging.getLogger(__name__)
-            self.logger.info('starting RunNode object')
-        except:
-            logdir=os.path.join(os.getcwd(),'log')
-            if not os.path.exists(logdir): os.mkdir(logdir)
-            handlername=os.path.join(logdir,f'RunNode-log')
-            logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
-                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                datefmt='%Y-%m-%dT%H:%M:%S')
-            self.logger = logging.getLogger(handlername)
-            self.logger.info('RunNode logging')
-        
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
         self.qdict=qdict
         self.source=source
         if not local_run:
-            self.netaddress=('192.168.1.45',50002)
+            self.netaddress=('192.168.1.83',50002)
             self.BaseManager=BaseManager
         super().__init__()
     
@@ -211,8 +186,8 @@ class RunNode(mp.Process,BaseManager):
         data=dataGenerator(data_gen)
         model_gen_dict=rundict['model_gen_dict']
         hash_id_model_dict={}
-        for model_gen in model_gen_dict:
-            hash_id_model_dict[model_gen['hash_id']]=SKToolInitializer(model_gen) # hashid based on model_gen and data_gen
+        for hash_id,model_gen in model_gen_dict.items():
+            hash_id_model_dict[hash_id]=SKToolInitializer(model_gen) # hashid based on model_gen and data_gen
         return data,hash_id_model_dict
     
     def run(self,):
@@ -275,30 +250,20 @@ class RunNode(mp.Process,BaseManager):
                 self.logger.exception('')           
     
     
-class RunCluster(mp.Process,DBTool):
+class RunCluster(mp.Process,DBTool,myLogger):
     '''
     '''
     
     def __init__(self,source=None,local_run=None,nodecount=0,qdict=None):
-        try:
-            self.logger=logging.getLogger(__name__)
-            self.logger.info('starting RunCluster object')
-        except:
-            logdir=os.path.join(os.getcwd(),'log')
-            if not os.path.exists(logdir): os.mkdir(logdir)
-            handlername=os.path.join(logdir,f'mycluster_.log')
-            logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
-                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                datefmt='%Y-%m-%dT%H:%M:%S')
-            self.logger = logging.getLogger(handlername)
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
         
         self.qdict=qdict 
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
-            self.netaddress=('192.168.1.45',50002)
+            self.netaddress=('192.168.1.83',50002)
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
@@ -326,6 +291,8 @@ class RunCluster(mp.Process,DBTool):
     def run(self,):
         self.logger.debug('master starting up')
         try:
+            if self.qdict is None:
+                self.qdict=self.getqdict()
             model_setup=self.setup.model_setup
             data_setup=self.setup.data_setup
             list_of_run_dicts,run_record_dict=self.setup.setupRundictList(model_setup,data_setup)
@@ -368,10 +335,6 @@ class RunCluster(mp.Process,DBTool):
                 if not run_dict_list:
                     return False
                     
-        
-            
-    
-            
             
     def getqdict(self):
         BaseManager.register('jobq')
@@ -383,7 +346,6 @@ class RunCluster(mp.Process,DBTool):
         return {'saveq':saveq,'jobq':jobq}    
             
                 
-           
 
 if __name__=="__main__":
     RunNode(local_run=0)

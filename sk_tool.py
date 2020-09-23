@@ -13,6 +13,9 @@ from sk_estimators import sk_estimator as sk_est
 import logging
 import numpy as np
 from mylogger import myLogger
+import re
+from warnings import filterwarnings
+filterwarnings('ignore')
 
 class SKToolInitializer(myLogger):
     def __init__(self,model_gen):
@@ -47,19 +50,25 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
      
    
     def fit(self,X,y):
-        modelgen=self.model_gen
-        est_name=modelgen['name']
-        self.model_kwargs=modelgen['kwargs']
-        sk_estimator=sk_est()
-        est_dict=sk_estimator.get_est_dict()
-        self.est=est_dict[est_name]['estimator']
-        fit_kwarg_dict=est_dict[est_name]['fit_kwarg_dict']
-        self.fit_kwargs_=self.make_fit_kwargs(fit_kwarg_dict,X,y)
-        self.n_,self.k_=X.shape
-        #self.logger(f'self.k_:{self.k_}')
-        self.model_=self.est(**self.model_kwargs)
-        self.model_.fit(X,y,**self.fit_kwargs_)
-        return self
+        try:
+            modelgen=self.model_gen
+            est_name=modelgen['name']
+            self.model_kwargs=modelgen['kwargs']
+            sk_estimator=sk_est()
+            est_dict=sk_estimator.get_est_dict()
+            self.est=est_dict[est_name]['estimator']
+            fit_kwarg_dict=est_dict[est_name]['fit_kwarg_dict']
+            self.fit_kwargs_=self.make_fit_kwargs(fit_kwarg_dict,X,y)
+            self.n_,self.k_=X.shape
+            #self.logger(f'self.k_:{self.k_}')
+            self.model_=self.est(**self.model_kwargs)
+            self.logger.info(f'starting fit of {est_name}')
+            self.model_.fit(X,y,**self.fit_kwargs_)
+            self.logger.info(f'completed fit of {est_name}')
+            return self
+        except:
+            self.logger.exception('fit error')
+            self.logger.error(f'X.shape:{X.shape}, X:{X}')
     
     
     

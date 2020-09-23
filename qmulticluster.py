@@ -4,25 +4,17 @@ from random import randint,seed
 import os,sys#,psutil
 import qcluster
 from datetime import datetime
-import logging,logging.config
+from mylogger import myLogger
 #import yaml
 from numpy import log
 
 
-class mypool:
+class mypool(myLogger):
     def __init__(self,source='monte', nodecount=1,includemaster=1,local_run='no'):
-
-        logdir=os.path.join(os.getcwd(),'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=os.path.join(logdir,f'multicluster.log')
-        logging.basicConfig(
-            handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=100)],
-                level=logging.WARNING,
-            format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-            datefmt='%Y-%m-%dT%H:%M:%S')
-      
-        #handler=logging.RotatingFileHandler(os.path.join(logdir,handlername),maxBytes=8000, backupCount=5)
-        self.logger = logging.getLogger(handlername)
+        func_name=f'{sys._getframe().f_code.co_name}'
+        myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger.info(f'starting {func_name} logger')
+        
         self.includemaster=includemaster
         self.source=source
 
