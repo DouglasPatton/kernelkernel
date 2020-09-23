@@ -43,7 +43,7 @@ class dataGenerator(PiscesDataTool,myLogger):
         drop_vars.extend(loc_vars)
         drop_vars.append(y_name)
         self.x_vars=[var for var in all_vars if var not in drop_vars]
-        self.datagen_dict['x_vars']=x_vars
+        self.datagen_dict['x_vars']=self.x_vars
         X_df=self.df.loc[:,self.x_vars]
         y_df=self.df.loc[:,y_name]
         if test_share:

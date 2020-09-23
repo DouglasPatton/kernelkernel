@@ -11,7 +11,7 @@ from numpy import log
 
 class mypool(myLogger):
     def __init__(self,source='monte', nodecount=1,includemaster=1,local_run='no'):
-        func_name=f'{sys._getframe().f_code.co_name}'
+        func_name='multicluster'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         

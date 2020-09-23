@@ -6,7 +6,6 @@ import datetime
 import traceback
 import shutil
 from random import randint,seed,shuffle
-import logging
 from helpers import Helper
 import multiprocessing as mp
 from multiprocessing.managers import BaseManager
@@ -17,6 +16,7 @@ from  sk_tool import SKToolInitializer
 from datagen import dataGenerator 
 from pisces_params import PiSetup,MonteSetup
 from pi_db_tool import DBTool
+from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 
         
@@ -155,7 +155,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
         model_gen_dict=rundict['model_gen_dict'] # {hash_id:data_gen...}
         hash_id_model_dict={}
         for hash_id,model_gen in model_gen_dict.items():
-            model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen)
+            model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
             hash_id_model_dict[hash_id]=model_dict# hashid based on model_gen and data_gen
         return data,hash_id_model_dict
     
@@ -275,7 +275,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             
             check_complete=0
             while not check_complete:
-                sleep(5)
+                sleep(30)
                 saveqdumper.run()
                 check_complete=self.checkComplete()
             jobqfiller.join() 

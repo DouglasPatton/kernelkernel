@@ -10,7 +10,7 @@ class PiSetup:
     def __init__(self,):
         self.pdt=PiscesDataTool()
         self.model_setup_dict=dict(
-            gridpoints=5,
+            gridpoints=3,
             inner_cv_splits=5,
             inner_cv_reps=1,
             )
