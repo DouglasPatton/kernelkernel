@@ -22,7 +22,10 @@ class SKToolInitializer(myLogger):
         myLogger.__init__(self,name='skToolInitializer.log')
         self.logger.info('starting skToolInitializer logger')
         self.model_gen=model_gen
-        self.scorer_list=['f1_micro','precision_micro','recall_micro','accuracy']
+        self.scorer_list=self.get_scorer_lists
+        
+    def get_scorer_list(self):
+        return ['f1_micro','precision_micro','recall_micro','accuracy']
         
     def run(self,datagen_obj):
         sktool=SkTool(self.model_gen)
@@ -78,8 +81,10 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             if re.search('sample_weight',key):
                 if fit_kwarg_dict[key] =='balanced':
                     fit_kwarg_dict[key]=self.make_sample_weight(y)
+                elif fit_kwarg_dict[key] is None:
+                    fit_kwarg_dict.pop(key)
                 else:
-                    assert False,f'expecting sample_weights to be "balanced" but sample_weight:{fit_kwarg_dict[key]} at key:{key}'
+                    assert False,f'expecting sample_weights to be None or "balanced" but sample_weight:{fit_kwarg_dict[key]} at key:{key}'
         return fit_kwarg_dict
     
     def make_sample_weight(self,y):
