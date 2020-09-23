@@ -7,7 +7,7 @@ import multiprocessing as mp
 import geopandas as gpd
 import logging
 import pandas as pd
-from geogtools import GeogTool as gt
+#from geogtools import GeogTool as gt
 from mylogger import myLogger
 from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01
 import re

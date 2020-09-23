@@ -5,11 +5,11 @@ import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
-import geopandas as gpd
+#import geopandas as gpd
 import logging
 import traceback
 import pandas as pd
-#from geogtools import GeogTool as gt
+#from geogtools import GeogTool as gt # turned off after data bult
 from mylogger import myLogger
 
         
