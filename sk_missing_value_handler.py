@@ -41,7 +41,7 @@ class missingValHandler(BaseEstimator,TransformerMixin):
                     self.logger.exception(f'error summing nulls for y, type(y):{type(y)}')
                 else:
                     pass
-        self.logger.info(f'x_nan_count:{x_nan_count}, y_nan_count:{y_nan_count}')
+        #self.logger.info(f'x_nan_count:{x_nan_count}, y_nan_count:{y_nan_count}')
         return self
         
     def transform(self,X,y=None):
