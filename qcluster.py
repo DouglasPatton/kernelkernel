@@ -184,7 +184,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 jobsuccess=0
                 try:
                     self.logger.debug('RunNode about to check jobq')
-                    rundict=jobq.get()
+                    rundict=jobq.get(True,10)
                     self.logger.debug(f'RunNode has job, rundict: {rundict}')
                     havejob=1
                 except:
@@ -231,7 +231,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         
-        self.qdict=qdict 
+        
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
@@ -239,9 +239,12 @@ class RunCluster(mp.Process,DBTool,myLogger):
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
+        self.qdict=qdict 
+        if self.qdict is None:
+            self.qdict=self.getqdict()
         if nodecount:
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
-            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=qdict) for _ in range(nodecount)]
+            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
         if source is None:
             self.source='pisces'
@@ -263,8 +266,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
     def run(self,):
         self.logger.debug('master starting up')
         try:
-            if self.qdict is None:
-                self.qdict=self.getqdict()
+            
             list_of_run_dicts,run_record_dict=self.setup.setupRundictList()
             self.addToDBDict(run_record_dict,gen=1)
         
