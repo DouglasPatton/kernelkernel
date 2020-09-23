@@ -87,6 +87,17 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                         if save_tup=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
+                    try:
+                        species=save_tup[1]['data_gen']['species']
+                    except:
+                        self.logger.info("trying to get species from savetup")
+                        species=None
+                    try:
+                        model_name=save_tup[1]['model_gen']['name']
+                    except:
+                        self.logger.exception('try to get model name from savetup')
+                        model_name=None
+                    self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}')
                     self.addToDBDict([save_tup])
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')

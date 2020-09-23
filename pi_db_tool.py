@@ -13,9 +13,18 @@ class DBTool(myLogger,):
             os.mkdir(resultsdir)
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
-        self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
-        self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
-        self.postfitDBdict=lambda name:SqliteDict(filename=self.postfitDBdictpath,tablename=name)
+        #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
+        #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
+        #self.postfitDBdict=lambda name:SqliteDict(filename=self.postfitDBdictpath,tablename=name)
+    
+    def resultsDBdict(self):
+        return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
+    
+    def genDBdict(self):
+        return SqliteDict(filename=self.resultsDBdictpath,tablename='gen')
+    
+    def postfitDBdict(self,name):
+        return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
     
     def addToDBDict(self,save_list,gen=0,post_fit_tablename=0):
         if gen:
