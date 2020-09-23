@@ -30,7 +30,7 @@ class PiscesDataTool(myLogger):
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
-        self.gt=gt()
+        #self.gt=gt()
                 
     
     def retrievespeciesdata(self,species_idx=None,species_name=None):
