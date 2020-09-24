@@ -31,7 +31,7 @@ class PiSetup(myLogger):
     def model_setup(self,):
         #sk_tool uses model_gen to create the estimator
         model_gen_list=[]
-        for est_name in est_dict.keys():
+        for est_name in self.est_dict.keys():
             kwargs=self.model_setup_dict
             model_gen={'kwargs':kwargs,'name':est_name}
             model_gen_list.append(model_gen)
