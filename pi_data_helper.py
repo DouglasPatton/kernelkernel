@@ -50,6 +50,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                     
                     comidlist_i=[comid for comid in specieshuc_allcomid if comid in self.sitedatacomid_dict]
                     comid_idx=[idx for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict]
+                    c_count=len(comid_idx)
                     keylist=[]
                     for comid in comidlist_i:
                         keylist.extend(list(self.sitedatacomid_dict[comid].keys()))
@@ -81,10 +82,14 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                             except:
                                 self.logger.exception('')
                                 assert False,'unexpected error'
+                                val=np.nan
                             if not key in vardatadict:
                                 vardatadict[key]=[val]
                             else:
                                 vardatadict[key].append(val)
+                    for var,obs_list in vardatadict.items():
+                        if len(obs_list)!=c_count:
+                            self.logger.critical(f'for {spec_i}, var:{var} len is {len(obs_list)} but expecting {c_count}')
                     species_df=pd.DataFrame(data=vardatadict,index=comidlist_i)
                     #self.logger.warning(f'created df for species:{spec_i}')
                     #self.logger.info(f'for species:{spec_i} df.head(): {species_df.head()}')

@@ -4,10 +4,10 @@ import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
-import geopandas as gpd
+#mport geopandas as gpd
 import logging
 import pandas as pd
-#from geogtools import GeogTool as gt
+from geogtools import GeogTool as gt
 from mylogger import myLogger
 from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01
 import re
@@ -18,6 +18,7 @@ class PiscesDataTool(myLogger):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
         self.savedir=os.path.join(os.getcwd(),'data_tool')
+        if not os.path.exists(self.savedir): os.mkdir(self.savedir)
         self.processcount=11
         try: self.logger
         except:
@@ -30,7 +31,7 @@ class PiscesDataTool(myLogger):
                 format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
                 datefmt='%Y-%m-%dT%H:%M:%S')
             self.logger = logging.getLogger(handlername)
-        #self.gt=gt()
+        #slf.gt=gt() # called later
                 
     
     def retrievespeciesdata(self,species_idx=None,species_name=None):
@@ -394,9 +395,10 @@ class PiscesDataTool(myLogger):
         comidcount=len(self.comidlist)
         com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
         comidlistlist=[]
+        geogtool=gt()
         for i in range(self.processcount):
             comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-        args_list=[[i,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,self.gt,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
+        args_list=[[i,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,geogtool,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
         
         outlist=self.runAsMultiProc(MpSearchComidHuc12,args_list)
         comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
