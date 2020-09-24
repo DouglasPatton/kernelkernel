@@ -51,6 +51,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                     comidlist_i=[comid for comid in specieshuc_allcomid if comid in self.sitedatacomid_dict]
                     comid_idx=[idx for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict]
                     c_count=len(comid_idx)
+                    assert len(comidlist_i)==len(comid_idx),f'expecting equal lengths but len(comidlist_i):{len(comidlist_i)}!=len(comid_idx):{len(comid_idx)}'
                     keylist=[]
                     for comid in comidlist_i:
                         keylist.extend(list(self.sitedatacomid_dict[comid].keys()))
@@ -87,9 +88,16 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                                 vardatadict[key]=[val]
                             else:
                                 vardatadict[key].append(val)
+                    self.logger.info(f'starting verificationo of length of data for {spec_i}')  
+                    v=0
                     for var,obs_list in vardatadict.items():
                         if len(obs_list)!=c_count:
+                            v+=1
                             self.logger.critical(f'for {spec_i}, var:{var} len is {len(obs_list)} but expecting {c_count}')
+                    if v:
+                        self.logger.info(f'{v} problems came up for {spec_i}') 
+                    else:
+                        self.logger.info(f'data built for {spec_i} with no length errors')
                     species_df=pd.DataFrame(data=vardatadict,index=comidlist_i)
                     #self.logger.warning(f'created df for species:{spec_i}')
                     #self.logger.info(f'for species:{spec_i} df.head(): {species_df.head()}')
