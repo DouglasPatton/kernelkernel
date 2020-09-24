@@ -71,7 +71,7 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             return self
         except:
             self.logger.exception('fit error')
-            self.logger.error(f'X.shape:{X.shape}, X:{X}')
+            self.logger.error(f'X.shape:{X.shape},y.shape:{y.shape},y:{y}, X:{X}')
     
     
     
