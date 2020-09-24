@@ -11,6 +11,7 @@ class PiSetup(myLogger):
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
         self.pdt=PiscesDataTool()
+        self.est_dict=sk_estimator().get_est_dict()
         self.model_setup_dict=dict(
             gridpoints=3,
             inner_cv_splits=5,
@@ -29,8 +30,6 @@ class PiSetup(myLogger):
     
     def model_setup(self,):
         #sk_tool uses model_gen to create the estimator
-        
-        est_dict=sk_estimator().get_est_dict()
         model_gen_list=[]
         for est_name in est_dict.keys():
             kwargs=self.model_setup_dict
