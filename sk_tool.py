@@ -22,7 +22,7 @@ class SKToolInitializer(myLogger):
         myLogger.__init__(self,name='skToolInitializer.log')
         self.logger.info('starting skToolInitializer logger')
         self.model_gen=model_gen
-        self.scorer_list=self.get_scorer_lists
+        self.scorer_list=self.get_scorer_list()
         
     def get_scorer_list(self):
         return ['f1_micro','precision_micro','recall_micro','accuracy']
