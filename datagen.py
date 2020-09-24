@@ -50,7 +50,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=test_share, random_state=0)
         else:
             X_train, X_test, y_train, y_test = (X_df, None, y_df, None)
-        self.logger.info(f'for {species} X_train.shape:{X_train.shape},y_train.shape:{y_train.shape}'
+        self.logger.info(f'for {species} X_train.shape:{X_train.shape},y_train.shape:{y_train.shape}')
         self.X_train=X_train
         self.X_test=X_test
         self.y_train=y_train

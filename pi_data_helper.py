@@ -88,7 +88,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                                 vardatadict[key]=[val]
                             else:
                                 vardatadict[key].append(val)
-                    self.logger.info(f'starting verificationo of length of data for {spec_i}')  
+                    self.logger.info(f'starting verification of length of data for {spec_i}')  
                     v=0
                     for var,obs_list in vardatadict.items():
                         if len(obs_list)!=c_count:
