@@ -15,7 +15,7 @@ from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logmin
 
 class missingValHandler(BaseEstimator,TransformerMixin):
     # https://scikit-learn.org/stable/auto_examples/compose/plot_column_transformer_mixed_types.html#use-columntransformer-by-selecting-column-by-names
-    def __init__(self,strategy='drop_row',transformer=None):
+    def __init__(self,strategy='impute_middle',transformer=None):
         self.strategy=strategy
         self.transformer=transformer
         self.logger=logging.getLogger()

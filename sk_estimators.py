@@ -99,6 +99,7 @@ class sk_estimator(myLogger):
         param_grid={
             #'regressor__clf__C':np.logspace(-2,2,gridpoints), 
             'regressor__clf__ccp_alpha':np.logspace(-3,-1,gridpoints),
+            'regressor__prep__strategy':['impute_knn_5']
         }
         inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=0)
         return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring='f1_micro')
