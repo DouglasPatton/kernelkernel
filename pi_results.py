@@ -20,50 +20,61 @@ from pisces_params import PiSetup,MonteSetup
 from mylogger import myLogger
 from pi_db_tool import DBTool
 import matplotlib.pyplot as plt
+from pi_data_viz import DataPlotter
 
 class PiResults(DBTool,myLogger):
     def __init__(self,):
-        func_name=f'{sys._getframe().f_code.co_name}'
+        func_name=f'PiResults'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         DBTool.__init__(self)
         self.resultsDBdict=self.resultsDBdict()
-        self.spec_est_scr_dict={}
+        self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=SKToolInitializer.get_scorer_list(None) # don't need to initialize 
         
-    def build_species_estimator_score_dict(self,):
-        spec_est_scr_dict={}
+    def build_scor_est_spec_dict(self,):
+        scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()}}
         for hash_id,result_dict in self.resultsDBdict.items():
             data_gen=result_dict['data_gen']
             species=data_gen[species]
             model_gen=result_dict['model_gen']
             est_name=model_gen['name']
             model=result_dict['model']
-            if not species in spec_est_scr_dict:
-                spec_est_scr_dict[species]={}
             if 'cv' in data_gen['data_split']:
                 model_keys=list(model.keys())
-                test_result_keys=[key for key in model_keys if key[:5]=='test_']
+                #test_result_keys=[key for key in model_keys if key[:5]=='test_']
+                test_result_keys=[f'test_{scorer}' for scorer in self.scorer_list]
                 for key in test_result_keys:
-                    spec_est_scr_dict[species][key]=model[key]
-        self.spec_est_scr_dict=spec_est_scr_dict
+                    scor_est_spec_dict[key[5:]][est_name][species]=model[key]
+        self.scor_est_spec_dict=scor_est_spec_dict
                     
     def plot_species_estimator_scores(self):
-        try: self.spec_est_scr_dict
-        except: self.build_species_estimator_score_dict()
+        try: self.scor_est_spec_dict
+        except: self.build_scor_est_spec_dict()
         fig=plt.figure(dpi=600,figsize=[10,6])
         plt.xticks(rotation=65)
         scorer_list=self.scorer_list
         scorer_count=len(scorer_list)
         est_list=list(self.sk_est_dict.keys())
         est_count=len(est_list)
+        species_list=list(self.scor_est_spec_dict.keys())
+        
+        # create a separate graph for each scorer. with each estimator on each graph
         for s,scorer in enumerate(scorer_list):
+            est_spec_dict=self.scor_est_spec_dict[scorer]
             ax=fig.subplot(s+1,1,est_count)
             ax.set_title(f'results for scorer:{scorer}')
             for e,est_name in enumerate(est_list):
+                spec_dict=est_spec_dict[est_name]
+                score_arr_list=[np.array(spec_dict[val]) for spec in species_list]
+                mean_scores=[np.mean(scores) for scores in score_arr_list]
+                sorted_score_arr_list=[np.sorted(arr) for arr in score_arr_list]
+                len_list=[arr.shape[0] for arr in score_arr_list]
+                l_idx,u_idx=zip(*[(int(round(l/0.025,0)),int(round(l/0.975,0))) for l in len_list])
+                lower,upper=zip(*[(arr[l_idx[i]],arr[u_idx[i]]) for i,arr in enumerate(sorted_score_arr_list)])
+                self.makePlotWithCI(species_list,mean_scores,None,ax,plottitle=est_name,color=e,hatch=e,ls=e,lower=lower,upper=upper)
                 
-            
 
         
         ax=fig.subplot()
