@@ -225,7 +225,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                             self.logger.debug(f'adding savedict to saveq')
                             try:
                                 qtry+=1
-                                saveq.put(savetup)
+                                saveq.put(savedict)
                                 self.logger.debug(f'savedict sucesfully added to saveq')
                                 break
                             except:
