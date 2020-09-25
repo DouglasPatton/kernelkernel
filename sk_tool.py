@@ -31,7 +31,7 @@ class SKToolInitializer(myLogger):
         sktool=SkTool(self.model_gen)
         if datagen_obj.cv:
             self.logger.info(f'starting cv for sktool.model_gen["name"]{sktool.model_gen["name"]}')
-            return cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_list,n_jobs=5)
+            return cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_list,n_jobs=1)
         else:
             self.logger.info(f'starting simple fit for sktool.model_gen["name"]{sktool.model_gen["name"]}')
             return sktool.fit(datagen_obj.X_train,datagen_obj.y_train)
