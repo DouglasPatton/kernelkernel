@@ -35,6 +35,8 @@ class DBTool(myLogger,):
             db=self.resultsDBdict
         with db() as dbdict:
             try:
+                if type(save_list) is dict:
+                    save_list=[save_list]
                 for dict_i in save_list:
                     for key,val in dict_i.items():
                         if key in dbdict:
