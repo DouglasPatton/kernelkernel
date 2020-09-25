@@ -38,7 +38,7 @@ class PiResults(DBTool,myLogger):
         self.scorer_list=SKToolInitializer.get_scorer_list(None) # don't need to initialize 
         
     def build_scor_est_spec_dict(self,):
-        scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()}}
+        scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.sk_est_dict.keys()}
         for hash_id,result_dict in self.resultsDBdict.items():
             data_gen=result_dict['data_gen']
             species=data_gen[species]
