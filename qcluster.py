@@ -308,11 +308,27 @@ class RunCluster(mp.Process,DBTool,myLogger):
         
     def checkComplete(self,run_dict_list=None):
         #run_dict_list is provided at startup, and if not, useful for checking if all have been saved
-        if run_dict_list:
-            return_list=1
-        else:
-            return_list=0
         resultsDBdict=self.resultsDBdict()
+        complete_hash_id_list=list(resultsDBdict.keys())
+        if run_dict_list:
+            for r,run_dict in enumerate(run_dict_list):
+                model_gen_dict=run_dict['model_gen_dict']
+                for hash_id in list(model_gen_dict.keys()): #so model_gen_dict can be changed
+                    if hash_id in complete_hash_id_list:
+                        del model_gen_dict[hash_id]
+                        self.logger.info(f'checkComplete already completed hash_id:{hash_id}')
+            return run_dict_list
+        else:
+            gen_hash_id_list=self.genDBdict().keys()
+            for hash_id in gen_hash_id_list:
+                if not hash_id in complete_hash_id_list:
+                    return False
+        return True # must be done
+                        
+                        
+        hash_id_list=list(self.genDBdict().keys())
+        
+        '''
         if not run_dict_list:
             hash_id_iter=self.genDBdict().keys()
         else:
@@ -322,7 +338,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
                 if run_dict_list: # only retu
                     r=hash_id_iter[hash_id]
                     run_dict_list[r].pop(hash_id)
-                    
+        '''            
         if return_list:
             return run_dict_list
         else:
