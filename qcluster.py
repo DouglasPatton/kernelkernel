@@ -209,7 +209,10 @@ class RunNode(mp.Process,BaseManager,myLogger):
                             jobq.put(rundict)
                             return
                     data,hash_id_model_dict=self.build_from_rundict(rundict) # each estimator contains rundict
-                    for hash_id,model_dict in hash_id_model_dict.items():
+                    hash_id_list=list(hash_id_model_dict.keys())
+                    shuffle(hash_id_list)# so all nodes aren't working on the same algorithm 
+                    for hash_id in hash_id_list:
+                        model_dict=hash_id_model_dict[hash_id]
                         try:
                             success=0
                             model_dict['model'].run(data)
