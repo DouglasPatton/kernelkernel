@@ -23,6 +23,10 @@ import matplotlib.pyplot as plt
 from pi_data_viz import DataPlotter
 
 class PiResults(DBTool,myLogger):
+    '''
+    from qcluster.runnode: 
+        model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
+    '''
     def __init__(self,):
         func_name=f'PiResults'
         myLogger.__init__(self,name=f'{func_name}.log')
@@ -66,14 +70,25 @@ class PiResults(DBTool,myLogger):
             ax=fig.subplot(s+1,1,est_count)
             ax.set_title(f'results for scorer:{scorer}')
             for e,est_name in enumerate(est_list):
-                spec_dict=est_spec_dict[est_name]
-                score_arr_list=[np.array(spec_dict[val]) for spec in species_list]
-                mean_scores=[np.mean(scores) for scores in score_arr_list]
-                sorted_score_arr_list=[np.sorted(arr) for arr in score_arr_list]
-                len_list=[arr.shape[0] for arr in score_arr_list]
-                l_idx,u_idx=zip(*[(int(round(l/0.025,0)),int(round(l/0.975,0))) for l in len_list])
-                lower,upper=zip(*[(arr[l_idx[i]],arr[u_idx[i]]) for i,arr in enumerate(sorted_score_arr_list)])
-                self.makePlotWithCI(species_list,mean_scores,None,ax,plottitle=est_name,color=e,hatch=e,ls=e,lower=lower,upper=upper)
+                try:
+                    spec_dict=est_spec_dict[est_name] # this may trigger the exception
+                    score_arr_list=[]
+                    for spec in species_list:
+                        if spec in spec_dict:
+                            score_arr_list.append(np.array(spec_dict[spec]))
+                        else:
+                            score_arr_list.append(np.array([]))
+                    mean_scores=[np.mean(scores) for scores in score_arr_list]
+                    sorted_score_arr_list=[np.sorted(arr) for arr in score_arr_list]
+                    len_list=[arr.shape[0] for arr in score_arr_list]
+                    l_idx,u_idx=zip(*[(int(round(l/0.025,0)),int(round(l/0.975,0))) for l in len_list])
+                    lower,upper=zip(*[(arr[l_idx[i]],arr[u_idx[i]]) for i,arr in enumerate(sorted_score_arr_list)])
+                        self.makePlotWithCI(
+                            species_list,mean_scores,None,
+                            ax,plottitle=est_name,color=e,
+                            hatch=e,ls=e,lower=lower,upper=upper)
+                except:
+                    self.logger.exception('')
                 
 
         

@@ -73,7 +73,7 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
             try:
                 success=0
                 try:
-                    save_tup=queue.get(True,5)
+                    savedict=queue.get(True,5)
                     
                     success=1
                 except:
@@ -83,22 +83,25 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                     else:
                         self.logger.exception('SaveQDumper unexpected error!')
                 if success:
-                    if type(save_tup) is str:
-                        if save_tup=='shutdown':
+                    if type(savedict) is str:
+                        if savedict=='shutdown':
                             self.logger.DEBUG(f'SaveQDumper shutting down')
                             return
-                    try:
-                        species=save_tup[1]['data_gen']['species']
-                    except:
-                        self.logger.info("trying to get species from savetup")
-                        species=None
-                    try:
-                        model_name=save_tup[1]['model_gen']['name']
-                    except:
-                        self.logger.exception('try to get model name from savetup')
-                        model_name=None
-                    self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}')
-                    self.addToDBDict([save_tup])
+                    assert type(savedict) is dict, f'SaveQDumper expecting a dict for savedict but got {type(savedict)}'
+                    for hash_id,model_dict in savedict.items():
+                        try:
+                            species=model_dict['data_gen']['species']
+                        except:
+                            self.logger.info("failed trying to get species from savedict")
+                            species='error'
+                        try:
+                            model_name=model_dict['model_gen']['name']
+                        except:
+                            self.logger.exception('failed try to get model name from model_dict')
+                            model_name='error'
+                        self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}')
+                    save_list=[savedict] # b/c addToDBDict expects a list of dicts.
+                    self.addToDBDict(save_list)
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
             
@@ -213,14 +216,14 @@ class RunNode(mp.Process,BaseManager,myLogger):
                             success=1
                         except:
                             self.logger.exception('error for model_dict:{model_dict}')
-                        savetup=(hash_id,model_dict)
+                        savedict={hash_id:model_dict}
                         qtry=0
                         while success:
-                            self.logger.debug(f'adding save_tup to saveq')
+                            self.logger.debug(f'adding savedict to saveq')
                             try:
                                 qtry+=1
                                 saveq.put(savetup)
-                                self.logger.debug(f'save_tup sucesfully added to saveq')
+                                self.logger.debug(f'savedict sucesfully added to saveq')
                                 break
                             except:
                                 if not saveq.full() and qtry>3:
@@ -280,6 +283,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             
             list_of_run_dicts,run_record_dict=self.setup.setupRundictList()
             self.addToDBDict(run_record_dict,gen=1)
+            list_of_run_dicts=self.checkComplete(run_dict_list=list_of_run_dicts) # remove any that are already in resultsDB
         
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
             jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
@@ -304,6 +308,10 @@ class RunCluster(mp.Process,DBTool,myLogger):
         
     def checkComplete(self,run_dict_list=None):
         #run_dict_list is provided at startup, and if not, useful for checking if all have been saved
+        if run_dict_list:
+            return_list=1
+        else:
+            return_list=0
         resultsDBdict=self.resultsDBdict()
         if not run_dict_list:
             hash_id_iter=self.genDBdict().keys()
@@ -311,12 +319,17 @@ class RunCluster(mp.Process,DBTool,myLogger):
             hash_id_iter={hash_id:r for r,rundict in enumerate(run_dict_list) for hash_id in rundict['model_gen_dict'].keys()}
         for hash_id in hash_id_iter:
             if hash_id in resultsDBdict:
-                if run_dict_list:
+                if run_dict_list: # only retu
                     r=hash_id_iter[hash_id]
                     run_dict_list[r].pop(hash_id)
+                    
+        if return_list:
+            return run_dict_list
+        else:
+            if run_dict_list:
+                return True
             else:
-                if not run_dict_list:
-                    return False
+                return False
                     
             
     def getqdict(self):

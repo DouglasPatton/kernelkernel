@@ -35,16 +35,15 @@ class DBTool(myLogger,):
             db=self.resultsDBdict
         with db() as dbdict:
             try:
-                if type(save_list) is dict:
-                    for key,val in save_list.items():
-                        dbdict[key]=val
-                if type(save_list) is list:
-                    if type(save_list[0]) is tuple:
-                        for key,val in save_list:
-                            dbdict[key]=val
-                    else:
-                        assert False, f'expecting tuple for save_list first item, but type(save_list[0]):{type(save_list[0])}'
+                for dict_i in save_list:
+                    for key,val in dict_i.items():
+                        if key in dbdict:
+                            if not gen:
+                                self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
+                                dbdict[key]=val
+                            else:
+                                self.logger.debug(f'key:{key} already exists in gen table in db dict')
             except:
-                self.logger.exception('')
+                self.logger.exception('dbtool addtoDBDict error! gen:{gen}')
             dbdict.commit()
         return  

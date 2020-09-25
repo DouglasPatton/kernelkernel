@@ -65,8 +65,8 @@ class PiSetup(myLogger):
             for model_gen in model_gen_list:
                 run_record={'model_gen':model_gen,'data_gen':data_gen}
                 hash_id=joblib.hash(run_record)
-                run_record_dict[hash_id]=run_record
-                model_gen_dict[hash_id]=model_gen
+                run_record_dict[hash_id]=run_record # store the _gen dicts for reference
+                model_gen_dict[hash_id]=model_gen # 
             run_dict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
             run_dict_list.append(run_dict)
         
