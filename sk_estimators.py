@@ -28,7 +28,7 @@ class sk_estimator(myLogger):
         fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now
         estimator_dict={
             #add logistic with e-net
-            'lin-reg-classifier':{'estimator':self.linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
+            #'lin-reg-classifier':{'estimator':self.linRegSupremeClf,'fit_kwarg_dict':fit_kwarg_dict},
             'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
             'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
             'gradient-boosting-classifier':{'estimator':self.gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
