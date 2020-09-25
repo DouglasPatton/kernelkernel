@@ -282,7 +282,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         try:
             
             list_of_run_dicts,run_record_dict=self.setup.setupRundictList()
-            self.addToDBDict(run_record_dict,gen=1)
+            self.addToDBDict(run_record_dict,gen=1) # create a record of the rundicts to check when it's all complete.
             list_of_run_dicts=self.checkComplete(run_dict_list=list_of_run_dicts) # remove any that are already in resultsDB
         
             self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
