@@ -49,7 +49,6 @@ class DBTool(myLogger,):
         return  
     
     def purgeExtraGen(self):
-        gendb=
         rdb=self.resultsDBdict()
         with self.genDBdict() as dbdict:
             for hash_id,run_record_dict in dbdict.items():
