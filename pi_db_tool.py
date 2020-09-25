@@ -5,7 +5,7 @@ from mylogger import myLogger
 
 class DBTool(myLogger,):
     def __init__(self):
-        func_name=f'{sys._getframe().f_code.co_name}'
+        func_name=DBTool
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         resultsdir=os.path.join(os.getcwd(),'results')
@@ -27,28 +27,33 @@ class DBTool(myLogger,):
         return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
     
     def addToDBDict(self,save_list,gen=0,post_fit_tablename=0):
-        if gen:
-            db=self.genDBdict
-        elif post_fit_tablename:
-            db=self.postfitDBdict(post_fit_tablename)
-        else:
-            db=self.resultsDBdict
-        with db() as dbdict:
-            try:
-                if type(save_list) is dict:
-                    save_list=[save_list]
-                for dict_i in save_list:
-                    for key,val in dict_i.items():
-                        if key in dbdict:
-                            if not gen:
-                                self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
-                                dbdict[key]=val
+        try:
+            if gen:
+                db=self.genDBdict
+            elif post_fit_tablename:
+                db=self.postfitDBdict(post_fit_tablename)
+            else:
+                db=self.resultsDBdict
+            with db() as dbdict:
+                try:
+                    if type(save_list) is dict:
+                        save_list=[save_list]
+                    for dict_i in save_list:
+                        for key,val in dict_i.items():
+                            if key in dbdict:
+                                if not gen:
+                                    self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
+                                    dbdict[key]=val
+                                else:
+                                    self.logger.debug(f'key:{key} already exists in gen table in db dict')
                             else:
-                                self.logger.debug(f'key:{key} already exists in gen table in db dict')
-            except:
-                self.logger.exception('dbtool addtoDBDict error! gen:{gen}')
-            dbdict.commit()
-        return  
+                                dbdict[key]=val
+                except:
+                    self.logger.exception('dbtool addtoDBDict error! gen:{gen}')
+                dbdict.commit()
+            return  
+        except:
+            self.logger.exception(f'addToDBDict outer catch')
     
     def purgeExtraGen(self):
         rdb=self.resultsDBdict()
