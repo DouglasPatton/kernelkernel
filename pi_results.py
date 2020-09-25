@@ -83,10 +83,10 @@ class PiResults(DBTool,myLogger):
                     len_list=[arr.shape[0] for arr in score_arr_list]
                     l_idx,u_idx=zip(*[(int(round(l/0.025,0)),int(round(l/0.975,0))) for l in len_list])
                     lower,upper=zip(*[(arr[l_idx[i]],arr[u_idx[i]]) for i,arr in enumerate(sorted_score_arr_list)])
-                        self.makePlotWithCI(
-                            species_list,mean_scores,None,
-                            ax,plottitle=est_name,color=e,
-                            hatch=e,ls=e,lower=lower,upper=upper)
+                    self.makePlotWithCI(
+                        species_list,mean_scores,None,
+                        ax,plottitle=est_name,color=e,
+                        hatch=e,ls=e,lower=lower,upper=upper)
                 except:
                     self.logger.exception('')
                 
