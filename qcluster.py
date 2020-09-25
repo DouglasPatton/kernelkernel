@@ -215,7 +215,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                         model_dict=hash_id_model_dict[hash_id]
                         try:
                             success=0
-                            model_dict['model'].run(data)
+                            model_dict['model']=model_dict['model'].run(data)
                             success=1
                         except:
                             self.logger.exception('error for model_dict:{model_dict}')
