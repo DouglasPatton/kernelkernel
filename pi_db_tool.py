@@ -52,7 +52,7 @@ class DBTool(myLogger,):
         rdb=self.resultsDBdict()
         with self.genDBdict() as dbdict:
             for hash_id,run_record_dict in dbdict.items():
-                if not hash_id in rdb
-                self.logger.info(f'purging {hash_id} run_record_dict:{run_record_dict}')
-                del dbdict[hash_id]
+                if not hash_id in rdb:
+                    self.logger.info(f'purging {hash_id} run_record_dict:{run_record_dict}')
+                    del dbdict[hash_id]
             dbdict.commit()
