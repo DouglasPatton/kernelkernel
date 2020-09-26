@@ -39,23 +39,25 @@ class PiscesDataTool(myLogger):
             self.specieslist
             #print(type(self.specieslist))
         except: self.buildspecieslist()
-        if species_name==None and type(species_idx) is int:
-            species_name=self.specieslist[species_idx]
-            
-        datadir=os.path.join(self.savedir,'speciesdata01')
-        if not species_name is None:
-            species_filename=os.path.join(datadir,species_name+'.data')  
-            with open(species_filename, 'rb') as f:
-                species_data=pickle.load(f)
-            return species_data
-        else:
-            try:
-                with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
-                    sitevarlist=pickle.load(f)
-                return sitevarlist   
-            except: 
-                self.logger.exception('')
-                return 'sitevarlist not found'
+        try:
+            if species_name==None and type(species_idx) is int:
+                species_name=self.specieslist[species_idx]
+
+            datadir=os.path.join(self.savedir,'speciesdata01')
+            if not species_name is None:
+                species_filename=os.path.join(datadir,species_name+'.data')  
+                with open(species_filename, 'rb') as f:
+                    species_data=pickle.load(f)
+                return species_data
+            else:
+                try:
+                    with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
+                        sitevarlist=pickle.load(f)
+                    return sitevarlist   
+                except: 
+                    self.logger.exception('')
+                    return 'sitevarlist not found'
+        except: self.logger.exception(f'retrievespeciesdata outer catch')
         
     
     def viewNHDplus_picklefile(self,):
