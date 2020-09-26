@@ -36,7 +36,14 @@ class PiResults(DBTool,myLogger):
         self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=SKToolInitializer.get_scorer_list(None) # don't need to initialize 
-        
+      
+    def build_predict_est_spec_dict(self,):
+        for hash_id,result_dict in self.resultsDBdict.items():
+    
+    
+    def plot_species_estimator_predict()
+    
+    
     def build_scor_est_spec_dict(self,):
         scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.sk_est_dict.keys()}
         for hash_id,result_dict in self.resultsDBdict.items():
@@ -69,6 +76,9 @@ class PiResults(DBTool,myLogger):
             est_spec_dict=self.scor_est_spec_dict[scorer]
             ax=fig.subplot(s+1,1,est_count)
             ax.set_title(f'results for scorer:{scorer}')
+            ax.legend(loc=1)
+            ax.margins(0)
+            
             for e,est_name in enumerate(est_list):
                 try:
                     spec_dict=est_spec_dict[est_name] # this may trigger the exception
@@ -81,7 +91,7 @@ class PiResults(DBTool,myLogger):
                     mean_scores=[np.mean(scores) for scores in score_arr_list]
                     sorted_score_arr_list=[np.sorted(arr) for arr in score_arr_list]
                     len_list=[arr.shape[0] for arr in score_arr_list]
-                    l_idx,u_idx=zip(*[(int(round(l/0.025,0)),int(round(l/0.975,0))) for l in len_list])
+                    l_idx,u_idx=zip(*[(int(round(l*0.025,0)),int(round(l*0.0975,0))+1) for l in len_list])
                     lower,upper=zip(*[(arr[l_idx[i]],arr[u_idx[i]]) for i,arr in enumerate(sorted_score_arr_list)])
                     self.makePlotWithCI(
                         species_list,mean_scores,None,
@@ -89,6 +99,8 @@ class PiResults(DBTool,myLogger):
                         hatch=e,ls=e,lower=lower,upper=upper)
                 except:
                     self.logger.exception('')
+            figpath=self.helper.getname(os.path.join(self.printdir,f'test_scores_by_species_{scorer}.png'))
+            fig.savefig(figpath)
                 
 
         
@@ -113,4 +125,6 @@ class PiResults(DBTool,myLogger):
         figpath=self.helper.getname(os.path.join(self.printdir,'wq_effects_graph.png'))
         fig.savefig(figpath)
                 
-    
+        
+        
+        
