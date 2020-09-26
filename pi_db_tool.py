@@ -12,6 +12,7 @@ class DBTool(myLogger,):
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
+        self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
@@ -21,7 +22,7 @@ class DBTool(myLogger,):
         return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
     
     def genDBdict(self):
-        return SqliteDict(filename=self.resultsDBdictpath,tablename='gen')
+        return SqliteDict(filename=self.genDBdictpath,tablename='gen')
     
     def postfitDBdict(self,name):
         return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
