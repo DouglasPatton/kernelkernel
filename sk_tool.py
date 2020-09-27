@@ -3,7 +3,7 @@ from sklearn.linear_model import ElasticNetCV, LinearRegression
 from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_validate, train_test_split, RepeatedKFold, GridSearchCV
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score,roc_auc_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score,roc_auc_score,make_scorer
 from sklearn.ensemble import GradientBoostingRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
@@ -25,7 +25,11 @@ class SKToolInitializer(myLogger):
         self.scorer_list=self.get_scorer_list()
         
     def get_scorer_list(self):
-        return ['f1_micro',roc_auc_score(average='macro'),roc_auc_score(average='micro'),'precision_micro','recall_micro','accuracy_weighted']
+        return [
+            'f1_micro',
+            make_scorer(roc_auc_score(average='macro')),
+            make_scorer(roc_auc_score(average='micro')),
+            'precision_micro', 'recall_micro','accuracy_weighted']
         
     def run(self,datagen_obj):
         sktool=SkTool(self.model_gen)
