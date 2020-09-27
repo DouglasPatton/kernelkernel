@@ -13,7 +13,7 @@ class PiSetup(myLogger):
         self.pdt=PiscesDataTool()
         self.est_dict=sk_estimator().get_est_dict()
         self.model_setup_dict=dict(
-            gridpoints=3,
+            gridpoints=5,
             inner_cv_splits=5,
             inner_cv_reps=1,
             )

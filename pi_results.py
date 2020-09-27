@@ -38,10 +38,10 @@ class PiResults(DBTool,myLogger):
         self.scorer_list=SKToolInitializer.get_scorer_list(None) # don't need to initialize 
         
     def build_scor_est_spec_dict(self,):
-        scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.sk_est_dict.keys()}
+        scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
         for hash_id,result_dict in self.resultsDBdict.items():
             data_gen=result_dict['data_gen']
-            species=data_gen[species]
+            species=data_gen['species']
             model_gen=result_dict['model_gen']
             est_name=model_gen['name']
             model=result_dict['model']
@@ -50,7 +50,8 @@ class PiResults(DBTool,myLogger):
                 #test_result_keys=[key for key in model_keys if key[:5]=='test_']
                 test_result_keys=[f'test_{scorer}' for scorer in self.scorer_list]
                 for key in test_result_keys:
-                    scor_est_spec_dict[key[5:]][est_name][species]=model[key]
+                    val=model[key]
+                    scor_est_spec_dict[key[5:]][est_name][species]=val
         self.scor_est_spec_dict=scor_est_spec_dict
                     
     def plot_species_estimator_scores(self):
@@ -62,12 +63,13 @@ class PiResults(DBTool,myLogger):
         scorer_count=len(scorer_list)
         est_list=list(self.sk_est_dict.keys())
         est_count=len(est_list)
-        species_list=list(self.scor_est_spec_dict.keys())
+        species_list=list(set([spec for s,est in self.scor_est_spec_dict.items() for spec in est.keys()]))
+        self.logger.info(f'species_list: {species_list}')
         
         # create a separate graph for each scorer. with each estimator on each graph
         for s,scorer in enumerate(scorer_list):
             est_spec_dict=self.scor_est_spec_dict[scorer]
-            ax=fig.subplot(s+1,1,est_count)
+            ax=plt.subplot(scorer_count,1,s+1)
             ax.set_title(f'results for scorer:{scorer}')
             for e,est_name in enumerate(est_list):
                 try:
@@ -79,9 +81,11 @@ class PiResults(DBTool,myLogger):
                         else:
                             score_arr_list.append(np.array([]))
                     mean_scores=[np.mean(scores) for scores in score_arr_list]
-                    sorted_score_arr_list=[np.sorted(arr) for arr in score_arr_list]
+                    sorted_score_arr_list=[np.sort(arr) for arr in score_arr_list]
                     len_list=[arr.shape[0] for arr in score_arr_list]
                     l_idx,u_idx=zip(*[(int(round(l/0.025,0)),int(round(l/0.975,0))) for l in len_list])
+                    self.logger.warning(f'len_list:{len_list},l_idx:{l_idx}, u_idx:{u_idx}')
+                    self.logger.warning (f'arr:{arr}')
                     lower,upper=zip(*[(arr[l_idx[i]],arr[u_idx[i]]) for i,arr in enumerate(sorted_score_arr_list)])
                     self.makePlotWithCI(
                         species_list,mean_scores,None,
@@ -90,7 +94,7 @@ class PiResults(DBTool,myLogger):
                 except:
                     self.logger.exception('')
                 
-
+'''
         
         ax=fig.subplot()
         ax.set_title('f1_')#Fixed Effects Estimates for Water Clarity by Distance from Shore Band')
@@ -113,4 +117,4 @@ class PiResults(DBTool,myLogger):
         figpath=self.helper.getname(os.path.join(self.printdir,'wq_effects_graph.png'))
         fig.savefig(figpath)
                 
-    
+    '''
