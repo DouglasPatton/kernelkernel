@@ -18,10 +18,12 @@ class PiSetup(myLogger):
             inner_cv_reps=1,
             )
         self.initial_datagen_dict=dict(
+            min_sample=64,
+            shuffle=True,
             source='Pisces',
             species='all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
-                test_share=0.1,
+                test_share=0,
                 cv=dict(n_splits=5,n_repeats=1,strategy=None),# e.g., 'balanced-HUC8'
             ),
             drop_vars=[],

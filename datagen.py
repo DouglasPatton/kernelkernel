@@ -38,6 +38,13 @@ class dataGenerator(PiscesDataTool,myLogger):
                     self.logger.warning(f'converting {col} to float')
                     col_convert[col]='float64'
             self.df=self.df.astype(col_convert)
+            n=self.df.shape[0]
+            min_n=self.datagen_dict['min_sample']
+            assert n>=min_n,f'aborting species:{species} because n:{n}<{min_n}'
+            if self.datagen_dict['shuffle']:
+                shuf=np.arange()
+                np.random.shuffle(shuf)
+                self.df=self.df.iloc[shuf]
             data_split_dict=self.datagen_dict['data_split']
             test_share=data_split_dict['test_share']
 
