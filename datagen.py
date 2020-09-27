@@ -72,7 +72,7 @@ class dataGenerator(PiscesDataTool,myLogger):
                 self.logger.info(f'cv set for species:{species}')
             else:
                 self.cv=None
-                self.logger.info(f'NO CV for species:{species}. datagen_dict:{datagen_dict}, data_split_dict:{data_split_dict})
+                self.logger.info(f'NO CV for species:{species}. datagen_dict:{datagen_dict}, data_split_dict:{data_split_dict}')
         except:
             self.logger.exception(f'datagen outer catch')
             
