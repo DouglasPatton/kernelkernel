@@ -36,7 +36,14 @@ class PiResults(DBTool,myLogger):
         self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=SKToolInitializer.get_scorer_list(None) # don't need to initialize 
-        
+      
+    def build_predict_est_spec_dict(self,):
+        for hash_id,result_dict in self.resultsDBdict.items():
+    
+    
+    def plot_species_estimator_predict()
+    
+    
     def build_scor_est_spec_dict(self,):
         scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
         for hash_id,result_dict in self.resultsDBdict.items():
@@ -71,6 +78,9 @@ class PiResults(DBTool,myLogger):
             est_spec_dict=self.scor_est_spec_dict[scorer]
             ax=plt.subplot(scorer_count,1,s+1)
             ax.set_title(f'results for scorer:{scorer}')
+            ax.legend(loc=1)
+            ax.margins(0)
+            
             for e,est_name in enumerate(est_list):
                 try:
                     spec_dict=est_spec_dict[est_name] # this may trigger the exception
@@ -93,6 +103,8 @@ class PiResults(DBTool,myLogger):
                         hatch=e,ls=e,lower=lower,upper=upper)
                 except:
                     self.logger.exception('')
+            figpath=self.helper.getname(os.path.join(self.printdir,f'test_scores_by_species_{scorer}.png'))
+            fig.savefig(figpath)
                 
 '''
         
@@ -118,3 +130,6 @@ class PiResults(DBTool,myLogger):
         fig.savefig(figpath)
                 
     '''
+        
+        
+        
