@@ -42,7 +42,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             min_n=self.datagen_dict['min_sample']
             assert n>=min_n,f'aborting species:{species} because n:{n}<{min_n}'
             if self.datagen_dict['shuffle']:
-                shuf=np.arange()
+                shuf=np.arange(n)
                 np.random.shuffle(shuf)
                 self.df=self.df.iloc[shuf]
             data_split_dict=self.datagen_dict['data_split']
