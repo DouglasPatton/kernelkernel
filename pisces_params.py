@@ -19,7 +19,7 @@ class PiSetup(myLogger):
             )
         self.initial_datagen_dict=dict(
             source='Pisces',
-            species=(0,2),#'all', # or a range, i.e., (0,100) # set in data_setup
+            species='all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
                 test_share=0.1,
                 cv=dict(n_splits=5,n_repeats=1,strategy=None),# e.g., 'balanced-HUC8'
