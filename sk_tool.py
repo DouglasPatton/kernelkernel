@@ -27,8 +27,8 @@ class SKToolInitializer(myLogger):
     def get_scorer_list(self):
         return [
             'f1_micro',
-            make_scorer(roc_auc_score(average='macro')),
-            make_scorer(roc_auc_score(average='micro')),
+            make_scorer(roc_auc_score,average='macro'),
+            make_scorer(roc_auc_score,average='micro'),
             'precision_micro', 'recall_micro','accuracy_weighted']
         
     def run(self,datagen_obj):
