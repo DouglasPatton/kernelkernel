@@ -3,7 +3,7 @@ from sklearn.linear_model import ElasticNetCV, LinearRegression
 from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_validate, train_test_split, RepeatedKFold, GridSearchCV
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score,roc_auc_score,make_scorer
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, f1_score, average_precision_score,roc_auc_score,make_scorer,precision_score,recall_score,get_scorer
 from sklearn.ensemble import GradientBoostingRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
@@ -22,20 +22,21 @@ class SKToolInitializer(myLogger):
         myLogger.__init__(self,name='skToolInitializer.log')
         self.logger.info('starting skToolInitializer logger')
         self.model_gen=model_gen
-        self.scorer_list=self.get_scorer_list()
+        self.scorer_dict=self.get_scorer_dict()
         
-    def get_scorer_list(self):
-        return [
-            'f1_micro':make_scorer(f1_score,average='micro')
+    def get_scorer_dict(self):
+        return {
+            'f1_micro':get_scorer('f1_micro'),
             'roc_auc_score_macro':make_scorer(roc_auc_score,average='macro'),
-            'roc_auc_score_micro':make_scorer(roc_auc_score,average='micro')},
-            'precision_micro', 'recall_micro']
+            'roc_auc_score_micro':make_scorer(roc_auc_score,average='micro'),
+            'precision_micro':get_scorer('precision_micro'),
+            'recall_micro':get_scorer('recall_micro')}
         
     def run(self,datagen_obj):
         sktool=SkTool(self.model_gen)
         if datagen_obj.cv:
             self.logger.info(f'starting cv for sktool.model_gen["name"]{sktool.model_gen["name"]}')
-            cv_dict=cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_list,n_jobs=1)
+            cv_dict=cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_dict,n_jobs=1)
             return cv_dict
         else:
             self.logger.info(f'starting simple fit for sktool.model_gen["name"]{sktool.model_gen["name"]}')
