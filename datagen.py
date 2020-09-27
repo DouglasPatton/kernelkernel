@@ -68,9 +68,11 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.y_test=y_test
             if data_split_dict['cv']:
                 cv_kwargs={key:val for key,val in data_split_dict['cv'].items() if not val is None}
-                self.cv=RepeatedKFold(**cv_kwargs)    
+                self.cv=RepeatedKFold(**cv_kwargs)  
+                self.logger.info(f'cv set for species:{species}')
             else:
                 self.cv=None
+                self.logger.info(f'NO CV for species:{species}. datagen_dict:{datagen_dict}, data_split_dict:{data_split_dict})
         except:
             self.logger.exception(f'datagen outer catch')
             
