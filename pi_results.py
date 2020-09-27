@@ -35,7 +35,7 @@ class PiResults(DBTool,myLogger):
         self.resultsDBdict=self.resultsDBdict()
         self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
-        self.scorer_list=SKToolInitializer.get_scorer_list(None) # don't need to initialize 
+        self.scorer_list=SKToolInitializer().get_scorer_list()
       
     def build_predict_est_spec_dict(self,):
         for hash_id,result_dict in self.resultsDBdict.items():
