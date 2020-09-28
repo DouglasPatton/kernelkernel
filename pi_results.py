@@ -35,14 +35,14 @@ class PiResults(DBTool,myLogger):
         self.resultsDBdict=self.resultsDBdict()
         self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
-        self.scorer_list=list(SKToolInitializer().get_scorer_dict().keys())
+        self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
       
     def build_predict_est_spec_dict(self,):
         for hash_id,result_dict in self.resultsDBdict.items():
+            pass
     
-    
-    def plot_species_estimator_predict()
-    
+    def plot_species_estimator_predict(self):
+        pass
     
     def build_scor_est_spec_dict(self,):
         scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
