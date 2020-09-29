@@ -9,6 +9,7 @@ class DBTool(myLogger,):
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         resultsdir=os.path.join(os.getcwd(),'results')
+        self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')

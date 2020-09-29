@@ -91,8 +91,8 @@ class Helper:
                 if len(splitlist)>1:
                     prefix=''.join(splitlist[:-1])
                     suffix=splitlist[-1]
-                    prefix=filename[:lastdot]
-                    suffix=filename[lastdot:]
+                    #prefix=filename[:lastdot]
+                    #suffix=filename[lastdot:]
                 else:
                     prefix=filename
                     suffix=''

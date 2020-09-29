@@ -3,7 +3,6 @@ import random
 import numpy as np
 from pisces_data_huc12 import PiscesDataTool
 import os
-import sklearn
 from sklearn.model_selection import StratifiedKFold,RepeatedKFold,train_test_split,RepeatedStratifiedKFold,cross_validate
 from sklearn.preprocessing import StandardScaler
 from mylogger import myLogger
