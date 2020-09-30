@@ -15,7 +15,7 @@ from pi_db_tool import DBTool
 
         
 class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):       
-    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist,pi_db):
+    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist):
         self.mypid=os.getpid()
         myLogger.__init__(self,name=f'build_{self.mypid}.log')
         DBTool.__init__(self)
@@ -31,16 +31,13 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
         self.specieshuclist_survey_idx_newhucs=specieshuclist_survey_idx_newhucs
         self.huccomidlist_survey=huccomidlist_survey
         self.speciescomidlist=speciescomidlist
-        self.pi_db=pi_db
         
     
     def run(self):
         fail_record=[];recordfailcount=0
-        try:
-            self.pi_db
-        except:
-            self.pi_db=self.pidataDBdict()
-            dbkeys=list(self.pi_db.keys())
+        self.pi_db=self.pidataDBdict()
+            
+        dbkeys=list(self.pi_db.keys())
         df_dict_add_list=[]
         for i,idx in enumerate(self.speciesidx_list):
             spec_i=self.specieslist[idx]

@@ -424,14 +424,18 @@ class PiscesDataTool(myLogger,DBTool):
         return         
 
     def runAsMultiProc(self,the_proc,args_list):
-        starttime=time()
-        q=mp.Queue()
-        q_args_list=[[q,*args] for args in args_list]
-        proc_count=len(args_list)
-        procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
-        [proc.start() for proc in procs]
-        outlist=['empty' for _ in range(proc_count)]
-        countdown=proc_count
+        try:
+            starttime=time()
+            q=mp.Queue()
+            q_args_list=[[q,*args] for args in args_list]
+            proc_count=len(args_list)
+            procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
+            [proc.start() for proc in procs]
+            outlist=['empty' for _ in range(proc_count)]
+            countdown=proc_count
+        except:
+            self.logger.exception('')
+            assert False,'unexpected error'
         while countdown:
             try:
                 self.logger.info(f'multiproc checking q. countdown:{countdown}')
@@ -478,7 +482,7 @@ class PiscesDataTool(myLogger,DBTool):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
         args_list=[
             [i,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
-            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist,self.pi_db] 
+            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
             for i in range(self.processcount)]
         outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)
         self.outlist2=outlist # just for debugging

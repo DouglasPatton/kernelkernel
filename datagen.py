@@ -42,6 +42,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             
             min_n=self.datagen_dict['min_sample']
             assert n>=min_n,f'aborting species:{species} because n:{n}<{min_n}'
+            
             if self.datagen_dict['shuffle']:
                 shuf=np.arange(n)
                 np.random.shuffle(shuf)
@@ -58,6 +59,11 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.datagen_dict['x_vars']=self.x_vars
             X_df=self.df.loc[:,self.x_vars]
             y_df=self.df.loc[:,y_name]
+            min_1count=self.datagen_dict['min_1count']
+            count1=np.sum(y_df)
+            assert count1>=min_1count,f'aborting species:{species} because count1:{count1}<min_1count{min_1count}'
+            
+            
             self.ymean=np.mean(y_df)
             try:random_state=self.datagen_dict['random_state']
             except KeyError:
@@ -72,6 +78,15 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.y_train=y_train
             self.y_test=y_test
             if data_split_dict['cv']:
+                if count1<data_split_dict['cv']['n_splits']:
+                    old_n_splits=data_split_dict['cv']['n_splits']
+                    new_n_splits=count1//4
+                    assert new_n_splits>=2,f'new_n_splits:{new_n_splits} must be >=2'
+                    data_split_dict['cv']['n_splits']=new_n_splits # 
+                    old_n_reps=data_split_dict['cv']['n_repeats']
+                    new_n_reps=-(-(old_n_reps*old_n_splits)//new_n_splits) # ceiling divide
+                    data_split_dict['cv']['n_repeats']=n_n_reps
+                    self.logger.critical(f'split change for species:{species} new_n_splits:{new_n_splits}, new_n_reps:{new_n_reps},old_n_splits:{old_n_splits},old_n_reps:{old_n_reps}')
                 cv_kwargs={key:val for key,val in data_split_dict['cv'].items() if not val is None}
                 self.cv=RepeatedKFold(**cv_kwargs)  
                 self.logger.info(f'cv set for species:{species}')

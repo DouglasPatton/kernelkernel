@@ -14,21 +14,23 @@ class PiSetup(myLogger):
         self.pdt=PiscesDataTool()
         self.est_dict=sk_estimator().get_est_dict()
         rs=randint(0,1e6) # to easily change random_states
+        splits=5
         self.model_setup_dict=dict(
             gridpoints=5,
-            inner_cv_splits=5,
+            inner_cv_splits=splits,
             inner_cv_reps=1,
             random_state=rs # for inner cv and some estimators
             )
         
-        self.initial_datagen_dict=dict(
-            min_sample=64,
+        self.datagen_dict_template=dict(
+            min_sample=32,
+            min_1count=8, # at least 4 ones per split
             shuffle=True,
             source='Pisces',
             species='all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
                 test_share=0,
-                cv=dict(n_splits=5,n_repeats=1,strategy=None,random_state=rs),# e.g., 'balanced-HUC8'
+                cv=dict(n_splits=splits,n_repeats=1,strategy=None,random_state=rs),# e.g., 'balanced-HUC8'
             ),
             drop_vars=[],
             loc_vars=['HUC12'],
@@ -46,7 +48,7 @@ class PiSetup(myLogger):
     
     def data_setup(self,):
         species_list=self.pdt.returnspecieslist()
-        data_params=self.initial_datagen_dict
+        data_params=self.datagen_dict_template
         if not data_params['species']=='all':
             species_selector=data_params['species']
             species_list=[species_list[i] for i in range(*species_selector)]
@@ -56,7 +58,8 @@ class PiSetup(myLogger):
             params['species']=species
             data_gen_list.append(params)
         return data_gen_list
-            
+     
+        
     
     def setupRundictList(self,):
         #a run dict has a 

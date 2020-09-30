@@ -39,13 +39,13 @@ class DBTool:
             if gen:
                 db=self.genDBdict
             elif post_fit_tablename:
-                db=self.postfitDBdict(post_fit_tablename)
+                db=lambda: self.postfitDBdict(post_fit_tablename)
             elif pi_data:
                 if type(pi_data) is str:
                     kwargs={'name':pi_data}
                 else:
                     kwargs={}
-                db=self.pidataDBdict(**kwargs)
+                db=lambda: self.pidataDBdict(**kwargs)
             else:
                 db=self.resultsDBdict
             with db() as dbdict:
