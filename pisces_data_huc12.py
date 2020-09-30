@@ -11,26 +11,18 @@ from geogtools import GeogTool as gt
 from mylogger import myLogger
 from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01
 import re
+from pi_db_tool import DBTool
 
 
-class PiscesDataTool(myLogger):
+class PiscesDataTool(myLogger,DBTool):
     def __init__(self,):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
+        DBTool.__init__(self)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir): os.mkdir(self.savedir)
         self.processcount=11
-        try: self.logger
-        except:
-            logdir=os.path.join(os.getcwd(),'log')
-            if not os.path.exists(logdir): os.mkdir(logdir)
-            handlername=os.path.join(logdir,f'multicluster.log')
-            logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(os.path.join(logdir,handlername), maxBytes=10**7, backupCount=100)],
-                level=logging.debug,
-                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                datefmt='%Y-%m-%dT%H:%M:%S')
-            self.logger = logging.getLogger(handlername)
+        self.pi_db=self.pidataDBdict()
         #slf.gt=gt() # called later
                 
     
@@ -42,21 +34,19 @@ class PiscesDataTool(myLogger):
         try:
             if species_name==None and type(species_idx) is int:
                 species_name=self.specieslist[species_idx]
-
-            datadir=os.path.join(self.savedir,'speciesdata01')
+            
             if not species_name is None:
-                species_filename=os.path.join(datadir,species_name+'.data')  
-                with open(species_filename, 'rb') as f:
-                    species_data=pickle.load(f)
-                return species_data
+                return self.pi_db[species_name]
             else:
-                try:
+                assert False,'expecting a species name or species idx'
+                '''try:
                     with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
                         sitevarlist=pickle.load(f)
                     return sitevarlist   
                 except: 
                     self.logger.exception('')
                     return 'sitevarlist not found'
+                '''
         except: self.logger.exception(f'retrievespeciesdata outer catch')
         
     
@@ -67,7 +57,7 @@ class PiscesDataTool(myLogger):
                 with open(savefilename, 'rb') as f:
                     self.NHDplus=pickle.load(f)
                 print(f'opening {savefilename} with length:{len(self.NHDplus)} and type:{type(self.NHDplus)}')
-                print(self.NHDplus)
+                #print(self.NHDplus)
                 return
             except:
                 self.logger.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
@@ -90,14 +80,14 @@ class PiscesDataTool(myLogger):
         print('finished read of NHDplus')
         print(f'opened {filename} with length:{len(dbf)} and type:{type(dbf)}')
         self.NHDvarlist=['COMID','HUC12','REACHCODE','TOHUC','Length']
-        print('self.NHDvarlist: ',self.NHDvarlist)
+        #print('self.NHDvarlist: ',self.NHDvarlist)
         self.NHDplus=dbf.loc[:,self.NHDvarlist] 
         strvarlist=self.NHDvarlist[:-1]
         for strvar in strvarlist:
             self.NHDplus.loc[:,(strvar)]=self.NHDplus.loc[:,(strvar)].to_numpy().astype('str')
         self.NHDpluscomidlist=list(self.NHDplus.loc[:,('COMID')].to_numpy()) # string comid's
 
-        print(self.NHDplus)
+        #print(self.NHDplus)
         
         try:
             with open(savefilename,'wb') as f:
@@ -488,7 +478,7 @@ class PiscesDataTool(myLogger):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
         args_list=[
             [i,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
-            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
+            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist,self.pi_db] 
             for i in range(self.processcount)]
         outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)
         self.outlist2=outlist # just for debugging

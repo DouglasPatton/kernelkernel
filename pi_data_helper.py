@@ -11,13 +11,15 @@ import traceback
 import pandas as pd
 #from geogtools import GeogTool as gt # turned off after data bult
 from mylogger import myLogger
+from pi_db_tool import DBTool
 
         
-class MpBuildSpeciesData01(mp.Process,myLogger):       
-    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist):
+class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):       
+    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist,pi_db):
         self.mypid=os.getpid()
         myLogger.__init__(self,name=f'build_{self.mypid}.log')
-        super().__init__()
+        DBTool.__init__(self)
+        super().__init__(name=f'buildspeciesdata01_{self.mypid}.log')
         self.logger.info(f'build_{self.mypid} starting  logger')
         self.q=q
         self.i=i
@@ -29,16 +31,21 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
         self.specieshuclist_survey_idx_newhucs=specieshuclist_survey_idx_newhucs
         self.huccomidlist_survey=huccomidlist_survey
         self.speciescomidlist=speciescomidlist
+        self.pi_db=pi_db
         
     
     def run(self):
-        datadir=os.path.join(self.savedir,'speciesdata01')
         fail_record=[];recordfailcount=0
+        try:
+            self.pi_db
+        except:
+            self.pi_db=self.pidataDBdict()
+            dbkeys=list(self.pi_db.keys())
+        df_dict_add_list=[]
         for i,idx in enumerate(self.speciesidx_list):
             spec_i=self.specieslist[idx]
             try:
-                species_filename=os.path.join(datadir,spec_i+'.data')
-                if not os.path.exists(species_filename):
+                if not spec_i in dbkeys:
                     try: 
                         self.specieshuc_allcomid
                         specieshuc_allcomid=self.specieshuc_allcomid[idx]
@@ -116,13 +123,12 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                                         speciesdata[j,1+k]='999999'
                                 self.logger.warning(f'missing keys from exception are: {missingkeys}')"""
                     #speciesdata=pd.concat(dflist,axis=1)
-                    
-                    with open(species_filename,'wb') as f:
-                        pickle.dump(species_df,f)  
+                    df_dict_add_list.append({spec_i:species_df})
                     self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. species_df.shape:{species_df.shape}')
                 else:
-                    self.logger.info(f'{species_filename} already exists')
+                    self.logger.info(f'{spec_i} already in pisces database')
                 fail_record.append(0)
+            
             except:
                 self.logger.exception(f'problem came up for species number {i},{spec_i}')
                 try: 
@@ -130,7 +136,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger):
                 except: 
                     fail_record.append((spec_i,'none'))
                 recordfailcount+=1
-        
+        self.addToDBDict(df_dict_add_list,pi_data='species01')
         if fail_record:
             self.logger.warning(f'succesful completion. len(self.speciesidx_list): {len(self.speciesidx_list)}, recordfailcount: {recordfailcount}')
             self.q.put([self.i,fail_record])

@@ -38,6 +38,8 @@ class dataGenerator(PiscesDataTool,myLogger):
                     col_convert[col]='float64'
             self.df=self.df.astype(col_convert)
             n=self.df.shape[0]
+            self.n=n
+            
             min_n=self.datagen_dict['min_sample']
             assert n>=min_n,f'aborting species:{species} because n:{n}<{min_n}'
             if self.datagen_dict['shuffle']:
@@ -56,8 +58,12 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.datagen_dict['x_vars']=self.x_vars
             X_df=self.df.loc[:,self.x_vars]
             y_df=self.df.loc[:,y_name]
+            self.ymean=np.mean(y_df)
+            try:random_state=self.datagen_dict['random_state']
+            except KeyError:
+                random_state=None
             if test_share:
-                X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=test_share, random_state=0)
+                X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=test_share, random_state=random_state)
             else:
                 X_train, X_test, y_train, y_test = (X_df, None, y_df, None)
             self.logger.info(f'for {species} X_train.shape:{X_train.shape},y_train.shape:{y_train.shape}')

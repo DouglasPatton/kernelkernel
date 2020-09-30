@@ -1,12 +1,14 @@
 from sqlitedict import SqliteDict
 import sys,os
-from mylogger import myLogger
+#from mylogger import myLogger
+import logging
 
-
-class DBTool(myLogger,):
+class DBTool:
     def __init__(self):
-        func_name=DBTool
-        myLogger.__init__(self,name=f'{func_name}.log')
+        func_name='DBTool'
+        #super.__init__(name=f'{func_name}.log')
+        #myLogger.__init__(self,name=f'{func_name}.log')
+        self.logger=logging.getLogger()
         self.logger.info(f'starting {func_name} logger')
         resultsdir=os.path.join(os.getcwd(),'results')
         self.resultsdir=resultsdir
@@ -15,7 +17,7 @@ class DBTool(myLogger,):
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
-        self.pidataDBdictpath=os.path.join(resultsdir,'pidataDB.sqlite')
+        self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.postfitDBdict=lambda name:SqliteDict(filename=self.postfitDBdictpath,tablename=name)
