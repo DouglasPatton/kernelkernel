@@ -43,7 +43,10 @@ class SKToolInitializer(myLogger):
             sktool.fit(datagen_obj.X_train,datagen_obj.y_train)
             return sktool
 
-    
+
+
+        
+        
 class SkTool(BaseEstimator,TransformerMixin,myLogger,):
     def __init__(self,model_gen=None):
         myLogger.__init__(self,name='SkTool.log')
@@ -106,7 +109,21 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             
         
         
+class SkTool_post_fit:
+    def __init__(self):
+        pass
+    def get_coef_dict(self,fitted_sktool,fitted_estimator=None):
+        if fitted_estimator:
+            model=fitted_estimator
+            if type(fitted_sktool) is SkTool
+        else:
+            model=fitted_sktool.model_
+        if type(model) is GridSearchCV:
+            inner_model=model.best_estimator_
+        if type(model) is TransformedTargetRegressor:
+            inner_model=model.regressor_    
         
+        fitted_clf=inner_model.named_steps['clf']
             
     
             
