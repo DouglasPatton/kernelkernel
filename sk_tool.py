@@ -113,9 +113,10 @@ class SkTool_post_fit:
     def __init__(self):
         pass
     def get_coef_dict(self,fitted_sktool,fitted_estimator=None):
-        if fitted_estimator:
+        if not fitted_estimator is None:
+            name='fitted_estimator'
             model=fitted_estimator
-            if type(fitted_sktool) is SkTool
+            assert not type(fitted_sktool) is SkTool,'fitted_estimator not None but fitted_sktool is an SkTool! One or the other, please.'
         else:
             model=fitted_sktool.model_
         if type(model) is GridSearchCV:
