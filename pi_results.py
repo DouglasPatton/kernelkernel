@@ -107,13 +107,43 @@ class PiResults(DBTool,DataPlotter,myLogger):
             
                 
                 
-    def plot_species_estimator_scores(self,scor_est_spec_dict=None):
-        if not scor_est_spec_dict:
-            try: scor_est_spec_dict=self.scor_est_spec_dict
-            except: 
-                self.build_scor_est_spec_dict()
-                scor_est_spec_dict=self.scor_est_spec_dict
+    def plot_species_estimator_scores(self,):
+        scorer_list=self.scorer_list
+        scorer_count=len(scorer_list)
+        est_list=list(self.sk_est_dict.keys())
+        est_count=len(est_list)
+        try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
+        except:self.build_mean_score_sort_spec_and_MLU()
+        fig=plt.figure(dpi=300,figsize=[10,scorer_count*4])
+        for s,scorer in list(enumerate(scorer_list)):
+            sorted_species_list=self.fit_sorted_species_dict[scorer]
+            est_spec_MLU=self.scor_est_spec_MLU[scorer]
+            just_numbers=np.arange(len(sorted_species_list))
+            ax=fig.add_subplot(scorer_count,1,s+1)
+            ax.set_title(f'results for scorer:{scorer}')
+            for e,est_name in list(enumerate(est_list))[:]:
+                spec_MLU=est_spec_MLU[est_name]
+                mean,lower,upper=zip(*[spec_MLU[spec] for spec in sorted_species_list]) # best across estimators, 
+                mean_arr=np.array(mean)
+                lower_arr=np.array(lower)
+                upper_arr=np.array(upper)
+                ax.margins(0)
+                self.makePlotWithCI(
+                        just_numbers,mean_arr,None,
+                        ax,plottitle=est_name,color=e,
+                        hatch=e,ls=e,lower=lower_arr,upper=upper_arr)
+            ax.legend(loc=8,ncol=2)
+            ax.set_xticks([])
+        fig.show()
+        self.fig=fig
+        #figpath=self.helper.getname(os.path.join(self.printdir,f'test_scores_by_species_{scorer}.png'))
+        #fig.savefig(figpath)
         
+    def build_mean_score_sort_spec_and_MLU(self):
+        try: scor_est_spec_dict=self.scor_est_spec_dict
+        except: 
+            self.build_scor_est_spec_dict()
+            scor_est_spec_dict=self.scor_est_spec_dict
         scorer_list=self.scorer_list
         scorer_count=len(scorer_list)
         est_list=list(self.sk_est_dict.keys())
@@ -126,7 +156,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         scor_est_spec_MLU={scorer:{est:{spec:None for spec in species_list} for est in est_list} for scorer in scorer_list}
         # create a separate graph for each scorer. with each estimator on each graph
         
-        fig=plt.figure(dpi=300,figsize=[10,scorer_count*4])
+        
         for s,scorer in enumerate(scorer_list):
             est_spec_dict=self.scor_est_spec_dict[scorer]
 
@@ -157,49 +187,24 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     self.logger.exception('')
         scor_spec_bestesttup_dict=self.build_best_est_dict(scor_spec_est_mean_dict) 
         #    scorer:species:(val,est) where val is lowest across ests for scorer and species
-        
+        fit_sorted_species_dict={}
         for s,scorer in list(enumerate(scorer_list)):
             est_spec_MLU=scor_est_spec_MLU[scorer]
             spec_best_est_dict_s=scor_spec_bestesttup_dict[scorer]
             best_scor_est_tups=[spec_best_est_dict_s[spec] for spec in species_list]#ordering by species_list
             
             bestscors=[tup[0] for tup in best_scor_est_tups]
-            species_scorsort_idx=list(np.argsort(np.array(bestscors)))
+            species_scorsort_idx=list(np.argsort(np.array(bestscors))) #argsort to handle np.nan in the list
             best_cvmean_scors=[best_scor_est_tups[i][1] for i in species_scorsort_idx]
-            """best_cvmean_scors,best_ests,species_scorsort_idx=zip(*[
-                (scor,est_name,idx) for scor,est_name,idx in 
-                sorted([(*scortup,i) for i,scortup in enumerate(best_scor_est_tups)])
-                ]) # sorting by the first item in each tup, ie the best score across estimators
-            self.logger.info(f'best_cvmean_scors:{best_cvmean_scors}')
-            self.logger.info(f'species_scorsort_idx{species_scorsort_idx}')
-            self.logger.info(f'best_scor_est_tups:{best_scor_est_tups}')
-            self.logger.info(f'best_ests{best_ests}')"""
             
             sorted_species_list=[species_list[i] for i in species_scorsort_idx]
             #plt.scatter(sorted_species_list,best_cvmean_scors)
             #plt.show()
-            just_numbers=np.arange(len(sorted_species_list))
-            ax=fig.add_subplot(scorer_count,1,s+1)
-            ax.set_title(f'results for scorer:{scorer}')
-            for e,est_name in list(enumerate(est_list))[:]:
-                spec_MLU=est_spec_MLU[est_name]
-                mean,lower,upper=zip(*[spec_MLU[spec] for spec in sorted_species_list]) # best across estimators, 
-                mean_arr=np.array(mean)
-                lower_arr=np.array(lower)
-                upper_arr=np.array(upper)
-                ax.margins(0)
-                self.makePlotWithCI(
-                        just_numbers,mean_arr,None,
-                        ax,plottitle=est_name,color=e,
-                        hatch=e,ls=e,lower=lower_arr,upper=upper_arr)
-            ax.legend(loc=8,ncol=2)
-            ax.set_xticks([])
-        fig.show()
-        figpath=self.helper.getname(os.path.join(self.resultsdir,f'test_scores_by_species_{scorer}.png'))
-        #fig.savefig(figpath)
+            fit_sorted_species_dict[scorer]=sorted_species_list
+        self.fit_sorted_species_dict=fit_sorted_species_dict
+        self.scor_est_spec_MLU=scor_est_spec_MLU
             
-            
-    def build_best_est_dict(self,scor_spec_est_mean_dict):
+    def build_best_est_dict(self,scor_spec_est_mean_dict,):
         scor_spec_bestesttup_dict={}
         for scorer,spec_dict in scor_spec_est_mean_dict.items():
             spec_best_est_dict={}
