@@ -23,6 +23,7 @@ class sk_estimator(myLogger):
         self.logger.info('starting new sk_estimator log')
         #self.scorer_dict=SKToolInitializer().get_scorer_dict() # for gridsearchCV
         #self.est_dict=self.get_est_dict()
+        self.name=None
         
         
     def get_est_dict(self,):
@@ -36,6 +37,7 @@ class sk_estimator(myLogger):
             'hist-gradient-boosting-classifier':{'estimator':self.histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
         }
         return estimator_dict
+    
     
     def linSvcClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
         try:

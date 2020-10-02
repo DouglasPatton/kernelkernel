@@ -75,9 +75,9 @@ class missingValHandler(BaseEstimator,TransformerMixin):
                 numeric_T=('num_imputer', KNNImputer(n_neighbors=k),self.float_idx_)
                 cat_imputer=make_pipeline(SimpleImputer(strategy='most_frequent'),cat_encoder)
                 categorical_T=('cat_imputer',cat_imputer,self.obj_idx_)
-        T=ColumnTransformer(transformers=[numeric_T,categorical_T])
-        T.fit(X,y)
-        X=T.transform(X)
+        self.T=ColumnTransformer(transformers=[numeric_T,categorical_T])
+        self.T.fit(X,y)
+        X=self.T.transform(X)
         x_nan_count=np.isnan(X).sum() # sums by column and then across columns
         """try:
             y_nan_count=y.isnull().sum().sum()

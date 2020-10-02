@@ -30,7 +30,10 @@ class PiSetup(myLogger):
             species='all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
                 test_share=0,
-                cv=dict(n_splits=splits,n_repeats=20,strategy=None,random_state=rs),# e.g., 'balanced-HUC8'
+                cv=dict(n_splits=splits,
+                        n_repeats=2,
+                        strategy=None, # e.g., 'balanced-HUC8'
+                        random_state=rs),
             ),
             drop_vars=[],
             loc_vars=['HUC12'],
