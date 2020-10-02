@@ -105,7 +105,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             
     def get_split_iterator(self,):
         if self.cv:
-            return self.cv.split(X_train,y_train)
+            return self.cv.split(self.X_train,self.y_train)
         else:
             return[(X_train,y_train)]
         

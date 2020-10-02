@@ -9,6 +9,7 @@ from sklearn.compose import TransformedTargetRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
 from sklearn.base import BaseEstimator, TransformerMixin
+fromosklearn.inspection import permutation_importance
 #from sk_estimators import linRegSupremeClf,linSvcClf, rbfSvcClf, gradientBoostingClf
 from sk_estimators import sk_estimator as sk_est
 import logging
@@ -109,7 +110,7 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             wt[y==u]=share
         return wt
             
-        
+
         
 class SkTool_post_fit:
     def __init__(self):
@@ -146,6 +147,8 @@ class SkTool_post_fit:
                 print(cat_names)
                 #prep.transformers_[1][1]
             fitted_clf=inner_pipe.named_steps['clf']"""
-
+            
+    def do_cv_permutation_importance(X,y):
+        permutation_importance(sel.model_,X,y,scoring='f1_micro')
 
             

@@ -38,6 +38,21 @@ class sk_estimator(myLogger):
         }
         return estimator_dict
     
+    """def get_coef_(self,est_name,est):
+        coef_tool_dict={
+            'logistic-reg':self.coef_linear
+            'linear-svc':self.coef_linear
+            'rbf-svc':
+            'gradient-boosting-classifier':
+            'hist-gradient-boosting-classifier':
+        }
+        return coef_tool_dict[name](est)
+    
+    def coef_linear(self,estimator):
+        return estimator.coef_"""
+    
+        
+    
     
     def linSvcClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
         try:
@@ -63,6 +78,7 @@ class sk_estimator(myLogger):
             return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,)
         except:
             self.logger.exception('')
+    
     
     
     
@@ -141,6 +157,7 @@ class sk_estimator(myLogger):
             return Pipeline(steps=steps)
         except:
             self.loggger.exception('')
+        
 
     
 if __name__=="__main__":
