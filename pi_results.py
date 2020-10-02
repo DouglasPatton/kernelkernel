@@ -43,9 +43,18 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
       
-    def build_predict_est_spec_dict(self,):
-        for hash_id,result_dict in self.resultsDBdict.items():
-            pass
+    def build_spec_est_var_coef_dict(self,rebuild=0):
+        savename=os.path.join('results','spec_est_var_coef_dict.pkl')
+        
+        if rebuild:
+            try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
+            except:self.build_mean_score_sort_spec_and_MLU()
+            spec_est_var_coef_dict={}
+            for hash_id,result_dict in self.resultsDBdict.items():
+            self.spec_est_var_coef_dict=spec_est_var_coef_dict
+            self.save_dict(spec_est_var_coef_dict,filename=savename,bump=1,load=0)
+        else:
+            self.spec_est_var_coef_dict=self.save_dict(None,filename=savename,load=1)
     
     def plot_species_estimator_predict(self):
         pass

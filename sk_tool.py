@@ -132,7 +132,7 @@ class SkTool_post_fit:
                 model=model.best_estimator_
             if type(model) is TransformedTargetRegressor:
                 model=model.regressor_  
-            inner_pipe=model
+            """inner_pipe=model
             # now we should be to the inner pipeline regardless of starting point 
             print('inner_pipe.named_steps',inner_pipe.named_steps)
             inner_steps=list(inner_pipe.named_steps.keys())
@@ -145,7 +145,7 @@ class SkTool_post_fit:
                 cat_names=prep.T.transformers_[1][1]['onehotencoder'].get_feature_names(catvars)
                 print(cat_names)
                 #prep.transformers_[1][1]
-            fitted_clf=inner_pipe.named_steps['clf']
+            fitted_clf=inner_pipe.named_steps['clf']"""
 
 
             

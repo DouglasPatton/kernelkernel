@@ -59,7 +59,14 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.datagen_dict['x_vars']=self.x_vars
             X_df=self.df.loc[:,self.x_vars]
             y_df=self.df.loc[:,y_name]
-            min_1count=self.datagen_dict['min_1count']
+            try:
+                min_1count=self.datagen_dict['min_1count']
+            except KeyError:
+                self.logger.warning(f'min_1count not in data_gen for species:{species}')
+                min_1count=0
+            except:
+                assert False,'unexpected error!'
+                
             count1=np.sum(y_df)
             assert count1>=min_1count,f'aborting species:{species} because count1:{count1}<min_1count{min_1count}'
             
