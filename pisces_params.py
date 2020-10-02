@@ -17,8 +17,9 @@ class PiSetup(myLogger):
         splits=5
         
         self.permutation_kwargs={
-            n_repeats=30,
-            random_state=rs
+            n_repeats:20,
+            random_state:rs
+            #scoring:None
             
         }
         self.model_setup_dict=dict(

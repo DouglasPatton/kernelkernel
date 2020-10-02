@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from pi_data_viz import DataPlotter
 from helpers import Helper
 import pickle
-fromsklearn.inspection import permutation_importance
+from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
     '''
@@ -55,14 +55,15 @@ class PiResults(DBTool,DataPlotter,myLogger):
             datagenhash_data_dict={}
             r_count=len(self.results_dict)
             spec_est_permutation_dict={}
+            permutation_kwargs=PiSetup().permutation_kwargs
             for r_idx,(hash_id,result_dict) in enumerate(self.results_dict.items()): 
+                if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
                 modeldict=rdb_dict[hash_id]
                 data_gen=modeldict["data_gen"]
                 datagenhash=joblib.hash(data_gen)
                 species=data_gen["species"]
                 est_name=modeldict["model_gen"]["name"]
-                try:
-                    modeldict['model_gen']
+                
                 try:
                     spec_est_permutation_dict[species]
                 except KeyError:
@@ -83,7 +84,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     except:
                         self.logger.exception(f'not a keyerror, unexpected error')
                         assert False,'halt'
-                    cv_train_idx,cv_test_idx=zip(*list(data.get_split_iterator())
+                    _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
                     for m in range(len(modeldict['model']['estimator'])): # cross_validate stores a list of the estimators
                         model=modeldict['model']['estimator'][m]
                         m_idx=cv_test_idx[m]

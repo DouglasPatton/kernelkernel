@@ -9,7 +9,7 @@ from sklearn.compose import TransformedTargetRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
 from sklearn.base import BaseEstimator, TransformerMixin
-fromosklearn.inspection import permutation_importance
+#from sklearn.inspection import permutation_importance
 #from sk_estimators import linRegSupremeClf,linSvcClf, rbfSvcClf, gradientBoostingClf
 from sk_estimators import sk_estimator as sk_est
 import logging
