@@ -61,9 +61,9 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
                         keylist.extend(list(self.sitedatacomid_dict[comid].keys()))
                     keylist=list(set(keylist))
                     #self.logger.info(f'full keylist:{keylist}')
-                    badvars=['COMID_2','HUC8','TOHUC','BMMI','IWI',
+                    badvars=['COMID','COMID_2','HUC8','TOHUC','BMMI','IWI',
                              'WsPctFullRp100','REACHCODE', 'WsAreaSqKmRp100',
-                             'CatAreaSqKmRp100','CatPctFullRp100',]#'WA','COMID']
+                             'CatAreaSqKmRp100','CatPctFullRp100',]#'WA']
 
                     keylist=sorted([key for key in keylist if not key in badvars])
                     keylist=self.drop_multi_version_vars(keylist)

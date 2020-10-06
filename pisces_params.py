@@ -13,7 +13,7 @@ class PiSetup(myLogger):
         self.logger.info('starting PiSetup logger')
         self.pdt=PiscesDataTool()
         self.est_dict=sk_estimator().get_est_dict()
-        rs=randint(0,1e6) # to easily change random_states
+        rs=1
         splits=5
         
         self.permutation_kwargs=dict(
