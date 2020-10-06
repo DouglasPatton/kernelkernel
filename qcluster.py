@@ -155,7 +155,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
         self.qdict=qdict
         self.source=source
         if not local_run:
-            self.netaddress=('192.168.1.116',50002)
+            self.netaddress=('192.168.1.121',50002)
             self.BaseManager=BaseManager
         super().__init__()
     
@@ -252,7 +252,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
-            self.netaddress=('192.168.1.116',50002)
+            self.netaddress=('192.168.1.121',50002)
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
