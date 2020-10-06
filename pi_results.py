@@ -43,7 +43,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
         
     def build_comid_spec_results(self,):
-        
+        pass
         
       
     def build_spec_est_permutation_dict(self,rebuild=0):
@@ -168,11 +168,13 @@ class PiResults(DBTool,DataPlotter,myLogger):
         scorer_count=len(scorer_list)
         est_list=list(self.sk_est_dict.keys())
         est_count=len(est_list)
+        metadata={**self.metadataDBdict()} #pull into memory for re-use 
         try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
         except:self.build_mean_score_sort_spec_and_MLU()
         fig=plt.figure(dpi=300,figsize=[10,scorer_count*4])
         for s,scorer in list(enumerate(scorer_list)):
             sorted_species_list=self.fit_sorted_species_dict[scorer]
+            n_list,ymean_list=zip(*[(metadata[spec]['n'],metadata[spec]['ymean']) for spec in sorted_species_list])
             est_spec_MLU=self.scor_est_spec_MLU[scorer]
             just_numbers=np.arange(len(sorted_species_list))
             ax=fig.add_subplot(scorer_count,1,s+1)
@@ -188,6 +190,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         just_numbers,mean_arr,None,
                         ax,plottitle=est_name,color=e,
                         hatch=e,ls=e,lower=lower_arr,upper=upper_arr)
+            ax.plot(just_numbers,ymean_list,ls='--',linewidth=0.5,label="share of 1's")
+            ax.plot(just_numbers,np.log10(np.array(n_list))/10,ls='--',linewidth=0.5,label="relative sample size (log scale)")
             ax.legend(loc=8,ncol=2)
             ax.set_xticks([])
         fig.show()

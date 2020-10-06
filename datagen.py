@@ -6,7 +6,7 @@ import os
 from sklearn.model_selection import StratifiedKFold,RepeatedKFold,train_test_split,RepeatedStratifiedKFold,cross_validate
 from sklearn.preprocessing import StandardScaler
 from mylogger import myLogger
-
+import joblib
 
 
 class dataGenerator(PiscesDataTool,myLogger):
@@ -68,10 +68,11 @@ class dataGenerator(PiscesDataTool,myLogger):
                 assert False,'unexpected error!'
                 
             count1=np.sum(y_df)
+            self.ymean=np.mean(y_df)
             assert count1>=min_1count,f'aborting species:{species} because count1:{count1}<min_1count{min_1count}'
             
             
-            self.ymean=np.mean(y_df)
+            
             try:random_state=self.datagen_dict['random_state']
             except KeyError:
                 random_state=None
@@ -108,6 +109,18 @@ class dataGenerator(PiscesDataTool,myLogger):
             return self.cv.split(self.X_train,self.y_train)
         else:
             return[(X_train,y_train)]
+        
+    def make_metadict(self):
+        datagenhash=joblib.hash(self.datagen_dict)
+        metadict=dict(
+            ymean=self.ymean,
+            n=self.n,
+            xvars=self.x_vars,
+            df_describe=self.df.describe()
+            )
+        return metadict
+        
+        
         
 
 

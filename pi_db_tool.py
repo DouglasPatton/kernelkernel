@@ -16,6 +16,7 @@ class DBTool:
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
+        self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
@@ -25,6 +26,9 @@ class DBTool:
     
     def resultsDBdict(self):
         return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
+    
+    def metadataDBdict(self):
+        return SqliteDict(filename=self.metadataDBdictpath,tablename='metadata')
     
     def resultsDBdict_backup(self):
         return SqliteDict(filename='results/resultsDB_backup.sqlite',tablename='results')
@@ -38,9 +42,12 @@ class DBTool:
     def postfitDBdict(self,name):
         return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
     
-    def addToDBDict(self,save_list,gen=0,post_fit_tablename=0,pi_data=0):
+    def addToDBDict(self,save_list,db=None,gen=0,post_fit_tablename=0,pi_data=0):
         try:
-            if gen:
+            
+            if db:
+                pass        
+            elif gen:
                 db=self.genDBdict
             elif post_fit_tablename:
                 db=lambda: self.postfitDBdict(post_fit_tablename)
