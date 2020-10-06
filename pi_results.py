@@ -1,3 +1,4 @@
+import joblib
 import pickle
 import os,sys,psutil
 import re
@@ -23,6 +24,7 @@ import matplotlib.pyplot as plt
 from pi_data_viz import DataPlotter
 from helpers import Helper
 import pickle
+from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
     '''
@@ -35,17 +37,65 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.logger.info(f'starting {func_name} logger')
         DBTool.__init__(self)
         DataPlotter.__init__(self)
-        self.resultsDBdict=self.resultsDBdict()
+        self.results_dict=self.resultsDBdict()
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
         self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
+        
       
-    def build_predict_est_spec_dict(self,):
-        for hash_id,result_dict in self.resultsDBdict.items():
-            pass
+    def build_spec_est_permutation_dict(self,rebuild=0):
+        savename=os.path.join('results','spec_est_permutation_dict.pkl')
+        
+        if rebuild:
+            #try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
+            #except:self.build_mean_score_sort_spec_and_MLU()
+            datagenhash_data_dict={}
+            r_count=len(self.results_dict)
+            spec_est_permutation_dict={}
+            permutation_kwargs=PiSetup().permutation_kwargs
+            for r_idx,(hash_id,result_dict) in enumerate(self.results_dict.items()): 
+                if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
+                modeldict=rdb_dict[hash_id]
+                data_gen=modeldict["data_gen"]
+                datagenhash=joblib.hash(data_gen)
+                species=data_gen["species"]
+                est_name=modeldict["model_gen"]["name"]
+                
+                try:
+                    spec_est_permutation_dict[species]
+                except KeyError:
+                    spec_est_permutation_dict[species]={est_name:[]}
+                except:
+                    assert False,'unexpected'
+                try:
+                    spec_est_permutation_dict[species][est_name]
+                except KeyError:
+                    spec_est_permutation_dict[species][est_name]=[]
+                if type(modeldict['model']) is dict:
+                    try:
+                        data=datagenhash_data_dict[datagenhash]
+                    except KeyError:
+                        self.logger.info(f'key error for {species}:{est_name}, so calling dataGenerator')
+                        data=dataGenerator(data_gen)
+                        datagenhash_data_dict[datagenhashs]=data
+                    except:
+                        self.logger.exception(f'not a keyerror, unexpected error')
+                        assert False,'halt'
+                    _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
+                    for m in range(len(modeldict['model']['estimator'])): # cross_validate stores a list of the estimators
+                        model=modeldict['model']['estimator'][m]
+                        m_idx=cv_test_idx[m]
+                        X=data.X_train[m_idx,:]
+                        y=data.y_train[m_idx]
+                        xvar_perm_tup=(data.x_vars,permutation_importance(model,X,y,**permutation_kwargs))
+                        spec_est_permutation_dict[species][est_name].append(xvar_perm_tup)
+            self.spec_est_permutation_dict=spec_est_permutation_dict
+            self.save_dict(spec_est_permutation_dict,filename=savename,bump=1,load=0)
+        else:
+            self.spec_est_permutation_dict=self.save_dict(None,filename=savename,load=1)
     
     def plot_species_estimator_predict(self):
         pass
@@ -55,7 +105,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
         if rebuild:
             scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
-            for hash_id,result_dict in self.resultsDBdict.items():
+            for hash_id,result_dict in self.results_dict.items():
                 data_gen=result_dict['data_gen']
                 species=data_gen['species']
                 model_gen=result_dict['model_gen']

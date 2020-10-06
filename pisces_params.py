@@ -15,6 +15,13 @@ class PiSetup(myLogger):
         self.est_dict=sk_estimator().get_est_dict()
         rs=randint(0,1e6) # to easily change random_states
         splits=5
+        
+        self.permutation_kwargs={
+            n_repeats:20,
+            random_state:rs
+            #scoring:None
+            
+        }
         self.model_setup_dict=dict(
             gridpoints=5,
             inner_cv_splits=splits,
