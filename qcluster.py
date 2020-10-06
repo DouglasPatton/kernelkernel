@@ -295,7 +295,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             
             check_complete=0
             while not check_complete:
-                sleep(30)
+                sleep(90)
                 saveqdumper.run()
                 check_complete=self.checkComplete()
             jobqfiller.join() 

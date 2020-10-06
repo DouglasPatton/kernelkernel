@@ -157,8 +157,8 @@ class PiscesDataTool(myLogger,DBTool):
             try:
                 with open(specieslistpath,'rb') as f:
                     speciestup=pickle.load(f)
-                self.specieslist=speciestup[0]
-                self.speciesoccurencelist=speciestup[1]
+                self.specieslist=speciestup[0] # variable descriptions below
+                self.speciesoccurencelist=speciestup[1] 
                 self.speciescomidlist=speciestup[2] 
                 self.specieshuclist=speciestup[3]
                 self.huclist_survey=speciestup[4]

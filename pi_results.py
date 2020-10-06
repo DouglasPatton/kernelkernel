@@ -8,12 +8,8 @@ import traceback
 import shutil
 from random import randint,seed,shuffle
 import logging
-from helpers import Helper
-import multiprocessing as mp
-from multiprocessing.managers import BaseManager
 from queue import Queue
 import numpy as np
-from sqlitedict import SqliteDict
 from  sk_tool import SKToolInitializer
 from sk_estimators import sk_estimator
 from datagen import dataGenerator 
@@ -45,57 +41,67 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
         
+        
+    def build_comid_spec_results(self,):
+        
+        
       
     def build_spec_est_permutation_dict(self,rebuild=0):
-        savename=os.path.join('results','spec_est_permutation_dict.pkl')
-        
-        if rebuild:
-            #try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
-            #except:self.build_mean_score_sort_spec_and_MLU()
-            datagenhash_data_dict={}
-            r_count=len(self.results_dict)
-            spec_est_permutation_dict={}
-            permutation_kwargs=PiSetup().permutation_kwargs
-            for r_idx,(hash_id,result_dict) in enumerate(self.results_dict.items()): 
-                if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
-                modeldict=rdb_dict[hash_id]
-                data_gen=modeldict["data_gen"]
-                datagenhash=joblib.hash(data_gen)
-                species=data_gen["species"]
-                est_name=modeldict["model_gen"]["name"]
-                
-                try:
-                    spec_est_permutation_dict[species]
-                except KeyError:
-                    spec_est_permutation_dict[species]={est_name:[]}
-                except:
-                    assert False,'unexpected'
-                try:
-                    spec_est_permutation_dict[species][est_name]
-                except KeyError:
-                    spec_est_permutation_dict[species][est_name]=[]
-                if type(modeldict['model']) is dict:
+        try:
+            savename=os.path.join('results','spec_est_permutation_dict.pkl')
+
+            if rebuild:
+                #try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
+                #except:self.build_mean_score_sort_spec_and_MLU()
+                datagenhash_data_dict={}
+                r_count=len(self.results_dict)
+                spec_est_permutation_dict={}
+                permutation_kwargs=PiSetup().permutation_kwargs
+                for r_idx,(hash_id,modeldict) in enumerate(self.results_dict.items()): 
+                    if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
+                    data_gen=modeldict["data_gen"]
+                    datagenhash=joblib.hash(data_gen)
+                    species=data_gen["species"]
+                    est_name=modeldict["model_gen"]["name"]
+
                     try:
-                        data=datagenhash_data_dict[datagenhash]
+                        spec_est_permutation_dict[species]
                     except KeyError:
-                        self.logger.info(f'key error for {species}:{est_name}, so calling dataGenerator')
-                        data=dataGenerator(data_gen)
-                        datagenhash_data_dict[datagenhashs]=data
+                        spec_est_permutation_dict[species]={est_name:[]}
                     except:
-                        self.logger.exception(f'not a keyerror, unexpected error')
-                        assert False,'halt'
-                    _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
-                    for m in range(len(modeldict['model']['estimator'])): # cross_validate stores a list of the estimators
-                        model=modeldict['model']['estimator'][m]
-                        m_idx=cv_test_idx[m]
-                        X=data.X_train[m_idx,:]
-                        y=data.y_train[m_idx]
-                        xvar_perm_tup=(data.x_vars,permutation_importance(model,X,y,**permutation_kwargs))
-                        spec_est_permutation_dict[species][est_name].append(xvar_perm_tup)
-            self.spec_est_permutation_dict=spec_est_permutation_dict
-            self.save_dict(spec_est_permutation_dict,filename=savename,bump=1,load=0)
-        else:
-            self.spec_est_permutation_dict=self.save_dict(None,filename=savename,load=1)
+                        assert False,'unexpected'
+                    try:
+                        spec_est_permutation_dict[species][est_name]
+                    except KeyError:
+                        spec_est_permutation_dict[species][est_name]=[]
+                    if type(modeldict['model']) is dict:
+                        try:
+                            data=datagenhash_data_dict[datagenhash] # in case diff species have diff 
+                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                        except KeyError:
+                            self.logger.info(f'key error for {species}:{est_name}, so calling dataGenerator')
+                            data=dataGenerator(data_gen)
+                            datagenhash_data_dict[datagenhash]=data
+                        except:
+                            self.logger.exception(f'not a keyerror, unexpected error')
+                            assert False,'halt'
+                        _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
+                        cv_count=len(modeldict['model']['estimator'])
+                        for m in range(cv_count): # cross_validate stores a list of the estimators
+                            self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
+                            model=modeldict['model']['estimator'][m]
+                            m_idx=cv_test_idx[m]
+                            X=data.X_train.iloc[m_idx]
+                            y=data.y_train.iloc[m_idx]
+                            xvar_perm_tup=(data.x_vars,permutation_importance(model,X,y,**permutation_kwargs))
+                            self.logger.info(f'xvar_perm_tup:{xvar_perm_tup}')
+                            spec_est_permutation_dict[species][est_name].append(xvar_perm_tup)
+                self.spec_est_permutation_dict=spec_est_permutation_dict
+                self.save_dict(spec_est_permutation_dict,filename=savename,bump=1,load=0)
+            else:
+                self.spec_est_permutation_dict=self.save_dict(None,filename=savename,load=1)
+        except:
+            self.logger.exception(f'outer catch in building spec_est Permutations')
     
     def plot_species_estimator_predict(self):
         pass

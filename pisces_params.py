@@ -16,12 +16,12 @@ class PiSetup(myLogger):
         rs=randint(0,1e6) # to easily change random_states
         splits=5
         
-        self.permutation_kwargs={
-            n_repeats:20,
-            random_state:rs
+        self.permutation_kwargs=dict(
+            n_repeats=5,
+            random_state=rs,
             #scoring:None
             
-        }
+            )
         self.model_setup_dict=dict(
             gridpoints=5,
             inner_cv_splits=splits,
@@ -43,7 +43,7 @@ class PiSetup(myLogger):
                         random_state=rs),
             ),
             drop_vars=[],
-            loc_vars=['HUC12'],
+            loc_vars=['HUC12','COMID'],
             )
     
     def model_setup(self,):
