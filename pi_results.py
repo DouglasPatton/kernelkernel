@@ -192,7 +192,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         hatch=e,ls=e,lower=lower_arr,upper=upper_arr)
             ax.plot(just_numbers,ymean_list,ls='--',linewidth=0.5,label="share of 1's")
             ax.plot(just_numbers,np.log10(np.array(n_list))/10,ls='--',linewidth=0.5,label="relative sample size (log scale)")
-            ax.legend(loc=8,ncol=2)
+            ax.legend(loc=8,ncol=3)
             ax.set_xticks([])
         fig.show()
         self.fig=fig
