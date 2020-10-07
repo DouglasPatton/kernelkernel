@@ -7,7 +7,7 @@ if __name__ == "__main__":
     print('len(gen_dict) ',len(gen_dict))
     success=0
     fail=0
-
+    '''
     for key in results_dict.keys():
         try:
             r=results_dict[key]
@@ -29,3 +29,4 @@ if __name__ == "__main__":
     print('successes: ',success)
     print('failures: ',fail)
 
+    '''
