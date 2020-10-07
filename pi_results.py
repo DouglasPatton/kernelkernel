@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from pi_data_viz import DataPlotter
 from helpers import Helper
 import pickle
-from sklearn.inspection import permutation_importance
+#from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
     '''
@@ -88,15 +88,18 @@ class PiResults(DBTool,DataPlotter,myLogger):
                             assert False,'halt'
                         _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
                         cv_count=len(modeldict['model']['estimator'])
+                        y_yhat_tup_list=[]
                         for m in range(cv_count): # cross_validate stores a list of the estimators
                             self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
                             model=modeldict['model']['estimator'][m]
                             m_idx=cv_test_idx[m]
                             X=data.X_train.iloc[m_idx]
                             y=data.y_train.iloc[m_idx]
-                            xvar_perm_tup=(data.x_vars,permutation_importance(model,X,y)# ,**prediction_kwargs))
-                            self.logger.info(f'xvar_perm_tup:{xvar_perm_tup}')
-                            spec_est_prediction_dict[species][est_name].append(xvar_perm_tup)
+                            y_yhat_tup_list.append((y,model.predict(X)))# ,**prediction_kwargs))
+                            self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
+                        y_,yhat_=zip(*y_yhat_tup_list)
+                        y_arr=np.concatenate(y_,axis=0);yhat_arr=np.concatenate(yhat_,axis=0)
+                        spec_est_prediction_dict[species][est_name].append((y_arr,yhat_arr))
                 self.spec_est_prediction_dict=spec_est_prediction_dict
                 self.save_dict(spec_est_prediction_dict,filename=savename,bump=1,load=0)
             else:
