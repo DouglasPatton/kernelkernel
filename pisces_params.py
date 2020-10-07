@@ -38,7 +38,7 @@ class PiSetup(myLogger):
             data_split=dict(
                 test_share=0,
                 cv=dict(n_splits=splits,
-                        n_repeats=2,
+                        n_repeats=20,
                         strategy=None, # e.g., 'balanced-HUC8'
                         random_state=rs),
             ),
