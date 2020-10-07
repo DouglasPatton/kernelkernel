@@ -1,5 +1,5 @@
 import traceback
-import geopandas as gpd
+#import geopandas as gpd
 import requests
 import json,pickle
 import os
