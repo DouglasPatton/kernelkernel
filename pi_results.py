@@ -45,77 +45,87 @@ class PiResults(DBTool,DataPlotter,myLogger):
     def build_comid_spec_results(self,):
         pass
         
-
+    def build_prediction_rundict(self):
+        try: self.predictDB
+        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
+        datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
+        rundict_list=[]
+        for d,(dg_hash,hash_id_list) in list(enumerate(datagenhash_hash_id_dict.items())):
+            rundict_list.append({})
+            for h,hash_id in list(enumerate(hash_id_list)):
+                if not hash_id in self.predictDB:
+                    rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
+                    if not 'data_gen' in rundict_list[d]:
+                        rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
+                    
+                    
+                    
+                
+    def build_dghash_hash_id_dict(self,):
+        datagenhash_hash_id_dict={}
+        for hash_id,modeldict in self.results_dict.items(): 
+                data_gen=modeldict["data_gen"]
+                datagenhash=joblib.hash(data_gen)
+                try:
+                    datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
+                        #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                except KeyError:
+                    self.logger.info(f'key error for {species}:{est_name}, so starting new list')
+                    datagenhash_hash_id_dict[datagenhash]=[hash_id]
+                except:
+                    self.logger.exception(f'not a keyerror, unexpected error')
+                    assert False,'halt'
+        return datagenhash_hash_id_dict
+    
     
     def build_species_estimator_prediction_dict(self,rebuild=0):
         try:
-            savename=os.path.join('results','spec_est_prediction_dict.pkl')
+            spec_est_prediction_dict={}
+            datagenhash_hash_id_dict=self.build_datagen_hash_id_dict()
 
-            if rebuild:
-                #try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
-                #except:self.build_mean_score_sort_spec_and_MLU()
-                datagenhash_hash_id_dict={}
-                r_count=len(self.results_dict)
-                spec_est_prediction_dict={}
-                #prediction_kwargs=PiSetup().prediction_kwargs
-                for hash_id,modeldict in self.results_dict.items(): 
-                    data_gen=modeldict["data_gen"]
-                    datagenhash=joblib.hash(data_gen)
-                    try:
-                        datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
-                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
-                    except KeyError:
-                        self.logger.info(f'key error for {species}:{est_name}, so starting new list')
-                        datagenhash_hash_id_dict[datagenhash]=[hash_id]
-                    except:
-                        self.logger.exception(f'not a keyerror, unexpected error')
-                        assert False,'halt'
-                        
-                for _,model_list
-                    
-                    
-                    
-                    species=data_gen["species"]
-                    est_name=modeldict["model_gen"]["name"]
+            for _,model_list
 
-                    try:
-                        spec_est_prediction_dict[species]
-                    except KeyError:
-                        spec_est_prediction_dict[species]={est_name:[]}
-                    except:
-                        assert False,'unexpected'
-                    try:
-                        spec_est_prediction_dict[species][est_name]
-                    except KeyError:
-                        spec_est_prediction_dict[species][est_name]=[]
-                    if type(modeldict['model']) is dict:
-                        
-                        _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
-                        cv_count=len(modeldict['model']['estimator'])
-                        yhat_list=[];mstack=[]
-                        for m in range(cv_count): # cross_validate stores a list of the estimators
-                            self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
-                            model=modeldict['model']['estimator'][m]
-                            m_idx=cv_test_idx[m]
-                            X=data.X_train.iloc[m_idx]
-                            #y=data.y_train.iloc[m_idx]
-                            try:
-                                yhat_list.append((model.predict(X)))
-                                mstack.extend(m_idx)#keep together in case failed predictions
-                            except:
-                                self.logger.exception(f'error with species:{species}, est_name:{est_name}, m:{m}')
-                            # ,**prediction_kwargs))
-                            #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
-                        y_arr=data.y_train.iloc[mstack];yhat_arr=np.concatenate(yhat_list,axis=0)
-                        huc12=data.df.loc[:,'HUC12'].iloc[mstack]
-                        spec_est_prediction_dict[species][est_name].append((y_arr,yhat_arr,huc12))
-                    else: assert False, 'only developed for CV!'
-                self.spec_est_prediction_dict=spec_est_prediction_dict
-                self.save_dict(spec_est_prediction_dict,filename=savename,bump=1,load=0)
-            else:
-                self.spec_est_prediction_dict=self.save_dict(None,filename=savename,load=1)
-        except:
-            self.logger.exception(f'outer catch in building spec_est predictions')
+
+
+                species=data_gen["species"]
+                est_name=modeldict["model_gen"]["name"]
+
+                try:
+                    spec_est_prediction_dict[species]
+                except KeyError:
+                    spec_est_prediction_dict[species]={est_name:[]}
+                except:
+                    assert False,'unexpected'
+                try:
+                    spec_est_prediction_dict[species][est_name]
+                except KeyError:
+                    spec_est_prediction_dict[species][est_name]=[]
+                if type(modeldict['model']) is dict:
+
+                    _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
+                    cv_count=len(modeldict['model']['estimator'])
+                    yhat_list=[];mstack=[]
+                    for m in range(cv_count): # cross_validate stores a list of the estimators
+                        self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
+                        model=modeldict['model']['estimator'][m]
+                        m_idx=cv_test_idx[m]
+                        X=data.X_train.iloc[m_idx]
+                        #y=data.y_train.iloc[m_idx]
+                        try:
+                            yhat_list.append((model.predict(X)))
+                            mstack.extend(m_idx)#keep together in case failed predictions
+                        except:
+                            self.logger.exception(f'error with species:{species}, est_name:{est_name}, m:{m}')
+                        # ,**prediction_kwargs))
+                        #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
+                    y_arr=data.y_train.iloc[mstack];yhat_arr=np.concatenate(yhat_list,axis=0)
+                    huc12=data.df.loc[:,'HUC12'].iloc[mstack]
+                    spec_est_prediction_dict[species][est_name].append((y_arr,yhat_arr,huc12))
+                else: assert False, 'only developed for CV!'
+            self.spec_est_prediction_dict=spec_est_prediction_dict
+            self.addToDBDict(spec_est_prediction_dict,predict=1)
+    except:
+        self.logger.exception(f'outer catch in building spec_est predictions')
 
       
     def build_spec_est_permutation_dict(self,rebuild=0):

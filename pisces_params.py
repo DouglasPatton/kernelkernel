@@ -102,17 +102,22 @@ class PiSetup(myLogger):
             for rundict in list_of_rundicts:
                 runlist.append(FitRunner(rundict))
 
-        
+        elif self.predict_run:
+            pi_results.build_prediction_rundict()
+            for rundict in rundict_list:
+                runlist.append(PredictRunner(rundict))
+            
         return runlist,hash_id_list
     
        
             
 
         
-    def checkComplete(self,rundict_list=None,hash_id_list=None):
+    def checkComplete(self,db=None,rundict_list=None,hash_id_list=None):
         #rundict_list is provided at startup, and if not, useful for checking if all have been saved
-        resultsDBdict=self.resultsDBdict()
-        complete_hash_id_list=list(resultsDBdict.keys())
+        if db is None:
+            db=self.resultsDBdict()
+        complete_hash_id_list=list(db.keys())
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):
                 model_gen_dict=run_dict['model_gen_dict']

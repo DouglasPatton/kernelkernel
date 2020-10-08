@@ -18,11 +18,11 @@ class DBTool:
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
         self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
-        self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
+        self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
-        #self.postfitDBdict=lambda name:SqliteDict(filename=self.postfitDBdictpath,tablename=name)
+        #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
     
     def resultsDBdict(self):
         return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
@@ -39,18 +39,18 @@ class DBTool:
     def genDBdict(self):
         return SqliteDict(filename=self.genDBdictpath,tablename='gen')
     
-    def postfitDBdict(self,name):
-        return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
+    def predictDBdict(self,):
+        return SqliteDict(filename=self.predictDBdictpath,tablename='predict')
     
-    def addToDBDict(self,save_list,db=None,gen=0,post_fit_tablename=0,pi_data=0):
+    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0):
         try:
             
             if db:
                 pass        
             elif gen:
                 db=self.genDBdict
-            elif post_fit_tablename:
-                db=lambda: self.postfitDBdict(post_fit_tablename)
+            elif predict:
+                db=self.predictDBdict
             elif pi_data:
                 if type(pi_data) is str:
                     kwargs={'name':pi_data}
