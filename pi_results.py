@@ -47,7 +47,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
 
     
-    def build_species_estimator_prediction_dict(self):
+    def build_species_estimator_prediction_dict(self,rebuild=0):
         try:
             savename=os.path.join('results','spec_est_prediction_dict.pkl')
 
@@ -82,24 +82,30 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         except KeyError:
                             self.logger.info(f'key error for {species}:{est_name}, so calling dataGenerator')
                             data=dataGenerator(data_gen)
+                            
                             datagenhash_data_dict[datagenhash]=data
                         except:
                             self.logger.exception(f'not a keyerror, unexpected error')
                             assert False,'halt'
                         _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
                         cv_count=len(modeldict['model']['estimator'])
-                        y_yhat_tup_list=[]
+                        yhat_list=[];mstack=[]
                         for m in range(cv_count): # cross_validate stores a list of the estimators
                             self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
                             model=modeldict['model']['estimator'][m]
                             m_idx=cv_test_idx[m]
                             X=data.X_train.iloc[m_idx]
-                            y=data.y_train.iloc[m_idx]
-                            y_yhat_tup_list.append((y,model.predict(X)))# ,**prediction_kwargs))
-                            self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
-                        y_,yhat_=zip(*y_yhat_tup_list)
-                        y_arr=np.concatenate(y_,axis=0);yhat_arr=np.concatenate(yhat_,axis=0)
-                        spec_est_prediction_dict[species][est_name].append((y_arr,yhat_arr))
+                            #y=data.y_train.iloc[m_idx]
+                            try:
+                                yhat_list.append((model.predict(X)))
+                                mstack.extend(m_idx)#keep together in case failed predictions
+                            except:
+                                self.logger.exception(f'error with species:{species}, est_name:{est_name}, m:{m}')
+                            # ,**prediction_kwargs))
+                            #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
+                        y_arr=data.y_train.iloc[mstack];yhat_arr=np.concatenate(yhat_list,axis=0)
+                        huc12=data.df.loc[:,'HUC12'].iloc[mstack]
+                        spec_est_prediction_dict[species][est_name].append((y_arr,yhat_arr,huc12))
                 self.spec_est_prediction_dict=spec_est_prediction_dict
                 self.save_dict(spec_est_prediction_dict,filename=savename,bump=1,load=0)
             else:

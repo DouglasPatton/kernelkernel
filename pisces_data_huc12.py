@@ -165,7 +165,7 @@ class PiscesDataTool(myLogger,DBTool):
                 self.huccomidlist_survey=speciestup[5]
                 self.specieshuclist_survey_idx=speciestup[6]
                 
-                print(f'opening {specieslistpath} with length:{len(speciestup)} and type:{type(speciestup)}')
+                #print(f'opening {specieslistpath} with length:{len(speciestup)} and type:{type(speciestup)}')
                 return
             except:
                 self.logger.exception(f'buildspecieslist found {specieslistpath} but there was an error loading variables')
