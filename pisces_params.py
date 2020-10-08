@@ -7,13 +7,18 @@ from copy import copy
 import joblib
 from random import randint
 from pi_db_tool import DBTool
-from pi_runners import FitRunner
+from pi_runners import FitRunner,PredictRunner
+from pi_results import PiResults
 
 class PiSetup(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.fit_run=True
+        self.run_type='predict'# 'fit'
+        if self.run_type=='predict':
+            self.db_kwargs={'predict':True} # for saveQdumper
+        else:
+            self.db_kwargs={}
         rs=1
         splits=5
         
@@ -21,8 +26,8 @@ class PiSetup(myLogger):
             n_repeats=5,
             random_state=rs,
             #scoring:None
-            
             )
+        
         self.model_setup_dict=dict(
             gridpoints=5,
             inner_cv_splits=splits,
@@ -39,7 +44,7 @@ class PiSetup(myLogger):
             data_split=dict(
                 test_share=0,
                 cv=dict(n_splits=splits,
-                        n_repeats=20,
+                        n_repeats=2,
                         strategy=None, # e.g., 'balanced-HUC8'
                         random_state=rs),
             ),
@@ -58,7 +63,7 @@ class PiSetup(myLogger):
             
     
     def data_setup(self,):
-        species_list=PiscesDataTool.returnspecieslist()
+        species_list=PiscesDataTool().returnspecieslist()
         data_params=self.datagen_dict_template
         if not data_params['species']=='all':
             species_selector=data_params['species']
@@ -77,8 +82,8 @@ class PiSetup(myLogger):
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
-        dbt=DBTool()
-        if self.fit_run:
+        self.dbt=DBTool()
+        if self.run_type=='fit':
             rundict_list=[]
             run_record_dict={}
             data_gen_list=self.data_setup()
@@ -95,15 +100,16 @@ class PiSetup(myLogger):
                 rundict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
                 rundict_list.append(rundict)
 
-            dbt.addToDBDict(run_record_dict,gen=1) # create a record of the rundicts to check when it's all complete.
+            self.dbt.addToDBDict(run_record_dict,gen=1) # create a record of the rundicts to check when it's all complete.
             self.logger.debug(f'len(rundict_list):{len(rundict_list)}')
             runlist=[]
             rundict_list=self.checkComplete(rundict_list=rundict_list) # remove any that are already in resultsDB
-            for rundict in list_of_rundicts:
+            for rundict in rundict_list:
                 runlist.append(FitRunner(rundict))
 
-        elif self.predict_run:
-            pi_results.build_prediction_rundict()
+        elif self.run_type=='predict':
+            rundict_list,hash_id_list=PiResults().build_prediction_rundicts()
+            runlist=[]
             for rundict in rundict_list:
                 runlist.append(PredictRunner(rundict))
             
@@ -116,7 +122,7 @@ class PiSetup(myLogger):
     def checkComplete(self,db=None,rundict_list=None,hash_id_list=None):
         #rundict_list is provided at startup, and if not, useful for checking if all have been saved
         if db is None:
-            db=self.resultsDBdict()
+            db=self.dbt.resultsDBdict()
         complete_hash_id_list=list(db.keys())
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):

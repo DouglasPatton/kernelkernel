@@ -40,7 +40,7 @@ class DBTool:
         return SqliteDict(filename=self.genDBdictpath,tablename='gen')
     
     def predictDBdict(self,):
-        return SqliteDict(filename=self.predictDBdictpath,tablename='predict')
+        return SqliteDict(filename=self.predictDBdictpath,tablename='predict01')
     
     def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0):
         try:

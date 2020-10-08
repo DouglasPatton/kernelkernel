@@ -49,8 +49,9 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         s.serve_forever()
         
 class SaveQDumper(mp.Process,DBTool,myLogger):
-    def __init__(self,q):
+    def __init__(self,q,db_kwargs={}):
         self.q=q
+        self.db_kwargs=db_kwargs
         #fself.netaddress=address
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
@@ -85,23 +86,27 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                 if success:
                     if type(savedict) is str:
                         if savedict=='shutdown':
-                            self.logger.DEBUG(f'SaveQDumper shutting down')
+                            self.logger.debug(f'SaveQDumper shutting down')
                             return
                     assert type(savedict) is dict, f'SaveQDumper expecting a dict for savedict but got {type(savedict)}'
                     for hash_id,model_dict in savedict.items():
-                        try:
-                            species=model_dict['data_gen']['species']
-                        except:
-                            self.logger.info("failed trying to get species from savedict")
-                            species='error'
-                        try:
-                            model_name=model_dict['model_gen']['name']
-                        except:
-                            self.logger.exception('failed try to get model name from model_dict')
-                            model_name='error'
-                        self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}')
+                        if not type(model_dict) is tuple:
+                            try:
+                                species=model_dict['data_gen']['species']
+                            except:
+
+                                self.logger.info("failed trying to get species from savedict")
+                                species='error'
+                            try:
+                                model_name=model_dict['model_gen']['name']
+                            except:
+                                self.logger.exception('failed try to get model name from model_dict')
+                                model_name='error'
+                            self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}')
+                        else:
+                            self.logger.info(f'saveqdumper has a tuple. self.db_kwargs:{self.db_kwargs}')
                     save_list=[savedict] # b/c addToDBDict expects a list of dicts.
-                    self.addToDBDict(save_list)
+                    self.addToDBDict(save_list,**self.db_kwargs)
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
             
@@ -186,7 +191,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 try:
                     self.logger.debug('RunNode about to check jobq')
                     runner=jobq.get(True,10)
-                    self.logger.debug(f'RunNode has job, rundict: {rundict}')
+                    self.logger.debug(f'RunNode has job:runner.rundict:{runner.rundict}')
                     havejob=1
                 except:
                     self.logger.exception('')
@@ -198,8 +203,6 @@ class RunNode(mp.Process,BaseManager,myLogger):
                      # each estimator contains rundict
                     runner.passQ(saveq)
                     runner.run()
-                                    
-                        
             except:
                 self.logger.exception('')           
     
@@ -233,7 +236,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         else:
             self.source=source
         if self.source=='pisces':
-            self.setup=PiSetup()
+            self.setup=PiSetup() # in pisces_params, this file/object determines how things run
         if self.source=='monte':
             self.setup=MonteSetup()
             
@@ -248,13 +251,10 @@ class RunCluster(mp.Process,DBTool,myLogger):
     def run(self,):
         self.logger.debug('master starting up')
         try:
-            
             runlist,hash_id_list=self.setup.setupRunners()
-            
             jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
             jobqfiller.run()
-            saveqdumper=SaveQDumper(self.qdict['saveq'])
-            
+            saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
             while not check_complete:
                 sleep(90)
@@ -267,14 +267,9 @@ class RunCluster(mp.Process,DBTool,myLogger):
             return
         except:
             self.logger.exception('')
+            assert False,'unexpected error'
         
- 
-        
-        
-    
-                        
-                        
-        hash_id_list=list(self.genDBdict().keys())
+        """hash_id_list=list(self.genDBdict().keys())
         
         '''
         if not run_dict_list:
@@ -293,7 +288,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             if run_dict_list:
                 return True
             else:
-                return False
+                return False"""
                     
             
     def getqdict(self):

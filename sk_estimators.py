@@ -20,7 +20,7 @@ from mylogger import myLogger
 class sk_estimator(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='sk_estimator.log')
-        self.logger.info('starting new sk_estimator log')
+        #self.logger.info('starting new sk_estimator log')
         #self.scorer_dict=SKToolInitializer().get_scorer_dict() # for gridsearchCV
         #self.est_dict=self.get_est_dict()
         self.name=None
