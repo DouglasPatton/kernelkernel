@@ -12,7 +12,7 @@ from multiprocessing.managers import BaseManager
 from queue import Queue
 import numpy as np
 from sqlitedict import SqliteDict
-from  sk_tool import SKToolInitializer
+#from  sk_tool import SKToolInitializer
 from datagen import dataGenerator 
 from pisces_params import PiSetup,MonteSetup
 from pi_db_tool import DBTool
@@ -160,19 +160,6 @@ class RunNode(mp.Process,BaseManager,myLogger):
         super().__init__()
     
     
-    
-        
-    
-    def build_from_rundict(self,rundict):
-        data_gen=rundict['data_gen'] #how to generate the data
-        data=dataGenerator(data_gen)
-        model_gen_dict=rundict['model_gen_dict'] # {hash_id:data_gen...}
-        hash_id_model_dict={}
-        for hash_id,model_gen in model_gen_dict.items():
-            model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
-            hash_id_model_dict[hash_id]=model_dict# hashid based on model_gen and data_gen
-        return data,hash_id_model_dict
-    
     def run(self,):
         self.logger.info('RunNode running')
         platform=sys.platform
@@ -198,41 +185,19 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 jobsuccess=0
                 try:
                     self.logger.debug('RunNode about to check jobq')
-                    rundict=jobq.get(True,10)
+                    runner=jobq.get(True,10)
                     self.logger.debug(f'RunNode has job, rundict: {rundict}')
                     havejob=1
                 except:
                     self.logger.exception('')
                 if havejob:
-                    if type(rundict) is str:
-                        if rundict=='shutdown':
-                            jobq.put(rundict)
+                    if type(runner) is str:
+                        if runner=='shutdown':
+                            jobq.put(runner)
                             return
-                    data,hash_id_model_dict=self.build_from_rundict(rundict) # each estimator contains rundict
-                    hash_id_list=list(hash_id_model_dict.keys())
-                    shuffle(hash_id_list)# so all nodes aren't working on the same algorithm 
-                    for hash_id in hash_id_list:
-                        model_dict=hash_id_model_dict[hash_id]
-                        try:
-                            success=0
-                            model_dict['model']=model_dict['model'].run(data)
-                            success=1
-                        except:
-                            self.logger.exception('error for model_dict:{model_dict}')
-                        savedict={hash_id:model_dict}
-                        qtry=0
-                        while success:
-                            self.logger.debug(f'adding savedict to saveq')
-                            try:
-                                qtry+=1
-                                saveq.put(savedict)
-                                self.logger.debug(f'savedict sucesfully added to saveq')
-                                break
-                            except:
-                                if not saveq.full() and qtry>3:
-                                    self.logger.exception('error adding to saveq')
-                                else:
-                                    sleep(1)
+                     # each estimator contains rundict
+                    runner.passQ(saveq)
+                    runner.run()
                                     
                         
             except:
@@ -284,12 +249,9 @@ class RunCluster(mp.Process,DBTool,myLogger):
         self.logger.debug('master starting up')
         try:
             
-            list_of_run_dicts,run_record_dict=self.setup.setupRundictList()
-            self.addToDBDict(run_record_dict,gen=1) # create a record of the rundicts to check when it's all complete.
-            list_of_run_dicts=self.checkComplete(run_dict_list=list_of_run_dicts) # remove any that are already in resultsDB
-        
-            self.logger.debug(f'len(list_of_run_dicts):{len(list_of_run_dicts)}')
-            jobqfiller=JobQFiller(self.qdict['jobq'],list_of_run_dicts)
+            runlist,hash_id_list=self.setup.setupRunners()
+            
+            jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
             jobqfiller.run()
             saveqdumper=SaveQDumper(self.qdict['saveq'])
             
@@ -297,7 +259,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             while not check_complete:
                 sleep(90)
                 saveqdumper.run()
-                check_complete=self.checkComplete()
+                check_complete=self.setup.checkComplete(hash_id_list=hash_id_list)
             jobqfiller.join() 
             saveqdumper.join()
             [node.join() for node in self.nodelist]
@@ -309,24 +271,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
  
         
         
-    def checkComplete(self,run_dict_list=None):
-        #run_dict_list is provided at startup, and if not, useful for checking if all have been saved
-        resultsDBdict=self.resultsDBdict()
-        complete_hash_id_list=list(resultsDBdict.keys())
-        if run_dict_list:
-            for r,run_dict in enumerate(run_dict_list):
-                model_gen_dict=run_dict['model_gen_dict']
-                for hash_id in list(model_gen_dict.keys()): #so model_gen_dict can be changed
-                    if hash_id in complete_hash_id_list:
-                        del model_gen_dict[hash_id]
-                        self.logger.info(f'checkComplete already completed hash_id:{hash_id}')
-            return run_dict_list
-        else:
-            gen_hash_id_list=self.genDBdict().keys()
-            for hash_id in gen_hash_id_list:
-                if not hash_id in complete_hash_id_list:
-                    return False
-        return True # must be done
+    
                         
                         
         hash_id_list=list(self.genDBdict().keys())

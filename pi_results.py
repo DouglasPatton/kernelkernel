@@ -54,14 +54,27 @@ class PiResults(DBTool,DataPlotter,myLogger):
             if rebuild:
                 #try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
                 #except:self.build_mean_score_sort_spec_and_MLU()
-                datagenhash_data_dict={}
+                datagenhash_hash_id_dict={}
                 r_count=len(self.results_dict)
                 spec_est_prediction_dict={}
                 #prediction_kwargs=PiSetup().prediction_kwargs
-                for r_idx,(hash_id,modeldict) in enumerate(self.results_dict.items()): 
-                    if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
+                for hash_id,modeldict in self.results_dict.items(): 
                     data_gen=modeldict["data_gen"]
                     datagenhash=joblib.hash(data_gen)
+                    try:
+                        datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
+                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                    except KeyError:
+                        self.logger.info(f'key error for {species}:{est_name}, so starting new list')
+                        datagenhash_hash_id_dict[datagenhash]=[hash_id]
+                    except:
+                        self.logger.exception(f'not a keyerror, unexpected error')
+                        assert False,'halt'
+                        
+                for _,model_list
+                    
+                    
+                    
                     species=data_gen["species"]
                     est_name=modeldict["model_gen"]["name"]
 
@@ -76,17 +89,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     except KeyError:
                         spec_est_prediction_dict[species][est_name]=[]
                     if type(modeldict['model']) is dict:
-                        try:
-                            data=datagenhash_data_dict[datagenhash] # in case diff species have diff 
-                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
-                        except KeyError:
-                            self.logger.info(f'key error for {species}:{est_name}, so calling dataGenerator')
-                            data=dataGenerator(data_gen)
-                            
-                            datagenhash_data_dict[datagenhash]=data
-                        except:
-                            self.logger.exception(f'not a keyerror, unexpected error')
-                            assert False,'halt'
+                        
                         _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
                         cv_count=len(modeldict['model']['estimator'])
                         yhat_list=[];mstack=[]
@@ -106,6 +109,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         y_arr=data.y_train.iloc[mstack];yhat_arr=np.concatenate(yhat_list,axis=0)
                         huc12=data.df.loc[:,'HUC12'].iloc[mstack]
                         spec_est_prediction_dict[species][est_name].append((y_arr,yhat_arr,huc12))
+                    else: assert False, 'only developed for CV!'
                 self.spec_est_prediction_dict=spec_est_prediction_dict
                 self.save_dict(spec_est_prediction_dict,filename=savename,bump=1,load=0)
             else:

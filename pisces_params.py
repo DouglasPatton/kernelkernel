@@ -6,13 +6,14 @@ import logging
 from copy import copy
 import joblib
 from random import randint
+from pi_db_tool import DBTool
+from pi_runners import FitRunner
 
 class PiSetup(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.pdt=PiscesDataTool()
-        self.est_dict=sk_estimator().get_est_dict()
+        self.fit_run=True
         rs=1
         splits=5
         
@@ -49,7 +50,7 @@ class PiSetup(myLogger):
     def model_setup(self,):
         #sk_tool uses model_gen to create the estimator
         model_gen_list=[]
-        for est_name in self.est_dict.keys():
+        for est_name in sk_estimator().get_est_dict().keys():
             kwargs=self.model_setup_dict
             model_gen={'kwargs':kwargs,'name':est_name}
             model_gen_list.append(model_gen)
@@ -57,7 +58,7 @@ class PiSetup(myLogger):
             
     
     def data_setup(self,):
-        species_list=self.pdt.returnspecieslist()
+        species_list=PiscesDataTool.returnspecieslist()
         data_params=self.datagen_dict_template
         if not data_params['species']=='all':
             species_selector=data_params['species']
@@ -71,30 +72,61 @@ class PiSetup(myLogger):
      
         
     
-    def setupRundictList(self,):
+    def setupRunners(self,):
         #a run dict has a 
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
-        run_dict_list=[]
-        run_record_dict={}
-        data_gen_list=self.data_setup()
+        dbt=DBTool()
+        if self.fit_run:
+            rundict_list=[]
+            run_record_dict={}
+            data_gen_list=self.data_setup()
+            hash_id_list=[]
+            for data_gen in data_gen_list:
+                model_gen_dict={}
+                model_gen_list=self.model_setup()
+                for model_gen in model_gen_list:
+                    run_record={'model_gen':model_gen,'data_gen':data_gen}
+                    hash_id=joblib.hash(run_record)
+                    hash_id_list.append(hash_id)
+                    run_record_dict[hash_id]=run_record # store the _gen dicts for reference
+                    model_gen_dict[hash_id]=model_gen # 
+                rundict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
+                rundict_list.append(rundict)
+
+            dbt.addToDBDict(run_record_dict,gen=1) # create a record of the rundicts to check when it's all complete.
+            self.logger.debug(f'len(rundict_list):{len(rundict_list)}')
+            runlist=[]
+            rundict_list=self.checkComplete(rundict_list=rundict_list) # remove any that are already in resultsDB
+            for rundict in list_of_rundicts:
+                runlist.append(FitRunner(rundict))
+
         
-        for data_gen in data_gen_list:
-            model_gen_dict={}
-            model_gen_list=self.model_setup()
-            for model_gen in model_gen_list:
-                run_record={'model_gen':model_gen,'data_gen':data_gen}
-                hash_id=joblib.hash(run_record)
-                run_record_dict[hash_id]=run_record # store the _gen dicts for reference
-                model_gen_dict[hash_id]=model_gen # 
-            run_dict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
-            run_dict_list.append(run_dict)
+        return runlist,hash_id_list
+    
+       
+            
+
         
-        return run_dict_list,run_record_dict
-    
-    
-    
+    def checkComplete(self,rundict_list=None,hash_id_list=None):
+        #rundict_list is provided at startup, and if not, useful for checking if all have been saved
+        resultsDBdict=self.resultsDBdict()
+        complete_hash_id_list=list(resultsDBdict.keys())
+        if rundict_list:
+            for r,run_dict in enumerate(rundict_list):
+                model_gen_dict=run_dict['model_gen_dict']
+                for hash_id in list(model_gen_dict.keys()): #so model_gen_dict can be changed
+                    if hash_id in complete_hash_id_list:
+                        del model_gen_dict[hash_id]
+                        self.logger.info(f'checkComplete already completed hash_id:{hash_id}')
+            return rundict_list
+        else:
+            for hash_id in hash_id_list:
+                if not hash_id in complete_hash_id_list:
+                    return False
+        return True # must be done
+        
     
 class MonteSetup(myLogger):
     def __init__(self,):
