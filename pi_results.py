@@ -102,29 +102,29 @@ class PiResults(DBTool,DataPlotter,myLogger):
         name='aggregate_predictions_by_species'
         if not rebuild:
             try:
-                aggregate_predictions_by_species=self.get_dict(name)
-                return aggregate_predictions_by_species
+                aggregate_predictions_by_species=self.getsave_postfit_db_dict(name)
+                return aggregate_predictions_by_species['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding aggregate_predictions_by_species but rebuild:{rebuild}')
         try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}  
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=0)    
-        aggregate_predictions_by_species={spec:None for spec in species_hash_id_dict.keys()}
+        #aggregate_predictions_by_species={spec:None for spec in species_hash_id_dict.keys()}
+        #species_df_list_dict={}
+        dflist=[]
         for species,hash_id_list in species_hash_id_dict.items():
-            dflist=[]
+            
             for hash_id in hash_id_list:
                 df=self.predictDB[hash_id]
-                multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
-                df.reindex()
-                dflist.append()
-            
-        
-        
-        
-        self.get_dict(name,aggregate_predictions_by_species)
-        return aggregate_predictions_by_species
+                #multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
+                #df.reindex()
+                dflist.append(df)
+        big_df_stack=pd.concat(dflist,axis=1)# axis for multi-reps of cv.
+        aggregate_predictions_by_species={'data':big_df_stack} 
+        self.getsave_postfit_db_dict(name,aggregate_predictions_by_species)
+        return aggregate_predictions_by_species['data'] # just returning the df
     
-    def get_dict(self,name,data=None,):
+    def getsave_postfit_db_dict(self,name,data=None,):
         if data is None:
             return self.postFitDBdict(name)
         else:
@@ -134,7 +134,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         name='species_hash_id_dict'
         if not rebuild:
             try:
-                species_hash_id_dict=self.get_dict(name)
+                species_hash_id_dict=self.getsave_postfit_db_dict(name)
                 return species_hash_id_dict
             except:
                 self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
@@ -144,7 +144,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             try: species_hash_id_dict[species].append(hash_id)
             except KeyError: species_hash_id_dict[species]=[hash_id]
             except: assert False, 'halt'
-        self.get_dict(name,species_hash_id_dict)
+        self.getsave_postfit_db_dict(name,species_hash_id_dict)
         return species_hash_id_dict
                 
     def build_dghash_hash_id_dict(self,):

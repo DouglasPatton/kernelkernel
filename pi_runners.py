@@ -92,7 +92,7 @@ class PredictRunner(myLogger):
         comids=data.y_train.index
         
         names=['species','estimator','HUC12','COMID']
-        index=pd.MultiIndex.from_tuples([(species,est_name,huc12s[i],comids[i])  for i in range(n)],names=names)
+        index=pd.MultiIndex.from_tuples([(species,est_name,huc12s[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
         yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
         
         return yhat_df
