@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 from pi_data_viz import DataPlotter
 from helpers import Helper
 import pickle
+from geogtools import GeogTool as GT
+from pisces_data_huc12 import PiscesDataTool as PDT
 #from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
@@ -33,7 +35,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.logger.info(f'starting {func_name} logger')
         DBTool.__init__(self)
         DataPlotter.__init__(self)
-        self.results_dict=self.resultsDBdict()
+        self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
         self.scor_est_spec_dict={}
@@ -45,24 +47,105 @@ class PiResults(DBTool,DataPlotter,myLogger):
     def build_comid_spec_results(self,):
         pass
         
-    def build_prediction_rundicts(self):
+    def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
-        datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
-        rundict_list=[]
-        keep_hash_id_list=[]
-        for d,(dg_hash,hash_id_list) in list(enumerate(datagenhash_hash_id_dict.items())):
-            rundict_list.append({})
-            for h,hash_id in list(enumerate(hash_id_list)):
-                if not hash_id in self.predictDB:
-                    rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
-                    if not 'data_gen' in rundict_list[d]: #just add once
-                        rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
-                    keep_hash_id_list.append(hash_id)
-        return rundict_list,keep_hash_id_list
-                    
-                    
-                    
+        try:
+            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
+            rundict_list=[]
+            keep_hash_id_list=[]
+            for d,(dg_hash,hash_id_list) in list(enumerate(datagenhash_hash_id_dict.items())):
+                rundict_list.append({})
+                for h,hash_id in list(enumerate(hash_id_list)):
+                    if not hash_id in self.predictDB:
+                        rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
+                        if not 'data_gen' in rundict_list[d]: #just add once
+                            rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
+                        keep_hash_id_list.append(hash_id)
+            return rundict_list,keep_hash_id_list
+        except:
+            self.logger.exception('outer catch, halting')
+            assert False,'halt'
+        
+
+    def build_comid_insample_err_compare(self,wt='negative_mean_squared_error'):     
+        try: self.predictDB
+        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
+        try:
+            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict() 
+        except:
+            self.logger.exception('')
+            assert False, 'halt'
+        try: self.pdt
+        except: self.pdt=PDT()
+        try: species_comid_list=self.pdt.speciescomidlist
+        except:
+            self.pdt.buildspecieslist()   
+            species_comid_list=self.pdt.speciescomidlist
+        try:self.gt
+        except:self.gt=GT()
+        huc12_comid_dict=self.gt.huc12comiddict
+        
+        
+        
+        hash_id_list=list(self.predictDB.keys())
+        
+        huc12_comid_species_results={huc12:{comid:{}} for huc12,comidlist in huc12_comid_dict.items()}
+        for hid in hash_id_list:
+            y_df,yhat_df,huc12_df=self.predictDB[hid]
+            for i in range(y_df.shape[0]):
+                
+                huc12=huc12_df.iloc[i]
+                y=y_df.iloc[i]
+    
+    def build_aggregate_predictions_by_species(self,rebuild=0):
+        name='aggregate_predictions_by_species'
+        if not rebuild:
+            try:
+                aggregate_predictions_by_species=self.get_dict(name)
+                return aggregate_predictions_by_species
+            except:
+                self.logger.info(f'rebuilding aggregate_predictions_by_species but rebuild:{rebuild}')
+        try: self.predictDB
+        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}  
+        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=0)    
+        aggregate_predictions_by_species={spec:None for spec in species_hash_id_dict.keys()}
+        for species,hash_id_list in species_hash_id_dict.items():
+            dflist=[]
+            for hash_id in hash_id_list:
+                df=self.predictDB[hash_id]
+                multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
+                df.reindex()
+                dflist.append()
+            
+        
+        
+        
+        self.get_dict(name,aggregate_predictions_by_species)
+        return aggregate_predictions_by_species
+    
+    def get_dict(self,name,data=None,):
+        if data is None:
+            return self.postFitDBdict(name)
+        else:
+            self.addtoDBDict(data,db=lambda: self.postFitDBdict(name))
+    
+    def build_species_hash_id_dict(self,rebuild=0):
+        name='species_hash_id_dict'
+        if not rebuild:
+            try:
+                species_hash_id_dict=self.get_dict(name)
+                return species_hash_id_dict
+            except:
+                self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
+        species_hash_id_dict={}
+        for hash_id,modeldict in self.results_dict.items():
+            species=modeldict['data_gen']['species']
+            try: species_hash_id_dict[species].append(hash_id)
+            except KeyError: species_hash_id_dict[species]=[hash_id]
+            except: assert False, 'halt'
+        self.get_dict(name,species_hash_id_dict)
+        return species_hash_id_dict
                 
     def build_dghash_hash_id_dict(self,):
         datagenhash_hash_id_dict={}
@@ -188,6 +271,12 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     test_result_keys=[f'test_{scorer}' for scorer in self.scorer_list]
                     for key in test_result_keys:
                         val=model[key]
+                        try:
+                            oldval=scor_est_spec_dict[key[5:]][est_name][species]
+                            val=np.concatenate([oldval,val],axis=0)
+                            self.logger.info(f'scor_est_spec_dict adding to existing array of scores oldval.shape:{oldval.shape}, new val.shape:{val.shape}')
+                        except:
+                            pass
                         scor_est_spec_dict[key[5:]][est_name][species]=val
             scor_est_spec_dict=self.drop_nan_species(scor_est_spec_dict)
             self.scor_est_spec_dict=scor_est_spec_dict

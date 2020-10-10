@@ -16,7 +16,7 @@ class PiSetup(myLogger):
         self.logger.info('starting PiSetup logger')
         self.run_type='predict'# 'fit'
         if self.run_type=='predict':
-            self.db_kwargs={'predict':True} # for saveQdumper
+            self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
             self.db_kwargs={}
         rs=1
@@ -123,6 +123,8 @@ class PiSetup(myLogger):
         #rundict_list is provided at startup, and if not, useful for checking if all have been saved
         if db is None:
             db=self.dbt.resultsDBdict()
+        if callable(db):
+            db=db()
         complete_hash_id_list=list(db.keys())
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):

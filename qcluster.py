@@ -89,22 +89,22 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                             self.logger.debug(f'SaveQDumper shutting down')
                             return
                     assert type(savedict) is dict, f'SaveQDumper expecting a dict for savedict but got {type(savedict)}'
-                    for hash_id,model_dict in savedict.items():
-                        if not type(model_dict) is tuple:
+                    for hash_id,thing_to_save in savedict.items():
+                        if type(thing_to_save) is dict:
                             try:
-                                species=model_dict['data_gen']['species']
+                                species=thing_to_save['data_gen']['species']
                             except:
 
                                 self.logger.info("failed trying to get species from savedict")
                                 species='error'
                             try:
-                                model_name=model_dict['model_gen']['name']
+                                model_name=thing_to_save['model_gen']['name']
                             except:
-                                self.logger.exception('failed try to get model name from model_dict')
+                                self.logger.exception('failed try to get model name from thing_to_save')
                                 model_name='error'
                             self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}')
                         else:
-                            self.logger.info(f'saveqdumper has a tuple. self.db_kwargs:{self.db_kwargs}')
+                            self.logger.info(f'saveqdumper has data with type:{type(thing_to_save)} and self.db_kwargs:{self.db_kwargs}')
                     save_list=[savedict] # b/c addToDBDict expects a list of dicts.
                     self.addToDBDict(save_list,**self.db_kwargs)
             except:
@@ -191,7 +191,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 try:
                     self.logger.debug('RunNode about to check jobq')
                     runner=jobq.get(True,10)
-                    self.logger.debug(f'RunNode has job:runner.rundict:{runner.rundict}')
+                    self.logger.debug(f'RunNode has job') #:runner.rundict:{runner.rundict}')
                     havejob=1
                 except:
                     self.logger.exception('')
@@ -259,8 +259,8 @@ class RunCluster(mp.Process,DBTool,myLogger):
             while not check_complete:
                 sleep(90)
                 saveqdumper.run()
-                check_complete=self.setup.checkComplete(hash_id_list=hash_id_list)
-            jobqfiller.join() 
+                check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
+            #jobqfiller.join() 
             saveqdumper.join()
             [node.join() for node in self.nodelist]
             self.qdict['jobq'].put('shutdown')

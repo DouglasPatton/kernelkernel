@@ -20,9 +20,14 @@ class DBTool:
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
+        self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
+    
+    def postFitDBdict(self,name):
+        return SqliteDict(filename=self.pidataDBdictpath,tablename=name)
+    
     
     def resultsDBdict(self):
         return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
@@ -59,6 +64,7 @@ class DBTool:
                 db=lambda: self.pidataDBdict(**kwargs)
             else:
                 db=self.resultsDBdict
+            
             with db() as dbdict:
                 try:
                     if type(save_list) is dict:
