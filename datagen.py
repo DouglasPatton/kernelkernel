@@ -28,7 +28,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             elif type(species) is int:
                 self.df=self.retrievespeciesdata(species_idx=species)
             self.logger.info(f'type(self.df): {type(self.df)}')
-            self.logger.info(f'self.df:{self.df}')
+            #self.logger.info(f'self.df:{self.df}')
             all_vars=list(self.df.columns)
 
             col_convert={}

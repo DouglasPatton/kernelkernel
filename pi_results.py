@@ -23,6 +23,7 @@ from helpers import Helper
 import pickle
 from geogtools import GeogTool as GT
 from pisces_data_huc12 import PiscesDataTool as PDT
+from pi_runners import PredictRunner
 #from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
@@ -47,36 +48,14 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
     def build_comid_spec_results(self,):
         pass
-        
-    def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
-        try: self.predictDB
-        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
-        try:
-            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
-            rundict_list=[]
-            keep_hash_id_list=[]
-            for d,(dg_hash,hash_id_list) in list(enumerate(datagenhash_hash_id_dict.items())):
-                rundict_list.append({})
-                for h,hash_id in list(enumerate(hash_id_list)):
-                    if not hash_id in self.predictDB:
-                        rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
-                        if not 'data_gen' in rundict_list[d]: #just add once per run_dict
-                            rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
-                        keep_hash_id_list.append(hash_id)
-            drop_idx_list=[]
-            for r,rundict in enumerate(rundict_list):
-                if len(rundict)==0:
-                    drop_idx_list.append(r)
-            for r in drop_idx_list[::-1]:
-                del rundict_list[r] # delete from rhs to avoid change of order on remaining idx's to delete
-            return rundict_list,keep_hash_id_list
-        except:
-            self.logger.exception('outer catch, halting')
-            assert False,'halt'
-        
 
-    def build_comid_insample_err_compare(self,wt='negative_mean_squared_error'):     
-        try: self.predictDB
+    
+    def build_comid_insample_err_compare(self,wt='negative_mean_squared_error'):  
+        
+        
+        build_y_like_agg_pred_spec(rebuild)
+        
+        """try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
         try:
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict() 
@@ -103,25 +82,63 @@ class PiResults(DBTool,DataPlotter,myLogger):
             for i in range(y_df.shape[0]):
                 
                 huc12=huc12_df.iloc[i]
-                y=y_df.iloc[i]
+                y=y_df.iloc[i]    """
+    
+    def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+        try: self.predictDB
+        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
+        try:
+            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
+            rundict_list=[]
+            keep_hash_id_list=[]
+            for d,(dg_hash,hash_id_list) in list(enumerate(datagenhash_hash_id_dict.items())):
+                rundict_list.append({})
+                for h,hash_id in list(enumerate(hash_id_list)):
+                    if not hash_id in self.predictDB:
+                        rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
+                        if not 'data_gen' in rundict_list[d]: #just add once per run_dict
+                            rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
+                        keep_hash_id_list.append(hash_id)
+            drop_idx_list=[]
+            for r,rundict in enumerate(rundict_list):
+                if len(rundict)==0:
+                    drop_idx_list.append(r)
+            for r in drop_idx_list[::-1]:
+                del rundict_list[r] # delete from rhs to avoid change of order on remaining idx's to delete
+            return rundict_list,keep_hash_id_list
+        except:
+            self.logger.exception('outer catch, halting')
+            assert False,'halt'
+        
+            
                 
-                
-    def build_y_like agg_pred_spec(self,rebuild=0,species_hash_id_dict=None):
-        name='aggregate_predictions_by_species'
+    def build_y_like_agg_pred_spec(self,rebuild=0,species_hash_id_dict=None):
+        name='y_like_agg_pred_spec'
         if not rebuild:
             try:
-                aggregate_predictions_by_species=self.getsave_postfit_db_dict(name)
-                return aggregate_predictions_by_species['data']#sqlitedict needs a key to pickle and save an object in sqlite
+                y_like_agg_pred_spec=self.getsave_postfit_db_dict(name)
+                return y_like_agg_pred_spec['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
         if species_hash_id_dict is None: 
             species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
         hash_id_list1=[hash_id_list[0] for species,hash_id_list in species_hash_id_dict.items()] # just get 1 hash_id per species
-        rundict_list=[]
+        runners=[]
+        
         for hash_id in hash_id_list1:
+            rundict={}
             result=self.results_dict[hash_id]
             data_gen=result['data_gen'] # same as datagen_dict
-            
+            data_gen['make_y']=1
+            rundict['data_gen']=data_gen
+            rundict[hash_id]=None #this is where the model would go
+            runners.append(PredictRunner(rundict))
+        dflist=[runner.run() for runner in runners]
+        all_y_df=pd.concat(dflist,axis=0)
+        y_like_agg_pred_spec={'data':all_y_df} 
+        self.getsave_postfit_db_dict(name,y_like_agg_pred_spec)
+        return y_like_agg_pred_spec['data'] # just returning the df
+        
             
         
         
@@ -141,13 +158,21 @@ class PiResults(DBTool,DataPlotter,myLogger):
         dflist=[]
         for species,hash_id_list in species_hash_id_dict.items():
             for hash_id in hash_id_list:
-                df=self.predictDB[hash_id]
-                self.logger.info(f'aggregating df: {df}')
-                #multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
-                #df.reindex()
-                dflist.append(df)
+                try:
+                    df=self.predictDB[hash_id]
+                    #self.logger.info(f'aggregating df: {df}')
+                    #multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
+                    #df.reindex()
+                    dflist.append(df)
+                except:
+                    self.logger.exception(f'no prediction for species:{species} and hash_id:{hash_id}')
         big_df_stack=pd.concat(dflist,axis=0)# axis for multi-reps of cv.
-        aggregate_predictions_by_species={'data':big_df_stack} 
+        y_df=self.build_y_like_agg_pred_spec(rebuild=rebuild,species_hash_id_dict=species_hash_id_dict)
+        self.logger.info(f'about to concatenate y_df:{y_df}')
+        self.logger.info(f'and big_df_stack:{big_df_stack}')
+        y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)
+        
+        aggregate_predictions_by_species={'data':y_yhat_df} 
         self.getsave_postfit_db_dict(name,aggregate_predictions_by_species)
         return aggregate_predictions_by_species['data'] # just returning the df
     

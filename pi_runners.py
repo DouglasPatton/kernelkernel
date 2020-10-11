@@ -18,6 +18,7 @@ class PredictRunner(myLogger):
         myLogger.__init__(self,name='PredictRunner.log')
         self.logger.info('starting PredictRunner logger')
         self.rundict=rundict
+        self.saveq=None
     def passQ(self,saveq):
         self.saveq=saveq
     def run(self,):
@@ -35,19 +36,23 @@ class PredictRunner(myLogger):
                 self.logger.exception('error for model_dict:{model_dict}')
             savedict={hash_id:predictresult}
             qtry=0
-            while success:
-                self.logger.debug(f'adding savedict to saveq')
-                try:
-                    qtry+=1
-                    self.saveq.put(savedict)
-                    self.logger.debug(f'savedict successfully added to saveq')
-                    break
-                except:
-                    if not self.saveq.full() and qtry>3:
-                        self.logger.exception('error adding to saveq')
-                    else:
-                        sleep(1)
-                        
+            if self.saveq is None:
+                    self.logger.info(f'yielding savedict')
+                    return predictresult
+            else:
+                while success:
+                    self.logger.debug(f'adding savedict to saveq')
+                    try:
+                        qtry+=1
+                        self.saveq.put(savedict)
+                        self.logger.debug(f'savedict successfully added to saveq')
+                        break
+                    except:
+                        if not self.saveq.full() and qtry>3:
+                            self.logger.exception('error adding to saveq')
+                        else:
+                            sleep(1)
+
     def predict(self,data,model):
         #FitRunner doesnt have equivalent to this
         #  becuase SKToolInitializer and sktool make this stuff happen
@@ -56,11 +61,13 @@ class PredictRunner(myLogger):
             make_y=1
         else:
             make_y=0
-        yhat_stack=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
+        
         n=data.df.shape[0]
         species=data.datagen_dict['species']
-        est_name=model['estimator'][0].name    
+        
         if not make_y:
+            yhat_stack=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
+            est_name=model['estimator'][0].name    
             _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
             cv_count=len(cv_test_idx)
             cv_dict=data.datagen_dict['data_split']['cv']
@@ -92,19 +99,12 @@ class PredictRunner(myLogger):
                     #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
                 #y_arr=data.y_train#.iloc[mstack]
             yhat_stack_arr=np.concatenate(yhat_stack,axis=1)
-
-
             columns=[f'yhat_{r}' for r in range(n_repeats)]
-            
-            
-            
-            
         else:
-            cv_test_idx=[tuple(range(n))]
-            n_repeats=1,
-            n_splits=1
+            est_name='y_train'
             y=data.y_train
-        
+            yhat_stack_arr=y.to_numpy()[:,None] #not really yhat...
+            columns=['y']#
         
         huc12s=data.df.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
