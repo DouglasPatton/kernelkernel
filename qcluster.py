@@ -257,7 +257,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
             while not check_complete:
-                sleep(90)
+                sleep(60)
                 saveqdumper.run()
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             #jobqfiller.join() 

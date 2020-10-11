@@ -14,7 +14,7 @@ class PiSetup(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='predict'# 'fit'
+        self.run_type='predict'# 'fit'#
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
