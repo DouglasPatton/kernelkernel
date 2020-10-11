@@ -14,12 +14,13 @@ class PiSetup(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='fit'#'predict'# 'fit'#
+        self.run_type='fit'#'predict'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
             self.db_kwargs={}
         rs=1
+        
         splits=5
         repeats=2
         self.permutation_kwargs=dict(
@@ -37,7 +38,7 @@ class PiSetup(myLogger):
 
         self.datagen_dict_template=dict(
             min_sample=32,
-            min_1count=8, # at least 4 ones per split
+            min_1count=8, # at least 4 ones per split since split can go down to 2
             shuffle=True,
             source='Pisces',
             species=(0,20),#'all', # or a range, i.e., (0,100) # set in data_setup
@@ -126,13 +127,19 @@ class PiSetup(myLogger):
         if callable(db):
             db=db()
         complete_hash_id_list=list(db.keys())
+        rundrop_idx=[]
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):
                 model_gen_dict=run_dict['model_gen_dict']
                 for hash_id in list(model_gen_dict.keys()): #so model_gen_dict can be changed
                     if hash_id in complete_hash_id_list:
-                        del model_gen_dict[hash_id]
+                        del rundict_list[r]['model_gen_dict'][hash_id]
                         self.logger.info(f'checkComplete already completed hash_id:{hash_id}')
+                if len(rundict_list[r])==0:
+                    rundrop_idx.append(r)
+            for r in rundrop_idx[::-1]: #from the rhs so remaining,lower indices to left don't change
+                self.logger.info(f'deleting rundisk idx:{r} bc len=0')
+                del rundict_list[r]
             return rundict_list
         else:
             for hash_id in hash_id_list:

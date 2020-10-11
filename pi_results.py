@@ -60,9 +60,15 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 for h,hash_id in list(enumerate(hash_id_list)):
                     if not hash_id in self.predictDB:
                         rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
-                        if not 'data_gen' in rundict_list[d]: #just add once
+                        if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
                         keep_hash_id_list.append(hash_id)
+            drop_idx_list=[]
+            for r,rundict in enumerate(rundict_list):
+                if len(rundict)==0:
+                    drop_idx_list.append(r)
+            for r in drop_idx_list[::-1]:
+                del rundict_list[r] # delete from rhs to avoid change of order on remaining idx's to delete
             return rundict_list,keep_hash_id_list
         except:
             self.logger.exception('outer catch, halting')
@@ -98,7 +104,27 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 
                 huc12=huc12_df.iloc[i]
                 y=y_df.iloc[i]
-    
+                
+                
+    def build_y_like agg_pred_spec(self,rebuild=0,species_hash_id_dict=None):
+        name='aggregate_predictions_by_species'
+        if not rebuild:
+            try:
+                aggregate_predictions_by_species=self.getsave_postfit_db_dict(name)
+                return aggregate_predictions_by_species['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        if species_hash_id_dict is None: 
+            species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
+        hash_id_list1=[hash_id_list[0] for species,hash_id_list in species_hash_id_dict.items()] # just get 1 hash_id per species
+        rundict_list=[]
+        for hash_id in hash_id_list1:
+            result=self.results_dict[hash_id]
+            data_gen=result['data_gen'] # same as datagen_dict
+            
+            
+        
+        
     def build_aggregate_predictions_by_species(self,rebuild=0):
         name='aggregate_predictions_by_species'
         if not rebuild:
@@ -106,7 +132,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 aggregate_predictions_by_species=self.getsave_postfit_db_dict(name)
                 return aggregate_predictions_by_species['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
-                self.logger.info(f'rebuilding aggregate_predictions_by_species but rebuild:{rebuild}')
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
         try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}  
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild)    

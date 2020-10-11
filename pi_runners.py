@@ -52,45 +52,60 @@ class PredictRunner(myLogger):
         #FitRunner doesnt have equivalent to this
         #  becuase SKToolInitializer and sktool make this stuff happen
             
-        
-        _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
-        cv_count=len(cv_test_idx)
-        cv_dict=data.datagen_dict['data_split']['cv']
-        n_repeats=cv_dict['n_repeats']
-        n_splits=cv_dict['n_splits']
+        if 'make_y' in data.datagen_dict:
+            make_y=1
+        else:
+            make_y=0
         yhat_stack=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
         n=data.df.shape[0]
         species=data.datagen_dict['species']
-        est_name=model['estimator'][0].name
-        yhat=np.empty([n,])
-        m=0
-        for rep in range(n_repeats):
-            mstack=[];yhat_list=[]
-            for s in range(n_splits):
-                #self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
-                model_m=model['estimator'][m]
-                m_idx=cv_test_idx[m]
-                X=data.X_train.iloc[m_idx]
-                #y=data.y_train.iloc[m_idx]
-                mstack.extend(m_idx)
-                try:
-                    yhat_list.append((model_m.predict(X)))
-                    #keep together in case failed predictions
-                except:
-                    yhat_list.append(np.array([np.nan for _ in range(len(m_idx))]))
-                    self.logger.exception(f'error with species:{species}, est_name:{est_name}, m:{m}')
-                m+=1
-            assert len(mstack)==n, 'uneven length error!'
-            yhat[mstack]=np.concatenate(yhat_list,axis=0)#undo shuffle
-            yhat_stack.append(yhat.copy()[:,None])#add axis for concatenating  
-                #yhat_stack[r,mstack]=yhat_list# mstack reverses the shuffling done by the cv indices
-                # ,**prediction_kwargs))
-                #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
-            #y_arr=data.y_train#.iloc[mstack]
-        yhat_stack_arr=np.concatenate(yhat_stack,axis=1)
+        est_name=model['estimator'][0].name    
+        if not make_y:
+            _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
+            cv_count=len(cv_test_idx)
+            cv_dict=data.datagen_dict['data_split']['cv']
+            n_repeats=cv_dict['n_repeats']
+            n_splits=cv_dict['n_splits']
+            yhat=np.empty([n,])
+            m=0
+            for rep in range(n_repeats):
+                mstack=[];yhat_list=[]
+                for s in range(n_splits):
+                    #self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
+                    model_m=model['estimator'][m]
+                    m_idx=cv_test_idx[m]
+                    X=data.X_train.iloc[m_idx]
+                    #y=data.y_train.iloc[m_idx]
+                    mstack.extend(m_idx)
+                    try:
+                        yhat_list.append((model_m.predict(X)))
+                        #keep together in case failed predictions
+                    except:
+                        yhat_list.append(np.array([np.nan for _ in range(len(m_idx))]))
+                        self.logger.exception(f'error with species:{species}, est_name:{est_name}, m:{m}')
+                    m+=1
+                assert len(mstack)==n, 'uneven length error!'
+                yhat[mstack]=np.concatenate(yhat_list,axis=0)#undo shuffle
+                yhat_stack.append(yhat.copy()[:,None])#add axis for concatenating  
+                    #yhat_stack[r,mstack]=yhat_list# mstack reverses the shuffling done by the cv indices
+                    # ,**prediction_kwargs))
+                    #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
+                #y_arr=data.y_train#.iloc[mstack]
+            yhat_stack_arr=np.concatenate(yhat_stack,axis=1)
+
+
+            columns=[f'yhat_{r}' for r in range(n_repeats)]
+            
+            
+            
+            
+        else:
+            cv_test_idx=[tuple(range(n))]
+            n_repeats=1,
+            n_splits=1
+            y=data.y_train
         
         
-        columns=[f'yhat_{r}' for r in range(n_repeats)]
         huc12s=data.df.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
         comids=data.y_train.index
