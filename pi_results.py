@@ -8,8 +8,9 @@ import traceback
 import shutil
 from random import randint,seed,shuffle
 import logging
-from queue import Queue
+#from queue import Queue
 import numpy as np
+import pandas as pd
 from  sk_tool import SKToolInitializer
 from sk_estimators import sk_estimator
 from datagen import dataGenerator 
@@ -108,18 +109,18 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 self.logger.info(f'rebuilding aggregate_predictions_by_species but rebuild:{rebuild}')
         try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}  
-        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=0)    
+        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild)    
         #aggregate_predictions_by_species={spec:None for spec in species_hash_id_dict.keys()}
         #species_df_list_dict={}
         dflist=[]
         for species,hash_id_list in species_hash_id_dict.items():
-            
             for hash_id in hash_id_list:
                 df=self.predictDB[hash_id]
+                self.logger.info(f'aggregating df: {df}')
                 #multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
                 #df.reindex()
                 dflist.append(df)
-        big_df_stack=pd.concat(dflist,axis=1)# axis for multi-reps of cv.
+        big_df_stack=pd.concat(dflist,axis=0)# axis for multi-reps of cv.
         aggregate_predictions_by_species={'data':big_df_stack} 
         self.getsave_postfit_db_dict(name,aggregate_predictions_by_species)
         return aggregate_predictions_by_species['data'] # just returning the df
@@ -128,7 +129,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         if data is None:
             return self.postFitDBdict(name)
         else:
-            self.addtoDBDict(data,db=lambda: self.postFitDBdict(name))
+            self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
     
     def build_species_hash_id_dict(self,rebuild=0):
         name='species_hash_id_dict'

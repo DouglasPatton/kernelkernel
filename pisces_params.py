@@ -14,14 +14,14 @@ class PiSetup(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='predict'# 'fit'
+        self.run_type='fit'#'predict'# 'fit'#
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
             self.db_kwargs={}
         rs=1
         splits=5
-        
+        repeats=2
         self.permutation_kwargs=dict(
             n_repeats=5,
             random_state=rs,
@@ -40,11 +40,11 @@ class PiSetup(myLogger):
             min_1count=8, # at least 4 ones per split
             shuffle=True,
             source='Pisces',
-            species='all', # or a range, i.e., (0,100) # set in data_setup
+            species=(0,20)#'all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
                 test_share=0,
                 cv=dict(n_splits=splits,
-                        n_repeats=2,
+                        n_repeats=repeats,
                         strategy=None, # e.g., 'balanced-HUC8'
                         random_state=rs),
             ),
