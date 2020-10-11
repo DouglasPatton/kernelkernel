@@ -131,7 +131,7 @@ class PiSetup(myLogger):
                 model_gen_dict=run_dict['model_gen_dict']
                 for hash_id in list(model_gen_dict.keys()): #so model_gen_dict can be changed
                     if hash_id in complete_hash_id_list:
-                        del model_gen_dict[hash_id]
+                        del run_dict['model_gen_dict'][hash_id]
                         self.logger.info(f'checkComplete already completed hash_id:{hash_id}')
             return rundict_list
         else:
