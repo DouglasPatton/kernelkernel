@@ -132,23 +132,33 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
+        max_q_size=10
+        q_size=0;tries=0 # for startup
         while len(self.joblist):
-            job=self.joblist.pop()
-            try:job.build()
-            except:self.logger.exception(f'error building job')
-            try:
-                jobcount=len(self.joblist)
-                self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
-                queue.put(job)
-                self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
-                i+=1
-            except:
-                self.joblist.append(job)
-                if queue.full():
-                    self.logger.DEBUG('jobq full, waiting 4s')
-                    sleep(4)
-                else:
-                    self.logger.exception(f'jobq error for i:{i}')
+            if q_size<max_q_size:
+                tries=0
+                for i in range(max_q_size-q_size+1): #fill queue back up to max_q_size
+                    job=self.joblist.pop()
+                    try:job.build()
+                    except:self.logger.exception(f'error building job')
+                    try:
+                        jobcount=len(self.joblist)
+                        self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
+                        queue.put(job)
+                        self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
+                        i+=1
+                    except:
+                        self.joblist.append(job)
+                        if queue.full():
+                            self.logger.DEBUG('jobq full, waiting 4s')
+                            sleep(4)
+                        else:
+                            self.logger.exception(f'jobq error for i:{i}')
+            else:
+                tries+=1
+            q_size=queue.qsize()
+            sleep(1+tries*10)
+            
         self.logger.debug('all jobs added to jobq.')
         return
 
@@ -255,12 +265,13 @@ class RunCluster(mp.Process,DBTool,myLogger):
         try:
             runlist,hash_id_list=self.setup.setupRunners()
             jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
+            jobqfiller.start()
             jobqfiller.run()
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
             while not check_complete:
                 sleep(60)
-                saveqdumper.run()
+                saveqdumper.run()#
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             #jobqfiller.join() 
             saveqdumper.join()

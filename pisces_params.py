@@ -12,17 +12,22 @@ from pi_results import PiResults
 
 class PiSetup(myLogger):
     def __init__(self,):
+        self.test=True # reduces repeats to speed things up
+        splits=5
+        if self.test:
+            repeats=2
+        else:
+            repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='fit'#'predict'# 
+        self.run_type='predict'#'fit'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
             self.db_kwargs={}
         rs=1
         
-        splits=5
-        repeats=2
+        
         self.permutation_kwargs=dict(
             n_repeats=5,
             random_state=rs,

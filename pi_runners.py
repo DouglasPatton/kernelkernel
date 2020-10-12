@@ -23,13 +23,16 @@ class PredictRunner(myLogger):
     def passQ(self,saveq):
         self.saveq=saveq
     def build(self):
-        #called on master machine before sending to jobq
+        #called on master machine by jobqfiller before sending to jobq
         try:
             none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
             if len(none_hash_id_list)>0:
                 resultsDBdict=DBTool().resultsDBdict()
                 for hash_id in none_hash_id_list:
-                    self.rundict[hash_id]=self.resultsDBdict[hash_id]['model']
+                    self.rundict[hash_id]=resultsDBdict[hash_id]['model']
+                    self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
+        except: 
+            self.logger.exception(f'build error with rundict:{rundict}')
     def run(self,):
         
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
@@ -46,7 +49,7 @@ class PredictRunner(myLogger):
             savedict={hash_id:predictresult}
             qtry=0
             if self.saveq is None:
-                    self.logger.info(f'yielding savedict')
+                    self.logger.info(f'no saveq, returning savedict')
                     return predictresult
             else:
                 while success:

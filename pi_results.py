@@ -93,7 +93,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         except:
             self.results_dict=self.resultsDBdict()
         try: self.predictDB
-        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
+        except:self.predictDB=self.predictDBdict()
         try:
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
             rundict_list=[]
@@ -120,6 +120,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             
                 
     def build_y_like_agg_pred_spec(self,rebuild=0,species_hash_id_dict=None):
+        #just runs once per species 
         name='y_like_agg_pred_spec'
         if not rebuild:
             try:
@@ -140,7 +141,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             rundict['data_gen']=data_gen
             rundict[hash_id]=None #this is where the model would go
             runners.append(PredictRunner(rundict))
-        dflist=[runner.run() for runner in runners]
+        
+        dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'
         all_y_df=pd.concat(dflist,axis=0)
         y_like_agg_pred_spec={'data':all_y_df} 
         self.getsave_postfit_db_dict(name,y_like_agg_pred_spec)
