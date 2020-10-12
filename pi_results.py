@@ -102,7 +102,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 rundict_list.append({})
                 for h,hash_id in list(enumerate(hash_id_list)):
                     if not hash_id in self.predictDB:
-                        rundict_list[d][hash_id]=self.results_dict[hash_id]['model'] #
+                        rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
                         keep_hash_id_list.append(hash_id)
@@ -167,9 +167,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
             for hash_id in hash_id_list:
                 try:
                     df=self.predictDB[hash_id]
-                    #self.logger.info(f'aggregating df: {df}')
-                    #multi_index=pd.MultiIndex.from_tuples([(species,*idx_row) for idx_row in df.index.values],names=['species']+list(df.index.names))
-                    #df.reindex()
                     dflist.append(df)
                 except:
                     self.logger.exception(f'no prediction for species:{species} and hash_id:{hash_id}')

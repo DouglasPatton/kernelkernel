@@ -3,6 +3,7 @@ import numpy as np
 from mylogger import myLogger
 from  sk_tool import SKToolInitializer
 from datagen import dataGenerator
+from pi_db_tool import DBTool
 
 
 ## Runners are oriented around the data_gen in 
@@ -21,6 +22,14 @@ class PredictRunner(myLogger):
         self.saveq=None
     def passQ(self,saveq):
         self.saveq=saveq
+    def build(self):
+        #called on master machine before sending to jobq
+        try:
+            none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
+            if len(none_hash_id_list)>0:
+                resultsDBdict=DBTool().resultsDBdict()
+                for hash_id in none_hash_id_list:
+                    self.rundict[hash_id]=self.resultsDBdict[hash_id]['model']
     def run(self,):
         
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
@@ -136,6 +145,8 @@ class FitRunner(myLogger):
         self.rundict=rundict
     def passQ(self,saveq):
         self.saveq=saveq
+    def build(self):
+        pass
     def run(self,):
         
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)

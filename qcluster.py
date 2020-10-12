@@ -134,6 +134,8 @@ class JobQFiller(mp.Process,myLogger):
         i=1
         while len(self.joblist):
             job=self.joblist.pop()
+            try:job.build()
+            except:self.logger.exception(f'error building job')
             try:
                 jobcount=len(self.joblist)
                 self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
