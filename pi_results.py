@@ -189,6 +189,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
     
     def build_species_hash_id_dict(self,rebuild=0):
+        try: self.results_dict
+        except:self.results_dict=self.resultsDBdict()
         name='species_hash_id_dict'
         if not rebuild:
             try:
