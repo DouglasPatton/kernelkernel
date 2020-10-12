@@ -37,7 +37,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.logger.info(f'starting {func_name} logger')
         DBTool.__init__(self)
         DataPlotter.__init__(self)
-        self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
+        #self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
         self.scor_est_spec_dict={}
@@ -50,10 +50,13 @@ class PiResults(DBTool,DataPlotter,myLogger):
         pass
 
     
-    def build_comid_insample_err_compare(self,wt='negative_mean_squared_error'):  
+    def build_comid_insample_err_compare(self,wt='f1_micro'):  
         
-        
-        build_y_like_agg_pred_spec(rebuild)
+        y_yhat_df=build_aggregate_predictions_by_species(rebuild=0)
+        y=y_yhat_df.xs('y_train',level='estimator').loc[:,['y']]
+        yhat=y_yhat_df.drop('y_train',level='estimator').loc[:,y_yhat_df.columns!='y']
+        y_a,yhat_a= y.align(yhat,axis=0)
+        diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct
         
         """try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
@@ -85,6 +88,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 y=y_df.iloc[i]    """
     
     def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+        try:
+            self.results_dict
+        except:
+            self.results_dict=self.resultsDBdict()
         try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
         try:
@@ -95,7 +102,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 rundict_list.append({})
                 for h,hash_id in list(enumerate(hash_id_list)):
                     if not hash_id in self.predictDB:
-                        rundict_list[d][hash_id]=self.results_dict[hash_id]['model']
+                        rundict_list[d][hash_id]=self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
                         keep_hash_id_list.append(hash_id)
