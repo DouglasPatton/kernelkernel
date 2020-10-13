@@ -238,8 +238,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     dghash_hash_id_dict=self.add_check_dghash_hash_id_dict(dghash_hash_id_dict)
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-        
-        else:
+                rebuild=1
+        if rebuild:
             try: self.results_dict
             except:self.results_dict=self.resultsDBdict()
             datagenhash_hash_id_dict={}

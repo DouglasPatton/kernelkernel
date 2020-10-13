@@ -26,7 +26,7 @@ class DBTool:
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
     
     def postFitDBdict(self,name):
-        return SqliteDict(filename=self.pidataDBdictpath,tablename=name)
+        return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
     
     
     def resultsDBdict(self):
