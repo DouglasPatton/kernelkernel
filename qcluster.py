@@ -119,10 +119,11 @@ class JobQFiller(mp.Process,myLogger):
     def __init__(self,q,joblist):
         self.q=q
         self.joblist=joblist
+        super().__init__()
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
-        super().__init__()
+        
     
     
     def run(self):
@@ -266,7 +267,6 @@ class RunCluster(mp.Process,DBTool,myLogger):
             runlist,hash_id_list=self.setup.setupRunners()
             jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
             jobqfiller.start()
-            jobqfiller.run()
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
@@ -274,8 +274,8 @@ class RunCluster(mp.Process,DBTool,myLogger):
                 sleep(60)
                 saveqdumper.run()#
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
-            #jobqfiller.join() 
-            saveqdumper.join()
+            jobqfiller.join() 
+            #saveqdumper.join()
             [node.join() for node in self.nodelist]
             self.qdict['jobq'].put('shutdown')
             return
