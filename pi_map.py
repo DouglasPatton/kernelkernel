@@ -32,10 +32,19 @@ class Mapper:
         mean_prediction_err=diff.mean(axis=1).mean(level='HUC12')
         err_df=mean_prediction_err.rename('err').reset_index().rename(columns={'HUC12':'huc12'})
         err_geo_df=self.h12_boundary.merge(err_df,on='huc12')
-    
-        fig=plt.figure(dpi=300,figsize=[10,14])
+        
+        
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        fig=plt.figure(dpi=300,figsize=[10,8])
         ax=fig.add_subplot(1,1,1)
-        err_geo_df.plot(column='err',ax=ax)
+
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+
+        err_geo_df.plot(column='err',ax=ax,cax=cax,legend=True,cmap='brg')#,legend_kwds={'orientation':'vertical'})
+        
+        
         
         fig.savefig('error_map.png')
 
