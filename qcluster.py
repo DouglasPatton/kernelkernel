@@ -268,6 +268,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             jobqfiller.start()
             jobqfiller.run()
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
+            saveqdumper.start()
             check_complete=0
             while not check_complete:
                 sleep(60)
