@@ -95,6 +95,41 @@ class DBTool:
                     del dbdict[hash_id]
             dbdict.commit()
             
+            
+    def del_est_from_results(self):
+        rdb=self.resultsDBdict
+        spec_xvar_dict={} # to store the xvars the first time a species comes up
+        with rdb() as rdb_dict:
+            for hash_id in list(rdb_dict.keys()):# generator to list so rdb_dict can be modified.
+                modeldict=rdb_dict[hash_id]
+                #data_gen=modeldict["data_gen"]
+                #species=data_gen["species"]
+                #est_name=modeldict["model_gen"]["name"]
+                
+                if type(modeldict['model']) is dict:
+                    changed=False
+                    for m_idx in range(len(modeldict['model']['estimator'])):
+                        try:
+                            del modeldict['model']['estimator'][m_idx].est
+                            changed=True # if triggered once, will write back to db
+                        except AttributeError:
+                            self.logger.exception(f'no est attribute for hash_id:{hash_id}')
+                        except:
+                            self.logger.exception(f'halting bc unexpected error for modeldict:{modeldict}')
+                            assert False,'halt'
+                        
+                    if changed:
+                        rdb_dict[hash_id]=modeldict # db only updated if attribute added
+                    
+                    
+                else:
+                    assert False,'expecting cross_validate dict '
+
+            rdb_dict.commit()
+        return
+            
+        
+        
     def add_x_vars_to_results(self):
         from datagen import dataGenerator
 

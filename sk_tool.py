@@ -70,14 +70,14 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             est_name=modelgen['name']
             self.model_kwargs=modelgen['kwargs']
             sk_estimator=sk_est()
-            est_dict=sk_estimator.get_est_dict()
-            self.est=est_dict[est_name]['estimator']
+            est_dict=sk_estimator.get_est_dict()#used to be stored in each sktool instance.
+            est=est_dict[est_name]['estimator']
             fit_kwarg_dict=est_dict[est_name]['fit_kwarg_dict']
             self.fit_kwargs_=self.make_fit_kwargs(fit_kwarg_dict,X,y)
             self.n_,self.k_=X.shape
             self.x_vars=list(X.columns)
             #self.logger(f'self.k_:{self.k_}')
-            self.model_=self.est(**self.model_kwargs)
+            self.model_=est(**self.model_kwargs)
             self.logger.info(f'starting fit of {est_name}')
             self.model_.fit(X,y,**self.fit_kwargs_)
             self.logger.info(f'completed fit of {est_name}')
@@ -112,11 +112,42 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             
 
         
-class SkPostFit:
+class SkTool_post_fit:
+    #reworkekd version moved to pi_results
     def __init__(self):
         pass
-   
-            
+    def get_coef_dict(self,fitted_sktool,fitted_estimator=None):
+        if not fitted_estimator is None:
+            name='fitted_estimator'
+            model_list=[fitted_estimator]
+            assert not type(fitted_sktool) is SkTool,'fitted_estimator not None but fitted_sktool is an SkTool! One or the other, please.'
+        else:
+            model_list=[];xlist=[]
+            if type(fitted_sktool) is dict:
+                for sktool in fitted_sktool['estimator']:
+                    model_list.append(sktool.model_)
+                    xlist.append(sktool.x_vars)
+                self.model_list=model_list
+                self.xlist=xlist
+        for m_idx,model in enumerate(model_list):
+            if type(model) is GridSearchCV:
+                model=model.best_estimator_
+            if type(model) is TransformedTargetRegressor:
+                model=model.regressor_  
+            """inner_pipe=model
+            # now we should be to the inner pipeline regardless of starting point 
+            print('inner_pipe.named_steps',inner_pipe.named_steps)
+            inner_steps=list(inner_pipe.named_steps.keys())
+            print('inner_steps',inner_steps)
+            self.inner_pipe=inner_pipe
+            if 'prep' in inner_steps: # no prep for histgradientboosting
+                prep=inner_pipe['prep']
+                self.prep=prep
+                catvars=[xlist[m_idx][idx] for idx in prep.obj_idx_]
+                cat_names=prep.T.transformers_[1][1]['onehotencoder'].get_feature_names(catvars)
+                print(cat_names)
+                #prep.transformers_[1][1]
+            fitted_clf=inner_pipe.named_steps['clf']"""
             
     def do_cv_permutation_importance(X,y):
         permutation_importance(sel.model_,X,y,scoring='f1_micro')

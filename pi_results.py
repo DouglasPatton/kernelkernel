@@ -51,18 +51,19 @@ class PiResults(DBTool,DataPlotter,myLogger):
         sktool_list=model_dict['model']['estimator']
         species=model_dict['data_gen']['species']
         est_name=model_dict['model_gen']['name']
-        if not est_name in ['logistic-reg','linear-svc']:
+        if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
             print(f'no coef for est_name:{est_name}')
             return None
         x_list=[skt.x_vars for skt in sktool_list]
         x_vars=x_list[0]
         K=len(x_vars)
-        fit_est_list=[skt.est for skt in sktool_list]
+        fit_est_list=[skt.model_ for skt in sktool_list]
         cv_m_count=len(fit_est_list)
         
         coef_array_list=[]
-        for model in fit_est_list:
-            coef_array_list.append(model.est['clf'].coef_[:,None])
+        self.fit_est_list=fit_est_list
+        for est in fit_est_list:
+            coef_array_list.append(est['clf'].coef_.T)
             ##axis appended for concatenation
         coef_mat=np.concatenate(coef_array_list,axis=1)
         #x_var_coef_dict={x_vars[k]:coef_mat[k,:] for k in range(K)}
