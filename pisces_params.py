@@ -12,7 +12,7 @@ from pi_results import PiResults
 
 class PiSetup(myLogger):
     def __init__(self,):
-        self.test=True # reduces repeats to speed things up
+        self.test=False#True # reduces repeats to speed things up
         splits=5
         if self.test:
             repeats=2
@@ -20,7 +20,7 @@ class PiSetup(myLogger):
             repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='predict'#'fit'# 
+        self.run_type='fit'#'predict'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
@@ -84,11 +84,15 @@ class PiSetup(myLogger):
         
     
     def setupRunners(self,):
+        try: self.dbt
+        except:self.dbt=DBTool()
+        try:self.results_dict
+        except: self.results_dict=self.dbt.resultsDBdict()
         #a run dict has a 
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
-        self.dbt=DBTool()
+        
         if self.run_type=='fit':
             rundict_list=[]
             run_record_dict={}
@@ -100,16 +104,20 @@ class PiSetup(myLogger):
                 for model_gen in model_gen_list:
                     run_record={'model_gen':model_gen,'data_gen':data_gen}
                     hash_id=joblib.hash(run_record)
-                    hash_id_list.append(hash_id)
-                    run_record_dict[hash_id]=run_record # store the _gen dicts for reference
-                    model_gen_dict[hash_id]=model_gen # 
-                rundict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
-                rundict_list.append(rundict)
+                    if not hash_id in self.results_dict:
+                        self.logger.info(f'adding to rundict hash_id:{hash_id}')
+                        hash_id_list.append(hash_id)
+                        run_record_dict[hash_id]=run_record # store the _gen dicts for reference
+                        model_gen_dict[hash_id]=model_gen # 
+                    else: self.logger.info(f'setupRunners skipping hash_id:{hash_id}')
+                if len(model_gen_dict)>0:
+                    rundict={'data_gen':data_gen, 'model_gen_dict':model_gen_dict}
+                    rundict_list.append(rundict)
 
             self.dbt.addToDBDict(run_record_dict,gen=1) # create a record of the rundicts to check when it's all complete.
             self.logger.debug(f'len(rundict_list):{len(rundict_list)}')
             runlist=[]
-            rundict_list=self.checkComplete(rundict_list=rundict_list) # remove any that are already in resultsDB
+            #rundict_list=self.checkComplete(rundict_list=rundict_list) # remove any that are already in resultsDB
             for rundict in rundict_list:
                 runlist.append(FitRunner(rundict))
 
@@ -141,7 +149,7 @@ class PiSetup(myLogger):
                     if hash_id in complete_hash_id_list:
                         del rundict_list[r]['model_gen_dict'][hash_id]
                         self.logger.info(f'checkComplete already completed hash_id:{hash_id}')
-                if len(rundict_list[r])==0:
+                if len(rundict_list[r]['model_gen_dict'])==0:
                     rundrop_idx.append(r)
             for r in rundrop_idx[::-1]: #from the rhs so remaining,lower indices to left don't change
                 self.logger.info(f'deleting rundisk idx:{r} bc len=0')
