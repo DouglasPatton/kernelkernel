@@ -50,8 +50,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         # model_dict is the val sotred in results_dict
         sktool_list=model_dict['model']['estimator']
         species=model_dict['data_gen']['species']
-        est_name=modelldict['model_gen']['name']
-        if not self.est_name in ['logistic-reg','linear-svc']:
+        est_name=model_dict['model_gen']['name']
+        if not est_name in ['logistic-reg','linear-svc']:
             print(f'no coef for est_name:{est_name}')
             return None
         x_list=[skt.x_vars for skt in sktool_list]
