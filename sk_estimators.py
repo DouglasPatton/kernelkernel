@@ -27,7 +27,7 @@ class sk_estimator(myLogger):
         
         
     def get_est_dict(self,):
-        fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now
+        fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now # move to pisces_params?
         estimator_dict={
             #add logistic with e-net
             'logistic-reg':{'estimator':self.logisticClf,'fit_kwarg_dict':fit_kwarg_dict},
