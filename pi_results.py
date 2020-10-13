@@ -98,9 +98,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
             rundict_list=[]
             keep_hash_id_list=[]
-            for d,(dg_hash,hash_id_list) in list(enumerate(datagenhash_hash_id_dict.items())):
+            self.logger.info(f'building rundict_list')
+            for d,(dg_hash,hash_id_list) in enumerate(datagenhash_hash_id_dict.items()):
                 rundict_list.append({})
-                for h,hash_id in list(enumerate(hash_id_list)):
+                for hash_id in (hash_id_list):
                     if not hash_id in self.predictDB:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
@@ -112,6 +113,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     drop_idx_list.append(r)
             for r in drop_idx_list[::-1]:
                 del rundict_list[r] # delete from rhs to avoid change of order on remaining idx's to delete
+            self.logger.info('building rundict_list is complete')
             return rundict_list,keep_hash_id_list
         except:
             self.logger.exception('outer catch, halting')
@@ -189,8 +191,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
     
     def build_species_hash_id_dict(self,rebuild=0):
-        try: self.results_dict
-        except:self.results_dict=self.resultsDBdict()
+        
         name='species_hash_id_dict'
         if not rebuild:
             try:
@@ -208,7 +209,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return species_hash_id_dict
                 
     def build_dghash_hash_id_dict(self,):
+        try: self.results_dict
+        except:self.results_dict=self.resultsDBdict()
         datagenhash_hash_id_dict={}
+        self.logger.info(f'building datagen hash hash_id dict ')
         for hash_id,modeldict in self.results_dict.items(): 
                 data_gen=modeldict["data_gen"]
                 datagenhash=joblib.hash(data_gen)
@@ -220,6 +224,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 except:
                     self.logger.exception(f'not a keyerror, unexpected error')
                     assert False,'halt'
+        self.logger.info('datagen hash hash_id dict complete')
         return datagenhash_hash_id_dict
     
     

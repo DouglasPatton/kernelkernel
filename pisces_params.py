@@ -116,9 +116,10 @@ class PiSetup(myLogger):
         elif self.run_type=='predict':
             rundict_list,hash_id_list=PiResults().build_prediction_rundicts()
             runlist=[]
+            self.logger.info('building list of runners')
             for rundict in rundict_list:
                 runlist.append(PredictRunner(rundict))
-            
+            self.logger.info('list of runners built')
         return runlist,hash_id_list
     
        

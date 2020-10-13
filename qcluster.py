@@ -137,7 +137,7 @@ class JobQFiller(mp.Process,myLogger):
         while len(self.joblist):
             if q_size<max_q_size:
                 tries=0
-                for i in range(max_q_size-q_size+1): #fill queue back up to max_q_size
+                for i in range(max_q_size): #fill queue back up to max_q_size
                     job=self.joblist.pop()
                     try:job.build()
                     except:self.logger.exception(f'error building job')
