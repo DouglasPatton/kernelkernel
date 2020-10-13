@@ -115,14 +115,7 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
 class SkPostFit:
     def __init__(self):
         pass
-    def get_cv_coef_dict(self,model_dict,):
-        # model_dict is the val sotred in results_dict
-        fit_est_list=modeldict['model']['estimator']
-        x_list=[model.x_vars for model in fit_est_list]
-        K=max([max(len(x_vars)) for x_vars in x_list])
-        M=len(fit_est_list)
-        
-        for m_idx,model in enumerate(fit_est_list):
+   
             
             
     def do_cv_permutation_importance(X,y):
