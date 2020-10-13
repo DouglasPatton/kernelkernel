@@ -207,24 +207,56 @@ class PiResults(DBTool,DataPlotter,myLogger):
             except: assert False, 'halt'
         self.getsave_postfit_db_dict(name,species_hash_id_dict)
         return species_hash_id_dict
-                
-    def build_dghash_hash_id_dict(self,):
+    
+    def add_check_dghash_hash_id_dict(self,dghash_hash_id_dict):
         try: self.results_dict
         except:self.results_dict=self.resultsDBdict()
-        datagenhash_hash_id_dict={}
-        self.logger.info(f'building datagen hash hash_id dict ')
-        for hash_id,modeldict in self.results_dict.items(): 
-                data_gen=modeldict["data_gen"]
-                datagenhash=joblib.hash(data_gen)
+        hash_id_list=[]
+        for _,h_i_list in dghash_hash_id_dict.items():
+            hash_id_list.extend(h_i_list)
+        results_hash_id_list=list(self.results_dict.keys())
+        for hash_id in results_hash_id_list:
+            if not hash_id in hash_id_list:
+                result=self.results_dict[hash_id]
+                data_gen=result['data_gen']
+                dghash=joblib.hash(data_gen)
                 try:
-                    datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
-                        #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                    dghash_hash_id_dict[dghash].append(hash_id)
                 except KeyError:
-                    datagenhash_hash_id_dict[datagenhash]=[hash_id]
-                except:
-                    self.logger.exception(f'not a keyerror, unexpected error')
-                    assert False,'halt'
-        self.logger.info('datagen hash hash_id dict complete')
+                    dghash_hash_id_dict[dghash]=[hash_id]
+        return dghash_hash_id_dict
+        
+        
+    def build_dghash_hash_id_dict(self,rebuild=0,add=0):
+        name='dghash_hash_id_dict'
+        if not rebuild:
+            try:
+                dghash_hash_id_dict=self.getsave_postfit_db_dict(name)
+                if not add:
+                    return dghash_hash_id_dict
+                else:
+                    dghash_hash_id_dict=self.add_check_dghash_hash_id_dict(dghash_hash_id_dict)
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        
+        else:
+            try: self.results_dict
+            except:self.results_dict=self.resultsDBdict()
+            datagenhash_hash_id_dict={}
+            self.logger.info(f'building datagen hash hash_id dict ')
+            for hash_id,modeldict in self.results_dict.items(): 
+                    data_gen=modeldict["data_gen"]
+                    datagenhash=joblib.hash(data_gen)
+                    try:
+                        datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
+                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                    except KeyError:
+                        datagenhash_hash_id_dict[datagenhash]=[hash_id]
+                    except:
+                        self.logger.exception(f'not a keyerror, unexpected error')
+                        assert False,'halt'
+            self.logger.info('datagen hash hash_id dict complete')
+        self.getsave_postfit_db_dict(name,datagenhash_hash_id_dict)
         return datagenhash_hash_id_dict
     
     
