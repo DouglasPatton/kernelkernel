@@ -158,6 +158,7 @@ class FitRunner(myLogger):
             model_dict=hash_id_model_dict[hash_id]
             try:
                 success=0
+                self.logger.info(f'fitrunner running hash_id:{hash_id}')
                 model_dict['model']=model_dict['model'].run(data)
                 success=1
             except:
@@ -175,7 +176,7 @@ class FitRunner(myLogger):
                     if not self.saveq.full() and qtry>3:
                         self.logger.exception('error adding to saveq')
                     else:
-                        sleep(1)
+                        sleep(2**qtry)
 
 
                                     
