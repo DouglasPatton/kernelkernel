@@ -44,7 +44,15 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
+    
+    def build_spec_est_coef_df(self,rebuild=0):
+        dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
+        try: self.results_dict
+        except:self.results_dict=self.resultsDBdict()
         
+        for dghash,dg_hash_id_list in dghash_hash_id_dict.items():
+            for hash_id in hash_id_list:
+                self.get_cv_coef_df(self.results_dict(hash_id))
         
     def get_cv_coef_df(self,model_dict,):
         # model_dict is the val sotred in results_dict
@@ -67,7 +75,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             ##axis appended for concatenation
         coef_mat=np.concatenate(coef_array_list,axis=1)
         #x_var_coef_dict={x_vars[k]:coef_mat[k,:] for k in range(K)}
-        mindex=pd.MultiIndex.from_tuples([(species,est_name,xvar) for xvar in x_vars])
+        mindex=pd.MultiIndex.from_tuples([(species,est_name,xvar) for xvar in x_vars],names=['species','estimator','x_var'])
         columns=[f'cv_{m}' for m in range(cv_m_count)]
         df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)
         self.logger.info(f'coef df:{df}')
