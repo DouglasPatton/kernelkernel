@@ -21,6 +21,7 @@ class DBTool:
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
+        self.fitfaillDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
@@ -28,6 +29,8 @@ class DBTool:
     def postFitDBdict(self,name):
         return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
     
+    def fitfailDBdict(self):
+        return SqliteDict(filename=self.fitfailDBdictpath,tablename='fitfail') 
     
     def resultsDBdict(self):
         return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
@@ -85,6 +88,22 @@ class DBTool:
             return  
         except:
             self.logger.exception(f'addToDBDict outer catch')
+    
+    def get_no_results_run_record_dict(self,ignore_failed=True):
+        no_results_run_record_dict={}
+        gen_dict=self.genDBdict()
+        results_keys=list(self.resultsDBdict().keys())
+        if ignore_failed:
+            fail_dict=self.fitfailDBdict()
+        else:
+            fail_dict={}
+        for hash_id in gen_dict.keys():
+            if not (hash_id in results_keys or not hash_id in fail_dict):
+                no_results_run_record_dict[hash_id]=gen_dict[hash_id]
+        return no_results_run_record_dict
+                
+    
+    
     
     def purgeExtraGen(self):
         rdb=self.resultsDBdict()

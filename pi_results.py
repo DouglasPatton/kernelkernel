@@ -47,6 +47,14 @@ class PiResults(DBTool,DataPlotter,myLogger):
     
     def build_spec_est_coef_df(self,rebuild=0):
         #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
+        name='spec_est_coef_df'
+        if not rebuild:
+            try:
+                spec_est_coef_df=self.getsave_postfit_db_dict(name)
+                return spec_est_coef_df['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        
         try: self.results_dict
         except:self.results_dict=self.resultsDBdict()
         df_list=[]
@@ -54,14 +62,16 @@ class PiResults(DBTool,DataPlotter,myLogger):
             df=self.get_cv_coef_df(model_dict)
             if not df is None:
                 df_list.append(df)
-        coef_df=pd.concat(df_list,axis=1)
-        self.coef_df=coef_df
+        coef_df=pd.concat(df_list,axis=0)
+        self.coef_df=coef_df# for developing in jupyterlabs
+        self.getsave_postfit_db_dict(name,spec_est_coef_df)
+        return spec_est_coef_df # just returning the df
         
     def get_cv_coef_df(self,model_dict,):
         # model_dict is the val sotred in results_dict
         est_name=model_dict['model_gen']['name']
         if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
-            print(f'no coef for est_name:{est_name}')
+            #print(f'no coef for est_name:{est_name}')
             return None
         
         sktool_list=model_dict['model']['estimator']
@@ -76,7 +86,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         coef_array_list=[]
         self.fit_est_list=fit_est_list
         for est in fit_est_list:
-            coef_array_list.append(est['clf'].coef_.T)
+            coef_array_list.append(self.get_coef_from_fit_est(est_name,est))
             ##axis appended for concatenation
         coef_mat=np.concatenate(coef_array_list,axis=1)
         #x_var_coef_dict={x_vars[k]:coef_mat[k,:] for k in range(K)}
@@ -85,7 +95,14 @@ class PiResults(DBTool,DataPlotter,myLogger):
         df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)
         self.logger.info(f'coef df:{df}')
         return df
-        
+    def get_coef_from_fit_est(self,est_name,est):
+        if est_name == 'linear-svc':
+            coef=est.best_estimator_.regressor_['clf'].coef_.T
+            return coef
+        elif est_name == 'logistic-reg':
+            coef=est['clf'].coef_.T
+            return coef
+        else:assert False,f'unexpected est_name:{est_name}'   
         
         
         
@@ -231,6 +248,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         if data is None:
             return self.postFitDBdict(name)
         else:
+            if not type(data) is dict:
+                data={'data':data}
             self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
     
     def build_species_hash_id_dict(self,rebuild=0):
@@ -405,7 +424,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 data_list.append(scor_est_spec_dict[est][spec])
                 
         score_stack=np.concatenate(data_list,axis=0)        
-        columns=[f'scorer-{i}') for i in range(score_stack.shape[1])]        
+        columns=[f'scorer-{i}' for i in range(score_stack.shape[1])]        
         m_idx=pd.MultiIndex.from_tuples(tup_list,levels=['species','estimator'])
         scor_df=pd.DataFrame(data=score_stack,index=m_idx,columns=columns)
         

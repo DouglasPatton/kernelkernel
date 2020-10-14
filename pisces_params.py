@@ -12,7 +12,7 @@ from pi_results import PiResults
 
 class PiSetup(myLogger):
     def __init__(self,):
-        self.test=False#True # reduces repeats to speed things up
+        self.test=True#True # reduces repeats to speed things up
         splits=5
         if self.test:
             repeats=2
@@ -20,7 +20,7 @@ class PiSetup(myLogger):
             repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='fit'#'predict'# 
+        self.run_type='fit'#'fit_fill'#'predict'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
@@ -84,7 +84,22 @@ class PiSetup(myLogger):
             data_gen_list.append(params)
         return data_gen_list
      
-        
+    def build_dghash_hash_id_dict_from_run_records(self,run_record_dict):
+        datagenhash_hash_id_run_records={}
+        self.logger.info(f'building datagenhash_hash_id_run_records')
+        for hash_id,run_record in run_record_dict.items(): 
+                data_gen=run_record["data_gen"]
+                datagenhash=joblib.hash(data_gen)
+                try:
+                    datagenhash_hash_id_run_records[datagenhash][hash_id]=run_record # in case diff species have diff 
+                        #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                except KeyError:
+                    datagenhash_hash_id_run_records[datagenhash]={hash_id:run_record}
+                except:
+                    self.logger.exception(f'not a keyerror, unexpected error')
+                    assert False,'halt'
+        self.logger.info('datagen hash hash_id dict complete')
+        return datagenhash_hash_id_run_records
     
     def setupRunners(self,):
         try: self.dbt
@@ -95,7 +110,21 @@ class PiSetup(myLogger):
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
-        
+        if self.run_type=='fit_fill':
+            no_results_run_record_dict=self.dbt.get_no_results_run_record_dict()
+            datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(no_results_run_record_dict)
+            rundict_list=[]
+            for _,hash_id_run_record_dict in datagenhash_hash_id_run_records.items():
+                first=True
+                for hash_id,run_record in hash_id_run_record_dict.items():
+                    if first: 
+                        rundict={'data_gen':run_record['data_gen'],'model_gen_dict':{hash_id,run_record['model_gen']}}
+                    else:
+                        rundict['model_gen_dict'][hash_id]=run_record['model_gen']
+                    first=False
+                rundict_list.append(rundict.copy()) #maybe copy is not necessary
+                
+            
         if self.run_type=='fit':
             rundict_list=[]
             run_record_dict={}
