@@ -46,22 +46,27 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.helper=Helper()
     
     def build_spec_est_coef_df(self,rebuild=0):
-        dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
+        #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
         try: self.results_dict
         except:self.results_dict=self.resultsDBdict()
-        
-        for dghash,dg_hash_id_list in dghash_hash_id_dict.items():
-            for hash_id in hash_id_list:
-                self.get_cv_coef_df(self.results_dict(hash_id))
+        df_list=[]
+        for hash_id,model_dict in self.results_dict.items():
+            df=self.get_cv_coef_df(model_dict)
+            if not df is None:
+                df_list.append(df)
+        coef_df=pd.concat(df_list,axis=1)
+        self.coef_df=coef_df
         
     def get_cv_coef_df(self,model_dict,):
         # model_dict is the val sotred in results_dict
-        sktool_list=model_dict['model']['estimator']
-        species=model_dict['data_gen']['species']
         est_name=model_dict['model_gen']['name']
         if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
             print(f'no coef for est_name:{est_name}')
             return None
+        
+        sktool_list=model_dict['model']['estimator']
+        species=model_dict['data_gen']['species']
+        
         x_list=[skt.x_vars for skt in sktool_list]
         x_vars=x_list[0]
         K=len(x_vars)
@@ -389,7 +394,21 @@ class PiResults(DBTool,DataPlotter,myLogger):
         except:
             self.logger.exception(f'outer catch in building spec_est Permutations')
                                            
-                                           
+    def spec_est_scor_df_from_dict(rebuild=0,scorer='f1_micro'):
+        scor_est_spec_dict=self.build_scor_est_spec_dict(rebuild=rebuild)
+        est_spec_dict=scor_est_spec_dict[scorer]
+        tup_list=[]
+        data_list=[]
+        for est in scor_est_spec_dict.keys():
+            for spec in scor_est_spec_dict[est].keys():
+                tup_list.append((spec,est))
+                data_list.append(scor_est_spec_dict[est][spec])
+                
+        score_stack=np.concatenate(data_list,axis=0)        
+        columns=[f'scorer-{i}') for i in range(score_stack.shape[1])]        
+        m_idx=pd.MultiIndex.from_tuples(tup_list,levels=['species','estimator'])
+        scor_df=pd.DataFrame(data=score_stack,index=m_idx,columns=columns)
+        
     def build_scor_est_spec_dict(self,rebuild=0):
         savename=os.path.join('results','scor_est_spec_dict.pkl')
         

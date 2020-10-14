@@ -58,10 +58,12 @@ class Mapper:
         nofish_mean_predicted_correct=mean_predicted_correct.xs('zzzno fish',level='species')
         mean_predicted_correct.drop('zzzno fish',level='species')"""
         
-        rvrs_abs_diff_geo_df=1-abs_diff_geo_df
-        rvrs_nofish_abs_diff_geo_df=1-nofish_abs_diff_geo_df
+        abs_diff_geo_df.loc[:,'err']=-1*abs_diff_geo_df.loc[:,'err'].sub(1)
+        rvrs_abs_diff_geo_df=abs_diff_geo_df
+        nofish_abs_diff_geo_df.loc[:,'err']=-1*nofish_abs_diff_geo_df.loc[:,'err'].sub(1)
+        rvrs_nofish_abs_diff_geo_df=nofish_abs_diff_geo_df
         fig=plt.figure(dpi=300,figsize=[10,8])
-        ax=fig.add_subplot(1,1,2)
+        ax=fig.add_subplot(2,1,1)
 
 
         divider = make_axes_locatable(ax)
