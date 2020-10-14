@@ -62,8 +62,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             df=self.get_cv_coef_df(model_dict)
             if not df is None:
                 df_list.append(df)
-        coef_df=pd.concat(df_list,axis=0)
-        self.coef_df=coef_df# for developing in jupyterlabs
+        spec_est_coef_df=pd.concat(df_list,axis=0)
+        self.coef_df=spec_est_coef_df# for developing in jupyterlabs
         self.getsave_postfit_db_dict(name,spec_est_coef_df)
         return spec_est_coef_df # just returning the df
         

@@ -41,7 +41,7 @@ class PiSetup(myLogger):
             random_state=rs # for inner cv and some estimators
             )
         if self.test:
-            species=(0,20)
+            species='all'#(0,20)
         else:
             species='all'
         self.datagen_dict_template=dict(
@@ -113,18 +113,23 @@ class PiSetup(myLogger):
         if self.run_type=='fit_fill':
             no_results_run_record_dict=self.dbt.get_no_results_run_record_dict()
             datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(no_results_run_record_dict)
-            rundict_list=[]
+            self.logger.info(f'datagenhash_hash_id_run_records:{datagenhash_hash_id_run_records}')
+            rundict_list=[];hash_id_list=[] #latter is for tracking completion
             for _,hash_id_run_record_dict in datagenhash_hash_id_run_records.items():
                 first=True
                 for hash_id,run_record in hash_id_run_record_dict.items():
+                    hash_id_list.append(hash_id)
                     if first: 
-                        rundict={'data_gen':run_record['data_gen'],'model_gen_dict':{hash_id,run_record['model_gen']}}
+                        self.logger.info(f'hash_id:{hash_id}')
+                        rundict={'data_gen':run_record['data_gen'],
+                                 'model_gen_dict':{hash_id:run_record['model_gen']}}
                     else:
                         rundict['model_gen_dict'][hash_id]=run_record['model_gen']
                     first=False
                 rundict_list.append(rundict.copy()) #maybe copy is not necessary
-                
-            
+            runlist=[]    
+            for rundict in rundict_list:
+                runlist.append(FitRunner(rundict))
         if self.run_type=='fit':
             rundict_list=[]
             run_record_dict={}
@@ -191,6 +196,7 @@ class PiSetup(myLogger):
             for hash_id in hash_id_list:
                 if not hash_id in complete_hash_id_list:
                     return False
+        self.logger.Warning(f'check complete returning True!!!!!')
         return True # must be done
         
     

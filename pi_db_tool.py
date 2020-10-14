@@ -21,7 +21,7 @@ class DBTool:
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
-        self.fitfaillDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
+        self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
@@ -76,7 +76,7 @@ class DBTool:
                         for key,val in dict_i.items():
                             if key in dbdict:
                                 if not gen:
-                                    self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
+                                    self.logger.Warning(f'overwriting val:{dbdict[key]} for key:{key}')
                                     dbdict[key]=val
                                 else:
                                     self.logger.debug(f'key:{key} already exists in gen table in db dict')
@@ -98,8 +98,10 @@ class DBTool:
         else:
             fail_dict={}
         for hash_id in gen_dict.keys():
-            if not (hash_id in results_keys or not hash_id in fail_dict):
+            if not (hash_id in results_keys or hash_id in fail_dict):
+                self.logger.info(f'no results or fails for gen_dict[hash_id]:{gen_dict[hash_id]}')
                 no_results_run_record_dict[hash_id]=gen_dict[hash_id]
+            else:self.logger.info(f'results or fails found for hash_id:{hash_id}')    
         return no_results_run_record_dict
                 
     

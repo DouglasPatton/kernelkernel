@@ -260,6 +260,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
+        else:self.nodelist=[]
         if source is None:
             self.source='pisces'
         else:
