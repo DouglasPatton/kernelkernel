@@ -76,7 +76,7 @@ class DBTool:
                         for key,val in dict_i.items():
                             if key in dbdict:
                                 if not gen:
-                                    self.logger.Warning(f'overwriting val:{dbdict[key]} for key:{key}')
+                                    self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
                                     dbdict[key]=val
                                 else:
                                     self.logger.debug(f'key:{key} already exists in gen table in db dict')

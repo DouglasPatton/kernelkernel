@@ -40,10 +40,12 @@ class PiResults(DBTool,DataPlotter,myLogger):
         #self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
-        self.scor_est_spec_dict={}
+        #self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
+     
+        
     
     def build_spec_est_coef_df(self,rebuild=0):
         #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
@@ -105,11 +107,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
         else:assert False,f'unexpected est_name:{est_name}'   
         
         
-        
-    def build_comid_spec_results(self,):
-        pass
-
-    
     def build_comid_insample_err_compare(self,wt='f1_micro'):  
         
         y_yhat_df=build_aggregate_predictions_by_species(rebuild=0)
@@ -118,34 +115,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
         y_a,yhat_a= y.align(yhat,axis=0)
         diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct
         
-        """try: self.predictDB
-        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
-        try:
-            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict() 
-        except:
-            self.logger.exception('')
-            assert False, 'halt'
-        try: self.pdt
-        except: self.pdt=PDT()
-        try: species_comid_list=self.pdt.speciescomidlist
-        except:
-            self.pdt.buildspecieslist()   
-            species_comid_list=self.pdt.speciescomidlist
-        try:self.gt
-        except:self.gt=GT()
-        huc12_comid_dict=self.gt.huc12comiddict
-        
-        
-        
-        hash_id_list=list(self.predictDB.keys())
-        
-        huc12_comid_species_results={huc12:{comid:{}} for huc12,comidlist in huc12_comid_dict.items()}
-        for hid in hash_id_list:
-            y_df,yhat_df,huc12_df=self.predictDB[hid]
-            for i in range(y_df.shape[0]):
-                
-                huc12=huc12_df.iloc[i]
-                y=y_df.iloc[i]    """
     
     def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
@@ -236,9 +205,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     self.logger.exception(f'no prediction for species:{species} and hash_id:{hash_id}')
         big_df_stack=pd.concat(dflist,axis=0)# axis for multi-reps of cv.
         y_df=self.build_y_like_agg_pred_spec(rebuild=rebuild,species_hash_id_dict=species_hash_id_dict)
-        self.logger.info(f'about to concatenate y_df:{y_df}')
-        self.logger.info(f'and big_df_stack:{big_df_stack}')
-        y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)
+        #self.logger.info(f'about to concatenate y_df:{y_df}')
+        #self.logger.info(f'and big_df_stack:{big_df_stack}')
+        y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)#estimators don't match, align later.
         
         aggregate_predictions_by_species={'data':y_yhat_df} 
         self.getsave_postfit_db_dict(name,aggregate_predictions_by_species)
@@ -413,25 +382,35 @@ class PiResults(DBTool,DataPlotter,myLogger):
         except:
             self.logger.exception(f'outer catch in building spec_est Permutations')
                                            
-    def spec_est_scor_df_from_dict(rebuild=0,scorer='f1_micro'):
-        scor_est_spec_dict=self.build_scor_est_spec_dict(rebuild=rebuild)
+    def spec_est_scor_df_from_dict(self,rebuild=0,scorer='f1_micro'):
+        try: self.scor_est_spec_dict
+        except:self.build_scor_est_spec_dict(rebuild=rebuild)
+        scor_est_spec_dict=self.scor_est_spec_dict
+        #self.logger.info(f'scor_est_spec_dict:{scor_est_spec_dict}')
         est_spec_dict=scor_est_spec_dict[scorer]
         tup_list=[]
         data_list=[]
-        for est in scor_est_spec_dict.keys():
-            for spec in scor_est_spec_dict[est].keys():
-                tup_list.append((spec,est))
-                data_list.append(scor_est_spec_dict[est][spec])
+        for est,spec_dict in est_spec_dict.items():
+            for spec,arr in spec_dict.items():
+                if arr.size>0:
+                    tup_list.append((spec,est))
+                    data_list.append(arr)
                 
-        score_stack=np.concatenate(data_list,axis=0)        
-        columns=[f'scorer-{i}' for i in range(score_stack.shape[1])]        
-        m_idx=pd.MultiIndex.from_tuples(tup_list,levels=['species','estimator'])
-        scor_df=pd.DataFrame(data=score_stack,index=m_idx,columns=columns)
+        score_stack=pd.DataFrame(data_list)       
+        columns=[f'{scorer}-{i}' for i in range(score_stack.shape[1])]        
+        score_stack.columns=columns
+        m_idx=pd.MultiIndex.from_tuples(tup_list,names=['species','estimator'])
+        scor_df=score_stack.set_index(m_idx)
+        #scor_df=score_stack#pd.DataFrame(data=score_stack,index=m_idx,columns=columns)
+        return scor_df
+        
         
     def build_scor_est_spec_dict(self,rebuild=0):
         savename=os.path.join('results','scor_est_spec_dict.pkl')
         
         if rebuild:
+            try:self.results_dict
+            except:self.results_dict=self.resultsDBdict()
             scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
             for hash_id,result_dict in self.results_dict.items():
                 data_gen=result_dict['data_gen']

@@ -167,9 +167,6 @@ class PiSetup(myLogger):
             self.logger.info('list of runners built')
         return runlist,hash_id_list
     
-       
-            
-
         
     def checkComplete(self,db=None,rundict_list=None,hash_id_list=None):
         #rundict_list is provided at startup, and if not, useful for checking if all have been saved
@@ -196,7 +193,7 @@ class PiSetup(myLogger):
             for hash_id in hash_id_list:
                 if not hash_id in complete_hash_id_list:
                     return False
-        self.logger.Warning(f'check complete returning True!!!!!')
+        self.logger.warning(f'check complete returning True!!!!!')
         return True # must be done
         
     
