@@ -27,21 +27,30 @@ class Mapper(myLogger):
         self.h12_boundary=gpd.read_file(self.boundary_data_path,layer='WBDHU12')
     
        
-    def make_weights(self,rebuild=0):
+    def make_comid_weights(self,rebuild=0):
         spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
-       
-    
-    
+        mean_scor=spec_est_scor_df.mean(axis=1)
+        #norm_mean_scor=mean_scor.divide(mean_scor.sum()) #cancelled out by norming over sum at end, so skip
         y,yhat,diff=agg_prediction_spec_df=self.build_prediction_and_error_dfs(rebuild=rebuild)
-        self.diff=diff
-        self.logger.info(f'spec_est_scor_df:{spec_est_scor_df},diff:{diff}')
-        spec_est_scor_df_a,diff_a=spec_est_scor_df.align(diff,broadcast_axis=0,join='outer')
-        spec_est_scor_df_a=spec_est_scor_df_a.dropna(axis=1)
-        diff_a=diff_a.dropna(axis=1)
-        mean_scor=spec_est_scor_df_a.mean(axis=1)
-        mean_abs_diff=diff_a.abs().mean(axis=1)
-        mean_scor_X_mean_abs_diff=mean_scor.multiply(mean_abs_diff)
-        mean_scor_X_mean_abs_diff.reindex(index=['species','HUC12','COMID','estimator'])
+        mean_abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1) # still 0 to 1, but higher is better
+        #norm_mean_abs_diff=mean_abs_diff.divide(mean_abs_diff.sum())
+        
+        self.logger.info(f'mean_scor:{mean_scor},diff:{mean_abs_diff_scor}')
+        mean_scor_a,diff_a=mean_scor.align(mean_abs_diff_scor,broadcast_axis=0,join='outer') #now a series join
+        #mean_scor_a=mean_scor_a.dropna(axis=1) # mean collapsed df to series, so unnecessary
+        #diff_a=diff_a.dropna(axis=1)
+        #mean_scor=spec_est_scor_df_a.mean(axis=1)
+        
+        #mean_abs_diff=diff_a.abs().mean(axis=1)
+        mean_scor_X_mean_abs_diff_scor=mean_scor.multiply(mean_abs_diff_scor)
+        #self.mean_scor_X_mean_abs_diff_scor=mean_scor_X_mean_abs_diff_scor
+        mean_scor_X_mean_abs_diff_scor.rename('EstScorComDifScor_comnorm_Wt',inplace=True)
+        #mean_scor_X_mean_abs_diff_scor.columns=['EstComWt']
+        self.mean_scor_X_mean_abs_diff_scor=mean_scor_X_mean_abs_diff_scor
+        norm_divisor=mean_scor_X_mean_abs_diff_scor.sum(level='COMID')
+        norm_divisor_a,mean_scor_X_mean_abs_diff_scor_a=norm_divisor.align(mean_scor_X_mean_abs_diff_scor,axis=0)
+        norm_scor_X_abs_diff_comid_wts=mean_scor_X_mean_abs_diff_scor.divide(norm_divisor_a)
+        return norm_scor_X_abs_diff_comid_wts
         #geo_y=self.huc12merge(y)
         #geo_yhat=self.huc12merge(yhat)
         #geo_diff=self.huc12merge(diff)
