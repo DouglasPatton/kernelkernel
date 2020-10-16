@@ -12,7 +12,7 @@ from pi_results import PiResults
 
 class PiSetup(myLogger):
     def __init__(self,):
-        self.test=True#True # reduces repeats to speed things up
+        self.test=False#True#True # reduces repeats to speed things up
         splits=5
         if self.test:
             repeats=2
