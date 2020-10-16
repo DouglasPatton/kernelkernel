@@ -1,6 +1,8 @@
 import os
 import geopandas as gpd
 from pi_results import PiResults
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class Mapper:
     def __init__(self):
@@ -21,10 +23,10 @@ class Mapper:
     def getHuc12Boundary(self):
         self.h12_boundary=gpd.read_file(self.boundary_data_path,layer='WBDHU12')
     
-    def draw_huc12_truefalse(self):
+    def draw_huc12_truefalse(self,rebuild=0):
         try: self.h12_boundary
         except: self.getHuc12Boundary()
-        agg_prediction_spec_df=self.pr.build_aggregate_predictions_by_species(rebuild=0)
+        agg_prediction_spec_df=self.pr.build_aggregate_predictions_by_species(rebuild=rebuild)
         yhat=agg_prediction_spec_df.drop('y_train',level='estimator').loc[:,agg_prediction_spec_df.columns!='y']
         y=agg_prediction_spec_df.xs('y_train',level='estimator').loc[:,['y']]
         y_a,yhat_a= y.align(yhat,axis=0)
@@ -32,10 +34,19 @@ class Mapper:
         mean_prediction_err=diff.mean(axis=1).mean(level='HUC12')
         err_df=mean_prediction_err.rename('err').reset_index().rename(columns={'HUC12':'huc12'})
         err_geo_df=self.h12_boundary.merge(err_df,on='huc12')
-    
-        fig=plt.figure(dpi=300,figsize=[10,14])
+        
+        
+        
+        fig=plt.figure(dpi=300,figsize=[10,8])
         ax=fig.add_subplot(1,1,1)
-        err_geo_df.plot(column='err',ax=ax)
+
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+
+        err_geo_df.plot(column='err',ax=ax,cax=cax,legend=True,cmap='brg')#,legend_kwds={'orientation':'vertical'})
+        
+        
         
         fig.savefig('error_map.png')
 
