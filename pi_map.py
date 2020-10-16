@@ -28,6 +28,8 @@ class Mapper(myLogger):
     
     def getHucBoundary(self,huc_level):
         level_digits=huc_level[-2:]
+        if level_digits[0]=='0':
+            level_digits=level_digits[1]
         self.boundary_dict[huc_level]=gpd.read_file(self.boundary_data_path,layer=f'WBDHU{level_digits}')
         
     def hucBoundaryMerge(self,data_df,right_on='HUC12'):
@@ -79,6 +81,8 @@ class Mapper(myLogger):
 
     
     def plot_features_huc12(self,rebuild=0):
+        try: self.boundary_dict['huc02']
+        except: self.getHucBoundary('huc02')
         wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild)
         huc12_coef_df=wtd_coef_df.mean(axis=0,level='HUC12')
         self.huc12_coef_df=huc12_coef_df
@@ -90,12 +94,13 @@ class Mapper(myLogger):
             
         fig=plt.figure(dpi=300,figsize=[10,8])
         ax=fig.add_subplot(1,1,1)
-
+        
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.1)
        
         huc12_coef_gdf.plot(column=columns[colsort[0]],ax=ax,cax=cax,legend=True)#,legend_kwds={'orientation':'vertical'})
+        self.boundary_dict['huc02'].plot(ax=ax,alpha=0.2,edgecolor='k')
         fig.savefig(Helper().getname(os.path.join(self.print_dir,'huc12_features.png')))
 
     
