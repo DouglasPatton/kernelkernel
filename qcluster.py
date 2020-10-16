@@ -89,6 +89,11 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                             self.logger.debug(f'SaveQDumper shutting down')
                             return
                     assert type(savedict) is dict, f'SaveQDumper expecting a dict for savedict but got {type(savedict)}'
+                    if 'fitfail' in savedict:
+                        savedict.pop('fitfail')
+                        fitfail=True
+                    else:
+                        fitfail=False
                     for hash_id,thing_to_save in savedict.items():
                         if type(thing_to_save) is dict:
                             try:
@@ -105,8 +110,19 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                             self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}, hash_id:{hash_id}')
                         else:
                             self.logger.info(f'saveqdumper has data with type:{type(thing_to_save)} and self.db_kwargs:{self.db_kwargs}')
+                    
                     save_list=[savedict] # b/c addToDBDict expects a list of dicts.
-                    self.addToDBDict(save_list,**self.db_kwargs)
+                    s=0
+                    while True:
+                        s+=1
+                        try:
+                            if fitfail:
+                                self.addToDBDict(save_list,db=self.fitfailDBdict)
+                            else:
+                                self.addToDBDict(save_list,**self.db_kwargs)
+                            break
+                        except:
+                            self.logger.exception(f'error adding to DB. try:{s}')
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
             
@@ -244,6 +260,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
+        else:self.nodelist=[]
         if source is None:
             self.source='pisces'
         else:

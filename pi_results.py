@@ -40,16 +40,73 @@ class PiResults(DBTool,DataPlotter,myLogger):
         #self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
-        self.scor_est_spec_dict={}
+        #self.scor_est_spec_dict={}
         self.sk_est_dict=sk_estimator().get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
+     
         
-        
-    def build_comid_spec_results(self,):
-        pass
-
     
+    def build_spec_est_coef_df(self,rebuild=0):
+        #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
+        name='spec_est_coef_df'
+        if not rebuild:
+            try:
+                spec_est_coef_df=self.getsave_postfit_db_dict(name)
+                return spec_est_coef_df['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        
+        try: self.results_dict
+        except:self.results_dict=self.resultsDBdict()
+        df_list=[]
+        for hash_id,model_dict in self.results_dict.items():
+            df=self.get_cv_coef_df(model_dict)
+            if not df is None:
+                df_list.append(df)
+        spec_est_coef_df=pd.concat(df_list,axis=0)
+        self.coef_df=spec_est_coef_df# for developing in jupyterlabs
+        self.getsave_postfit_db_dict(name,spec_est_coef_df)
+        return spec_est_coef_df # just returning the df
+        
+    def get_cv_coef_df(self,model_dict,):
+        # model_dict is the val sotred in results_dict
+        est_name=model_dict['model_gen']['name']
+        if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
+            #print(f'no coef for est_name:{est_name}')
+            return None
+        
+        sktool_list=model_dict['model']['estimator']
+        species=model_dict['data_gen']['species']
+        
+        x_list=[skt.x_vars for skt in sktool_list]
+        x_vars=x_list[0]
+        K=len(x_vars)
+        fit_est_list=[skt.model_ for skt in sktool_list]
+        cv_m_count=len(fit_est_list)
+        
+        coef_array_list=[]
+        self.fit_est_list=fit_est_list
+        for est in fit_est_list:
+            coef_array_list.append(self.get_coef_from_fit_est(est_name,est))
+            ##axis appended for concatenation
+        coef_mat=np.concatenate(coef_array_list,axis=1)
+        #x_var_coef_dict={x_vars[k]:coef_mat[k,:] for k in range(K)}
+        mindex=pd.MultiIndex.from_tuples([(species,est_name,xvar) for xvar in x_vars],names=['species','estimator','x_var'])
+        columns=[f'cv_{m}' for m in range(cv_m_count)]
+        df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)
+        self.logger.info(f'coef df:{df}')
+        return df
+    def get_coef_from_fit_est(self,est_name,est):
+        if est_name == 'linear-svc':
+            coef=est.best_estimator_.regressor_['clf'].coef_.T
+            return coef
+        elif est_name == 'logistic-reg':
+            coef=est['clf'].coef_.T
+            return coef
+        else:assert False,f'unexpected est_name:{est_name}'   
+        
+        
     def build_comid_insample_err_compare(self,wt='f1_micro'):  
         
         y_yhat_df=build_aggregate_predictions_by_species(rebuild=0)
@@ -58,34 +115,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
         y_a,yhat_a= y.align(yhat,axis=0)
         diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct
         
-        """try: self.predictDB
-        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}
-        try:
-            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict() 
-        except:
-            self.logger.exception('')
-            assert False, 'halt'
-        try: self.pdt
-        except: self.pdt=PDT()
-        try: species_comid_list=self.pdt.speciescomidlist
-        except:
-            self.pdt.buildspecieslist()   
-            species_comid_list=self.pdt.speciescomidlist
-        try:self.gt
-        except:self.gt=GT()
-        huc12_comid_dict=self.gt.huc12comiddict
-        
-        
-        
-        hash_id_list=list(self.predictDB.keys())
-        
-        huc12_comid_species_results={huc12:{comid:{}} for huc12,comidlist in huc12_comid_dict.items()}
-        for hid in hash_id_list:
-            y_df,yhat_df,huc12_df=self.predictDB[hid]
-            for i in range(y_df.shape[0]):
-                
-                huc12=huc12_df.iloc[i]
-                y=y_df.iloc[i]    """
     
     def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
@@ -176,9 +205,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     self.logger.exception(f'no prediction for species:{species} and hash_id:{hash_id}')
         big_df_stack=pd.concat(dflist,axis=0)# axis for multi-reps of cv.
         y_df=self.build_y_like_agg_pred_spec(rebuild=rebuild,species_hash_id_dict=species_hash_id_dict)
-        self.logger.info(f'about to concatenate y_df:{y_df}')
-        self.logger.info(f'and big_df_stack:{big_df_stack}')
-        y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)
+        #self.logger.info(f'about to concatenate y_df:{y_df}')
+        #self.logger.info(f'and big_df_stack:{big_df_stack}')
+        y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)#estimators don't match, align later.
         
         aggregate_predictions_by_species={'data':y_yhat_df} 
         self.getsave_postfit_db_dict(name,aggregate_predictions_by_species)
@@ -188,6 +217,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         if data is None:
             return self.postFitDBdict(name)
         else:
+            if not type(data) is dict:
+                data={'data':data}
             self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
     
     def build_species_hash_id_dict(self,rebuild=0):
@@ -201,8 +232,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             except:
                 self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
         species_hash_id_dict={}
-        for hash_id,modeldict in self.results_dict.items():
-            species=modeldict['data_gen']['species']
+        for hash_id,model_dict in self.results_dict.items():
+            species=model_dict['data_gen']['species']
             try: species_hash_id_dict[species].append(hash_id)
             except KeyError: species_hash_id_dict[species]=[hash_id]
             except: assert False, 'halt'
@@ -245,8 +276,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             except:self.results_dict=self.resultsDBdict()
             datagenhash_hash_id_dict={}
             self.logger.info(f'building datagen hash hash_id dict ')
-            for hash_id,modeldict in self.results_dict.items(): 
-                    data_gen=modeldict["data_gen"]
+            for hash_id,model_dict in self.results_dict.items(): 
+                    data_gen=model_dict["data_gen"]
                     datagenhash=joblib.hash(data_gen)
                     try:
                         datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
@@ -272,7 +303,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
 
 
                 species=data_gen["species"]
-                est_name=modeldict["model_gen"]["name"]
+                est_name=model_dict["model_gen"]["name"]
 
                 try:
                     spec_est_prediction_dict[species]
@@ -284,7 +315,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     spec_est_prediction_dict[species][est_name]
                 except KeyError:
                     spec_est_prediction_dict[species][est_name]=[]
-                if type(modeldict['model']) is dict:
+                if type(model_dict['model']) is dict:
                     assert False, 'broken'
                    
                 else: assert False, 'only developed for CV!'
@@ -305,12 +336,12 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 r_count=len(self.results_dict)
                 spec_est_permutation_dict={}
                 #permutation_kwargs=PiSetup().permutation_kwargs
-                for r_idx,(hash_id,modeldict) in enumerate(self.results_dict.items()): 
+                for r_idx,(hash_id,model_dict) in enumerate(self.results_dict.items()): 
                     if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
-                    data_gen=modeldict["data_gen"]
+                    data_gen=model_dict["data_gen"]
                     datagenhash=joblib.hash(data_gen)
                     species=data_gen["species"]
-                    est_name=modeldict["model_gen"]["name"]
+                    est_name=model_dict["model_gen"]["name"]
 
                     try:
                         spec_est_permutation_dict[species]
@@ -322,7 +353,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         spec_est_permutation_dict[species][est_name]
                     except KeyError:
                         spec_est_permutation_dict[species][est_name]=[]
-                    if type(modeldict['model']) is dict:
+                    if type(model_dict['model']) is dict:
                         try:
                             data=datagenhash_data_dict[datagenhash] # in case diff species have diff 
                             #     datagen_dicts. if wrong random_state passed to cv, split is wrong
@@ -334,10 +365,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
                             self.logger.exception(f'not a keyerror, unexpected error')
                             assert False,'halt'
                         _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
-                        cv_count=len(modeldict['model']['estimator'])
+                        cv_count=len(model_dict['model']['estimator'])
                         for m in range(cv_count): # cross_validate stores a list of the estimators
                             self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
-                            model=modeldict['model']['estimator'][m]
+                            model=model_dict['model']['estimator'][m]
                             m_idx=cv_test_idx[m]
                             X=data.X_train.iloc[m_idx]
                             y=data.y_train.iloc[m_idx]
@@ -351,11 +382,35 @@ class PiResults(DBTool,DataPlotter,myLogger):
         except:
             self.logger.exception(f'outer catch in building spec_est Permutations')
                                            
-                                           
+    def spec_est_scor_df_from_dict(self,rebuild=0,scorer='f1_micro'):
+        try: self.scor_est_spec_dict
+        except:self.build_scor_est_spec_dict(rebuild=rebuild)
+        scor_est_spec_dict=self.scor_est_spec_dict
+        #self.logger.info(f'scor_est_spec_dict:{scor_est_spec_dict}')
+        est_spec_dict=scor_est_spec_dict[scorer]
+        tup_list=[]
+        data_list=[]
+        for est,spec_dict in est_spec_dict.items():
+            for spec,arr in spec_dict.items():
+                if arr.size>0:
+                    tup_list.append((spec,est))
+                    data_list.append(arr)
+                
+        score_stack=pd.DataFrame(data_list)       
+        columns=[f'{scorer}-{i}' for i in range(score_stack.shape[1])]        
+        score_stack.columns=columns
+        m_idx=pd.MultiIndex.from_tuples(tup_list,names=['species','estimator'])
+        scor_df=score_stack.set_index(m_idx)
+        #scor_df=score_stack#pd.DataFrame(data=score_stack,index=m_idx,columns=columns)
+        return scor_df
+        
+        
     def build_scor_est_spec_dict(self,rebuild=0):
         savename=os.path.join('results','scor_est_spec_dict.pkl')
         
         if rebuild:
+            try:self.results_dict
+            except:self.results_dict=self.resultsDBdict()
             scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
             for hash_id,result_dict in self.results_dict.items():
                 data_gen=result_dict['data_gen']

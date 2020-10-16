@@ -164,8 +164,11 @@ class FitRunner(myLogger):
             except:
                 self.logger.exception(f'error for model_dict:{model_dict}')
             savedict={hash_id:model_dict}
+            if not success:
+                self.logger.warning(f'adding fitfail key to savedict.')
+                savedict['fitfail']=True
             qtry=0
-            while success:
+            while True: #saving regardless of success
                 self.logger.debug(f'adding savedict to saveq')
                 try:
                     qtry+=1
@@ -174,9 +177,9 @@ class FitRunner(myLogger):
                     break
                 except:
                     if not self.saveq.full() and qtry>3:
-                        self.logger.exception('error adding to saveq')
+                        self.logger.exception('error adding to saveq, continuing to try')
                     else:
-                        sleep(2**qtry)
+                        sleep(5*qtry)
 
 
                                     

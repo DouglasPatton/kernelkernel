@@ -70,14 +70,14 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             est_name=modelgen['name']
             self.model_kwargs=modelgen['kwargs']
             sk_estimator=sk_est()
-            est_dict=sk_estimator.get_est_dict()
-            self.est=est_dict[est_name]['estimator']
+            est_dict=sk_estimator.get_est_dict()#used to be stored in each sktool instance.
+            est=est_dict[est_name]['estimator']
             fit_kwarg_dict=est_dict[est_name]['fit_kwarg_dict']
             self.fit_kwargs_=self.make_fit_kwargs(fit_kwarg_dict,X,y)
             self.n_,self.k_=X.shape
             self.x_vars=list(X.columns)
             #self.logger(f'self.k_:{self.k_}')
-            self.model_=self.est(**self.model_kwargs)
+            self.model_=est(**self.model_kwargs)
             self.logger.info(f'starting fit of {est_name}')
             self.model_.fit(X,y,**self.fit_kwargs_)
             self.logger.info(f'completed fit of {est_name}')
@@ -113,6 +113,7 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
 
         
 class SkTool_post_fit:
+    #reworkekd version moved to pi_results
     def __init__(self):
         pass
     def get_coef_dict(self,fitted_sktool,fitted_estimator=None):
