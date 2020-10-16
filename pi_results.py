@@ -45,7 +45,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
      
-        
+
     
     def build_spec_est_coef_df(self,rebuild=0):
         #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
@@ -87,14 +87,24 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
         coef_array_list=[]
         self.fit_est_list=fit_est_list
-        for est in fit_est_list:
-            coef_array_list.append(self.get_coef_from_fit_est(est_name,est))
+        col_mindx_tuplist=[]
+        
+        for cv_idx,est in enumerate(fit_est_list):
+            coefs=self.get_coef_from_fit_est(est_name,est)
+            coef_array_list.append(coefs)
+            col_mindx_tuplist.extend([(xvar,f'cv_{cv_idx}') for xvar in x_vars])
             ##axis appended for concatenation
-        coef_mat=np.concatenate(coef_array_list,axis=1)
+        coef_arr=np.concatenate(coef_array_list,axis=0).T
+        columns_midx=pd.MultiIndex.from_tuples(col_mindx_tuplist,names=['x_var','cv_i'])
+        index_midx=pd.MultiIndex.from_tuples([(species,est_name)], names=['species','estimator'] )
+        df=pd.DataFrame(data=coef_arr,columns=columns_midx,index=index_midx)
+        
+        
+        '''coef_mat=np.concatenate(coef_array_list,axis=1)
         #x_var_coef_dict={x_vars[k]:coef_mat[k,:] for k in range(K)}
         mindex=pd.MultiIndex.from_tuples([(species,est_name,xvar) for xvar in x_vars],names=['species','estimator','x_var'])
         columns=[f'cv_{m}' for m in range(cv_m_count)]
-        df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)
+        df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)'''
         self.logger.info(f'coef df:{df}')
         return df
     def get_coef_from_fit_est(self,est_name,est):
