@@ -106,6 +106,8 @@ class PiSetup(myLogger):
         except:self.dbt=DBTool()
         try:self.results_dict
         except: self.results_dict=self.dbt.resultsDBdict()
+        try: self.fitfail_dict
+        except: self.fitfail_dict=self.dbt.fitfailDBdict()
         #a run dict has a 
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
@@ -141,7 +143,7 @@ class PiSetup(myLogger):
                 for model_gen in model_gen_list:
                     run_record={'model_gen':model_gen,'data_gen':data_gen}
                     hash_id=joblib.hash(run_record)
-                    if not hash_id in self.results_dict:
+                    if not (hash_id in self.results_dict or hash_id in self.fitfail_dict):
                         self.logger.info(f'adding to rundict hash_id:{hash_id}')
                         hash_id_list.append(hash_id)
                         run_record_dict[hash_id]=run_record # store the _gen dicts for reference
