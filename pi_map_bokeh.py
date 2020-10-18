@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from helpers import Helper
 from mylogger import myLogger
+from bokeh.plotting import save, figure, show
+from bokeh.models import GeoJSONDataSource
+from bokeh.io import output_notebook
 
 class Mapper(myLogger):
     def __init__(self):
@@ -63,24 +66,29 @@ class Mapper(myLogger):
         wtd_coef_df=coefs_wts.iloc[:,:-1].mul(coefs_wts.iloc[:,-1],axis=0)
         return wtd_coef_df
        
-    def make_comid_weights(self,rebuild=0,norm_index='COMID'):
+    def make_comid_weights(self,rebuild=0,norm_index='COMID',cv_mean=False):
         #norm_index is scope of normalization of wts (sum to 1). 
         ##e.g., for 'COMID', all specs,est wts are summed.
         spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
         spec_est_scor_df=spec_est_scor_df.drop('zzzno fish',level='species')
-        mean_scor=spec_est_scor_df.mean(axis=1)
         y,yhat,diff=agg_prediction_spec_df=self.build_prediction_and_error_dfs(rebuild=rebuild)
-        mean_abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1) # still 0 to 1, but higher is better
-        mean_abs_diff_scor=mean_abs_diff_scor.drop('zzzno fish',level='species')
+        diff=diff.drop('zzzno fish',level='species')
+        if cv_mean:
+            _scor=spec_est_scor_df.mean(axis=1)
+            
+        else:
+            _scor=spec_est_scor_df
         
-        self.logger.info(f'mean_scor:{mean_scor},diff:{mean_abs_diff_scor}')
-        mean_scor_a,diff_a=mean_scor.align(mean_abs_diff_scor,broadcast_axis=0,join='outer') #now a series join
-        mean_scor_X_mean_abs_diff_scor=mean_scor.multiply(mean_abs_diff_scor)
-        norm_divisor=mean_scor_X_mean_abs_diff_scor.sum(axis=0,level=norm_index)
-        norm_divisor_a,mean_scor_X_mean_abs_diff_scor_a=norm_divisor.align(mean_scor_X_mean_abs_diff_scor,axis=0)
-        self.mean_scor_X_mean_abs_diff_scor=mean_scor_X_mean_abs_diff_scor
+        _abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1) # still 0 to 1, but higher is better
+        
+        self.logger.info(f'_scor:{_scor},diff:{_abs_diff_scor}')
+        _scor_a,diff_a=_scor.align(_abs_diff_scor,broadcast_axis=0,join='outer') #now a series join
+        _scor_X_abs_diff_scor=_scor.multiply(_abs_diff_scor)
+        norm_divisor=_scor_X_abs_diff_scor.sum(axis=0,level=norm_index)
+        norm_divisor_a,_scor_X_abs_diff_scor_a=norm_divisor.align(_scor_X_abs_diff_scor,axis=0)
+        self._scor_X_abs_diff_scor=_scor_X_abs_diff_scor
         self.norm_divisor=norm_divisor_a
-        norm_scor_X_abs_diff_comid_wts=mean_scor_X_mean_abs_diff_scor.divide(norm_divisor_a)
+        norm_scor_X_abs_diff_comid_wts=_scor_X_abs_diff_scor.divide(norm_divisor_a)
         self.norm_scor_X_abs_diff_comid_wts=norm_scor_X_abs_diff_comid_wts
         norm_scor_X_abs_diff_comid_wts_df=pd.DataFrame(norm_scor_X_abs_diff_comid_wts,columns=['est-scorXcom-scor_wt'])
         return norm_scor_X_abs_diff_comid_wts_df
@@ -108,8 +116,14 @@ class Mapper(myLogger):
         colsort=np.argsort(huc12_coef_df.mean(axis=0).abs())[::-1]
         huc12_coef_gdf=self.hucBoundaryMerge(huc12_coef_df,right_on='HUC12')
         self.huc12_coef_gdf=huc12_coef_gdf
-            
-        fig=plt.figure(dpi=300,figsize=[10,8])
+        huc12_coef_df=huc12_coef_gdf.loc[:,[columns[colsort[0]],'geometry']]
+        p = figure(title="A test map")
+        p.multi_line('xs', 'ys', 
+                     source=huc12_coef_df,
+                     color='gray', line_width=3)
+        show(p)
+
+        '''fig=plt.figure(dpi=300,figsize=[10,8])
         ax=fig.add_subplot(1,1,1)
         
 
@@ -118,7 +132,7 @@ class Mapper(myLogger):
        
         huc12_coef_gdf.plot(column=columns[colsort[0]],ax=ax,cax=cax,legend=True)#,legend_kwds={'orientation':'vertical'})
         self.add_huc2_conus(ax)
-        fig.savefig(Helper().getname(os.path.join(self.print_dir,'huc12_features.png')))
+        fig.savefig(Helper().getname(os.path.join(self.print_dir,'huc12_features.png')))'''
 
     
     def build_prediction_and_error_dfs(self,rebuild=0):
