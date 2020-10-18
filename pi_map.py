@@ -56,21 +56,31 @@ class Mapper(myLogger):
 
     def build_wt_comid_feature_importance(self,rebuild=0,norm_index='COMID'):#,wt_kwargs={'norm_index':'COMID'}):
         coef_df=self.pr.build_spec_est_coef_df(rebuild=rebuild).drop('zzzno fish',level='species')
-        
-        
-        coef_df=coef_df.mean(axis=1,level='x_var')
+        spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro').drop('zzzno fish',level='species')
+        norm_spec_est_scor_df=spec_est_scor_df.divide(spec_est_scor_df.sum(axis=1,keepdims=True))
+        scor_norm_coef_df=coef_df.multiply(norm_spec_est_scor_df).sum(axis=1)
+        y,yhat,diff=self.build_prediction_and_error_dfs(rebuild=rebuild)
+        diff=diff.drop('zzzno fish',level='species')
+        abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame()
+        scor_norm_coef_df_a,abs_diff_scor_a=scor_norm_coef_df.align(abs_diff_scor,broadcast_axis=0,join='outer',axis=0)
+        scor_norm_coef_df_a.dropna(axis=1,inplace=True)
+        abs_diff_scor_a.dropna(axis=1,inplace=True)
+        abs_diff_scor_a_normalizer=abs_diff_scor_a/abs_diff_scor_a.sum(level='COMID')
+        comid_scor_norm_coef_df=scor_norm_coef_df_a.multiply(abs_diff_scor_a_normalizer)
+        return comid_scor_norm_coef_df
+        '''coef_df=coef_df.mean(axis=1,level='x_var')
         comid_wts=self.make_comid_weights(rebuild=rebuild,norm_index=norm_index)
         coefs_wts=coef_df.join(comid_wts)
         self.coefs_wts=coefs_wts
         wtd_coef_df=coefs_wts.iloc[:,:-1].mul(coefs_wts.iloc[:,-1],axis=0)
-        return wtd_coef_df
+        return wtd_coef_df'''
        
     def make_comid_weights(self,rebuild=0,norm_index='COMID',cv_mean=True):
         #norm_index is scope of normalization of wts (sum to 1). 
         ##e.g., for 'COMID', all specs,est wts are summed.
         spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
         spec_est_scor_df=spec_est_scor_df.drop('zzzno fish',level='species')
-        y,yhat,diff=agg_prediction_spec_df=self.build_prediction_and_error_dfs(rebuild=rebuild)
+        y,yhat,diff=self.build_prediction_and_error_dfs(rebuild=rebuild)
         diff=diff.drop('zzzno fish',level='species')
         if cv_mean:
             _scor=spec_est_scor_df.mean(axis=1).to_frame()
