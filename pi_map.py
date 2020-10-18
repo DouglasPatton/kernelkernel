@@ -56,6 +56,8 @@ class Mapper(myLogger):
 
     def build_wt_comid_feature_importance(self,rebuild=0,norm_index='COMID'):#,wt_kwargs={'norm_index':'COMID'}):
         coef_df=self.pr.build_spec_est_coef_df(rebuild=rebuild).drop('zzzno fish',level='species')
+        
+        
         coef_df=coef_df.mean(axis=1,level='x_var')
         comid_wts=self.make_comid_weights(rebuild=rebuild,norm_index=norm_index)
         coefs_wts=coef_df.join(comid_wts)
@@ -63,27 +65,52 @@ class Mapper(myLogger):
         wtd_coef_df=coefs_wts.iloc[:,:-1].mul(coefs_wts.iloc[:,-1],axis=0)
         return wtd_coef_df
        
-    def make_comid_weights(self,rebuild=0,norm_index='COMID'):
+    def make_comid_weights(self,rebuild=0,norm_index='COMID',cv_mean=True):
         #norm_index is scope of normalization of wts (sum to 1). 
         ##e.g., for 'COMID', all specs,est wts are summed.
         spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
         spec_est_scor_df=spec_est_scor_df.drop('zzzno fish',level='species')
-        mean_scor=spec_est_scor_df.mean(axis=1)
         y,yhat,diff=agg_prediction_spec_df=self.build_prediction_and_error_dfs(rebuild=rebuild)
-        mean_abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1) # still 0 to 1, but higher is better
-        mean_abs_diff_scor=mean_abs_diff_scor.drop('zzzno fish',level='species')
+        diff=diff.drop('zzzno fish',level='species')
+        if cv_mean:
+            _scor=spec_est_scor_df.mean(axis=1).to_frame()
+            print(_scor)
+            _abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame() # still 0 to 1, but higher is better    
+        else:
+            _scor=spec_est_scor_df
+            _abs_diff_scor=diff.abs().sub(1).mul(-1) # still 0 to 1, but higher is better
+        self._scor=_scor
         
-        self.logger.info(f'mean_scor:{mean_scor},diff:{mean_abs_diff_scor}')
-        mean_scor_a,diff_a=mean_scor.align(mean_abs_diff_scor,broadcast_axis=0,join='outer') #now a series join
-        mean_scor_X_mean_abs_diff_scor=mean_scor.multiply(mean_abs_diff_scor)
-        norm_divisor=mean_scor_X_mean_abs_diff_scor.sum(axis=0,level=norm_index)
-        norm_divisor_a,mean_scor_X_mean_abs_diff_scor_a=norm_divisor.align(mean_scor_X_mean_abs_diff_scor,axis=0)
-        self.mean_scor_X_mean_abs_diff_scor=mean_scor_X_mean_abs_diff_scor
+        self.logger.info(f'_scor:{_scor},diff:{_abs_diff_scor}')
+        #_scor_a=_scor.reindex(_abs_diff_scor.index,axis=0 )
+        #diff_a=_abs_diff_scor
+        _scor_a,diff_a=_scor.align(_abs_diff_scor,broadcast_axis=0,join='outer',axis=0) 
+        _scor_a=_scor_a.dropna(axis=1)
+        diff_a=diff_a.dropna(axis=1)
+        self.diff_a=diff_a
+        self._scor_a=_scor_a
+        if cv_mean:
+            _scor_X_abs_diff_scor=_scor_a.multiply(diff_a)
+        else:
+            cv_reps=diff_a.shape[1]
+            cv_splits=int(_scor_a.shape[1]/cv_reps)
+            assert _scor_a.shape[1]/cv_reps==cv_splits,'expecting int for cv_splits:{cv_splits},   diff_a.shape:{diff_a.shape},  scor_a.shape:{scor_a.shape}'
+            _scor_X_abs_diff_scor=diff_a.copy() #since they have the same size...
+            for r in range(cv_reps):
+                _scor_X_abs_diff_scor.iloc[:,r]=diff_a.iloc[:,r].multiply(_scor_a.iloc[:,slice(r*cv_splits,(r+1)*cv_splits)].mean(axis=1))
+        self._scor_X_abs_diff_scor=_scor_X_abs_diff_scor
+        norm_divisor=_scor_X_abs_diff_scor.sum(axis=0,level=norm_index)
+        norm_divisor_a,_scor_X_abs_diff_scor_a=norm_divisor.align(_scor_X_abs_diff_scor,axis=0)
+        
         self.norm_divisor=norm_divisor_a
-        norm_scor_X_abs_diff_comid_wts=mean_scor_X_mean_abs_diff_scor.divide(norm_divisor_a)
+        norm_scor_X_abs_diff_comid_wts=_scor_X_abs_diff_scor.divide(norm_divisor_a)
         self.norm_scor_X_abs_diff_comid_wts=norm_scor_X_abs_diff_comid_wts
-        norm_scor_X_abs_diff_comid_wts_df=pd.DataFrame(norm_scor_X_abs_diff_comid_wts,columns=['est-scorXcom-scor_wt'])
-        return norm_scor_X_abs_diff_comid_wts_df
+        frame_name='est-scorXcom-scor_wt'
+        if not type(norm_scor_X_abs_diff_comid_wts) is pd.DataFrame:
+            norm_scor_X_abs_diff_comid_wts=pd.DataFrame(norm_scor_X_abs_diff_comid_wts,columns=[frame_name])
+        else:
+            norm_scor_X_abs_diff_comid_wts.columns=[frame_name]
+        return norm_scor_X_abs_diff_comid_wts
         
     def add_huc2_conus(self,ax):
         try: huc2=self.boundary_dict['huc02']
