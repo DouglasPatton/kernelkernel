@@ -149,12 +149,12 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=10
+        max_q_size=10 #not really the max
         q_size=0;tries=0 # for startup
         while len(self.joblist):
             if q_size<max_q_size:
                 tries=0
-                for i in range(max_q_size): #fill queue back up to max_q_size
+                for i in range(max_q_size): #fill queue back up to 2*max_q_size
                     job=self.joblist.pop()
                     try:job.build()
                     except:self.logger.exception(f'error building job')
@@ -174,7 +174,7 @@ class JobQFiller(mp.Process,myLogger):
             else:
                 tries+=1
             q_size=queue.qsize()
-            sleep(1+tries*10)
+            sleep(1+tries*10) 
             
         self.logger.debug('all jobs added to jobq.')
         return
@@ -291,10 +291,12 @@ class RunCluster(mp.Process,DBTool,myLogger):
                 sleep(60)
                 saveqdumper.run()#
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
-            jobqfiller.join() 
+            try:jobqfiller.join()
+            except: self.logger.exception(f'jobqfiller join error, moving on.')
             #saveqdumper.join()
-            [node.join() for node in self.nodelist]
+            
             self.qdict['jobq'].put('shutdown')
+            [node.join() for node in self.nodelist]
             return
         except:
             self.logger.exception('')

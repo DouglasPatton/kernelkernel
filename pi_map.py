@@ -56,18 +56,33 @@ class Mapper(myLogger):
 
     def build_wt_comid_feature_importance(self,rebuild=0,norm_index='COMID'):#,wt_kwargs={'norm_index':'COMID'}):
         coef_df=self.pr.build_spec_est_coef_df(rebuild=rebuild).drop('zzzno fish',level='species')
-        spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro').drop('zzzno fish',level='species')
-        norm_spec_est_scor_df=spec_est_scor_df.divide(spec_est_scor_df.sum(axis=1,keepdims=True))
-        scor_norm_coef_df=coef_df.multiply(norm_spec_est_scor_df).sum(axis=1)
+        #normalize coefficients from each model to sum to 1 for combining across estimatorss
+        mod_norm_coef_df=coef_df.divide(coef_df.sum(axis=1))
+        
+        spec_est_fitscor_df=self.pr.spec_est_scor_df_from_dict(
+            rebuild=rebuild,scorer='f1_micro').drop('zzzno fish',level='species')
+        
+        # normalize scores across cv iterations
+        norm_spec_est_fitscor_df=spec_est_fitscor_df.divide(spec_est_fitscor_df.sum(axis=1))
+        
+        #weight coefs by relative cv score
+        #no align should be necessary since fit_scor correspond to coefficients 1:1
+        cvscor_norm_mod_norm_coef_df=mod_norm_coef_df.multiply(norm_spec_est_fitscor_df).sum(axis=1)
+        
+        
+        #create accuracy measure for comid oriented weights
         y,yhat,diff=self.build_prediction_and_error_dfs(rebuild=rebuild)
         diff=diff.drop('zzzno fish',level='species')
-        abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame()
-        scor_norm_coef_df_a,abs_diff_scor_a=scor_norm_coef_df.align(abs_diff_scor,broadcast_axis=0,join='outer',axis=0)
-        scor_norm_coef_df_a.dropna(axis=1,inplace=True)
-        abs_diff_scor_a.dropna(axis=1,inplace=True)
-        abs_diff_scor_a_normalizer=abs_diff_scor_a/abs_diff_scor_a.sum(level='COMID')
-        comid_scor_norm_coef_df=scor_norm_coef_df_a.multiply(abs_diff_scor_a_normalizer)
-        return comid_scor_norm_coef_df
+        abs_diffscor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame()
+        # "broadcast" scors across huc12/comids
+        cvscor_norm_mod_norm_coef_df_a,abs_diffscor_a=cvscor_norm_mod_norm_coef_df.align(
+            abs_diffscor,broadcast_axis=0,join='outer',axis=0)
+        cvscor_norm_mod_norm_coef_df_a.dropna(axis=1,inplace=True)
+        abs_diffscor_a.dropna(axis=1,inplace=True)
+        # normalize abs err across predictions for each comid
+        abs_diffscor_a_normalizer=abs_diffscor_a/abs_diffscor_a.sum(level='COMID')
+        comid_cvscor_norm_mod_norm_coef_df=cvscor_norm_mod_norm_coef_df_a.multiply(abs_diffscor_a_normalizer)
+        return comid_cvscor_norm_mod_norm_coef_df
         '''coef_df=coef_df.mean(axis=1,level='x_var')
         comid_wts=self.make_comid_weights(rebuild=rebuild,norm_index=norm_index)
         coefs_wts=coef_df.join(comid_wts)
@@ -78,42 +93,42 @@ class Mapper(myLogger):
     def make_comid_weights(self,rebuild=0,norm_index='COMID',cv_mean=True):
         #norm_index is scope of normalization of wts (sum to 1). 
         ##e.g., for 'COMID', all specs,est wts are summed.
-        spec_est_scor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
-        spec_est_scor_df=spec_est_scor_df.drop('zzzno fish',level='species')
+        spec_est_fitscor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
+        spec_est_fitscor_df=spec_est_fitscor_df.drop('zzzno fish',level='species')
         y,yhat,diff=self.build_prediction_and_error_dfs(rebuild=rebuild)
         diff=diff.drop('zzzno fish',level='species')
         if cv_mean:
-            _scor=spec_est_scor_df.mean(axis=1).to_frame()
+            _scor=spec_est_fitscor_df.mean(axis=1).to_frame()
             print(_scor)
-            _abs_diff_scor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame() # still 0 to 1, but higher is better    
+            _abs_diffscor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame() # still 0 to 1, but higher is better    
         else:
-            _scor=spec_est_scor_df
-            _abs_diff_scor=diff.abs().sub(1).mul(-1) # still 0 to 1, but higher is better
+            _scor=spec_est_fitscor_df
+            _abs_diffscor=diff.abs().sub(1).mul(-1) # still 0 to 1, but higher is better
         self._scor=_scor
         
-        self.logger.info(f'_scor:{_scor},diff:{_abs_diff_scor}')
-        #_scor_a=_scor.reindex(_abs_diff_scor.index,axis=0 )
-        #diff_a=_abs_diff_scor
-        _scor_a,diff_a=_scor.align(_abs_diff_scor,broadcast_axis=0,join='outer',axis=0) 
+        self.logger.info(f'_scor:{_scor},diff:{_abs_diffscor}')
+        #_scor_a=_scor.reindex(_abs_diffscor.index,axis=0 )
+        #diff_a=_abs_diffscor
+        _scor_a,diff_a=_scor.align(_abs_diffscor,broadcast_axis=0,join='outer',axis=0) 
         _scor_a=_scor_a.dropna(axis=1)
         diff_a=diff_a.dropna(axis=1)
         self.diff_a=diff_a
         self._scor_a=_scor_a
         if cv_mean:
-            _scor_X_abs_diff_scor=_scor_a.multiply(diff_a)
+            _scor_X_abs_diffscor=_scor_a.multiply(diff_a)
         else:
             cv_reps=diff_a.shape[1]
             cv_splits=int(_scor_a.shape[1]/cv_reps)
             assert _scor_a.shape[1]/cv_reps==cv_splits,'expecting int for cv_splits:{cv_splits},   diff_a.shape:{diff_a.shape},  scor_a.shape:{scor_a.shape}'
-            _scor_X_abs_diff_scor=diff_a.copy() #since they have the same size...
+            _scor_X_abs_diffscor=diff_a.copy() #since they have the same size...
             for r in range(cv_reps):
-                _scor_X_abs_diff_scor.iloc[:,r]=diff_a.iloc[:,r].multiply(_scor_a.iloc[:,slice(r*cv_splits,(r+1)*cv_splits)].mean(axis=1))
-        self._scor_X_abs_diff_scor=_scor_X_abs_diff_scor
-        norm_divisor=_scor_X_abs_diff_scor.sum(axis=0,level=norm_index)
-        norm_divisor_a,_scor_X_abs_diff_scor_a=norm_divisor.align(_scor_X_abs_diff_scor,axis=0)
+                _scor_X_abs_diffscor.iloc[:,r]=diff_a.iloc[:,r].multiply(_scor_a.iloc[:,slice(r*cv_splits,(r+1)*cv_splits)].mean(axis=1))
+        self._scor_X_abs_diffscor=_scor_X_abs_diffscor
+        norm_divisor=_scor_X_abs_diffscor.sum(axis=0,level=norm_index)
+        norm_divisor_a,_scor_X_abs_diffscor_a=norm_divisor.align(_scor_X_abs_diffscor,axis=0)
         
         self.norm_divisor=norm_divisor_a
-        norm_scor_X_abs_diff_comid_wts=_scor_X_abs_diff_scor.divide(norm_divisor_a)
+        norm_scor_X_abs_diff_comid_wts=_scor_X_abs_diffscor.divide(norm_divisor_a)
         self.norm_scor_X_abs_diff_comid_wts=norm_scor_X_abs_diff_comid_wts
         frame_name='est-scorXcom-scor_wt'
         if not type(norm_scor_X_abs_diff_comid_wts) is pd.DataFrame:
