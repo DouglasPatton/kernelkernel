@@ -54,43 +54,65 @@ class Mapper(myLogger):
             
             
 
-    def build_wt_comid_feature_importance(self,rebuild=0,norm_index='COMID'):#,wt_kwargs={'norm_index':'COMID'}):
+    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro'):#,wt_kwargs={'norm_index':'COMID'}):
+        #get data
         coef_df=self.pr.build_spec_est_coef_df(rebuild=rebuild).drop('zzzno fish',level='species')
-        #normalize coefficients from each model to sum to 1 for combining across estimatorss
-        mod_norm_coef_df=coef_df.divide(coef_df.sum(axis=1))
-        
         spec_est_fitscor_df=self.pr.spec_est_scor_df_from_dict(
-            rebuild=rebuild,scorer='f1_micro').drop('zzzno fish',level='species')
-        
-        # normalize scores across cv iterations
-        norm_spec_est_fitscor_df=spec_est_fitscor_df.divide(spec_est_fitscor_df.sum(axis=1))
-        
-        #weight coefs by relative cv score
-        #no align should be necessary since fit_scor correspond to coefficients 1:1
-        cvscor_norm_mod_norm_coef_df=mod_norm_coef_df.multiply(norm_spec_est_fitscor_df).sum(axis=1)
-        
-        
-        #create accuracy measure for comid oriented weights
+            rebuild=rebuild,scorer=fit_scorer).drop('zzzno fish',level='species')
+        #get data and create accuracy measure for comid oriented weights
         y,yhat,diff=self.build_prediction_and_error_dfs(rebuild=rebuild)
         diff=diff.drop('zzzno fish',level='species')
         abs_diffscor=diff.abs().mean(axis=1).sub(1).mul(-1).to_frame()
-        # "broadcast" scors across huc12/comids
-        cvscor_norm_mod_norm_coef_df_a,abs_diffscor_a=cvscor_norm_mod_norm_coef_df.align(
-            abs_diffscor,broadcast_axis=0,join='outer',axis=0)
-        cvscor_norm_mod_norm_coef_df_a.dropna(axis=1,inplace=True)
-        abs_diffscor_a.dropna(axis=1,inplace=True)
-        # normalize abs err across predictions for each comid
-        abs_diffscor_a_normalizer=abs_diffscor_a/abs_diffscor_a.sum(level='COMID')
-        comid_cvscor_norm_mod_norm_coef_df=cvscor_norm_mod_norm_coef_df_a.multiply(abs_diffscor_a_normalizer)
-        return comid_cvscor_norm_mod_norm_coef_df
-        '''coef_df=coef_df.mean(axis=1,level='x_var')
+        self.abs_diffscor=abs_diffscor
+        #normalize coefficients from each model to sum to 1 for combining across estimators
+        self.coef_df=coef_df
+        #mod_norm_coef_df=coef_df.divide(coef_df.sum(axis=1)) # do before collapsing across estimators instead
+        self.spec_est_fitscor_df=spec_est_fitscor_df
+        # normalize fit scores across cv iterations
+        norm_spec_est_fitscor_df=spec_est_fitscor_df.divide(spec_est_fitscor_df.sum(axis=1),axis=0)
+        
+        #weight coefs by relative cv score
+        #no align should be necessary since fit_scor correspond to coefficients 1:1..HAHAHA
+        coef_df,norm_spec_est_fitscor_df=coef_df.align(
+            norm_spec_est_fitscor_df,axis=0,join='inner')#drop any unmatched rows
+        
+        #manually align cv_i's across multiindex columns
+        fitscore_wt_coef=coef_df.copy()
+        for cv_i in norm_spec_est_fitscor_df.columns: #iterating over cv_i's
+            fitscore_wt_coef.loc[slice(None),(slice(None),cv_i)]=coef_df.loc[slice(None),(slice(None),cv_i)]*norm_spec_est_fitscor_df.loc[slice(None),cv_i].to_numpy()[:,None]
+            #[:,None] broadcasts the numpy array of n(axis0) fitscors to all 270 columns
+        cvscor_norm_coef_df=fitscore_wt_coef.sum(axis=1,level='x_var')
+        self.cvscor_norm_coef_df=cvscor_norm_coef_df
+        #cvscor_wtd_coef_df=coef_df.multiply(norm_spec_est_fitscor_df,axis=0)
+        #cvscor_norm_coef_df=cvscor_wtd_coef_df.sum(level='cv_i')
+        
+
+        # "broadcast" scors across huc12/comids 
+        cvscor_norm_coef_df_a,abs_diffscor_a=cvscor_norm_coef_df.align(
+            abs_diffscor,axis=0)
+        #cvscor_norm_coef_df_a.dropna(axis=1,inplace=True) #remove columns added by align
+        #abs_diffscor_a.dropna(axis=1,inplace=True)
+        self.cvscor_norm_coef_df_a=cvscor_norm_coef_df_a
+        self.abs_diffscor_a=abs_diffscor_a
+        
+        # normalize abs diff scor (diff=err=y-yhat) across predictions for each comid
+        
+        abs_diffscor_normalized_weights=abs_diffscor/abs_diffscor.sum(axis=0,level='COMID') 
+        self.abs_diffscor_normalized_weights=abs_diffscor_normalized_weights
+        abs_diffscor_normalized_weights_series=abs_diffscor_normalized_weights.loc[slice(None),0]
+        comid_cvscor_norm_coef_df=cvscor_norm_coef_df_a.multiply(abs_diffscor_normalized_weights_series.to_numpy(),axis=0)
+        return comid_cvscor_norm_coef_df
+    
+    
+        '''old approach below:
+        coef_df=coef_df.mean(axis=1,level='x_var')
         comid_wts=self.make_comid_weights(rebuild=rebuild,norm_index=norm_index)
         coefs_wts=coef_df.join(comid_wts)
         self.coefs_wts=coefs_wts
         wtd_coef_df=coefs_wts.iloc[:,:-1].mul(coefs_wts.iloc[:,-1],axis=0)
         return wtd_coef_df'''
        
-    def make_comid_weights(self,rebuild=0,norm_index='COMID',cv_mean=True):
+    '''def make_comid_weights(self,rebuild=0,norm_index='COMID',cv_mean=True):
         #norm_index is scope of normalization of wts (sum to 1). 
         ##e.g., for 'COMID', all specs,est wts are summed.
         spec_est_fitscor_df=self.pr.spec_est_scor_df_from_dict(rebuild=rebuild,scorer='f1_micro')
@@ -135,7 +157,7 @@ class Mapper(myLogger):
             norm_scor_X_abs_diff_comid_wts=pd.DataFrame(norm_scor_X_abs_diff_comid_wts,columns=[frame_name])
         else:
             norm_scor_X_abs_diff_comid_wts.columns=[frame_name]
-        return norm_scor_X_abs_diff_comid_wts
+        return norm_scor_X_abs_diff_comid_wts'''
         
     def add_huc2_conus(self,ax):
         try: huc2=self.boundary_dict['huc02']

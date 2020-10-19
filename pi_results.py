@@ -407,7 +407,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     data_list.append(arr)
                 
         score_stack=pd.DataFrame(data_list)       
-        columns=[f'{scorer}-{i}' for i in range(score_stack.shape[1])]        
+        columns=[f'cv_{i}' for i in range(score_stack.shape[1])]     #was scorer, no cv   
         score_stack.columns=columns
         m_idx=pd.MultiIndex.from_tuples(tup_list,names=['species','estimator'])
         scor_df=score_stack.set_index(m_idx)
