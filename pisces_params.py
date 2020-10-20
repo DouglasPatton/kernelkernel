@@ -11,8 +11,8 @@ from pi_runners import FitRunner,PredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
-    def __init__(self,):
-        self.test=True#True # reduces repeats to speed things up
+    def __init__(self,test=False):
+        self.test=test#True # reduces repeats to speed things up
         splits=5
         if self.test:
             repeats=2
@@ -20,7 +20,7 @@ class PiSetup(myLogger):
             repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='predict'# 'fit'#'fit_fill'#'predict'# 
+        self.run_type='predict'# 'fit_fill'#'predict'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
@@ -159,12 +159,16 @@ class PiSetup(myLogger):
                 runlist.append(FitRunner(rundict))
 
         elif self.run_type=='predict':
-            rundict_list,hash_id_list=PiResults().build_prediction_rundicts()
+            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=self.test)
+            if self.test:
+                self.logger.warning(f'self.test is True, so dropping all but first 5 rundicts')
+                rundict_list=rundict_list[:5]
+                hash_id_list=hash_id_list[:5]
             runlist=[]
-            self.logger.info('building list of runners')
+            self.logger.info(f'building list of runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
                 runlist.append(PredictRunner(rundict))
-            self.logger.info('list of runners built')
+            self.logger.info(f'list of runners built. len(runlist):{len(runlist)}')
             self.logger.info(f'runlist:{runlist}')
         return runlist,hash_id_list
     

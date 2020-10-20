@@ -24,7 +24,17 @@ class sk_estimator(myLogger):
         #self.scorer_dict=SKToolInitializer().get_scorer_dict() # for gridsearchCV
         #self.est_dict=self.get_est_dict()
         self.name=None
+    
+    def get_coef_from_fit_est(self,est_name,est):
         
+        if est_name == 'linear-svc':
+            coef=est.best_estimator_.regressor_['clf'].coef_.T
+            return coef
+        elif est_name == 'logistic-reg':
+            coef=est['clf'].coef_.T
+            return coef
+        else:assert False,f'unexpected est_name:{est_name}'   
+    
         
     def get_est_dict(self,):
         fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now # move to pisces_params?

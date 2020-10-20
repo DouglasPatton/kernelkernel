@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from mylogger import myLogger
 from  sk_tool import SKToolInitializer
+from sk_estimators import sk_estimator
 from datagen import dataGenerator
 from pi_db_tool import DBTool
 
@@ -34,7 +35,7 @@ class PredictRunner(myLogger):
         except: 
             self.logger.exception(f'build error with rundict:{rundict}')
     def run(self,):
-        
+        self.ske=sk_estimator()
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
         hash_id_list=list(hash_id_model_dict.keys())
         for hash_id in hash_id_list:
@@ -46,8 +47,7 @@ class PredictRunner(myLogger):
                 success=1
             except:
                 self.logger.exception('error for model_dict:{model_dict}')
-            
-            if self.saveq is None:
+            if self.saveq is None and success:
                     self.logger.info(f'no saveq, returning predictresult')
                     return predictresult
             else:
@@ -66,6 +66,34 @@ class PredictRunner(myLogger):
                         else:
                             sleep(1)
 
+                            
+    def make_coef_scor_df(self,model,r,s,m,species):
+        try:
+            est_name=model['estimator'][0].name  
+
+            model_m=model['estimator'][m]
+            if est_name in ['logistic-reg','linear-svc']: 
+                coefs=self.ske.get_coef_from_fit_est(est_name,model_m.model_,)
+                x_vars=model_m.x_vars
+            else:
+                coefs=[]
+                x_vars=[]
+            scor_names,scors=zip(*[(key[5:],model[key][m]) for key in model.keys() if key[:5]=='test_'])
+            arr_list=[*scors,*coefs]
+
+            #data=np.concatenate(arr_list,axis=1)
+            data=np.array(arr_list)[None,:]
+            columns=[*scor_names,*x_vars]
+            column_tups=[(col,r,s) for col in columns]
+            col_midx=pd.MultiIndex.from_tuples(column_tups,names=['var','rep_idx','split_idx'])
+            row_tup=[(species,est_name)]
+            row_midx=pd.MultiIndex.from_tuples(row_tup,names=['species','estimator'])
+            coef_scor_df=pd.DataFrame(data=data,columns=col_midx,index=row_midx)
+            return coef_scor_df
+        except:
+            self.logger.exception(f'outer catch')
+            assert False,'unexpected'
+                            
     def predict(self,data,model):
         #FitRunner doesnt have equivalent to this
         #  becuase SKToolInitializer and sktool make this stuff happen
@@ -87,11 +115,15 @@ class PredictRunner(myLogger):
         n_splits=cv_dict['n_splits']
         yhat=np.empty([n,])
         m=0
+        coef_scor_df_list=[]
         for rep in range(n_repeats):
             mstack=[];yhat_list=[]
             for s in range(n_splits):
                 #self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
                 model_m=model['estimator'][m]
+                coef_scor_df_m=self.make_coef_scor_df(model,rep,s,m,species)
+                coef_scor_df_list.append(coef_scor_df_m)
+                
                 m_idx=cv_test_idx[m]
                 X=data.X_train.iloc[m_idx]
                 #y=data.y_train.iloc[m_idx]
@@ -111,7 +143,9 @@ class PredictRunner(myLogger):
                 #self.logger.info(f'y_yhat_tup_list:{y_yhat_tup_list}')
             #y_arr=data.y_train#.iloc[mstack]
         yhat_stack_arr=np.concatenate(yhat_stack,axis=1)
-        columns=[f'yhat_{r}' for r in range(n_repeats)]
+        col_tups=[('yhat',r) for r in range(n_repeats)]
+        
+        columns=pd.MultiIndex.from_tuples(col_tups,names=['var','rep_idx'])
         
         huc12s=data.df.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
@@ -130,7 +164,10 @@ class PredictRunner(myLogger):
         index=pd.MultiIndex.from_tuples([(species,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
         y_df=pd.DataFrame(y_stack_arr,columns=columns,index=index)
         self.logger.info(f'y_df:{y_df}')
-        return {'yhat':yhat_df,'y':y_df}
+        #### create coef_scor_df
+        full_coef_scor_df=pd.concat(coef_scor_df_list,axis=0)
+        
+        return {'yhat':yhat_df,'y':y_df,'coef_scor_df':full_coef_scor_df}
       
     def huc12float_to_str(self,huc12):
         huc12str=str(int(huc12))

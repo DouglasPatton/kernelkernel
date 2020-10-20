@@ -41,7 +41,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
         #self.scor_est_spec_dict={}
-        self.sk_est_dict=sk_estimator().get_est_dict() 
+        self.ske=sk_estimator()
+        self.sk_est_dict=self.ske.get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
      
@@ -79,7 +80,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         est_dict[est_name].append((model_dict,predict_dict))
             for est,model_predict_tup_list in est_dict.items():
                 
-                df=self.get_cv_coeffs_scores_predictions_df(model_predict_tup_list)
+                df=self.get_cv_coefs_scores_predictions_df(model_predict_tup_list)
                 df_list.append(df)   
                 
         '''for hash_id,model_dict in self.results_dict.items():
@@ -92,10 +93,11 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return spec_est_coef_df # just returning the df
     
     
-    def get_cv_coeffs_scores_predictions_df(self,model_predict_tup_list,):
+    """def get_cv_coefs_scores_predictions_df(self,model_predict_tup_list,):
+        assert False,'broken,obsolete'
         # model_dict is the val sotred in results_dict
         
-        species=model_predict_tup_list[0][[0]['data_gen']['species']
+        species=model_predict_tup_list[0][0]['data_gen']['species']
         sktool_list=[];hash_id_list=[]
         for model_dict,predict_dict in model_predict_tup_list:
             est_name=model_dict['model_gen']['name']
@@ -103,9 +105,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
             if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
                 #print(f'no coef for est_name:{est_name}')
                 return None
-        
-            sktool_list.extend(model_dict['model']['estimator'])
-        
+            #for cv_i in range(len(None)):
+            self.ske.get_coef_frdom_fit_est[]
+            sktool_list.append(model_dict['model']['estimator'])
+            
         
         x_vars=sktool_list[0].x_vars
         K=len(x_vars)
@@ -117,7 +120,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         col_mindx_tuplist=[]
         
         for cv_idx,est in enumerate(fit_est_list):
-            coefs=self.get_coef_from_fit_est(est_name,est)
+            coefs=self.ske.get_coef_from_fit_est(est_name,est)
             coef_array_list.append(coefs)
             col_mindx_tuplist.extend([(xvar,f'cv_{cv_idx}') for xvar in x_vars])
             ##axis appended for concatenation
@@ -134,14 +137,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)'''
         self.logger.info(f'coef df:{df}')
         return df
-    def get_coef_from_fit_est(self,est_name,est):
-        if est_name == 'linear-svc':
-            coef=est.best_estimator_.regressor_['clf'].coef_.T
-            return coef
-        elif est_name == 'logistic-reg':
-            coef=est['clf'].coef_.T
-            return coef
-        else:assert False,f'unexpected est_name:{est_name}'   
+    """
         
         
     '''def build_comid_insample_err_compare(self,wt='f1_micro',rebuild=0):  
@@ -153,7 +149,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct'''
         
     
-    def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+    def build_prediction_rundicts(self,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
             self.results_dict
         except:
@@ -166,6 +162,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             keep_hash_id_list=[]
             self.logger.info(f'building rundict_list')
             for d,(dg_hash,hash_id_list) in enumerate(datagenhash_hash_id_dict.items()):
+                if test and d>5: break
                 rundict_list.append({})
                 for hash_id in (hash_id_list):
                     if not hash_id in self.predictDB:
@@ -302,7 +299,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
             try:
                 dghash_hash_id_dict=self.getsave_postfit_db_dict(name)
                 if not add:
-                    return dghash_hash_id_dict
+                    if len(dghash_hash_id_dict)==0:
+                        rebuild=1
+                    else:
+                        return dghash_hash_id_dict
                 else:
                     dghash_hash_id_dict=self.add_check_dghash_hash_id_dict(dghash_hash_id_dict)
             except:
