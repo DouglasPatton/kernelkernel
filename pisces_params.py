@@ -20,7 +20,7 @@ class PiSetup(myLogger):
             repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='fit'#'fit_fill'#'predict'# 
+        self.run_type='predict'# 'fit'#'fit_fill'#'predict'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
@@ -165,6 +165,7 @@ class PiSetup(myLogger):
             for rundict in rundict_list:
                 runlist.append(PredictRunner(rundict))
             self.logger.info('list of runners built')
+            self.logger.info(f'runlist:{runlist}')
         return runlist,hash_id_list
     
         

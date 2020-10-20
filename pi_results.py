@@ -56,31 +56,58 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 return spec_est_coef_df['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-        
+        try: self.predict_dict
+        except: self.predict_dict=self.predictDBdict()
         try: self.results_dict
         except:self.results_dict=self.resultsDBdict()
         df_list=[]
-        for hash_id,model_dict in self.results_dict.items():
+        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
+        for species,hash_id_list in species_hash_id_dict.items():
+            est_dict={};spec_df_list=[]
+            for hash_id in hash_id_list:
+                
+                try:
+                    model_dict=self.results_dict[hash_id]
+                    predict_dict=self.predict_dict[hash_id]
+                    success=1
+                except:success=0
+                if success:
+                    est_name=model_dict['model_gen']['name']
+                    if not est_name in est_dict:
+                        est_dict[est_name]=[(model_dict,predict_dict)]
+                    else:
+                        est_dict[est_name].append((model_dict,predict_dict))
+            for est,model_predict_tup_list in est_dict.items():
+                
+                df=self.get_cv_coeffs_scores_predictions_df(model_predict_tup_list)
+                df_list.append(df)   
+                
+        '''for hash_id,model_dict in self.results_dict.items():
             df=self.get_cv_coef_df(model_dict)
             if not df is None:
-                df_list.append(df)
+                df_list.append(df)'''
         spec_est_coef_df=pd.concat(df_list,axis=0)
         self.coef_df=spec_est_coef_df# for developing in jupyterlabs
         self.getsave_postfit_db_dict(name,spec_est_coef_df)
         return spec_est_coef_df # just returning the df
-        
-    def get_cv_coef_df(self,model_dict,):
+    
+    
+    def get_cv_coeffs_scores_predictions_df(self,model_predict_tup_list,):
         # model_dict is the val sotred in results_dict
-        est_name=model_dict['model_gen']['name']
-        if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
-            #print(f'no coef for est_name:{est_name}')
-            return None
         
-        sktool_list=model_dict['model']['estimator']
-        species=model_dict['data_gen']['species']
+        species=model_predict_tup_list[0][[0]['data_gen']['species']
+        sktool_list=[];hash_id_list=[]
+        for model_dict,predict_dict in model_predict_tup_list:
+            est_name=model_dict['model_gen']['name']
+            hash_id_list.append(modeldict['model_gen']['hash_id'])
+            if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
+                #print(f'no coef for est_name:{est_name}')
+                return None
         
-        x_list=[skt.x_vars for skt in sktool_list]
-        x_vars=x_list[0]
+            sktool_list.extend(model_dict['model']['estimator'])
+        
+        
+        x_vars=sktool_list[0].x_vars
         K=len(x_vars)
         fit_est_list=[skt.model_ for skt in sktool_list]
         cv_m_count=len(fit_est_list)
@@ -117,13 +144,13 @@ class PiResults(DBTool,DataPlotter,myLogger):
         else:assert False,f'unexpected est_name:{est_name}'   
         
         
-    def build_comid_insample_err_compare(self,wt='f1_micro'):  
+    '''def build_comid_insample_err_compare(self,wt='f1_micro',rebuild=0):  
         
-        y_yhat_df=build_aggregate_predictions_by_species(rebuild=0)
+        y_yhat_df=build_aggregate_predictions_by_species(rebuild=rebuild)
         y=y_yhat_df.xs('y_train',level='estimator').loc[:,['y']]
         yhat=y_yhat_df.drop('y_train',level='estimator').loc[:,y_yhat_df.columns!='y']
         y_a,yhat_a= y.align(yhat,axis=0)
-        diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct
+        diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct'''
         
     
     def build_prediction_rundicts(self,): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
@@ -406,11 +433,13 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     tup_list.append((spec,est))
                     data_list.append(arr)
                 
-        score_stack=pd.DataFrame(data_list)       
+        score_stack=pd.DataFrame(data_list)  
+        colcount=max()
         columns=[f'cv_{i}' for i in range(score_stack.shape[1])]     #was scorer, no cv   
         score_stack.columns=columns
         m_idx=pd.MultiIndex.from_tuples(tup_list,names=['species','estimator'])
         scor_df=score_stack.set_index(m_idx)
+        scor_df=pd.DataFrame(data_list,columns=columns)
         #scor_df=score_stack#pd.DataFrame(data=score_stack,index=m_idx,columns=columns)
         return scor_df
         
@@ -441,12 +470,17 @@ class PiResults(DBTool,DataPlotter,myLogger):
                         except:
                             pass
                         scor_est_spec_dict[key[5:]][est_name][species]=val
+            self.logger.info(f'scor_est_spec_dict before dropping NAN species: {scor_est_spec_dict}')
             scor_est_spec_dict=self.drop_nan_species(scor_est_spec_dict)
             self.scor_est_spec_dict=scor_est_spec_dict
             self.save_dict(scor_est_spec_dict,filename=savename,bump=1,load=0)
         else:
-            self.scor_est_spec_dict=self.save_dict(None,filename=savename,load=1)
-
+            try:
+                self.scor_est_spec_dict=self.save_dict(None,filename=savename,load=1)
+            except:
+                self.logger.exception(f'cannot locate scor_est_spec_dict, rebuilding')
+                self.build_scor_est_spec_dict(rebuild=1)
+                
     def drop_nan_species(self,sepd):
         drop_specs=[]
         for s,epd in sepd.items():
