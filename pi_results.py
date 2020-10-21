@@ -47,29 +47,83 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.helper=Helper()
     
     def stack_predictions(self,rebuild=0):
+        name='stack_predictions'
+        if not rebuild:
+            try:
+                datadict=self.getsave_postfit_db_dict(name)
+                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
         try: self.predict_dict
         except: self.predict_dict=self.predictDBdict()
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
-        
+        predictresults_tostack=[]
         for species,hash_id_list in species_hash_id_dict.items():
-            est_dict={};spec_df_list=[]
+            est_dict={};needs_col_stacking=[]
+            
             for hash_id in hash_id_list:
                 
                 try:
-                    model_dict=self.results_dict[hash_id]
                     predict_dict=self.predict_dict[hash_id]
+                    est_name=self.results_dict[hash_id]['model_gen']['name']
+                    
                     success=1
-                except:success=0
+                except:
+                    self.logger.exception(f'error for hash_id:{hash_id}, so skipping')
+                    success=0
                 if success:
-                    est_name=model_dict['model_gen']['name']
                     if not est_name in est_dict:
-                        est_dict[est_name]=[(model_dict,predict_dict)]
+                        est_dict[est_name]=[predict_dict]
                     else:
-                        est_dict[est_name].append((model_dict,predict_dict))
-            for est,model_predict_tup_list in est_dict.items():
-                assert False,'developing'
-                
-    
+                        if not est_name in needs_col_stacking: #so just once per est
+                            needs_col_stacking.append(est_name)
+                        est_dict[est_name].append(predict_dict)
+            for est_name in est_dict:
+                if est_name in needs_col_stacking: #if same spec and est, stack columns
+                    predict_list=est_dict[est_name]
+
+                    #predict_list=[tup[1] for tup in model_predict_tup_list]
+                    stacked_predict_result=self.do_col_stack(predict_list)
+                    predictresults_tostack.append(stacked_predict_result)
+                else:
+                    predictresults_tostack.append(est_dict[est_name][0]) #should be list with len=1
+        stacked_predict_dict={'y':None,'yhat':None,'coef_scor_df':None}
+        for key in list(stacked_predict_dict.keys()):
+            dflist=[pr[key] for pr in predictresults_tostack]
+            stacked_df=pd.concat(dflist,axis=0).sort_index(axis=0)
+            self.logger.info(f'key:{key} and stacked_df:{stacked_df}')
+            stacked_predict_dict[key]=stacked_df
+        datadict={'data':stacked_predict_dict}
+        self.getsave_postfit_db_dict(name,datadict)
+        return stacked_predict_dict
+                                                   
+    def do_col_stack(self,predict_list):
+        keys_with_reps=['yhat','coef_scor_df']
+        hstack_dict={key:[predict_list[0][key]] for key in keys_with_reps}
+        #col_midx_stack_dict={'yhat':[],'coef_scor_df':[]}
+        cols=predict_list[0]['yhat'].columns # using this as the starting
+        ## point for adjusting reps in both df's (yhat has fewer columns!)
+        _,reps,_=zip(*cols)
+        maxr=max(reps)
+        
+        for p,pr in enumerate(predict_list[1:]):
+            for key in keys_with_reps:
+                df=pr[key]
+                oldtuplist=df.columns #each tup is ['var','rep_idx','split_idx']
+                newtuplist=[(tup[0],tup[1]+maxr+1,tup[2])]# add old max+1 to each rep
+                df.columns=newtuplist #p off by 1.
+                hstack_dict[key].append(df)
+            maxr=+maxr+1
+        self.hstack_dict=hstack_dict
+        new_yhat=pd.concat(hstack_dict['yhat'],axis=1).sort_index(axis=1)
+        new_coef_scor_df=pd.concat(hstack_dict['coef_scor_df'],axis=1).sort_index(axis=1)
+        y=predict_list[0]['y']
+        new_predictresult={'y':y,'yhat':new_yhat,
+                           'coef_scor_df':new_coef_scor_df}
+        return new_predictresult
+
+
+    """
     def build_spec_est_coef_df(self,rebuild=0):
         #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
         name='spec_est_coef_df'
@@ -115,7 +169,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         spec_est_coef_df=pd.concat(df_list,axis=0)
         self.coef_df=spec_est_coef_df# for developing in jupyterlabs
         self.getsave_postfit_db_dict(name,spec_est_coef_df)
-        return spec_est_coef_df # just returning the df
+        return spec_est_coef_df # just returning the df"""
     
     
     """def get_cv_coefs_scores_predictions_df(self,model_predict_tup_list,):
@@ -214,8 +268,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         name='y_like_agg_pred_spec'
         if not rebuild:
             try:
-                y_like_agg_pred_spec=self.getsave_postfit_db_dict(name)
-                return y_like_agg_pred_spec['data']#sqlitedict needs a key to pickle and save an object in sqlite
+                datadict=self.getsave_postfit_db_dict(name)
+                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
         if species_hash_id_dict is None: 
@@ -234,9 +288,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
         dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'
         all_y_df=pd.concat(dflist,axis=0)
-        y_like_agg_pred_spec={'data':all_y_df} 
-        self.getsave_postfit_db_dict(name,y_like_agg_pred_spec)
-        return y_like_agg_pred_spec['data'] # just returning the df
+        datadict={'data':all_y_df} 
+        self.getsave_postfit_db_dict(name,datadict)
+        return all_y_df # just returning the df
         
             
         
@@ -245,8 +299,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         name='aggregate_predictions_by_species'
         if not rebuild:
             try:
-                aggregate_predictions_by_species=self.getsave_postfit_db_dict(name)
-                return aggregate_predictions_by_species['data']#sqlitedict needs a key to pickle and save an object in sqlite
+                datadict=self.getsave_postfit_db_dict(name)
+                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
         try: self.predictDB
@@ -268,9 +322,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
         #self.logger.info(f'and big_df_stack:{big_df_stack}')
         y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)#estimators don't match, align later.
         
-        aggregate_predictions_by_species={'data':y_yhat_df} 
-        self.getsave_postfit_db_dict(name,aggregate_predictions_by_species)
-        return aggregate_predictions_by_species['data'] # just returning the df
+        data_dict={'data':y_yhat_df} 
+        self.getsave_postfit_db_dict(name,data_dict)
+        return y_yhat_df # just returning the df
     
     def getsave_postfit_db_dict(self,name,data=None,):
         if data is None:

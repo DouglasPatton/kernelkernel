@@ -94,7 +94,7 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                         fitfail=True
                     else:
                         fitfail=False
-                    for hash_id,thing_to_save in savedict.items():
+                    '''for hash_id,thing_to_save in savedict.items():
                         if type(thing_to_save) is dict:
                             try:
                                 species=thing_to_save['data_gen']['species']
@@ -108,8 +108,8 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                                 self.logger.exception('failed try to get model name from thing_to_save')
                                 model_name='error'
                             self.logger.info(f'saveqdumper is adding to DB dict species:{species}, model_name:{model_name}, hash_id:{hash_id}')
-                        else:
-                            self.logger.info(f'saveqdumper has data with type:{type(thing_to_save)} and self.db_kwargs:{self.db_kwargs}')
+                    '''    #else:
+                    #self.logger.info(f'saveqdumper has data with type:{type(thing_to_save)} and self.db_kwargs:{self.db_kwargs}')
                     
                     save_list=[savedict] # b/c addToDBDict expects a list of dicts.
                     s=0

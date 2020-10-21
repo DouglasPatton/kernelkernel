@@ -74,11 +74,13 @@ class PredictRunner(myLogger):
             model_m=model['estimator'][m]
             if est_name in ['logistic-reg','linear-svc']: 
                 coefs=self.ske.get_coef_from_fit_est(est_name,model_m.model_,)
+                self.logger.info(f'species:{species},est_name:{est_name},coefs:{coefs}')
                 x_vars=model_m.x_vars
             else:
                 coefs=[]
                 x_vars=[]
-            scor_names,scors=zip(*[(key[5:],model[key][m]) for key in model.keys() if key[:5]=='test_'])
+            scor_names,scors=zip(*[(f'scorer:{key[5:]}',model[key][m]) for key in model.keys() if key[:5]=='test_'])
+            coefs=[coef[0] for coef in coefs]
             arr_list=[*scors,*coefs]
             #arr_list=[arr[:,None] for arr in arr_list]
             #data=np.concatenate(arr_list,axis=1)
@@ -173,7 +175,7 @@ class PredictRunner(myLogger):
         y_df=pd.DataFrame(y_stack_arr,columns=columns,index=index)
         self.logger.info(f'y_df:{y_df}')
         #### create coef_scor_df
-        full_coef_scor_df=pd.concat(coef_scor_df_list,axis=0)
+        full_coef_scor_df=pd.concat(coef_scor_df_list,axis=1)
         
         return {'yhat':yhat_df,'y':y_df,'coef_scor_df':full_coef_scor_df}
       
