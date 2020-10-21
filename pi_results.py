@@ -45,8 +45,30 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.sk_est_dict=self.ske.get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
-     
-
+    
+    def stack_predictions(self,rebuild=0):
+        try: self.predict_dict
+        except: self.predict_dict=self.predictDBdict()
+        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
+        
+        for species,hash_id_list in species_hash_id_dict.items():
+            est_dict={};spec_df_list=[]
+            for hash_id in hash_id_list:
+                
+                try:
+                    model_dict=self.results_dict[hash_id]
+                    predict_dict=self.predict_dict[hash_id]
+                    success=1
+                except:success=0
+                if success:
+                    est_name=model_dict['model_gen']['name']
+                    if not est_name in est_dict:
+                        est_dict[est_name]=[(model_dict,predict_dict)]
+                    else:
+                        est_dict[est_name].append((model_dict,predict_dict))
+            for est,model_predict_tup_list in est_dict.items():
+                assert False,'developing'
+                
     
     def build_spec_est_coef_df(self,rebuild=0):
         #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
@@ -75,11 +97,14 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 if success:
                     est_name=model_dict['model_gen']['name']
                     if not est_name in est_dict:
-                        est_dict[est_name]=[(model_dict,predict_dict)]
+                        est_dict[est_name]=predict_dict#[(model_dict,predict_dict)]
                     else:
-                        est_dict[est_name].append((model_dict,predict_dict))
-            for est,model_predict_tup_list in est_dict.items():
-                
+                        est_dict[est_name].append(predict_dict)#(model_dict,predict_dict))
+            for est,predict_dict_list in est_dict.items():
+                if len(predict_list)>0:
+                    y=[];yhat=[];scor_coef=[]
+                    for predict_result in predict_list:
+                        pass
                 df=self.get_cv_coefs_scores_predictions_df(model_predict_tup_list)
                 df_list.append(df)   
                 
@@ -162,7 +187,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             keep_hash_id_list=[]
             self.logger.info(f'building rundict_list')
             for d,(dg_hash,hash_id_list) in enumerate(datagenhash_hash_id_dict.items()):
-                if test and d>5: break
+                if test and d>test: break
                 rundict_list.append({})
                 for hash_id in (hash_id_list):
                     if not hash_id in self.predictDB:

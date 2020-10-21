@@ -159,11 +159,11 @@ class PiSetup(myLogger):
                 runlist.append(FitRunner(rundict))
 
         elif self.run_type=='predict':
-            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=self.test)
             if self.test:
-                self.logger.warning(f'self.test is True, so dropping all but first 5 rundicts')
-                rundict_list=rundict_list[:5]
-                hash_id_list=hash_id_list[:5]
+                test=20
+            else:
+                test=self.test
+            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test)
             runlist=[]
             self.logger.info(f'building list of runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
