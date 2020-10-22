@@ -74,7 +74,6 @@ class PredictRunner(myLogger):
             model_m=model['estimator'][m]
             if est_name in ['logistic-reg','linear-svc']: 
                 coefs=self.ske.get_coef_from_fit_est(est_name,model_m.model_,)
-                self.logger.info(f'species:{species},est_name:{est_name},coefs:{coefs}')
                 x_vars=model_m.x_vars
             else:
                 coefs=[]
@@ -168,7 +167,7 @@ class PredictRunner(myLogger):
         
         ########create y_df
         y=data.y_train
-        y_stack_arr=y.to_numpy()[:,None]
+        y_stack_arr=y.to_numpy()
         columns=['y']
         names=['species','HUC12','COMID']
         index=pd.MultiIndex.from_tuples([(species,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns

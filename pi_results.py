@@ -47,17 +47,18 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.helper=Helper()
     
     def stack_predictions(self,rebuild=0):
-        name='stack_predictions'
+        keys=['y','yhat','coef_scor_df']
+        name=os.path.join(os.getcwd(),'results','prediction_stack.h5')
         if not rebuild:
             try:
-                datadict=self.getsave_postfit_db_dict(name)
-                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
+                stacked_predict_dict={key:pd.read_hdf(name,key) for key in keys}
+                return stacked_predict_dict#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
         try: self.predict_dict
         except: self.predict_dict=self.predictDBdict()
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
-        predictresults_tostack=[]
+        predictresults_tostack=[];species_y_dict={}
         for species,hash_id_list in species_hash_id_dict.items():
             est_dict={};needs_col_stacking=[]
             
@@ -72,6 +73,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
                     self.logger.exception(f'error for hash_id:{hash_id}, so skipping')
                     success=0
                 if success:
+                    if not species in species_y_dict:
+                        species_y_dict[species]=predict_dict['y']
                     if not est_name in est_dict:
                         est_dict[est_name]=[predict_dict]
                     else:
@@ -88,13 +91,15 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 else:
                     predictresults_tostack.append(est_dict[est_name][0]) #should be list with len=1
         stacked_predict_dict={'y':None,'yhat':None,'coef_scor_df':None}
-        for key in list(stacked_predict_dict.keys()):
+        for key in ['yhat','coef_scor_df']:
             dflist=[pr[key] for pr in predictresults_tostack]
             stacked_df=pd.concat(dflist,axis=0).sort_index(axis=0)
             self.logger.info(f'key:{key} and stacked_df:{stacked_df}')
             stacked_predict_dict[key]=stacked_df
-        datadict={'data':stacked_predict_dict}
-        self.getsave_postfit_db_dict(name,datadict)
+        y_df_list=list(species_y_dict.values())
+        stacked_predict_dict['y']=pd.concat(y_df_list,axis=0).sort_index(axis=0)
+        for key in keys:
+            stacked_predict_dict[key].to_hdf(name,key,complevel=5)
         return stacked_predict_dict
                                                    
     def do_col_stack(self,predict_list):
@@ -110,7 +115,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             for key in keys_with_reps:
                 df=pr[key]
                 oldtuplist=df.columns #each tup is ['var','rep_idx','split_idx']
-                newtuplist=[(tup[0],tup[1]+maxr+1,tup[2])]# add old max+1 to each rep
+                newtuplist=[(tup[0],tup[1]+maxr+1,tup[2]) for tup in oldtuplist]# add old max+1 to each rep
                 df.columns=newtuplist #p off by 1.
                 hstack_dict[key].append(df)
             maxr=+maxr+1

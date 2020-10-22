@@ -130,7 +130,36 @@ class Mapper(myLogger):
                 return saved_data['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-                
+        datadict=self.pr.stack_predictions(rebuild=rebuild)
+        y=datadict['y'];yhat=datadict['yhat']
+        coef_scor_df=datadict['coef_scor_df']
+        scor_indices=[]
+        coef_indices=[]
+        coef_scor_cols=coef_scor_df.columns
+        for i,tup in enumerate(coef_scor_cols):
+            if tup[0][:7]=='scorer:':
+                scor_indices.append(i)
+            else:
+                coef_indices.append(i)
+        scor_df=coef_scor_df.iloc[:,scor_indices]  
+        coef_df=coef_scor_df.iloc[:,coef_indices]  
+        coef_df=coef_df.dropna(axis=0,how='all')
+        self.logger.info(f'BEFORE drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
+        coef_df,scor_df=coef_df.align(scor_df,axis=0,join='inner')
+        self.logger.info(f'AFTER drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
+        
+        #get the scorer and align to differences
+        scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
+        yhat_a,y_a=yhat.align(y,axis=0)
+        
+        #scor_norm=scor_select.divide(scor_select.sum(axis=1,level='var'),axis=0)
+        #scor_norm2=scor_norm1.divide(scor_norm1.sum(axis=0,level='species'),axis=0)
+        #wt_coef_df=coef_df.multiply(scor_norm,axis=0)
+        #wt_coef_df.sum(axis=1,level=['var']) #
+        #wt_coef_df.sum(axis=0,level=['species'])#after broadcasting across hucs
+        ##############
+        ##############      
+        assert False,'halt'
         coef_df=self.pr.build_spec_est_coef_df(rebuild=rebuild).drop('zzzno fish',level='species')
         spec_est_fitscor_df=self.pr.spec_est_scor_df_from_dict(
             rebuild=rebuild,scorer=fit_scorer).drop('zzzno fish',level='species')
