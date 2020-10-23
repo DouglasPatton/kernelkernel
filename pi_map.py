@@ -1,3 +1,5 @@
+from multiprocessing import Process,Queue
+from time import time,sleep
 import os
 import geopandas as gpd
 import pandas as pd
@@ -8,6 +10,89 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from helpers import Helper
 from mylogger import myLogger
 
+
+
+class MatchCollapseHuc12(Process,myLogger):
+    def __init__(self,q,huc12list,coef_a,fitscor,adiff_scor_chunk):
+        myLogger.__init__(self,name='MatchCollapseHuc12.log')
+        self.logger.info(f'starting up a MatchCollapseHuc12 proc')
+        super().__init__()
+        self.q=q
+        self.huc12list=huc12list
+        self.coef_a=coef_a
+        self.fitscor=fitscor
+        self.adiff_scor_chunk=adiff_scor_chunk
+    
+    def run(self,):
+        try:
+            dflist=[]
+            for huc12 in self.huc12list[:1]:
+                huc12_adiff_scor=self.adiff_scor_chunk.loc[(slice(None),huc12,slice(None),slice(None)),:]
+                self.huc12_adiff_scor=huc12_adiff_scor
+                #this should add comids and huc12s to fitscor
+                _,fitscor=huc12_adiff_scor.align(self.fitscor,axis=0,join='left')
+                #huc12_adiff_scor,fitscor=huc12_adiff_scor.align(fitscor,axis=1)
+                #fitscor.columns=fitscor.columns.droplevel('var')#already done
+                wt=huc12_adiff_scor.multiply(fitscor,axis=0)
+                self.wt=wt
+                denom=wt.sum(axis=1,level='var')#.sum(axis=0,level='HUC12')
+                denom_a,_=denom.align(wt,axis=1,level='var')
+                #denom__a,_=denom_a.align(wt,axis=0,level='HUC12')
+                #denom_a.columns=denom_a.columns.droplevel('var')
+                normwt_var=wt.divide(denom_a.values)
+                self.denom=denom;self.denom_a=denom_a;#self.denom_aa=denom_aa
+                self.normwt_var=normwt_var
+                self.huc12_adiff_scor=huc12_adiff_scor
+                
+                '''denom=huc12_adiff_scor.sum(axis=1,level='var').sum(axis=0,level='HUC12')
+                #self.logger.info(f'denom1:{denom}')
+                huc12_adiff_scor,denom=huc12_adiff_scor.align(denom,axis=0)
+                #self.logger.info(f'denom2:{denom}')
+                huc12_adiff_scor,denom=huc12_adiff_scor.align(denom,axis=1)
+                #self.logger.info(f'denom3:{denom}')
+                normed_huc12_adiff_scor=huc12_adiff_scor.divide(denom.values,axis=0)
+                self.logger.info(f'normed_huc12_adiff_scor1:{normed_huc12_adiff_scor}')'''
+                coef_a=self.coef_a
+                normwt_var.columns=normwt_var.columns.droplevel('var')
+                _,normwt_var=coef_a.align(normwt_var,axis=0)
+                _,normwt_var=coef_a.align(normwt_var,axis=1)
+                wt_coef=coef_a.mul(normwt_var,axis=0)
+                varwt_coef=wt_coef.sum(axis=1,level='var')#.sum(axis=0,level='HUC12')
+                self.varwt_coef=varwt_coef
+                
+                wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
+                self.wtmean=wtmean
+                ##get average weight for each coef
+                denom2=wtmean.sum(axis=0,level='HUC12')
+                denom2_a,_=denom2.align(wtmean,axis=0)
+                #denom2_a.columns=denom2_a.columns.droplevel('var')
+                self.denom2=denom2;self.denom2_a=denom2_a
+                normwt_huc=wtmean.divide(denom2_a,axis=0)
+                
+                self.normwt_huc=normwt_huc
+                _,normwt_huc=varwt_coef.align(normwt_huc,axis=0)
+                #normwt_huc.columns=normwt_huc.columns.droplevel('var')
+                wt2_coef=varwt_coef.mul(normwt_huc,axis=0)
+                hucwt_varwt_coef=varwt_coef.sum(axis=0,level='HUC12')
+                """
+                huc12_coefs,normed_huc12_adiff_scor=self.scorwtd_coef_df.align(
+                    normed_huc12_adiff_scor,join='right',axis=0)
+                self.logger.info(f'normed_huc12_adiff_scor2:{normed_huc12_adiff_scor}')
+                huc12_coefs,normed_huc12_adiff_scor=huc12_coefs.align(
+                    normed_huc12_adiff_scor.loc[:,('y',slice(None),slice(None))]
+                    ,join='left',axis=1)
+                self.logger.info(f'normed_huc12_adiff_scor3:{normed_huc12_adiff_scor}')"""
+                
+                dflist.append(
+                    hucwt_varwt_coef)
+            chunk_df=pd.concat(dflist,axis=0)
+            self.q.put(chunk_df)
+            return chunk_df
+        except:
+            self.logger.exception('')
+        
+                
+
 class Mapper(myLogger):
     def __init__(self):
         myLogger.__init__(self,name='Mapper.log')
@@ -17,7 +102,147 @@ class Mapper(myLogger):
         self.boundary_data_path=self.boundaryDataCheck()
         self.boundary_dict={}
         self.pr=PiResults()
+    
+    def runAsMultiProc(self,the_proc,args_list):
+        try:
+            starttime=time()
+            q=Queue()
+            q_args_list=[[q,*args] for args in args_list]
+            proc_count=len(args_list)
+            procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
+            [proc.start() for proc in procs]
+            outlist=[]
+            countdown=proc_count
+        except:
+            self.logger.exception('')
+            assert False,'unexpected error'
+        while countdown:
+            try:
+                self.logger.info(f'multiproc checking q. countdown:{countdown}')
+                result=q.get(True,20)
+                self.logger.info(f'multiproc has something from the q!')
+                outlist.append(result)
+                countdown-=1
+                self.logger.info(f'proc completed. countdown:{countdown}')
+            except:
+                self.logger.exception('error')
+                if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
+                else: sleep(5)
+        [proc.join() for proc in procs]
+        q.close()
+        self.logger.info(f'all procs joined sucessfully')
+        endtime=time()
+        self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
+        return outlist
+    
+    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro'):#,wt_kwargs={'norm_index':'COMID'}):
+        #get data
         
+        name='wt_comid_feature_importance'
+        if False:#not rebuild: #just turning off rebuild here
+            try:
+                saved_data=self.pr.getsave_postfit_db_dict(name)
+                return saved_data['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        datadict=self.pr.stack_predictions(rebuild=rebuild)
+        y=datadict['y']#.astype('Int8')
+        yhat=datadict['yhat']#.astype('Int8')
+        coef_scor_df=datadict['coef_scor_df']#.astype('float32')
+        
+        #split coefs and scors and drop rows missing 
+        ##coefs from both (e.g., boosting, rbfsvm)
+        scor_indices=[]
+        coef_indices=[]
+        coef_scor_cols=coef_scor_df.columns
+        for i,tup in enumerate(coef_scor_cols):
+            if tup[0][:7]=='scorer:':
+                scor_indices.append(i)
+            else:
+                coef_indices.append(i)
+        scor_df=coef_scor_df.iloc[:,scor_indices]  
+        coef_df=coef_scor_df.iloc[:,coef_indices]  
+        coef_df=coef_df.dropna(axis=0,how='all')
+        self.logger.info(f'BEFORE drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
+        coef_df,scor_df=coef_df.align(scor_df,axis=0,join='inner')#dropping scors w/o coefs
+        self.logger.info(f'AFTER drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
+        
+        #get the scorer
+        scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
+        
+        #drop non-linear ests
+        for est in ['gradient-boosting-classifier',
+                    'hist-gradient-boosting-classifier','rbf-svc']:
+            try:yhat.drop(est,level='estimator',inplace=True)
+            except:self.logger.exception(f'error dropping est:{est}, moving on')
+        
+        #make diffs
+        self.y=y;self.yhat=yhat
+        yhat_a,y_a=yhat.align(y,axis=0)
+        adiff_scor=np.exp(yhat_a.subtract(y_a.values,axis=0).abs().mul(-1)) # a for abs
+        self.adiff_scor=adiff_scor
+        #wt ceofs w/ score
+        self.scor_select=scor_select
+        self.coef_df=coef_df
+        #assert False,'pause'
+        ####
+        ####
+        ####
+        scor_select.columns=scor_select.columns.droplevel('var')
+        coef_a,scor_a=coef_df.align(scor_select,axis=1)
+        #normed_scor=scor_a.divide(scor_a.sum(axis=1,level='var'),axis=0)
+        #scorwtd_coef_df=coef_a.multiply(normed_scor,axis=0)        #
+        
+        
+        
+        
+        """need to drop zzzno_fish before summing for weight normalization"""
+        #broadcast coefs to huc12/comid levels
+        #self.scorwtd_coef_df=scorwtd_coef_df
+        #self.adiff_scor=adiff_scor
+        #assert False,'pausecheck'
+        #scorwtd_coef_df_a,adiff_a=scorwtd_coef_df.align(adiff,axis=0,join='right',level=['species','estimator'])
+        #wtd_coef_df=scorwtd_coef_df_a.multiply(adiff_a,axis=0)
+        #wtd_coef_df=pd.DataFrame()
+        proc_count=15
+        huc12_list=y.index.levels[1].to_list()
+        chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
+        huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]
+        adiff_scor_chunk=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
+        #scor_coef_chunk=[scorwtd_coef_df.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
+        args_list=[[huc12chunk[i],coef_a,scor_select,adiff_scor_chunk[i]] for i in range(proc_count)]
+        q=Queue()
+        self.mch_list=[]
+        self.results=[]
+        for args in args_list[:1]:
+            args=[q,*args]
+            mch=MatchCollapseHuc12(*args)
+            self.mch_list.append(mch)
+            self.results.append(self.mch_list[-1].run())
+        
+        wtd_coef_df=pd.concat(self.results,axis=0)
+        #dflist=self.runAsMultiProc(MatchCollapseHuc12,args_list)
+        '''for huc12 in huc12_list:
+            huc12_adiff_scor=adiff_scor.loc[(slice(None),huc12,slice(None),slice(None)),:]
+            huc12_coefs,huc12_adiff_scor=scorwtd_coef_df.align(huc12_adiff_scor,join='right',axis=0)
+            dflist.append(
+                huc12_coefs.mul(huc12_adiff_scor).sum(axis=1,level='var').sum(
+                    axis=0,level='HUC12'))
+        self.dflist=dflist
+        wtd_coef_df=pd.concat(dflist,axis=0)  '''
+        
+            
+        #wtd_coef_df=scorwtd_coef_df.multiply(adiff,axis=0)
+        self.wtd_coef_df=wtd_coef_df
+        
+        
+        save_data={'data':wtd_coef_df} 
+        self.pr.getsave_postfit_db_dict(name,save_data)
+        return wtd_coef_df
+    
+    
+    
+    
     def boundaryDataCheck(self):
         #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
         datalink="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/WBD/National/GDB/WBD_National_GDB.zip"
@@ -101,122 +326,9 @@ class Mapper(myLogger):
         split_coef_mean=wtd_coef_df2.mean(axis=0,level=split) # mean across huc
         split_coef_rank=np.argsort(split_coef_mean,axis=1)
         
-        
-        #bestn=split_coef_mean.
-        #bestn
-            
-    def normalize_and_sum_to_huc12(self,wtd_coef_df):
-        wt_coef_df_sum_a,_=wt_coef_df.sum(
-            axis=0,level=['species','HUC12','COMID']).align(wt_coef_df,axis=0)
-        est_norm=wt_coef_df/wt_coef_df_sum_a
-        estnorm_wtd_coef_df=wtd_coef_df.multiply(
-            est_norm,axis=0).sum(axis=0,level=['species','HUC12','COMID'])
-        estnorm_wtd_coef_df_sum_a,_=estnorm_wtd_coef_df.sum(
-            axis=0,level=['HUC12','COMID']).align(estnorm_wtd_coef_df,axis=0)
-        spec_norm=estnorm_wtd_coef_df/estnorm_wtd_coef_df_sum_a
-        specnorm_estnorm_wtd_coef_df=estnorm_wtd_coef_df*spec_norm.sum(axis=0,level=['HUC12','COMID'])
-        
-        
-        
-        
+    
 
-    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro'):#,wt_kwargs={'norm_index':'COMID'}):
-        #get data
-        
-        name='wt_comid_feature_importance'
-        if False:#not rebuild: #just turning off rebuild here
-            try:
-                saved_data=self.pr.getsave_postfit_db_dict(name)
-                return saved_data['data']#sqlitedict needs a key to pickle and save an object in sqlite
-            except:
-                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-        datadict=self.pr.stack_predictions(rebuild=rebuild)
-        y=datadict['y'];yhat=datadict['yhat']
-        coef_scor_df=datadict['coef_scor_df']
-        scor_indices=[]
-        coef_indices=[]
-        coef_scor_cols=coef_scor_df.columns
-        for i,tup in enumerate(coef_scor_cols):
-            if tup[0][:7]=='scorer:':
-                scor_indices.append(i)
-            else:
-                coef_indices.append(i)
-        scor_df=coef_scor_df.iloc[:,scor_indices]  
-        coef_df=coef_scor_df.iloc[:,coef_indices]  
-        coef_df=coef_df.dropna(axis=0,how='all')
-        self.logger.info(f'BEFORE drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
-        coef_df,scor_df=coef_df.align(scor_df,axis=0,join='inner')
-        self.logger.info(f'AFTER drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
-        
-        #get the scorer and align to differences
-        scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
-        yhat_a,y_a=yhat.align(y,axis=0)
-        
-        #scor_norm=scor_select.divide(scor_select.sum(axis=1,level='var'),axis=0)
-        #scor_norm2=scor_norm1.divide(scor_norm1.sum(axis=0,level='species'),axis=0)
-        #wt_coef_df=coef_df.multiply(scor_norm,axis=0)
-        #wt_coef_df.sum(axis=1,level=['var']) #
-        #wt_coef_df.sum(axis=0,level=['species'])#after broadcasting across hucs
-        ##############
-        ##############      
-        assert False,'halt'
-        coef_df=self.pr.build_spec_est_coef_df(rebuild=rebuild).drop('zzzno fish',level='species')
-        spec_est_fitscor_df=self.pr.spec_est_scor_df_from_dict(
-            rebuild=rebuild,scorer=fit_scorer).drop('zzzno fish',level='species')
-        #get data and create accuracy measure for comid oriented weights
-        y,yhat,diff=self.build_prediction_and_error_dfs(rebuild=rebuild)
-        diff=diff.drop('zzzno fish',level='species')
-        abs_diffscor=diff.abs().mean(axis=1).sub(1).mul(-1)
-        self.abs_diffscor=abs_diffscor
-        #normalize coefficients from each model to sum to 1 for combining across estimators
-        self.coef_df=coef_df
-        #mod_norm_coef_df=coef_df.divide(coef_df.sum(axis=1)) # do before collapsing across estimators instead
-        self.spec_est_fitscor_df=spec_est_fitscor_df
-        # normalize fit scores across cv iterations
-        norm_spec_est_fitscor_df=spec_est_fitscor_df.divide(spec_est_fitscor_df.sum(axis=1),axis=0)
-        self.norm_spec_est_fitscor_df=norm_spec_est_fitscor_df
-        #weight coefs by relative cv score
-        #align on indices(0) then cv_i of multiindex columns
-        coef_df_a0,norm_spec_est_fitscor_df_a0=coef_df.align(
-            norm_spec_est_fitscor_df,axis=0,join='inner')#drop any unmatched rows
-        coef_df_a01,norm_spec_est_fitscor_df_a01=coef_df_a0.align(
-            norm_spec_est_fitscor_df_a0,axis=1,level='cv_i')
-        fitscore_wt_coef=coef_df_a01.multiply(
-            norm_spec_est_fitscor_df_a01,axis=0)
-        
-        '''fitscore_wt_coef=coef_df.copy()
-        #manually align cv_i's across multiindex columns
-        for cv_i in norm_spec_est_fitscor_df.columns: #iterating over cv_i's
-            cvi_coef=coef_df.loc[slice(None),(slice(None),cv_i)]
-            cvi_fitscor=norm_spec_est_fitscor_df.loc[slice(None),cv_i].to_numpy()[:,None]
-            cvi_wtd_coef=cvi_coef.multiply(cvi_fitscor,axis=0)
-            fitscore_wt_coef.loc[slice(None),(slice(None),cv_i)]=cvi_wtd_coef
-            #[:,None] broadcasts the numpy array of n(axis0) fitscors to all 270 columns'''
-        
-        
-        #sum over cv_i's for each x_var
-        cvscor_norm_coef_df=fitscore_wt_coef.sum(axis=1,level='x_var')
-        self.cvscor_norm_coef_df=cvscor_norm_coef_df
-        
-
-        # "broadcast" scors across huc12/comids 
-        cvscor_norm_coef_df_a,abs_diffscor_a=cvscor_norm_coef_df.align(
-            abs_diffscor,axis=0)
-        #cvscor_norm_coef_df_a.dropna(axis=1,inplace=True) #remove columns added by align
-        #abs_diffscor_a.dropna(axis=1,inplace=True)
-        #self.cvscor_norm_coef_df_a=cvscor_norm_coef_df_a
-        #self.abs_diffscor_a=abs_diffscor_a
-        
-        # normalize abs diff scor (diff=err=y-yhat) across predictions for all dimensions except huc12.
-        
-        abs_diffscor_normalized_weights=abs_diffscor/abs_diffscor.sum(axis=0,level='HUC12') 
-        #self.abs_diffscor_normalized_weights=abs_diffscor_normalized_weights
-        abs_diffscor_normalized_weights_series=abs_diffscor_normalized_weights.loc[slice(None),0]
-        comid_cvscor_norm_coef_df=cvscor_norm_coef_df_a.multiply(abs_diffscor_normalized_weights_series.to_numpy(),axis=0).sum(axis=0,level='HUC12')
-        
-        save_data={'data':comid_cvscor_norm_coef_df} 
-        self.pr.getsave_postfit_db_dict(name,save_data)
-        return comid_cvscor_norm_coef_df
+    
       
         
     def add_huc2_conus(self,ax):
@@ -255,7 +367,7 @@ class Mapper(myLogger):
         fig.savefig(Helper().getname(os.path.join(self.print_dir,'huc12_features.png')))
 
     
-    def build_prediction_and_error_dfs(self,rebuild=0):
+    '''def build_prediction_and_error_dfs(self,rebuild=0):
         agg_prediction_spec_df=self.pr.build_aggregate_predictions_by_species(rebuild=rebuild)
         yhat=agg_prediction_spec_df.drop('y_train',level='estimator').loc[:,agg_prediction_spec_df.columns!='y']
         y=agg_prediction_spec_df.xs('y_train',level='estimator').loc[:,['y']]
@@ -265,7 +377,7 @@ class Mapper(myLogger):
         self.y_a=y_a
         self.yhat_a=yhat_a
         self.diff=diff
-        return y_a,yhat_a,diff
+        return y_a,yhat_a,diff'''
     
     
     def draw_huc12_truefalse(self,rebuild=0):
