@@ -26,6 +26,7 @@ class DBTool:
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
     
+    
     def postFitDBdict(self,name):
         return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
     
