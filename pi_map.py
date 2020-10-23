@@ -193,7 +193,7 @@ class Mapper(myLogger):
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
         """need to drop zzzno_fish before summing for weight normalization"""
         if zzzno_fish:
-            assert False,'not developed'
+            scor_select=scor_select.loc[(),:]
         else:
             scor_select.drop('zzzno fish',level='species',inplace=True)
             coef_df.drop('zzzno fish',level='species',inplace=True)
@@ -260,8 +260,9 @@ class Mapper(myLogger):
         except: self.getHucBoundary(huc_level)
         return self.boundary_dict[huc_level].merge(data_df,left_on=huc_level,right_on=right_on)
   
-    def plot_top_features(self,split=None,top_n=10,rebuild=0):
-        wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild)
+    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False):
+        
+        wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish)
         if split is None:
             cols=wtd_coef_df.columns
             drop_vars=['tmean','tmax','msst','mwst','precip','slope','wa','elev','mast','tmin']
