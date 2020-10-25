@@ -1,4 +1,4 @@
-from multiprocessing import Process,Queue
+dfrom multiprocessing import Process,Queue
 from time import time,sleep
 import re
 import os
@@ -14,7 +14,7 @@ from mylogger import myLogger
 
 
 class MatchCollapseHuc12(Process,myLogger):
-    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk):
+    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,return_weights=False):
         #myLogger.__init__(self,name='MatchCollapseHuc12.log')
         #self.logger.info(f'starting up a MatchCollapseHuc12 proc')
         super().__init__()
@@ -23,6 +23,7 @@ class MatchCollapseHuc12(Process,myLogger):
         self.coef_df=coef_df
         self.fitscor=fitscor
         self.adiff_scor_chunk=adiff_scor_chunk
+        self.return_weights=return_weights
     
     def run(self,):
         myLogger.__init__(self,name='MatchCollapseHuc12.log')
@@ -38,7 +39,6 @@ class MatchCollapseHuc12(Process,myLogger):
             for block_idx in block_selector:
                 self.logger.info(f'pid:{pid} on block_idx:{block_idx}')
                 huc12block=self.huc12list[block_idx[0]:block_idx[1]]
-            #######
                 huc12_adiff_scor=self.adiff_scor_chunk.loc[(slice(None),huc12block,slice(None),slice(None)),:]
                 huc12_adiff_scor.index=huc12_adiff_scor.index.remove_unused_levels()
                 self.huc12_adiff_scor=huc12_adiff_scor
@@ -52,6 +52,11 @@ class MatchCollapseHuc12(Process,myLogger):
                 self.denom=denom;self.denom_a=denom_a;#self.denom_aa=denom_aa
                 self.normwt_var=normwt_var
                 self.huc12_adiff_scor=huc12_adiff_scor
+                if self.coef_df is None:
+                    if self.return_weights:
+                        return normwt_var
+                    
+                ###coef_df enters
                 coef_df=self.coef_df
                 normwt_var.columns=normwt_var.columns.droplevel('var')
                 _,normwt_var=coef_df.align(normwt_var,axis=0)
@@ -136,6 +141,8 @@ class Mapper(myLogger):
         self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
         return outlist
     
+    def build_errscor_fitscor_comidwts(self, rebuild=0,fit_scorer='f1_micro',zzzno_fish=False)
+    
     def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro',zzzno_fish=False):#,wt_kwargs={'norm_index':'COMID'}):
         #get data
         name='wt_comid_feature_importance'
@@ -175,8 +182,9 @@ class Mapper(myLogger):
         scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
         
         #drop non-linear ests
-        for est in ['gradient-boosting-classifier',
-                    'hist-gradient-boosting-classifier','rbf-svc']:
+        ests_without_coefs=['gradient-boosting-classifier',
+                    'hist-gradient-boosting-classifier','rbf-svc']
+        for est in ests_without_coefs:
             try:yhat.drop(est,level='estimator',inplace=True)
             except:self.logger.exception(f'error dropping est:{est}, moving on')
         
