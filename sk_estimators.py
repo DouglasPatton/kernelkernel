@@ -25,15 +25,26 @@ class sk_estimator(myLogger):
         #self.est_dict=self.get_est_dict()
         self.name=None
     
-    def get_coef_from_fit_est(self,est_name,est):
+    def get_coef_from_fit_est(self,est_name,est,counter_std=True):
         
         if est_name == 'linear-svc':
             coef=est.best_estimator_.regressor_['clf'].coef_.T
-            return coef
+            if counter_std:
+                std=est.best_estimator_.regressor_['scaler'].scale_.T
+                coef_raw=coef.copy()
+                coef=coef*std #counter standardized
+                self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
         elif est_name == 'logistic-reg':
             coef=est['clf'].coef_.T
-            return coef
-        else:assert False,f'unexpected est_name:{est_name}'   
+            if counter_std:
+                std=est['scaler'].scale_.Ts
+                coef_raw=coef.copy()
+                coef=coef*std #counter standardized
+                self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
+        else:assert False,f'unexpected est_name:{est_name}'  
+            
+        
+        return coef
     
         
     def get_est_dict(self,):
