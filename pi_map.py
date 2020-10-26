@@ -1,4 +1,4 @@
-dfrom multiprocessing import Process,Queue
+from multiprocessing import Process,Queue
 from time import time,sleep
 import re
 import os
@@ -14,7 +14,7 @@ from mylogger import myLogger
 
 
 class MatchCollapseHuc12(Process,myLogger):
-    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,return_weights=False):
+    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,):
         #myLogger.__init__(self,name='MatchCollapseHuc12.log')
         #self.logger.info(f'starting up a MatchCollapseHuc12 proc')
         super().__init__()
@@ -23,7 +23,6 @@ class MatchCollapseHuc12(Process,myLogger):
         self.coef_df=coef_df
         self.fitscor=fitscor
         self.adiff_scor_chunk=adiff_scor_chunk
-        self.return_weights=return_weights
     
     def run(self,):
         myLogger.__init__(self,name='MatchCollapseHuc12.log')
@@ -53,8 +52,7 @@ class MatchCollapseHuc12(Process,myLogger):
                 self.normwt_var=normwt_var
                 self.huc12_adiff_scor=huc12_adiff_scor
                 if self.coef_df is None:
-                    if self.return_weights:
-                        return normwt_var
+                    return normwt_var
                     
                 ###coef_df enters
                 coef_df=self.coef_df
@@ -64,7 +62,7 @@ class MatchCollapseHuc12(Process,myLogger):
                 wt_coef=coef_df.mul(normwt_var,axis=0)
                 varwt_coef=wt_coef.sum(axis=1,level='var')#.sum(axis=0,level='HUC12')
                 self.varwt_coef=varwt_coef
-
+                self.logger.info(f'wt:{wt}')
                 wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
                 self.wtmean=wtmean
                 ##get average weight for each coef
@@ -141,13 +139,18 @@ class Mapper(myLogger):
         self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
         return outlist
     
-    def build_errscor_fitscor_comidwts(self, rebuild=0,fit_scorer='f1_micro',zzzno_fish=False)
+      
+        
     
-    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro',zzzno_fish=False):#,wt_kwargs={'norm_index':'COMID'}):
+    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro',zzzno_fish=False,return_weights=False):#,wt_kwargs={'norm_index':'COMID'}):
         #get data
-        name='wt_comid_feature_importance'
+        if return_weights:
+            name='comid_diffscor_fitscor_weights'
+        else:
+            name='wt_comid_feature_importance'
         if zzzno_fish:
             name+='zzzno fish'
+        
             
         if not rebuild: #just turning off rebuild here
             try:
@@ -201,20 +204,35 @@ class Mapper(myLogger):
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
         """need to drop zzzno_fish before summing for weight normalization"""
         if zzzno_fish:
-            scor_select=scor_select.loc[(),:]
+            ztup=(['zzzno fish'],slice(None),slice(None),slice(None))
+            scor_select=scor_select.loc[ztup]
+            scor_select.index=scor_select.index.remove_unused_levels()
+            coef_df=coef_df.loc[ztup]
+            coef_df.index=coef_df.index.remove_unused_levels()
+            adiff_scor=adiff_scor.loc[ztup]
+            adiff_scor.index=adiff_scor.index.remove_unused_levels()
+            self.scor_select=scor_select;self.coef_df=coef_df;self.adiff_scor=adiff_scor
         else:
             scor_select.drop('zzzno fish',level='species',inplace=True)
             coef_df.drop('zzzno fish',level='species',inplace=True)
             adiff_scor.drop('zzzno fish',level='species',inplace=True)
         #break into chunks and line up coefs w/ huc12's in groups b/c 
-        proc_count=10
-        huc12_list=y.index.levels[1].to_list()
+        if zzzno_fish:
+            proc_count=1
+        else:
+            proc_count=10
+        #huc12_list=y.index.levels[1].to_list()
+        huc12_list=adiff_scor.index.levels[1].to_list()
+        
         chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
         huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]
         adiff_scor_chunk=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
+        if return_weights:
+            coef_df=None
         args_list=[[huc12chunk[i],coef_df,scor_select,adiff_scor_chunk[i]] for i in range(proc_count)]
+        """#####
         q=Queue()
-        """self.mch_list=[]
+        self.mch_list=[]
         self.results=[]
         for args in args_list[:1]:
             args=[q,*args]
@@ -222,7 +240,8 @@ class Mapper(myLogger):
             self.mch_list.append(mch)
             self.results.append(self.mch_list[-1].run())
         
-        wtd_coef_df=pd.concat(self.results,axis=0)"""
+        wtd_coef_df=pd.concat(self.results,axis=0)
+        #####"""
         print(f'starting {proc_count} procs')
         dflistlist=self.runAsMultiProc(MatchCollapseHuc12,args_list)
         print('multiprocessing complete')
@@ -287,13 +306,13 @@ class Mapper(myLogger):
             top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
             top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
             #self.big_top_wtd_coef_df=big_top_wtd_coef_df
-            pos_sort_idx=np.argsort(top_pos_coef_df,axis=1).iloc[:,::-1]
-            neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1]
+            pos_sort_idx=np.argsort(top_pos_coef_df,axis=1).iloc[:,::-1] #descending
+            neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
             #select the best and worst columns
             big_top_cols_pos=pos_sort_idx.apply(
                 lambda x: big_top_2n[0][x[0]],axis=1)
             big_top_cols_neg=neg_sort_idx.apply(
-                lambda x: big_top_2n[1][x[-1]],axis=1)
+                lambda x: big_top_2n[1][x[0]],axis=1)
             colname='top_predictive_variable'
             big_top_cols_pos=big_top_cols_pos.rename(colname)
             big_top_cols_neg=big_top_cols_neg.rename(colname)
