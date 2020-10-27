@@ -1,17 +1,16 @@
 from sqlitedict import SqliteDict
 from shutil import copy
-import sys,os
+import sys,os,logging
 from mylogger import myLogger
-import logging
 import zlib, pickle, sqlite3
 
-class DBTool(myLogger):
+class DBTool():
     def __init__(self):
         func_name='DBTool'
         #super.__init__(name=f'{func_name}.log')
-        myLogger.__init__(self,name=f'{func_name}.log')
-        #self.logger=logging.getLogger()
-        #self.logger.info(f'starting {func_name} logger')
+       
+        self.logger=logging.getLogger()
+        #
         resultsdir=os.path.join(os.getcwd(),'results')
         self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):
