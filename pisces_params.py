@@ -88,16 +88,16 @@ class PiSetup(myLogger):
         datagenhash_hash_id_run_records={}
         self.logger.info(f'building datagenhash_hash_id_run_records')
         for hash_id,run_record in run_record_dict.items(): 
-                data_gen=run_record["data_gen"]
-                datagenhash=joblib.hash(data_gen)
-                try:
-                    datagenhash_hash_id_run_records[datagenhash][hash_id]=run_record # in case diff species have diff 
-                        #     datagen_dicts. if wrong random_state passed to cv, split is wrong
-                except KeyError:
-                    datagenhash_hash_id_run_records[datagenhash]={hash_id:run_record}
-                except:
-                    self.logger.exception(f'not a keyerror, unexpected error')
-                    assert False,'halt'
+            data_gen=run_record["data_gen"]
+            datagenhash=joblib.hash(data_gen)
+            try:
+                datagenhash_hash_id_run_records[datagenhash][hash_id]=run_record # in case diff species have diff 
+                    #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+            except KeyError:
+                datagenhash_hash_id_run_records[datagenhash]={hash_id:run_record}
+            except:
+                self.logger.exception(f'not a keyerror, unexpected error')
+                assert False,'halt'
         self.logger.info('datagen hash hash_id dict complete')
         return datagenhash_hash_id_run_records
     

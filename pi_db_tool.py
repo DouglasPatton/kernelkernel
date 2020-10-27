@@ -1,16 +1,17 @@
 from sqlitedict import SqliteDict
+from shutil import copy
 import sys,os
-#from mylogger import myLogger
+from mylogger import myLogger
 import logging
+import zlib, pickle, sqlite3
 
-
-class DBTool:
+class DBTool(myLogger):
     def __init__(self):
         func_name='DBTool'
         #super.__init__(name=f'{func_name}.log')
-        #myLogger.__init__(self,name=f'{func_name}.log')
-        self.logger=logging.getLogger()
-        self.logger.info(f'starting {func_name} logger')
+        myLogger.__init__(self,name=f'{func_name}.log')
+        #self.logger=logging.getLogger()
+        #self.logger.info(f'starting {func_name} logger')
         resultsdir=os.path.join(os.getcwd(),'results')
         self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):
@@ -25,31 +26,56 @@ class DBTool:
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
-    
+    def re_encode(self,path):
+        assert os.path.exists(path),f'{path} does not exist'
+        bpath=path+'_backup'
+        os.rename(path,bpath)
+        #os.remove(path)
+        tablenames=SqliteDict.get_tablenames(bpath)
+        for name in tablenames:
+            self.logger.info(f'starting tablename:{name}')
+            with SqliteDict(filename=bpath,tablename=name,) as olddict:
+                with SqliteDict(filename=path,tablename=name,encode=self.my_encode, decode=self.my_decode) as newdict:
+                    keys=list(olddict.keys())
+                    kcount=len(keys)
+                    self.logger.info(f'for tablename:{name}, keys: {keys}')
+                    for k,key in enumerate(keys):
+                        if (k+1)%100==0:
+                            print(f'{k}/{kcount}.',end='')
+                        val=olddict[key]
+                        newdict[key]=val
+                        newdict.commit()
+            
+        
+    def my_encode(self,obj):
+        return sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
+    def my_decode(self,obj):
+        return pickle.loads(zlib.decompress(bytes(obj)))
+    #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
     
     def postFitDBdict(self,name):
-        return SqliteDict(filename=self.postfitDBdictpath,tablename=name)
+        return SqliteDict(filename=self.postfitDBdictpath,tablename=name, encode=self.my_encode, decode=self.my_decode)
     
     def fitfailDBdict(self):
-        return SqliteDict(filename=self.fitfailDBdictpath,tablename='fitfail') 
+        return SqliteDict(filename=self.fitfailDBdictpath,tablename='fitfail', encode=self.my_encode, decode=self.my_decode) 
     
     def resultsDBdict(self):
-        return SqliteDict(filename=self.resultsDBdictpath,tablename='results')
+        return SqliteDict(filename=self.resultsDBdictpath,tablename='results', encode=self.my_encode, decode=self.my_decode)
     
     def metadataDBdict(self):
-        return SqliteDict(filename=self.metadataDBdictpath,tablename='metadata')
+        return SqliteDict(filename=self.metadataDBdictpath,tablename='metadata', encode=self.my_encode, decode=self.my_decode)
     
     def resultsDBdict_backup(self):
-        return SqliteDict(filename='results/resultsDB_backup.sqlite',tablename='results')
+        return SqliteDict(filename='results/resultsDB_backup.sqlite',tablename='results', encode=self.my_encode, decode=self.my_decode)
     
     def pidataDBdict(self,name='species01'):
-        return SqliteDict(filename=self.pidataDBdictpath,tablename=name)
+        return SqliteDict(filename=self.pidataDBdictpath,tablename=name, encode=self.my_encode, decode=self.my_decode)
     
     def genDBdict(self):
-        return SqliteDict(filename=self.genDBdictpath,tablename='gen')
+        return SqliteDict(filename=self.genDBdictpath,tablename='gen', encode=self.my_encode, decode=self.my_decode)
     
     def predictDBdict(self,):
-        return SqliteDict(filename=self.predictDBdictpath,tablename='predict01')
+        return SqliteDict(filename=self.predictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
     
     def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0):
         try:

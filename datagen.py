@@ -85,6 +85,10 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.X_test=X_test
             self.y_train=y_train
             self.y_test=y_test
+            self.X_train_std=self.X_train.std(axis=0)
+            self.y_train_mean=np.mean(self.y_train)
+            
+            
             if data_split_dict['cv']:
                 if count1<data_split_dict['cv']['n_splits']:
                     old_n_splits=data_split_dict['cv']['n_splits']
@@ -113,6 +117,8 @@ class dataGenerator(PiscesDataTool,myLogger):
     def make_metadict(self):
         datagenhash=joblib.hash(self.datagen_dict)
         metadict=dict(
+            X_train_std=self.X_train_std,
+            y_train_mean=self.y_train_mean,
             ymean=self.ymean,
             n=self.n,
             xvars=self.x_vars,

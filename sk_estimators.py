@@ -14,6 +14,7 @@ from sk_missing_value_handler import missingValHandler
 import logging
 import numpy as np
 from mylogger import myLogger
+from pi_db_tool import DBTool
 
 
 
@@ -24,25 +25,32 @@ class sk_estimator(myLogger):
         #self.scorer_dict=SKToolInitializer().get_scorer_dict() # for gridsearchCV
         #self.est_dict=self.get_est_dict()
         self.name=None
-    
-    def get_coef_from_fit_est(self,est_name,est,counter_std=True):
         
+    def get_spec_std(self,spec):
+        db=DBTool().metadataDBdict()
+        return db[spec].X_train_std
+        
+    def get_coef_from_fit_est(self,species,est_name,est,std_rescale=True):
+        #std_rescale rescales coefficients from their cv sample std scale to the global
+        ##xtrain(i.e., everything since so far running cv on all data) std scale.
+        if std_rescale:
+            global_std=self.get_spec_std(species).T
         if est_name == 'linear-svc':
             coef=est.best_estimator_.regressor_['clf'].coef_.T
-            if counter_std:
+            if std_rescale:
                 std=est.best_estimator_.regressor_['scaler'].scale_.T
-                coef_raw=coef.copy()
-                coef=coef*std #counter standardized
-                self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
+                
         elif est_name == 'logistic-reg':
             coef=est['clf'].coef_.T
-            if counter_std:
-                std=est['scaler'].scale_.Ts
-                coef_raw=coef.copy()
-                coef=coef*std #counter standardized
-                self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
+            if std_rescale:
+                std=est['scaler'].scale_.T
+                
         else:assert False,f'unexpected est_name:{est_name}'  
+        if std_rescale:
+            coef_raw=coef.copy()
+            coef=coef*std/global_std #rescaled
             
+            self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
         
         return coef
     
