@@ -66,8 +66,16 @@ class MatchCollapseHuc12(Process,myLogger):
                 wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
                 self.wtmean=wtmean
                 ##get average weight for each coef
+                if spec_wt=='equal':
+                    level=['HUC12','species']
+                else:
+                    level='HUC12'
+                
+                
+                
                 denom2=wtmean.sum(axis=0,level='HUC12')
                 denom2_a,_=denom2.align(wtmean,axis=0)
+                                
                 #denom2_a.columns=denom2_a.columns.droplevel('var')
                 self.denom2=denom2;self.denom2_a=denom2_a
                 normwt_huc=wtmean.divide(denom2_a,axis=0)
@@ -149,15 +157,19 @@ class Mapper(myLogger):
         else:
             name='wt_comid_feature_importance'
         if zzzno_fish:
-            name+='zzzno fish'
+            name+='_zzzno fish'
         
             
         if not rebuild: #just turning off rebuild here
+            
             try:
                 saved_data=self.pr.getsave_postfit_db_dict(name)
                 return saved_data['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
         datadict=self.pr.stack_predictions(rebuild=rebuild)
         
         y=datadict['y']#.astype('Int8')
@@ -287,18 +299,19 @@ class Mapper(myLogger):
         except: self.getHucBoundary(huc_level)
         return self.boundary_dict[huc_level].merge(data_df,left_on=huc_level,right_on=right_on)
   
-    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False):
+    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,filter_vars=False):
         
         wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish)
         if split is None:
             cols=wtd_coef_df.columns
-            drop_vars=['tmean','tmax','msst','mwst','precip','slope','wa','elev','mast','tmin']
-            for col in cols:
-                for varstr in drop_vars:
-                    if re.search(varstr,col.lower()):
-                        wtd_coef_df.drop(col,axis=1,inplace=True)
-                        self.logger.info(f'dropped col: {col}')
-                        break #stop searching
+            if filter_vars:
+                drop_vars=['tmean','tmax','msst','mwst','precip','slope','wa','elev','mast','tmin']
+                for col in cols:
+                    for varstr in drop_vars:
+                        if re.search(varstr,col.lower()):
+                            wtd_coef_df.drop(col,axis=1,inplace=True)
+                            self.logger.info(f'dropped col: {col}')
+                            break #stop searching
             big_mean=wtd_coef_df.mean(axis=0)
             big_cols_sorted=list(big_mean.sort_values().index)[::-1]#descending
             big_top_2n=(big_cols_sorted[:top_n],
@@ -365,7 +378,7 @@ class Mapper(myLogger):
         huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
         huc2_conus.boundary.plot(linewidth=1,color=None,edgecolor='k',ax=ax)
     
-    def plot_features_huc12(self,rebuild=0,norm_index='COMID'):
+    """ def plot_features_huc12(self,rebuild=0,norm_index='COMID'):
         
         wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild,norm_index=norm_index)
         if norm_index=='COMID':
@@ -390,7 +403,7 @@ class Mapper(myLogger):
        
         huc12_coef_gdf.plot(column=columns[colsort[0]],ax=ax,cax=cax ,legend=True)#,legend_kwds={'orientation':'vertical'})
         self.add_huc2_conus(ax)
-        fig.savefig(Helper().getname(os.path.join(self.print_dir,'huc12_features.png')))
+        fig.savefig(Helper().getname(os.path.join(self.print_dir,'huc12_features.png')))"""
 
     
     '''def build_prediction_and_error_dfs(self,rebuild=0):
@@ -404,7 +417,8 @@ class Mapper(myLogger):
         self.yhat_a=yhat_a
         self.diff=diff
         return y_a,yhat_a,diff'''
-    
+    def plot_confusion_01predict(self,rebuild=0):
+        wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
     
     def draw_huc12_truefalse(self,rebuild=0):
         try: self.boundary_dict['huc12']
