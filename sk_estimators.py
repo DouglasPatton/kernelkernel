@@ -28,29 +28,33 @@ class sk_estimator(myLogger):
         
     def get_spec_std(self,spec):
         db=DBTool().metadataDBdict()
-        return db[spec].X_train_std
+        return db[spec]['X_train_std']
         
     def get_coef_from_fit_est(self,species,est_name,est,std_rescale=True):
         #std_rescale rescales coefficients from their cv sample std scale to the global
         ##xtrain(i.e., everything since so far running cv on all data) std scale.
         if std_rescale:
-            global_std=self.get_spec_std(species).T
+            global_std=self.get_spec_std(species)
         if est_name == 'linear-svc':
             coef=est.best_estimator_.regressor_['clf'].coef_.T
             if std_rescale:
-                std=est.best_estimator_.regressor_['scaler'].scale_.T
+                std=est.best_estimator_.regressor_['scaler'].scale_
                 
         elif est_name == 'logistic-reg':
             coef=est['clf'].coef_.T
             if std_rescale:
-                std=est['scaler'].scale_.T
+                std=est['scaler'].scale_
                 
         else:assert False,f'unexpected est_name:{est_name}'  
         if std_rescale:
+            
             coef_raw=coef.copy()
+            std=std[None,:]
+            global_std=global_std.to_numpy()[None,:]
+            #self.logger.info(f'coef:{coef}, std:{std}, global_std:{global_std}')
             coef=coef*std/global_std #rescaled
             
-            self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
+            #self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
         
         return coef
     

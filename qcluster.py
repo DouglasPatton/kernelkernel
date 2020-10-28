@@ -153,9 +153,16 @@ class JobQFiller(mp.Process,myLogger):
         q_size=0;tries=0 # for startup
         while len(self.joblist):
             if q_size<max_q_size:
+                if i>1 and q_size==0: 
+                    self.logger.info(f'jobq is empty, so max_q doubling from {max_q}')
+                    max_q*=2 # double max q since it is being consumed
                 tries=0
                 for i in range(max_q_size): #fill queue back up to 2*max_q_size
-                    job=self.joblist.pop()
+                    if len(self.joblist):
+                        job=self.joblist.pop()
+                    else: 
+                        self.logger.critical("jobqfiller's joblist is empty, returning")
+                        return
                     try:job.build()
                     except:self.logger.exception(f'error building job')
                     try:
