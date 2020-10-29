@@ -276,7 +276,7 @@ class Mapper(myLogger):
         self.dflist=dflist
         print('concatenating dflist')
         wtd_coef_df=pd.concat(dflist,axis=0) 
-        
+        #"""
             
         #wtd_coef_df=scorwtd_coef_df.multiply(adiff,axis=0)
         self.wtd_coef_df=wtd_coef_df
