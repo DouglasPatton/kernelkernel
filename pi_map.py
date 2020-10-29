@@ -14,7 +14,7 @@ from mylogger import myLogger
 
 
 class MatchCollapseHuc12(Process,myLogger):
-    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,):
+    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,spec_wt=None):
         #myLogger.__init__(self,name='MatchCollapseHuc12.log')
         #self.logger.info(f'starting up a MatchCollapseHuc12 proc')
         super().__init__()
@@ -23,6 +23,7 @@ class MatchCollapseHuc12(Process,myLogger):
         self.coef_df=coef_df
         self.fitscor=fitscor
         self.adiff_scor_chunk=adiff_scor_chunk
+        self.spec_wt=spec_wt
     
     def run(self,):
         myLogger.__init__(self,name='MatchCollapseHuc12.log')
@@ -45,7 +46,7 @@ class MatchCollapseHuc12(Process,myLogger):
                 _,fitscor=huc12_adiff_scor.align(self.fitscor,axis=0,join='left')
                 wt=huc12_adiff_scor.multiply(fitscor,axis=0)
                 self.wt=wt
-                denom=wt.sum(axis=1,level='var')#.sum(axis=0,level='HUC12')
+                denom=wt.sum(axis=1,level='var') # sum across rep_idx, cv_idx  #.sum(axis=0,level='HUC12')
                 denom_a,_=denom.align(wt,axis=1,level='var')
                 normwt_var=wt.divide(denom_a.values)
                 self.denom=denom;self.denom_a=denom_a;#self.denom_aa=denom_aa
@@ -57,23 +58,23 @@ class MatchCollapseHuc12(Process,myLogger):
                 ###coef_df enters
                 coef_df=self.coef_df
                 normwt_var.columns=normwt_var.columns.droplevel('var')
-                _,normwt_var=coef_df.align(normwt_var,axis=0)
-                _,normwt_var=coef_df.align(normwt_var,axis=1)
+                coef_df,normwt_var=coef_df.align(normwt_var,axis=0,join='right')
+                coef_df,normwt_var=coef_df.align(normwt_var,axis=1)
                 wt_coef=coef_df.mul(normwt_var,axis=0)
                 varwt_coef=wt_coef.sum(axis=1,level='var')#.sum(axis=0,level='HUC12')
                 self.varwt_coef=varwt_coef
-                self.logger.info(f'wt:{wt}')
+                #self.logger.info(f'wt:{wt}')
                 wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
                 self.wtmean=wtmean
                 ##get average weight for each coef
-                if spec_wt=='equal':
+                if self.spec_wt=='equal':
                     level=['HUC12','species']
                 else:
                     level='HUC12'
                 
                 
                 
-                denom2=wtmean.sum(axis=0,level='HUC12')
+                denom2=wtmean.sum(axis=0,level=level)
                 denom2_a,_=denom2.align(wtmean,axis=0)
                                 
                 #denom2_a.columns=denom2_a.columns.droplevel('var')
@@ -81,10 +82,16 @@ class MatchCollapseHuc12(Process,myLogger):
                 normwt_huc=wtmean.divide(denom2_a,axis=0)
 
                 self.normwt_huc=normwt_huc
-                _,normwt_huc=varwt_coef.align(normwt_huc,axis=0)
+                varwt_coef,normwt_huc=varwt_coef.align(normwt_huc,axis=0,join='inner')
                 #normwt_huc.columns=normwt_huc.columns.droplevel('var')
-                wt2_coef=varwt_coef.mul(normwt_huc,axis=0)
-                hucwt_varwt_coef=varwt_coef.sum(axis=0,level='HUC12')
+                wt2_coef=varwt_coef.mul(normwt_huc.values,axis=0)
+                self.wt2_coef=wt2_coef
+                if self.spec_wt=='equal':
+                    spec_varwt_coef=wt2_coef.sum(axis=0,level=level)
+                    hucwt_varwt_coef=spec_varwt_coef.mean(axis=0,level='HUC12')
+                else:
+                    hucwt_varwt_coef=wt2_coef.sum(axis=0,level='HUC12')
+                self.hucwt_varwt_coef=hucwt_varwt_coef
                 dflist.append(hucwt_varwt_coef)
             ######## end former for loop
             self.q.put(dflist)
@@ -115,13 +122,13 @@ class Mapper(myLogger):
         self.boundary_dict={}
         self.pr=PiResults()
     
-    def runAsMultiProc(self,the_proc,args_list):
+    def runAsMultiProc(self,the_proc,args_list,kwargs={}):
         try:
             starttime=time()
             q=Queue()
             q_args_list=[[q,*args] for args in args_list]
             proc_count=len(args_list)
-            procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
+            procs=[the_proc(*q_args_list[i],**kwargs) for i in range(proc_count)]
             [proc.start() for proc in procs]
             outlist=[]
             countdown=proc_count
@@ -150,7 +157,7 @@ class Mapper(myLogger):
       
         
     
-    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro',zzzno_fish=False,return_weights=False):#,wt_kwargs={'norm_index':'COMID'}):
+    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer='f1_micro',zzzno_fish=False,return_weights=False,spec_wt=None):#,wt_kwargs={'norm_index':'COMID'}):
         #get data
         if return_weights:
             name='comid_diffscor_fitscor_weights'
@@ -158,10 +165,13 @@ class Mapper(myLogger):
             name='wt_comid_feature_importance'
         if zzzno_fish:
             name+='_zzzno fish'
+        if type(spec_wt) is str:
+            name+='_'+spec_wt
+        name+='_'+fit_scorer
         
             
         if not rebuild: #just turning off rebuild here
-            
+             
             try:
                 saved_data=self.pr.getsave_postfit_db_dict(name)
                 return saved_data['data']#sqlitedict needs a key to pickle and save an object in sqlite
@@ -242,27 +252,30 @@ class Mapper(myLogger):
         if return_weights:
             coef_df=None
         args_list=[[huc12chunk[i],coef_df,scor_select,adiff_scor_chunk[i]] for i in range(proc_count)]
-        """#####
+        kwargs={'spec_wt':spec_wt}
+        """ 
+        #####
         q=Queue()
         self.mch_list=[]
         self.results=[]
-        for args in args_list[:1]:
+        for args in args_list[-2:-1]:
             args=[q,*args]
             mch=MatchCollapseHuc12(*args)
             self.mch_list.append(mch)
             self.results.append(self.mch_list[-1].run())
         
         wtd_coef_df=pd.concat(self.results,axis=0)
-        #####"""
+        #####
+        """
         print(f'starting {proc_count} procs')
-        dflistlist=self.runAsMultiProc(MatchCollapseHuc12,args_list)
+        dflistlist=self.runAsMultiProc(MatchCollapseHuc12,args_list,kwargs=kwargs)
         print('multiprocessing complete')
         dflist=[]
         for dfl in dflistlist:
             dflist.extend(dfl)
         self.dflist=dflist
         print('concatenating dflist')
-        wtd_coef_df=pd.concat(dflist,axis=0)  
+        wtd_coef_df=pd.concat(dflist,axis=0) 
         
             
         #wtd_coef_df=scorwtd_coef_df.multiply(adiff,axis=0)
@@ -299,9 +312,9 @@ class Mapper(myLogger):
         except: self.getHucBoundary(huc_level)
         return self.boundary_dict[huc_level].merge(data_df,left_on=huc_level,right_on=right_on)
   
-    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,filter_vars=False):
+    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,filter_vars=False,spec_wt=None,fit_scorer='f1_micro'):
         
-        wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish)
+        wtd_coef_df=self.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish,spec_wt=spec_wt,fit_scorer=fit_scorer)
         if split is None:
             cols=wtd_coef_df.columns
             if filter_vars:
@@ -417,9 +430,18 @@ class Mapper(myLogger):
         self.yhat_a=yhat_a
         self.diff=diff
         return y_a,yhat_a,diff'''
-    def plot_confusion_01predict(self,rebuild=0):
+    def plot_confusion_01predict(self,rebuild=0,fit_scorer='f1_micro'):
         wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
-    
+        y=wt_df['y'].drop(species='zzzno fish',level='species')
+        yhat=wt_df['yhat'].drop(species='zzzno fish',level='species')
+        coef_scor_df=wt_df['coef_scor_df'].drop(species='zzzno fish',level='species')
+        csd_vars=coef_scor_df.columns.levels[0].to_list()
+        scor_vars=[var for var in csd_vars if var[:7]=='scorer:']
+        
+        
+        
+        
+        
     def draw_huc12_truefalse(self,rebuild=0):
         try: self.boundary_dict['huc12']
         except: self.getHucBoundary('huc12')
