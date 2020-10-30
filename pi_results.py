@@ -8,7 +8,7 @@ import traceback
 import shutil
 from random import randint,seed,shuffle
 import logging
-#from queue import Queue
+from multiprocessing  import Queue
 import numpy as np
 import pandas as pd
 from  sk_tool import SKToolInitializer
@@ -24,6 +24,7 @@ import pickle
 from geogtools import GeogTool as GT
 from pisces_data_huc12 import PiscesDataTool as PDT
 from pi_runners import PredictRunner
+from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12
 #from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
@@ -45,8 +46,312 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.sk_est_dict=self.ske.get_est_dict() 
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
+        self.fit_scorer='f1_micro'
+        
+    def scale_coef_by_X(self,coef_df=None,wt='fitscor_diffscor',rebuild=0,drop_zzz=True):
+        if type(wt) is str and wt=='fitscor_diffscor':
+            wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=False,return_weights=True,spec_wt=None)
+        name=os.path.join(os.getcwd(),'results','bigXB.h5')
+        key='data'
+        if not rebuild:
+            try:
+                XB_df=pd.read_hdf(name,key)
+                return XB_df#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
+        if coef_df is None:
+            coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz)
+        spec_list=coef_df.index.unique(level='species')
+        Big_X_train_df=self.build_X_train_df(spec_list=spec_list,std=True)
+        if type(wt) is dict:
+            self.logger.info('getting weights')
+            wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,**wt)
+        else:
+            wt_df=None
+        #xvars=Big_X_train_df.columns
+        #col_index=pd.MultiIndex.from_tuples([(xvar,) for xvar in xvars],names=['var'])
+        #Big_X_train_df.columns=col_index
+        cycles=40
+        cycle_n=-(-len(spec_list)//cycles)
+        chunks=5
+        chunk_n=-(-cycle_n//chunks)
+        #args_list_list=[]
+        df=pd.DataFrame()
+        for cy in range(cycles)[:1]: # 1 cycle for debugging
+            args_list=[]
+            for c in range(chunks):
+                left=cy*cycle_n+c*chunk_n
+                right=left+chunk_n
+                spec_list_ch=spec_list[left:right]
+                
+                if wt_df is None:
+                    spec_wt=None
+                else:
+                    spec_wt=wt_df.loc[spec_list_ch]
+                spec_wt.index=spec_wt.index.remove_unused_levels()
+                spec_x=Big_X_train_df.loc[spec_list_ch].astype(np.float32)
+                spec_x.index=spec_x.index.remove_unused_levels()
+                spec_b=coef_df.loc[spec_list_ch].astype(np.float32)
+                spec_b.index=spec_b.index.remove_unused_levels()  
+                args_list.append([spec_x,spec_b,spec_wt])
+                if right>=len(spec_list):break
+            self.logger.info(f'starting cycle:{cy+1}/{cycles}')
+            mph=MpHelper()
+            #self.mph=mph
+            df=pd.concat([df,*mph.runAsMultiProc(MulXB,args_list)],axis=0,no_mp=True) #no_mp for debugging
+            #args_list_list.append(args_list)
+            if right>=len(spec_list):break
+        
+        """    
+        q=Queue()
+        self.mxb=MulXB(q,*args_list_list[0][0])
+        self.mxb.run()
+        result=q.get_nowait()
+        ####
+        """
+        self.logger.info(f'staring up MulXB procs')
+        df=pd.DataFrame()
+        for a,args_list in enumerate(args_list_list):
+            self.logger.info(f'starting cycle# {a}/{cycles}')
+            df=pd.concat([df,*MpHelper().runAsMultiProc(MulXB,args_list)],axis=0)
+        self.logger.info(f'about to concat dflist rom MulXB')
+        XB_df=df#pd.concat(dflist,axis=0)
+        ####
+        #"""
+        
+        XB_df.to_hdf(name,key,complevel=5)
+        return XB_df
+        #for spec in spec_list:
+            
+        ...
+        return coef_df,scor_df
     
+    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer=None,
+                                          zzzno_fish=False,return_weights=False,
+                                          spec_wt=None):#,wt_kwargs={'norm_index':'COMID'}):
+        #get data
+        if fit_scorer is None:
+            fit_scorer=self.fit_scorer
+        if return_weights:
+            name='comid_diffscor_fitscor_weights'
+        else:
+            name='wt_comid_feature_importance'
+            if type(spec_wt) is str:#not relevant for return_weights
+                name+='_'+spec_wt
+        if zzzno_fish:
+            name+='_zzzno fish'
+        
+        name+='_'+fit_scorer
+        
+            
+        if not rebuild: #just turning off rebuild here
+             
+            try:
+                saved_data=self.getsave_postfit_db_dict(name)
+                return saved_data['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
+        datadict=self.stack_predictions(rebuild=rebuild)
+        
+        y=datadict['y']#.astype('Int8')
+        yhat=datadict['yhat']#.astype('Int8')
+        
+        coef_scor_df=datadict['coef_scor_df']#.astype('float32')
+        coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=True)
+        
+        #get the scorer
+        scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
+        
+        #drop non-linear ests
+        ests_without_coefs=['gradient-boosting-classifier',
+                    'hist-gradient-boosting-classifier','rbf-svc']
+        for est in ests_without_coefs:
+            try:yhat.drop(est,level='estimator',inplace=True)
+            except:self.logger.exception(f'error dropping est:{est}, moving on')
+        
+        #make diffs
+        self.y=y;self.yhat=yhat
+        yhat_a,y_a=yhat.align(y,axis=0)
+        adiff_scor=np.exp(yhat_a.subtract(y_a.values,axis=0).abs().mul(-1)) # a for abs
+        self.adiff_scor=adiff_scor
+        #wt ceofs w/ score
+        self.scor_select=scor_select
+        self.coef_df=coef_df
+
+        scor_select.columns=scor_select.columns.droplevel('var')
+        #coef_a,scor_a=coef_df.align(scor_select,axis=1)
+        """need to drop zzzno_fish before summing for weight normalization"""
+        if zzzno_fish:
+            ztup=(['zzzno fish'],slice(None),slice(None),slice(None))
+            scor_select=scor_select.loc[ztup]
+            scor_select.index=scor_select.index.remove_unused_levels()
+            coef_df=coef_df.loc[ztup]
+            coef_df.index=coef_df.index.remove_unused_levels()
+            adiff_scor=adiff_scor.loc[ztup]
+            adiff_scor.index=adiff_scor.index.remove_unused_levels()
+            self.scor_select=scor_select;self.coef_df=coef_df;self.adiff_scor=adiff_scor
+        else:
+            scor_select.drop('zzzno fish',level='species',inplace=True)
+            coef_df.drop('zzzno fish',level='species',inplace=True)
+            adiff_scor.drop('zzzno fish',level='species',inplace=True)
+        #break into chunks and line up coefs w/ huc12's in groups b/c 
+        if zzzno_fish:
+            proc_count=1
+        else:
+            proc_count=10
+        #huc12_list=y.index.levels[1].to_list()
+        huc12_list=adiff_scor.index.levels[1].to_list()
+        
+        chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
+        huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]
+        adiff_scor_chunk=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
+        if return_weights:
+            coef_df=None
+        args_list=[[huc12chunk[i],coef_df,scor_select,adiff_scor_chunk[i]] for i in range(proc_count)]
+        kwargs={'spec_wt':spec_wt}
+        """ 
+        #####
+        q=Queue()
+        self.mch_list=[]
+        self.results=[]
+        for args in args_list[-2:-1]:
+            args=[q,*args]
+            mch=MatchCollapseHuc12(*args)
+            self.mch_list.append(mch)
+            self.results.append(self.mch_list[-1].run())
+        
+        wtd_coef_df=pd.concat(self.results,axis=0)
+        #####
+        """
+        print(f'starting {proc_count} procs')
+        dflistlist=MpHelper().runAsMultiProc(MatchCollapseHuc12,args_list,kwargs=kwargs)
+        self.dflistlist=dflistlist
+        print('multiprocessing complete')
+        dflist=[]
+        for dfl in dflistlist:
+            dflist.extend(dfl)
+        self.dflist=dflist
+        print('concatenating dflist')
+        wtd_coef_df=pd.concat(dflist,axis=0) 
+        #"""
+            
+        #wtd_coef_df=scorwtd_coef_df.multiply(adiff,axis=0)
+        self.wtd_coef_df=wtd_coef_df
+        
+        
+        save_data={'data':wtd_coef_df} 
+        self.getsave_postfit_db_dict(name,save_data)
+        return wtd_coef_df
+    
+    
+    def build_X_train_df(self,rebuild=0,spec_list=None,std=True):
+        name=os.path.join(os.getcwd(),'results','bigX.h5')
+        if std:
+            key='std_data'
+        else:
+            key='data'
+        if not rebuild:
+            try:
+                Big_X_train_df=pd.read_hdf(name,key)
+                return Big_X_train_df#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
+        try:
+            self.results_dict
+        except:
+            self.results_dict=self.resultsDBdict()
+        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
+        if spec_list is None:
+            spec_list=list(species_hash_id_dict.keys())
+        if std:
+            metadict=self.metadataDBdict()
+            
+        spec_df_list=[]
+        for spec in spec_list:
+            spec_meta_dict=metadict[spec]
+            a_hash_id=species_hash_id_dict[spec][0]
+            modeldict=self.results_dict[a_hash_id]
+            datagen_dict=modeldict['data_gen']
+            species=datagen_dict['species']
+            data=dataGenerator(datagen_dict)
+            n=data.y_train.shape[0]
+            X_train=data.X_train
+            if std:
+                X_std=spec_meta_dict['X_train_std']
+                X_mean=spec_meta_dict['X_train_mean']
+                X_train=(X_train-X_mean)/X_std
+            huc12s=data.df.loc[:,'HUC12']
+            huc12strs=huc12s.apply(self.huc12float_to_str)
+            comids=data.y_train.index
+            names=['species','HUC12','COMID']
+            index=pd.MultiIndex.from_tuples([(species,huc12strs[i],comids[i])  for i in range(n)],names=names)
+            X_train.index=index
+            spec_df_list.append(X_train)
+        Big_X_train_df=pd.concat(spec_df_list,axis=0) 
+        Big_X_train_df.to_hdf(name,key,complevel=5)
+        return Big_X_train_df
+        
+                
+    def huc12float_to_str(self,huc12):
+        huc12str=str(int(huc12))
+        if len(huc12str)==11:huc12str='0'+huc12str
+        assert len(huc12str)==12,'expecting len 12 from huc12str:{huc12str}'
+        return huc12str
+    
+    
+    def get_coef_stack(self,rebuild=0,drop_zzz=True):
+        pdict=self.stack_predictions(rebuild=rebuild)
+        if drop_zzz:
+            pdict=self.drop_zzz(pdict)
+        coef_scor_df=pdict['coef_scor_df']
+        coef_df,scor_df=self.split_coef_scor_df(coef_scor_df)
+        return coef_df,scor_df
+        
+    def drop_zzz(self,data):
+        if type(data) is dict:
+            for key in data.keys():
+                try:
+                    data[key].drop('zzzno fish',level='species',inplace=True)
+                    self.logger.info(f'zzzno_fish dropped from key:{key}')
+                except:
+                    self.logger.exception(f'error dropping zzzno fish from key:{key}')
+        elif type(data) is pd.DataFrame:
+            data.drop(species='zzzno fish',level='species',inplace=True)
+        return data
+    
+    def split_coef_scor_df(self,coef_scor_df,drop_nocoef_scors=False):
+        scor_indices=[]
+        coef_indices=[]
+        coef_scor_cols=coef_scor_df.columns
+        for i,tup in enumerate(coef_scor_cols):
+            if tup[0][:7]=='scorer:':
+                scor_indices.append(i)
+            else:
+                coef_indices.append(i)
+        scor_df=coef_scor_df.iloc[:,scor_indices]  
+        coef_df=coef_scor_df.iloc[:,coef_indices]  
+        coef_df=coef_df.dropna(axis=0,how='all')
+        self.logger.info(f'BEFORE drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
+        if drop_nocoef_scors:
+            coef_df,scor_df=coef_df.align(scor_df,axis=0,join='inner')#dropping scors w/o coefs
+            self.logger.info(f'AFTER drop coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}')
+        else:
+            self.logger.info(f'splitting coef_scor_df and not dropping nocoe_scors, so no after... coef_df.shape:{coef_df.shape},scor_df.shape:{scor_df.shape}.')
+        #remove unused levels???
+        return coef_df,scor_df
+        
+        
     def stack_predictions(self,rebuild=0):
+        #combines different models (species+data+fit) over DF index and repetitions over columns (rep_idx level) 
         keys=['y','yhat','coef_scor_df']
         name=os.path.join(os.getcwd(),'results','prediction_stack.h5')
         if not rebuild:
@@ -129,112 +434,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
         new_predictresult={'y':y,'yhat':new_yhat,
                            'coef_scor_df':new_coef_scor_df}
         return new_predictresult
-
-
-    """
-    def build_spec_est_coef_df(self,rebuild=0):
-        #dghash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=rebuild)
-        name='spec_est_coef_df'
-        if not rebuild:
-            try:
-                spec_est_coef_df=self.getsave_postfit_db_dict(name)
-                return spec_est_coef_df['data']#sqlitedict needs a key to pickle and save an object in sqlite
-            except:
-                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-        try: self.predict_dict
-        except: self.predict_dict=self.predictDBdict()
-        try: self.results_dict
-        except:self.results_dict=self.resultsDBdict()
-        df_list=[]
-        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
-        for species,hash_id_list in species_hash_id_dict.items():
-            est_dict={};spec_df_list=[]
-            for hash_id in hash_id_list:
-                
-                try:
-                    model_dict=self.results_dict[hash_id]
-                    predict_dict=self.predict_dict[hash_id]
-                    success=1
-                except:success=0
-                if success:
-                    est_name=model_dict['model_gen']['name']
-                    if not est_name in est_dict:
-                        est_dict[est_name]=predict_dict#[(model_dict,predict_dict)]
-                    else:
-                        est_dict[est_name].append(predict_dict)#(model_dict,predict_dict))
-            for est,predict_dict_list in est_dict.items():
-                if len(predict_list)>0:
-                    y=[];yhat=[];scor_coef=[]
-                    for predict_result in predict_list:
-                        pass
-                df=self.get_cv_coefs_scores_predictions_df(model_predict_tup_list)
-                df_list.append(df)   
-                
-        '''for hash_id,model_dict in self.results_dict.items():
-            df=self.get_cv_coef_df(model_dict)
-            if not df is None:
-                df_list.append(df)'''
-        spec_est_coef_df=pd.concat(df_list,axis=0)
-        self.coef_df=spec_est_coef_df# for developing in jupyterlabs
-        self.getsave_postfit_db_dict(name,spec_est_coef_df)
-        return spec_est_coef_df # just returning the df"""
-    
-    
-    """def get_cv_coefs_scores_predictions_df(self,model_predict_tup_list,):
-        assert False,'broken,obsolete'
-        # model_dict is the val sotred in results_dict
-        
-        species=model_predict_tup_list[0][0]['data_gen']['species']
-        sktool_list=[];hash_id_list=[]
-        for model_dict,predict_dict in model_predict_tup_list:
-            est_name=model_dict['model_gen']['name']
-            hash_id_list.append(modeldict['model_gen']['hash_id'])
-            if not est_name in ['logistic-reg','linear-svc']: #using est and model interchangeably :(
-                #print(f'no coef for est_name:{est_name}')
-                return None
-            #for cv_i in range(len(None)):
-            self.ske.get_coef_frdom_fit_est[]
-            sktool_list.append(model_dict['model']['estimator'])
-            
-        
-        x_vars=sktool_list[0].x_vars
-        K=len(x_vars)
-        fit_est_list=[skt.model_ for skt in sktool_list]
-        cv_m_count=len(fit_est_list)
-        
-        coef_array_list=[]
-        self.fit_est_list=fit_est_list
-        col_mindx_tuplist=[]
-        
-        for cv_idx,est in enumerate(fit_est_list):
-            coefs=self.ske.get_coef_from_fit_est(est_name,est)
-            coef_array_list.append(coefs)
-            col_mindx_tuplist.extend([(xvar,f'cv_{cv_idx}') for xvar in x_vars])
-            ##axis appended for concatenation
-        coef_arr=np.concatenate(coef_array_list,axis=0).T
-        columns_midx=pd.MultiIndex.from_tuples(col_mindx_tuplist,names=['x_var','cv_i'])
-        index_midx=pd.MultiIndex.from_tuples([(species,est_name)], names=['species','estimator'] )
-        df=pd.DataFrame(data=coef_arr,columns=columns_midx,index=index_midx)
-        
-        
-        '''coef_mat=np.concatenate(coef_array_list,axis=1)
-        #x_var_coef_dict={x_vars[k]:coef_mat[k,:] for k in range(K)}
-        mindex=pd.MultiIndex.from_tuples([(species,est_name,xvar) for xvar in x_vars],names=['species','estimator','x_var'])
-        columns=[f'cv_{m}' for m in range(cv_m_count)]
-        df=pd.DataFrame(data=coef_mat,columns=columns,index=mindex)'''
-        self.logger.info(f'coef df:{df}')
-        return df
-    """
-        
-        
-    '''def build_comid_insample_err_compare(self,wt='f1_micro',rebuild=0):  
-        
-        y_yhat_df=build_aggregate_predictions_by_species(rebuild=rebuild)
-        y=y_yhat_df.xs('y_train',level='estimator').loc[:,['y']]
-        yhat=y_yhat_df.drop('y_train',level='estimator').loc[:,y_yhat_df.columns!='y']
-        y_a,yhat_a= y.align(yhat,axis=0)
-        diff=yhat_a.sub(y_a['y'],axis=0) # use to graph false+,false-, and correct'''
-        
     
     def build_prediction_rundicts(self,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
@@ -512,7 +711,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
         except:
             self.logger.exception(f'outer catch in building spec_est Permutations')
                                            
-    def spec_est_scor_df_from_dict(self,rebuild=0,scorer='f1_micro'):
+    def spec_est_scor_df_from_dict(self,rebuild=0,scorer=None):
+        if fit_scorer is None:
+            fit_scorer=self.fit_scorer
         try: self.scor_est_spec_dict
         except:self.build_scor_est_spec_dict(rebuild=rebuild)
         scor_est_spec_dict=self.scor_est_spec_dict

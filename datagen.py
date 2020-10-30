@@ -86,6 +86,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.y_train=y_train
             self.y_test=y_test
             self.X_train_std=self.X_train.std(axis=0)
+            self.X_train_mean=self.X_train.mean(axis=0)
             self.y_train_mean=np.mean(self.y_train)
             
             
@@ -118,6 +119,7 @@ class dataGenerator(PiscesDataTool,myLogger):
         datagenhash=joblib.hash(self.datagen_dict)
         metadict=dict(
             X_train_std=self.X_train_std,
+            X_train_mean=self.X_train_mean,
             y_train_mean=self.y_train_mean,
             ymean=self.ymean,
             n=self.n,

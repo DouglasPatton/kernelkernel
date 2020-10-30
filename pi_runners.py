@@ -6,7 +6,6 @@ from sk_estimators import sk_estimator
 from datagen import dataGenerator
 from pi_db_tool import DBTool
 
-
 ## Runners are oriented around the data_gen in 
 ###the rundict they recieve. the data is not pulled 
 ###until the node starts it up to reduce q load 
