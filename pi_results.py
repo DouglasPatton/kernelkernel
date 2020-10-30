@@ -74,13 +74,13 @@ class PiResults(DBTool,DataPlotter,myLogger):
         #xvars=Big_X_train_df.columns
         #col_index=pd.MultiIndex.from_tuples([(xvar,) for xvar in xvars],names=['var'])
         #Big_X_train_df.columns=col_index
-        cycles=40
+        cycles=5
         cycle_n=-(-len(spec_list)//cycles)
         chunks=5
         chunk_n=-(-cycle_n//chunks)
         #args_list_list=[]
-        df=pd.DataFrame()
-        for cy in range(cycles)[:1]: # 1 cycle for debugging
+        XB_df=pd.DataFrame()
+        for cy in range(cycles): # 1 cycle for debugging
             args_list=[]
             for c in range(chunks):
                 left=cy*cycle_n+c*chunk_n
@@ -101,7 +101,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             self.logger.info(f'starting cycle:{cy+1}/{cycles}')
             mph=MpHelper()
             #self.mph=mph
-            df=pd.concat([df,*mph.runAsMultiProc(MulXB,args_list)],axis=0,no_mp=True) #no_mp for debugging
+            XB_df=pd.concat([XB_df,*mph.runAsMultiProc(MulXB,args_list,no_mp=False)],axis=0) #no_mp for debugging
             #args_list_list.append(args_list)
             if right>=len(spec_list):break
         
@@ -111,7 +111,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.mxb.run()
         result=q.get_nowait()
         ####
-        """
+        
         self.logger.info(f'staring up MulXB procs')
         df=pd.DataFrame()
         for a,args_list in enumerate(args_list_list):
@@ -120,7 +120,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.logger.info(f'about to concat dflist rom MulXB')
         XB_df=df#pd.concat(dflist,axis=0)
         ####
-        #"""
+        """
         
         XB_df.to_hdf(name,key,complevel=5)
         return XB_df

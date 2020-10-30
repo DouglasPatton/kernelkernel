@@ -29,13 +29,13 @@ class MulXB(Process,myLogger):
                 self.xb=xb;self.w=w
                 self.logger.info(f'xb:{xb}')
                 self.logger.info(f'w:{w}')
-                xbw=xb.mul(w,axis=0,level=['rep_idx','split_idx'])
+                xbw=xb.mul(w,axis=0)
                 xbw_=xbw.sum(axis=1,level='var') 
                 result=xbw_            
             else:
                 result=xb
             self.logger.info(f'MulXB result:{result}')
-            if not q is None:
+            if not self.q is None:
                 self.q.put(result)
             else:
                 self.result=result
@@ -147,7 +147,7 @@ class MatchCollapseHuc12(Process,myLogger):
             
 class MpHelper(myLogger):   
     def __init__(self):
-        myLogger.__init__(self,)
+        myLogger.__init__(self,name='mphelper.log')
         
             
     def runAsMultiProc(self,the_proc,args_list,kwargs={},no_mp=False):
