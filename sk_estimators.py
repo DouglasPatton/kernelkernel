@@ -47,13 +47,15 @@ class sk_estimator(myLogger):
                 
         else:assert False,f'unexpected est_name:{est_name}'  
         if std_rescale:
-            
+            self.logger.info(f'before transforming: coef.shape:{coef.shape}, std.shape:{std.shape}, global_std.shape:{global_std.shape}')
             coef_raw=coef.copy()
-            std=std[None,:]
-            global_std=global_std.to_numpy()[None,:]
+            std=std[:,None]
+            global_std=global_std.to_numpy()[:,None]
             #self.logger.info(f'coef:{coef}, std:{std}, global_std:{global_std}')
-            coef=coef*std/global_std #rescaled
             
+            coef=coef/std*global_std #rescaled
+            coef[std<0.01]=0
+            coef[global_std<0.01]=0
             #self.logger.info(f'est_name:{est_name}, std.T:{std}, coef_raw:{coef_raw}, coef:{coef}')
         
         return coef

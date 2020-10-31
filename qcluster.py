@@ -154,8 +154,8 @@ class JobQFiller(mp.Process,myLogger):
         while len(self.joblist):
             if q_size<max_q_size:
                 if i>1 and q_size==0: 
-                    self.logger.info(f'jobq is empty, so max_q doubling from {max_q}')
-                    max_q*=2 # double max q since it is being consumed
+                    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
+                    max_q_size*=2 # double max q since it is being consumed
                 tries=0
                 for i in range(max_q_size): #fill queue back up to 2*max_q_size
                     if len(self.joblist):

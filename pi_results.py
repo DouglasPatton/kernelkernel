@@ -55,6 +55,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 return stacked_predict_dict#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
         try: self.predict_dict
         except: self.predict_dict=self.predictDBdict()
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
@@ -277,6 +280,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
         if species_hash_id_dict is None: 
             species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
         hash_id_list1=[hash_id_list[0] for species,hash_id_list in species_hash_id_dict.items()] # just get 1 hash_id per species
@@ -308,6 +314,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
         try: self.predictDB
         except:self.predictDB={key:val for key,val in self.predictDBdict().items()}  
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild)    
