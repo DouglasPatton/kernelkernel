@@ -47,11 +47,18 @@ class Mapper(myLogger):
         except: self.getHucBoundary(huc_level)
         return self.boundary_dict[huc_level].merge(data_df,left_on=huc_level,right_on=right_on)
   
-    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,filter_vars=False,spec_wt=None,fit_scorer=None):
+    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+                      filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=True):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-        
-        wtd_coef_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish,spec_wt=spec_wt,fit_scorer=fit_scorer)
+        if scale_by_X:
+            wtd_coef_df=self.pr.scale_coef_by_X(rebuild=rebuild,
+                                                wt=dict(zzzno_fish=zzzno_fish,return_weights=True,
+                                                        spec_wt=spec_wt,fit_scorer=fit_scorer))
+        else:
+            wtd_coef_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish,
+                                                              spec_wt=spec_wt,fit_scorer=fit_scorer)
+        self.logger.info('features loaded')
         if split is None:
             cols=wtd_coef_df.columns
             if filter_vars:
@@ -80,11 +87,15 @@ class Mapper(myLogger):
             colname='top_predictive_variable'
             big_top_cols_pos=big_top_cols_pos.rename(colname)
             big_top_cols_neg=big_top_cols_neg.rename(colname)
+            
+            
             self.big_top_cols_pos=big_top_cols_pos
             self.big_top_cols_neg=big_top_cols_neg
             
+            
+            self.logger.info('starting boundary merge pos')
             geo_pos_cols=self.hucBoundaryMerge(big_top_cols_pos)
-            geo_neg_cols=self.hucBoundaryMerge(big_top_cols_neg)
+
                
             fig=plt.figure(dpi=300,figsize=[10,14])
             ax=fig.add_subplot(2,1,1)
@@ -92,6 +103,9 @@ class Mapper(myLogger):
             #cax = divider.append_axes("right", size="5%", pad=0.1)
             geo_pos_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
             self.add_huc2_conus(ax)
+            
+            self.logger.info('starting boundary merge neg')
+            geo_neg_cols=self.hucBoundaryMerge(big_top_cols_neg)
             
             ax=fig.add_subplot(2,1,2)
             #divider = make_axes_locatable(ax)
@@ -126,18 +140,11 @@ class Mapper(myLogger):
         huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
         huc2_conus.boundary.plot(linewidth=1,color=None,edgecolor='k',ax=ax)
     
-    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None):
+    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-        datadict=self.pr.stack_predictions(rebuild=rebuild)
         wt_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
-        datadict=self.pr.drop_zzz(datadict)
-        y=datadict['y']#.drop('zzzno fish',level='species')
-        yhat=datadict['yhat']#.drop('zzzno fish',level='species')
-        coef_scor_df=datadict['coef_scor_df']#.drop('zzzno fish',level='species')
-        csd_vars=coef_scor_df.columns.levels[0].to_list()
-        scor_vars=[var for var in csd_vars if var[:7]=='scorer:']
-        
+        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
         
         
         

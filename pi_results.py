@@ -48,9 +48,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.helper=Helper()
         self.fit_scorer='f1_micro'
         
-    def scale_coef_by_X(self,coef_df=None,wt='fitscor_diffscor',rebuild=0,drop_zzz=True):
+    def scale_coef_by_X(self,coef_df=None,wt='fitscor_diffscor',rebuild=0,zzzno_fish=False):
         if type(wt) is str and wt=='fitscor_diffscor':
-            wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=False,return_weights=True,spec_wt=None)
+            wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=zzzno_fish,return_weights=True,spec_wt=None)
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
         key='data'
         if not rebuild:
@@ -63,7 +63,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             if type(rebuild) is int:
                 rebuild-=1
         if coef_df is None:
-            coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz)
+            coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish)
         spec_list=coef_df.index.unique(level='species')
         Big_X_train_df=self.build_X_train_df(spec_list=spec_list,std=True)
         if type(wt) is dict:
@@ -308,13 +308,16 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return huc12str
     
     
-    def get_coef_stack(self,rebuild=0,drop_zzz=True):
+    def get_coef_stack(self,rebuild=0,drop_zzz=True,return_y_yhat=False):
         pdict=self.stack_predictions(rebuild=rebuild)
         if drop_zzz:
             pdict=self.drop_zzz(pdict)
         coef_scor_df=pdict['coef_scor_df']
         coef_df,scor_df=self.split_coef_scor_df(coef_scor_df)
-        return coef_df,scor_df
+        if return_y_yhat: 
+            return coef_df,scor_df,pdict['y'],pdict['yhat']
+        else: 
+            return coef_df,scor_df
         
     def drop_zzz(self,data):
         if type(data) is dict:
