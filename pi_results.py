@@ -48,9 +48,9 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.helper=Helper()
         self.fit_scorer='f1_micro'
         
-    def scale_coef_by_X(self,coef_df=None,wt='fitscor_diffscor',rebuild=0,zzzno_fish=False):
+    def scale_coef_by_X(self,coef_df=None,wt='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False):
         if type(wt) is str and wt=='fitscor_diffscor':
-            wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=zzzno_fish,return_weights=True,spec_wt=None)
+            wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=zzzno_fish,return_weights=True,spec_wt=spec_wt,scale_by_X=False)
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
         key='data'
         if not rebuild:
@@ -69,6 +69,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         if type(wt) is dict:
             self.logger.info('getting weights')
             wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,**wt)
+        elif type(wt) is pd.DataFrame:
+            wt_df=wt
         else:
             wt_df=None
         #xvars=Big_X_train_df.columns
@@ -124,14 +126,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
         XB_df.to_hdf(name,key,complevel=5)
         return XB_df
-        #for spec in spec_list:
-            
-        ...
-        return coef_df,scor_df
     
     def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer=None,
                                           zzzno_fish=False,return_weights=False,
-                                          spec_wt=None):#,wt_kwargs={'norm_index':'COMID'}):
+                                          spec_wt=None,scale_by_X=False):
         #get data
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -143,7 +141,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 name+='_'+spec_wt
         if zzzno_fish:
             name+='_zzzno fish'
-        
+        if scale_by_X:
+            name+='_scaled_by_X'
         name+='_'+fit_scorer
         
             
@@ -157,32 +156,38 @@ class PiResults(DBTool,DataPlotter,myLogger):
         else:
             if type(rebuild) is int:
                 rebuild-=1
-        datadict=self.stack_predictions(rebuild=rebuild)
         
+        datadict=self.stack_predictions(rebuild=rebuild)
+
         y=datadict['y']#.astype('Int8')
         yhat=datadict['yhat']#.astype('Int8')
-        
+
         coef_scor_df=datadict['coef_scor_df']#.astype('float32')
         coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=True)
-        
+        self.logger.info('coef_df,scor_df retrieved')
+        if scale_by_X:
+            self.logger.info(f'building coef_df scaled_by_X')
+            coef_df=self.scale_coef_by_X(
+                coef_df=coef_df,wt='fitscor_diffscor',rebuild=rebuild,zzzno_fish=zzzno_fish)
+            self.logger.info(f'sucessfully built coef_df scaled_by_X')
         #get the scorer
         scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
-        
+
         #drop non-linear ests
         ests_without_coefs=['gradient-boosting-classifier',
                     'hist-gradient-boosting-classifier','rbf-svc']
         for est in ests_without_coefs:
             try:yhat.drop(est,level='estimator',inplace=True)
             except:self.logger.exception(f'error dropping est:{est}, moving on')
-        
+
         #make diffs
-        self.y=y;self.yhat=yhat
+        #self.y=y;self.yhat=yhat
         yhat_a,y_a=yhat.align(y,axis=0)
         adiff_scor=np.exp(yhat_a.subtract(y_a.values,axis=0).abs().mul(-1)) # a for abs
-        self.adiff_scor=adiff_scor
-        #wt ceofs w/ score
-        self.scor_select=scor_select
-        self.coef_df=coef_df
+        #self.adiff_scor=adiff_scor
+        #wt coefs w/ score
+        #self.scor_select=scor_select
+        #self.coef_df=coef_df
 
         scor_select.columns=scor_select.columns.droplevel('var')
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
@@ -191,30 +196,34 @@ class PiResults(DBTool,DataPlotter,myLogger):
             ztup=(['zzzno fish'],slice(None),slice(None),slice(None))
             scor_select=scor_select.loc[ztup]
             scor_select.index=scor_select.index.remove_unused_levels()
-            coef_df=coef_df.loc[ztup]
-            coef_df.index=coef_df.index.remove_unused_levels()
+            if not scale_by_X:#already done if scale_by_X
+                coef_df=coef_df.loc[ztup]
+                coef_df.index=coef_df.index.remove_unused_levels()
             adiff_scor=adiff_scor.loc[ztup]
             adiff_scor.index=adiff_scor.index.remove_unused_levels()
-            self.scor_select=scor_select;self.coef_df=coef_df;self.adiff_scor=adiff_scor
+            #self.scor_select=scor_select;self.coef_df=coef_df;self.adiff_scor=adiff_scor
         else:
             scor_select.drop('zzzno fish',level='species',inplace=True)
-            coef_df.drop('zzzno fish',level='species',inplace=True)
+            if not scale_by_X: #already done if scale_by_X
+                coef_df.drop('zzzno fish',level='species',inplace=True)
             adiff_scor.drop('zzzno fish',level='species',inplace=True)
         #break into chunks and line up coefs w/ huc12's in groups b/c 
         if zzzno_fish:
             proc_count=1
         else:
             proc_count=10
-        #huc12_list=y.index.levels[1].to_list()
+
         huc12_list=adiff_scor.index.levels[1].to_list()
         
         chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
         huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]
-        adiff_scor_chunk=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
+        
         if return_weights:
             coef_df=None
+            
+        adiff_scor_chunk=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
         args_list=[[huc12chunk[i],coef_df,scor_select,adiff_scor_chunk[i]] for i in range(proc_count)]
-        kwargs={'spec_wt':spec_wt}
+        kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights}
         """ 
         #####
         q=Queue()

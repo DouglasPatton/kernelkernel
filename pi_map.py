@@ -51,13 +51,9 @@ class Mapper(myLogger):
                       filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=True):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-        if scale_by_X:
-            wtd_coef_df=self.pr.scale_coef_by_X(rebuild=rebuild,
-                                                wt=dict(zzzno_fish=zzzno_fish,return_weights=True,
-                                                        spec_wt=spec_wt,fit_scorer=fit_scorer))
-        else:
-            wtd_coef_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish,
-                                                              spec_wt=spec_wt,fit_scorer=fit_scorer)
+
+        wtd_coef_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish,
+                                                              spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X)
         self.logger.info('features loaded')
         if split is None:
             cols=wtd_coef_df.columns
@@ -91,7 +87,6 @@ class Mapper(myLogger):
             
             self.big_top_cols_pos=big_top_cols_pos
             self.big_top_cols_neg=big_top_cols_neg
-            
             
             self.logger.info('starting boundary merge pos')
             geo_pos_cols=self.hucBoundaryMerge(big_top_cols_pos)
