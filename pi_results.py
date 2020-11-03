@@ -24,7 +24,7 @@ import pickle
 from geogtools import GeogTool as GT
 from pisces_data_huc12 import PiscesDataTool as PDT
 from pi_runners import PredictRunner
-from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12,StackMul
+from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12
 #from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
@@ -129,35 +129,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
     
     
     
-    def presence_filter_coefs(self,wtd_coef_df,y=None):
-        self.logger.info(f'starting presence filter coefs')
-        if y is None:
-            datadict=self.pr.stack_predictions(rebuild=0)
-            y=datadict['y']
-        y_series=y.loc[:,'y']
-        
-        coef_df1=self.spec_batch_mul(wtd_coef_df,y_series)
-        coef_df0=self.spec_batch_mul(wtd_coef_df,1-y_series)
-        return [coef_df1,coef_df0]
-            
-    def spec_batch_mul(self,coef_df,y_series):
-        spec_pos_c=coef_df.index.names.index('species')
-        spec_pos_y=y_series.index.names.index('species')
-        spec_list=y_series.index.unique(level='species')
-        
-        args_list=[]
-        chunks=10
-        ch_size=-(-len(spec_list)//chunks) # ceil divide
-        y_slice=[slice(None) for _ in range(len(y_series.index.levels))]
-        coef_slice=[slice(None) for _ in range(len(coef_df.index.levels))]
-        for ch in range(chunks):
-            bite=slice(ch_size*ch,ch_size*(ch+1))
-            y_slice[spec_pos_y]=bite
-            coef_slice[spec_pos_c]=bite
-            args_list.append([coef_df.loc[tuple(coef_slice)],y_series.loc[tuple(y_slice)],'species'])
-        dflist=self.runAsMultiProc(StackMul,args_list,no_mp=False)
-        prod=pd.concat(dflist,axis=0)
-        return prod
     
     
     def build_wt_comid_feature_importance(
@@ -238,63 +209,121 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 coef_df.index=coef_df.index.remove_unused_levels()
             adiff_scor=adiff_scor.loc[ztup]
             adiff_scor.index=adiff_scor.index.remove_unused_levels()
+            y=y.loc[['zzzno fish']]
             #self.scor_select=scor_select;self.coef_df=coef_df;self.adiff_scor=adiff_scor
         else:
             scor_select.drop('zzzno fish',level='species',inplace=True)
             if not scale_by_X: #already done if scale_by_X
                 coef_df.drop('zzzno fish',level='species',inplace=True)
             adiff_scor.drop('zzzno fish',level='species',inplace=True)
-        #break into chunks and line up coefs w/ huc12's in groups b/c 
-        if zzzno_fish:
-            proc_count=1
-        else:
-            proc_count=10
+            y.drop('zzzno fish',level='species',inplace=True)
 
-        huc12_list=adiff_scor.index.levels[1].to_list()
-        
-        chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
-        huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]
-        
-        if return_weights:
-            coef_df=None
             
-        adiff_scor_chunk=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:] for i in range(proc_count)]
-        args_list=[[huc12chunk[i],coef_df,scor_select,adiff_scor_chunk[i]] for i in range(proc_count)]
-        kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights}
-        """ 
-        #####
-        q=Queue()
-        self.mch_list=[]
-        self.results=[]
-        for args in args_list[-2:-1]:
-            args=[q,*args]
-            mch=MatchCollapseHuc12(*args)
-            self.mch_list.append(mch)
-            self.results.append(self.mch_list[-1].run())
+        if zzzno_fish: # no need for mp
+            proc_count=1
+        else: # to split list of huc's for parallel processing, 
+            ##   with internal splits as well for ram savings
+            proc_count=10
+        mch_kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights,
+                    'presence_filter':presence_filter}
+        wtd_coef_df=self.mul_wt_norm_coefs(
+                adiff_scor,scor_select,coef_df,y,proc_count=proc_count,mch_kwargs=mch_kwargs)
         
-        wtd_coef_df=pd.concat(self.results,axis=0)
-        #####
-        """
-        print(f'starting {proc_count} procs')
-        dflistlist=MpHelper().runAsMultiProc(MatchCollapseHuc12,args_list,kwargs=kwargs)
-        self.dflistlist=dflistlist
-        print('multiprocessing complete')
-        dflist=[]
-        for dfl in dflistlist:
-            dflist.extend(dfl)
-        self.dflist=dflist
-        print('concatenating dflist')
-        wtd_coef_df=pd.concat(dflist,axis=0) 
-        #"""
-        if presence_filter:
-            wtd_coef_df=self.presence_filter_coefs(wtd_coef_df,y=y)
-        #wtd_coef_df=scorwtd_coef_df.multiply(adiff,axis=0)
-        self.wtd_coef_df=wtd_coef_df
+        
+        
         
         
         save_data={'data':wtd_coef_df} 
         self.getsave_postfit_db_dict(name,save_data)
         return wtd_coef_df
+    #below moved to pi_mp_helper
+    '''def presence_filter_coefs(self,coef_df,y=None):
+        self.logger.info(f'starting presence filter coefs')
+        if y is None:
+            datadict=self.pr.stack_predictions(rebuild=0)
+            y=datadict['y']
+        y_series=y.loc[:,'y']
+        
+        spec_pos_c=coef_df.index.names.index('species')
+        spec_pos_y=y_series.index.names.index('species')
+        spec_list=y_series.index.unique(level='species')
+        
+        args_list=[]
+        chunks=10
+        ch_size=-(-len(spec_list)//chunks) # ceil divide
+        y_slice=[slice(None) for _ in range(len(y_series.index.levels))]
+        coef_slice=[slice(None) for _ in range(len(coef_df.index.levels))]
+        for ch in range(chunks):
+            bite=slice(ch_size*ch,ch_size*(ch+1))
+            y_slice[spec_pos_y]=bite
+            coef_slice[spec_pos_c]=bite
+            args_list.append([coef_df.loc[tuple(coef_slice)],y_series.loc[tuple(y_slice)],'species'])
+        dflistlist=self.runAsMultiProc(StackY01Select,args_list,no_mp=False)
+        a0_df_list,a1_df_list=zip(*dflistlist) # always 0,1 order
+        a0_df=pd.concat(a0_df_list,axi=0)
+        a1_df=pd.concat(a1_df_list,axi=0)
+        #coef_df0=self.spec_batch_y_select(coef_df,1-y_series)
+        return [a0_df,a1_df]'''
+            
+    
+    
+    def mul_wt_norm_coefs(self,adiff_scor,scor_select,coef_df,y,proc_count=4 ,mch_kwargs={}):
+        
+        
+        huc12_list=adiff_scor.index.levels[1].to_list()
+        
+        '''chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
+        huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]'''
+        
+        if mch_kwargs['return_weights']:
+            coef_df=None
+            
+        '''adiff_scor_chunks=[adiff_scor.loc[(slice(None),huc12chunk[i],slice(None),slice(None)),:]
+                           for i in range(proc_count)]'''
+        adiff_scor_chunks=self.chunker(adiff_scor,'HUC12',huc12_list,proc_count)
+        if mch_kwargs['presence_filter']:
+            y_chunks=self.chunker(y,'HUC12',huc12_list,proc_count)
+        else:
+            y_chunks=[None for i in range(proc_count)]
+        if mch_kwargs['scale_by_X']: #cut p coef_df b/c it has already been aligned to huc12,comid
+            coef_df_chunks=self.chunker(coef_df,'HUC12',huc12_list,proc_count)
+            '''h12_pos=coef_df.index.names.index('HUC12')
+            selectors=[[slice(None) for _ in range(len(coef_df.index.names))] for __ in range(proc_count)]
+            for i in range(proc_count):
+                selectors[i][h12_pos]=huc12chunk[i]
+            
+            coef_df_chunks=[coef_df.loc[tuple(selectors[i])] for i in range(proc_count)]'''
+            args_list=[[huc12chunk[i],coef_df_chunks[i],scor_select,adiff_scor_chunks[i],y_chunks[i]]
+                       for i in range(proc_count)]
+        else: #not scale_by_X, so can't cut up coef_df b/c just coef_df.index.names are spec,est
+            args_list=[[huc12chunk[i],coef_df,scor_select,adiff_scor_chunks[i],y_chunks[i]]
+                       for i in range(proc_count)]
+        
+        print(f'starting {proc_count} procs')
+        dflistlist=MpHelper().runAsMultiProc(MatchCollapseHuc12,args_list,kwargs=mch_kwargs)
+        print('multiprocessing complete')
+        dflist=[]
+        for dfl in dflistlist:
+            dflist.extend(dfl)
+        print('concatenating dflist')
+        if type(dflist[0]) is list: #i.e., presence_filter
+            dflist0,dflist1=zip(*dflist)
+            wtd_coef_df=[pd.concat(dflist0,axis=0),pd.concat(dflist1,axis=1)]
+        else:
+            wtd_coef_df=pd.concat(dflist,axis=0) 
+        return wtd_coef
+    
+    def chunker(self,df,name,partlist,split_count):
+        df_chunk_list=[]
+        part_count=len(partlist)
+        parts_per_split=-(-part_count//split_count)
+        part_chunks=[splitlist[ch*parts_per_split:(ch+1)*parts_per_split] for ch in split_count]
+        part_pos=df.index.names.index(name)
+        selectors=[[slice(None) for _ in range(len(df.index.names))] for __ in range(split_count)]
+        for i in range(split_count):
+            selectors[i][part_pos]=part_chunks[i]
+        df_chunk_list=[df.loc[tuple(selectors[i])] for i in range(split_count)]
+        return df_chunk_list
     
     
     def build_X_train_df(self,rebuild=0,spec_list=None,std=True):

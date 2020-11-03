@@ -4,13 +4,13 @@ from mylogger import myLogger
 from time import time,sleep
 import numpy as np
 
+'''
 
-
-class StackMul(Process,myLogger):
-    def __init__(self,q,a,b,key,chunks=10):
+class StackY01Select(Process,myLogger):
+    def __init__(self,q,a,y,key,chunks=10):
         self.q=q
         self.a=a
-        self.b=b
+        self.y=y
         self.key=key
         self.chunks=chunks
         
@@ -19,7 +19,7 @@ class StackMul(Process,myLogger):
         try:
             q=self.q
             a=self.a
-            b=self.b
+            y=self.y
             key=self.key
             chunks=self.chunks
 
@@ -28,19 +28,33 @@ class StackMul(Process,myLogger):
                 chunks=len(keys)
             chunksize=-(-len(keys)//chunks)# ceil divide
             a_key_pos=a.index.names.index(key)
-            b_key_pos=b.index.names.index(key)
+            y_key_pos=y.index.names.index(key)
             a_slice=[slice(None) for _ in range(len(a.index.levels))]
-            b_slice=[slice(None) for _ in range(len(b.index.levels))]
+            y_slice=[slice(None) for _ in range(len(b.index.levels))]
             dflist=[]
             for ch in range(chunks):
                 bite=slice(chunksize*ch,chunksize*(ch+1))
                 a_slice[a_key_pos]=bite
-                b_slice[b_key_pos]=bite
-                dflist.append(a.loc[tuple(a_slice)].mul(b.loc[tuple(b_slice)],axis=0))
-            self.q.put(pd.concat(dflist,axis=0))
+                y_slice[y_key_pos]=bite
+                a_ch=a.loc[a_slice]
+                y_ch=y.loc[a_slice]
+                a_,y_=a_ch.align(y_ch,axis=1)
+                a__,y__=a__.align(y__,axis=0)
+                a1_sel=a__[y__==1]
+                a0_sel=a__[y__==0]
+                
+                
+                a_sel=(a0_sel,a1_sel)
+                dflist.append(a_sel)
+            a0,a1=zip(*dflist)
+            a0_df=pd.concat(a0,axis=0)
+            a1_df=pd.concat(a1,axis=0)
+            a_dfs=[a0_df,a1_df]
+            self.q.put(a_dfs)
+            #self.q.put(pd.concat(dflist,axis=0))
         except:
             self.logger.exception(f'stackmul outer catch')
-            
+            '''
         
 
 
@@ -86,7 +100,7 @@ class MulXB(Process,myLogger):
             assert False,'halt'
     
 class MatchCollapseHuc12(Process,myLogger):
-    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,spec_wt=None,scale_by_X=False,return_weights=False):
+    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,y_chunk,spec_wt=None,scale_by_X=False,return_weights=False):
         #myLogger.__init__(self,name='MatchCollapseHuc12.log')
         #self.logger.info(f'starting up a MatchCollapseHuc12 proc')
         super().__init__()
@@ -95,6 +109,7 @@ class MatchCollapseHuc12(Process,myLogger):
         self.coef_df=coef_df
         self.fitscor=fitscor
         self.adiff_scor_chunk=adiff_scor_chunk
+        self.y_chunk=y_chunk # a series
         self.spec_wt=spec_wt
         self.scale_by_X=scale_by_X
         self.return_weights=return_weights
@@ -134,19 +149,26 @@ class MatchCollapseHuc12(Process,myLogger):
                     self.varnorm_coef=varnorm_coef
 
                 else: #only use part of coef_df at a time, accomplished by right join above. 
-                    h12_pos=self.coef_df.index.names.index('HUC12')
+                    '''below code moved to construction of argslist.'''
+                    '''h12_pos=self.coef_df.index.names.index('HUC12')
                     selector=[slice(None) for _ in range(len(self.coef_df.index.names))]
                     selector[h12_pos]=huc12block
                     selector=tuple(selector)
                     varnorm_coef=self.coef_df.loc[selector] # coef_df already has been aligned with huc12's,
                     ##so can use .loc on it to make next aligns easy. Also wts already applied 
-                    ##and summed over CV when scaled-by-X
+                    ##and summed over CV when scaled-by-X'''
+                    varnorm_coef=self.coef_df
 
-
-                
+                if not self.y_chunk is None: # implicitly presence_filter
+                    varnorm_coefs=self.presence_filter_coefs(varnorm_coef,self.y_chunk)
+                    hucnorm_varnorm_coefs=[]
+                    for varnorm_coef in varnorm_coefs:
+                        hucnorm_varnorm_coefs.append(self.huc12_wtd_coef(wt,varnorm_coef))
+                    self.dflist.append(hucnorm_varnorm_coefs)
+                else:
                 #self.logger.info(f'wt:{wt}')
-                hucnorm_varnorm_coef=self.huc12_wtd_coef(wt,varnorm_coef)
-                self.dflist.append(hucnorm_varnorm_coef)
+                    hucnorm_varnorm_coef=self.huc12_wtd_coef(wt,varnorm_coef)
+                    self.dflist.append(hucnorm_varnorm_coef)
                 ######## end for loop
             
             if not self.q is None:
@@ -154,52 +176,51 @@ class MatchCollapseHuc12(Process,myLogger):
                 self.q.put(self.dflist)
             else:
                 self.result=self.dflist
-            """t=0
-            while t<5
-                try:
-                    self.q.put(hucnorm_varnorm_coef,10) #since no dflist w/o loop
-                    return
-                except:
-                    self.logger.exception(f'error adding to q')
-                    t+=1
-            self.logger.error(f'failed to add job to q')    
-            self.logger.error(f'hucnorm_varnorm_coef:{hucnorm_varnorm_coef}')
-                
-            #return chunk_df"""
         except:
             self.logger.exception('')
             
     
+    def presence_filter_coefs(self,varnorm_coef,y_chunk):
+        if type(y_chunk) is pd.DataFrame:
+            self.logger.info(f'converting y_chunk to pd.Series')
+            y_chunk=y_chunk.loc[:,'y']
+        coef_,y_=varnorm_coef.align(y_chunk,axis=0,join=left) # drop extra hucs and add estimator
+        coef__,y__=coef_.align(y_,axis=1) # broadcast y across vars,reps,splits
+        coef0=coef__[y__==0]
+        coef1=coef__[y__==1]
+        return([coef0,coef1])
     
     def huc12_wtd_coef(self,wt,varnorm_coef):
-        wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
-        self.wtmean=wtmean
-        ##get average weight for each coef
-        if self.spec_wt=='equal':
-            level=['HUC12','species']
-        else:
-            level='HUC12'
+        try:
+            wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
+            self.wtmean=wtmean
+            ##get average weight for each coef
+            if self.spec_wt=='equal':
+                level=['HUC12','species']
+            else:
+                level='HUC12'
 
-        denom2=wtmean.sum(axis=0,level=level)
-        denom2_a,_=denom2.align(wtmean,axis=0)
+            denom2=wtmean.sum(axis=0,level=level)
+            denom2_a,_=denom2.align(wtmean,axis=0)
 
-        #denom2_a.columns=denom2_a.columns.droplevel('var')
-        self.denom2=denom2;self.denom2_a=denom2_a
-        normwt_huc=wtmean.divide(denom2_a,axis=0)
+            #denom2_a.columns=denom2_a.columns.droplevel('var')
+            self.denom2=denom2;self.denom2_a=denom2_a
+            normwt_huc=wtmean.divide(denom2_a,axis=0)
 
-        self.normwt_huc=normwt_huc
-        varnorm_coef,normwt_huc=varnorm_coef.align(normwt_huc,axis=0,join='inner')
-        #normwt_huc.columns=normwt_huc.columns.droplevel('var')
-        wt2_coef=varnorm_coef.mul(normwt_huc.values,axis=0)
-        self.wt2_coef=wt2_coef
-        if self.spec_wt=='equal':
-            spec_varnorm_coef=wt2_coef.sum(axis=0,level=level)
-            hucnorm_varnorm_coef=spec_varnorm_coef.mean(axis=0,level='HUC12')
-        else:
-            hucnorm_varnorm_coef=wt2_coef.sum(axis=0,level='HUC12')
-        self.hucnorm_varnorm_coef=hucnorm_varnorm_coef
-        return hucnorm_varnorm_coef
-    
+            self.normwt_huc=normwt_huc
+            varnorm_coef,normwt_huc=varnorm_coef.align(normwt_huc,axis=0,join='inner')
+            #normwt_huc.columns=normwt_huc.columns.droplevel('var')
+            wt2_coef=varnorm_coef.mul(normwt_huc.values,axis=0)
+            self.wt2_coef=wt2_coef
+            if self.spec_wt=='equal':
+                spec_varnorm_coef=wt2_coef.sum(axis=0,level=level)
+                hucnorm_varnorm_coef=spec_varnorm_coef.mean(axis=0,level='HUC12')
+            else:
+                hucnorm_varnorm_coef=wt2_coef.sum(axis=0,level='HUC12')
+            self.hucnorm_varnorm_coef=hucnorm_varnorm_coef
+            return hucnorm_varnorm_coef
+        except: 
+            self.logger.exception(f'outer catch')
     @staticmethod
     def cvnorm_wts(wt):
         denom=wt.sum(axis=1,level='var') # sum across rep_idx, cv_idx  #.sum(axis=0,level='HUC12')
