@@ -24,7 +24,7 @@ import pickle
 from geogtools import GeogTool as GT
 from pisces_data_huc12 import PiscesDataTool as PDT
 from pi_runners import PredictRunner
-from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12
+from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12,StackMul
 #from sklearn.inspection import permutation_importance
 
 class PiResults(DBTool,DataPlotter,myLogger):
@@ -127,9 +127,42 @@ class PiResults(DBTool,DataPlotter,myLogger):
         XB_df.to_hdf(name,key,complevel=5)
         return XB_df
     
-    def build_wt_comid_feature_importance(self,rebuild=0,fit_scorer=None,
-                                          zzzno_fish=False,return_weights=False,
-                                          spec_wt=None,scale_by_X=False):
+    
+    
+    def presence_filter_coefs(self,wtd_coef_df,y=None):
+        self.logger.info(f'starting presence filter coefs')
+        if y is None:
+            datadict=self.pr.stack_predictions(rebuild=0)
+            y=datadict['y']
+        y_series=y.loc[:,'y']
+        
+        coef_df1=self.spec_batch_mul(wtd_coef_df,y_series)
+        coef_df0=self.spec_batch_mul(wtd_coef_df,1-y_series)
+        return [coef_df1,coef_df0]
+            
+    def spec_batch_mul(self,coef_df,y_series):
+        spec_pos_c=coef_df.index.names.index('species')
+        spec_pos_y=y_series.index.names.index('species')
+        spec_list=y_series.index.unique(level='species')
+        
+        args_list=[]
+        chunks=10
+        ch_size=-(-len(spec_list)//chunks) # ceil divide
+        y_slice=[slice(None) for _ in range(len(y_series.index.levels))]
+        coef_slice=[slice(None) for _ in range(len(coef_df.index.levels))]
+        for ch in range(chunks):
+            bite=slice(ch_size*ch,ch_size*(ch+1))
+            y_slice[spec_pos_y]=bite
+            coef_slice[spec_pos_c]=bite
+            args_list.append([coef_df.loc[tuple(coef_slice)],y_series.loc[tuple(y_slice)],'species'])
+        dflist=self.runAsMultiProc(StackMul,args_list,no_mp=False)
+        prod=pd.concat(dflist,axis=0)
+        return prod
+    
+    
+    def build_wt_comid_feature_importance(
+        self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
+        spec_wt=None,scale_by_X=False,presence_filter=False ):
         #get data
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -143,7 +176,11 @@ class PiResults(DBTool,DataPlotter,myLogger):
             name+='_zzzno fish'
         if scale_by_X:
             name+='_scaled_by_X'
+        if presence_filter:
+            name+='_presence_filter'
+        
         name+='_'+fit_scorer
+        
         
             
         if not rebuild: #just turning off rebuild here
@@ -249,7 +286,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         print('concatenating dflist')
         wtd_coef_df=pd.concat(dflist,axis=0) 
         #"""
-            
+        if presence_filter:
+            wtd_coef_df=self.presence_filter_coefs(wtd_coef_df,y=y)
         #wtd_coef_df=scorwtd_coef_df.multiply(adiff,axis=0)
         self.wtd_coef_df=wtd_coef_df
         

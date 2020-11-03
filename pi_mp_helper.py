@@ -4,6 +4,46 @@ from mylogger import myLogger
 from time import time,sleep
 import numpy as np
 
+
+
+class StackMul(Process,myLogger):
+    def __init__(self,q,a,b,key,chunks=10):
+        self.q=q
+        self.a=a
+        self.b=b
+        self.key=key
+        self.chunks=chunks
+        
+        
+    def run(self,):
+        try:
+            q=self.q
+            a=self.a
+            b=self.b
+            key=self.key
+            chunks=self.chunks
+
+            keys=a.index.unique(level=key)
+            if chunks<len(keys):
+                chunks=len(keys)
+            chunksize=-(-len(keys)//chunks)# ceil divide
+            a_key_pos=a.index.names.index(key)
+            b_key_pos=b.index.names.index(key)
+            a_slice=[slice(None) for _ in range(len(a.index.levels))]
+            b_slice=[slice(None) for _ in range(len(b.index.levels))]
+            dflist=[]
+            for ch in range(chunks):
+                bite=slice(chunksize*ch,chunksize*(ch+1))
+                a_slice[a_key_pos]=bite
+                b_slice[b_key_pos]=bite
+                dflist.append(a.loc[tuple(a_slice)].mul(b.loc[tuple(b_slice)],axis=0))
+            self.q.put(pd.concat(dflist,axis=0))
+        except:
+            self.logger.exception(f'stackmul outer catch')
+            
+        
+
+
 class MulXB(Process,myLogger):
     def __init__(self,q,x,b,wt):
         if not q is None:

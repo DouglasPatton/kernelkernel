@@ -35,7 +35,7 @@ class Mapper(myLogger):
     def getHucBoundary(self,huc_level):
         level_digits=huc_level[-2:]
         if level_digits[0]=='0':
-            level_digits=level_digits[1]
+            level_digits=level_digits[1] #e.g. HUC02 --> 2
         self.boundary_dict[huc_level]=gpd.read_file(self.boundary_data_path,layer=f'WBDHU{level_digits}')
         
     def hucBoundaryMerge(self,data_df,right_on='HUC12'):
@@ -46,40 +46,57 @@ class Mapper(myLogger):
         try: self.boundary_dict[huc_level]
         except: self.getHucBoundary(huc_level)
         return self.boundary_dict[huc_level].merge(data_df,left_on=huc_level,right_on=right_on)
-  
-    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
-                      filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=True):
+    
+    
+    
+            
+    def plot_top_features(
+        self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=True,presence_filter=False):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
 
-        wtd_coef_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,zzzno_fish=zzzno_fish,
-                                                              spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X)
-        self.logger.info('features loaded')
-        if split is None:
-            cols=wtd_coef_df.columns
-            if filter_vars:
-                drop_vars=['tmean','tmax','msst','mwst','precip',
-                           'slope','wa','elev','mast','tmin','Al2O3']
-                for col in cols:
-                    for varstr in drop_vars:
-                        if re.search(varstr,col.lower()):
+        wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
+            presence_filter=presence_filter,rebuild=rebuild,zzzno_fish=zzzno_fish,
+            spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X)
+        if type(wtd_coef_dfs) is pd.DataFrame:
+            wtd_coef_dfs=[wtd_coef_dfs]
+        cols=wtd_coef_df.columns
+        if filter_vars:
+            drop_vars=[
+                'tmean','tmax','msst','mwst','precip',
+                'slope','wa','elev','mast','tmin','Al2O3']
+            for col in cols:
+                for varstr in drop_vars:
+                    if re.search(varstr,col.lower()):
+                        for wtd_coef_df in wtd_coef_dfs:
                             wtd_coef_df.drop(col,axis=1,inplace=True)
                             self.logger.info(f'dropped col: {col}')
                             break #stop searching
-            big_mean=wtd_coef_df.mean(axis=0)
-            big_cols_sorted=list(big_mean.sort_values().index)[::-1]#descending
-            big_top_2n=(big_cols_sorted[:top_n],
-                        big_cols_sorted[-top_n:])
-            top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
-            top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
+        
+        
+        for wtd_coef_df in wtd_coef_dfs:
+            wtd_coef_df.astype(np.float32,copy=False)
+        
+        if split is None:
+            cols_sorted_list=[]
+            for wtd_coef_df in wtd_coef_dfs:
+                
+                big_mean=wtd_coef_df.mean(axis=0)
+                cols_sorted_list.append(list(big_mean.sort_values().index))#ascending
+            
+            big_top_2n=(cols_sorted_list[0][:top_n],
+                        cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
+            top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
+            top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
             #self.big_top_wtd_coef_df=big_top_wtd_coef_df
-            pos_sort_idx=np.argsort(top_pos_coef_df,axis=1).iloc[:,::-1] #descending
+            pos_sort_idx=np.argsort(top_pos_coef_df,axis=1) #ascending
             neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
             #select the best and worst columns
             big_top_cols_pos=pos_sort_idx.apply(
-                lambda x: big_top_2n[0][x[0]],axis=1)
+                lambda x: big_top_2n[1][x[-1]],axis=1)
             big_top_cols_neg=neg_sort_idx.apply(
-                lambda x: big_top_2n[1][x[0]],axis=1)
+                lambda x: big_top_2n[0][x[0]],axis=1)
             colname='top_predictive_variable'
             big_top_cols_pos=big_top_cols_pos.rename(colname)
             big_top_cols_neg=big_top_cols_neg.rename(colname)
