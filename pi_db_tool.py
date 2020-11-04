@@ -45,7 +45,13 @@ class DBTool():
                         newdict[key]=val
                         newdict.commit()
             
-        
+    
+    def anyNameDB(self,dbname,tablename='data'):
+        path=os.path.join(self.resultsdir,dbname+'.sqlite')
+        return SqliteDict(
+            filename=path,tablename=tablename,
+            encode=self.my_encode,decode=self.my_decode)
+    
     def my_encode(self,obj):
         return sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
     def my_decode(self,obj):

@@ -55,81 +55,48 @@ class Mapper(myLogger):
         filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=True,presence_filter=False):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-
+        if presence_filter:
+            title=f'top {top_n} presence-hi/absence-lo features'
+        else:
+            title=f'top {top_n} hi/lo features'
+        if scale_by_X:
+            title+='_Xscaled'
+        if zzzno_fish:
+            title+='_zzzno fish'
+        if filter_vars:
+            title+='_var-filter'
+        title+='_'+fit_scorer
+        
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
             presence_filter=presence_filter,rebuild=rebuild,zzzno_fish=zzzno_fish,
             spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X)
+        self.wtd_coef_dfs=wtd_coef_dfs
         if type(wtd_coef_dfs) is pd.DataFrame:
             wtd_coef_dfs=[wtd_coef_dfs]
-        cols=wtd_coef_df.columns
-        if filter_vars:
-            drop_vars=[
-                'tmean','tmax','msst','mwst','precip',
-                'slope','wa','elev','mast','tmin','Al2O3']
-            for col in cols:
-                for varstr in drop_vars:
-                    if re.search(varstr,col.lower()):
-                        for wtd_coef_df in wtd_coef_dfs:
-                            wtd_coef_df.drop(col,axis=1,inplace=True)
-                            self.logger.info(f'dropped col: {col}')
+        
+        
+        
+        for i,wtd_coef_df_ in enumerate(wtd_coef_dfs):
+            self.logger.info(f'pi_map dropping cols from wtd_coef_df i:{i}')
+            #wtd_coef_df_.astype(np.float32,copy=False)
+            cols=wtd_coef_df_.columns
+            if filter_vars:
+                drop_vars=[
+                    'tmean','tmax','msst','mwst','precip',
+                    'slope','wa','elev','mast','tmin','Al2O3','slp']
+                for col in cols:
+                    for varstr in drop_vars:
+                        if re.search(varstr,col.lower()):
+                            try:
+                                wtd_coef_df_.drop(col,axis=1,inplace=True)
+                                self.logger.info(f'dropped col: {col}')
+                            except:
+                                self.logger.info(f'failed trying to drop col:{col} matching varstr:{varstr} and current cols:{list(wtd_coef_df_.columns)}')
+                            
                             break #stop searching
-        
-        
-        for wtd_coef_df in wtd_coef_dfs:
-            wtd_coef_df.astype(np.float32,copy=False)
-        
         if split is None:
             cols_sorted_list=[]
-            for wtd_coef_df in wtd_coef_dfs:
-                
-                big_mean=wtd_coef_df.mean(axis=0)
-                cols_sorted_list.append(list(big_mean.sort_values().index))#ascending
-            
-            big_top_2n=(cols_sorted_list[0][:top_n],
-                        cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
-            top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
-            top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
-            #self.big_top_wtd_coef_df=big_top_wtd_coef_df
-            pos_sort_idx=np.argsort(top_pos_coef_df,axis=1) #ascending
-            neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
-            #select the best and worst columns
-            big_top_cols_pos=pos_sort_idx.apply(
-                lambda x: big_top_2n[1][x[-1]],axis=1)
-            big_top_cols_neg=neg_sort_idx.apply(
-                lambda x: big_top_2n[0][x[0]],axis=1)
-            colname='top_predictive_variable'
-            big_top_cols_pos=big_top_cols_pos.rename(colname)
-            big_top_cols_neg=big_top_cols_neg.rename(colname)
-            
-            
-            self.big_top_cols_pos=big_top_cols_pos
-            self.big_top_cols_neg=big_top_cols_neg
-            
-            self.logger.info('starting boundary merge pos')
-            geo_pos_cols=self.hucBoundaryMerge(big_top_cols_pos)
-
-               
-            fig=plt.figure(dpi=300,figsize=[10,14])
-            ax=fig.add_subplot(2,1,1)
-            #divider = make_axes_locatable(ax)
-            #cax = divider.append_axes("right", size="5%", pad=0.1)
-            geo_pos_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
-            self.add_huc2_conus(ax)
-            
-            self.logger.info('starting boundary merge neg')
-            geo_neg_cols=self.hucBoundaryMerge(big_top_cols_neg)
-            
-            ax=fig.add_subplot(2,1,2)
-            #divider = make_axes_locatable(ax)
-            #cax = divider.append_axes("right", size="5%", pad=0.1)
-            geo_neg_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
-            self.add_huc2_conus(ax)
-    
-            
-            fig.savefig(Helper().getname(os.path.join(
-                self.print_dir,f'huc12_top{top_n}_features.png')))
-
-            
+            self.plot_hilo_coefs(wtd_coef_dfs,title)
             return
         elif split[:3]=='huc': # add a new index level on lhs for huc2,etc
             split=int(split[3:])
@@ -142,6 +109,56 @@ class Mapper(myLogger):
         split_coef_mean=wtd_coef_df2.mean(axis=0,level=split) # mean across huc
         split_coef_rank=np.argsort(split_coef_mean,axis=1)
         
+    def plot_hilo_coefs(self,wt_coef_dfs,title):
+        for wtd_coef_df in wtd_coef_dfs:
+
+            big_mean=wtd_coef_df.mean(axis=0)
+            cols_sorted_list.append(list(big_mean.sort_values().index))#ascending
+
+        big_top_2n=(cols_sorted_list[0][:top_n],
+                    cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
+        top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
+        top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
+        #self.big_top_wtd_coef_df=big_top_wtd_coef_df
+        pos_sort_idx=np.argsort(top_pos_coef_df,axis=1) #ascending
+        neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
+        #select the best and worst columns
+        big_top_cols_pos=pos_sort_idx.apply(
+            lambda x: big_top_2n[1][x[-1]],axis=1)
+        big_top_cols_neg=neg_sort_idx.apply(
+            lambda x: big_top_2n[0][x[0]],axis=1)
+        colname='top_predictive_variable'
+        big_top_cols_pos=big_top_cols_pos.rename(colname)
+        big_top_cols_neg=big_top_cols_neg.rename(colname)
+
+
+        self.big_top_cols_pos=big_top_cols_pos
+        self.big_top_cols_neg=big_top_cols_neg
+
+        self.logger.info('starting boundary merge pos')
+        geo_pos_cols=self.hucBoundaryMerge(big_top_cols_pos)
+
+
+        fig=plt.figure(dpi=300,figsize=[10,14])
+        
+        ax=fig.add_subplot(2,1,1)
+        #divider = make_axes_locatable(ax)
+        #cax = divider.append_axes("right", size="5%", pad=0.1)
+        geo_pos_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
+        self.add_huc2_conus(ax)
+
+        self.logger.info('starting boundary merge neg')
+        geo_neg_cols=self.hucBoundaryMerge(big_top_cols_neg)
+
+        ax=fig.add_subplot(2,1,2)
+        #divider = make_axes_locatable(ax)
+        #cax = divider.append_axes("right", size="5%", pad=0.1)
+        geo_neg_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
+        self.add_huc2_conus(ax)
+
+
+        fig.savefig(Helper().getname(os.path.join(
+            self.print_dir,f'huc12_top{top_n}_features.png')))
     
         
     def add_huc2_conus(self,ax):

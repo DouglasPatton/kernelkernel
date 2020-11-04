@@ -3,6 +3,7 @@ from multiprocessing import Process,Queue
 from mylogger import myLogger
 from time import time,sleep
 import numpy as np
+import pandas as pd
 
 '''
 
@@ -59,10 +60,11 @@ class StackY01Select(Process,myLogger):
 
 
 class MulXB(Process,myLogger):
-    def __init__(self,q,x,b,wt):
+    def __init__(self,q,i,x,b,wt):
         if not q is None:
             super().__init__()
         #spec_list=b.index.unique(level='species')
+        self.i=i
         self.q=q
         self.x=x
         self.b=b
@@ -92,7 +94,7 @@ class MulXB(Process,myLogger):
                 result=xb
             self.logger.info(f'MulXB result:{result}')
             if not self.q is None:
-                self.q.put(result)
+                self.q.put((self.i,result))
             else:
                 self.result=result
         except:
@@ -100,10 +102,11 @@ class MulXB(Process,myLogger):
             assert False,'halt'
     
 class MatchCollapseHuc12(Process,myLogger):
-    def __init__(self,q,huc12list,coef_df,fitscor,adiff_scor_chunk,y_chunk,spec_wt=None,scale_by_X=False,return_weights=False):
+    def __init__(self,q,i,huc12list,coef_df,fitscor,adiff_scor_chunk,y_chunk,spec_wt=None,scale_by_X=False,return_weights=False,presence_filter=False):
         #myLogger.__init__(self,name='MatchCollapseHuc12.log')
         #self.logger.info(f'starting up a MatchCollapseHuc12 proc')
         super().__init__()
+        self.i=i
         self.q=q
         self.huc12list=huc12list
         self.coef_df=coef_df
@@ -113,7 +116,7 @@ class MatchCollapseHuc12(Process,myLogger):
         self.spec_wt=spec_wt
         self.scale_by_X=scale_by_X
         self.return_weights=return_weights
-        
+        self.presence_filter=presence_filter
         
         self.dflist=[]
     
@@ -149,18 +152,21 @@ class MatchCollapseHuc12(Process,myLogger):
                     self.varnorm_coef=varnorm_coef
 
                 else: #only use part of coef_df at a time, accomplished by right join above. 
-                    '''below code moved to construction of argslist.'''
-                    '''h12_pos=self.coef_df.index.names.index('HUC12')
+                    h12_pos=self.coef_df.index.names.index('HUC12')
                     selector=[slice(None) for _ in range(len(self.coef_df.index.names))]
                     selector[h12_pos]=huc12block
                     selector=tuple(selector)
                     varnorm_coef=self.coef_df.loc[selector] # coef_df already has been aligned with huc12's,
                     ##so can use .loc on it to make next aligns easy. Also wts already applied 
                     ##and summed over CV when scaled-by-X'''
-                    varnorm_coef=self.coef_df
 
-                if not self.y_chunk is None: # implicitly presence_filter
-                    varnorm_coefs=self.presence_filter_coefs(varnorm_coef,self.y_chunk)
+                if self.presence_filter:
+                    y_chunk=self.y_chunk
+                    h12_pos=y_chunk.index.names.index('HUC12')
+                    selector=[slice(None) for _ in range(len(y_chunk))]
+                    selector[h12_pos]=huc12block
+                    y_ch_ch=y_chunk.loc[tuple(selector)]
+                    varnorm_coefs=self.presence_filter_coefs(varnorm_coef,y_ch_ch)
                     hucnorm_varnorm_coefs=[]
                     for varnorm_coef in varnorm_coefs:
                         hucnorm_varnorm_coefs.append(self.huc12_wtd_coef(wt,varnorm_coef))
@@ -173,7 +179,7 @@ class MatchCollapseHuc12(Process,myLogger):
             
             if not self.q is None:
                 self.logger.info(f'mch w/pid:{pid} adding to queue')
-                self.q.put(self.dflist)
+                self.q.put((self.i,self.dflist))
             else:
                 self.result=self.dflist
         except:
@@ -181,13 +187,18 @@ class MatchCollapseHuc12(Process,myLogger):
             
     
     def presence_filter_coefs(self,varnorm_coef,y_chunk):
-        if type(y_chunk) is pd.DataFrame:
+        '''if type(y_chunk) is pd.DataFrame:
             self.logger.info(f'converting y_chunk to pd.Series')
-            y_chunk=y_chunk.loc[:,'y']
-        coef_,y_=varnorm_coef.align(y_chunk,axis=0,join=left) # drop extra hucs and add estimator
-        coef__,y__=coef_.align(y_,axis=1) # broadcast y across vars,reps,splits
-        coef0=coef__[y__==0]
-        coef1=coef__[y__==1]
+            y_chunk=y_chunk.loc[:,'y']'''
+        #self.logger.info(f'before axis 0 align, varnorm_coef:{varnorm_coef}')
+        #self.logger.info(f'and y_chunk:{y_chunk}')
+        coef_,y_=varnorm_coef.align(y_chunk,axis=0,join='left') # drop extra hucs and add estimator
+        #y_ser=y_.loc[:,'y']
+        #coef__,y__=coef_.align(y_ser,axis=1,level='var') # broadcast y across vars,reps,splits
+        coef0=coef_[y_==0].copy()
+        coef1=coef_[y_==1].copy()
+        self.logger.info(f'presence_filter coef0.shape:{coef0.shape}')
+        self.logger.info(f'presence_filter coef1.shape:{coef1.shape}')
         return([coef0,coef1])
     
     def huc12_wtd_coef(self,wt,varnorm_coef):
@@ -267,8 +278,9 @@ class MpHelper(myLogger):
             starttime=time()
             if no_mp:q=None
             else:q=Queue()
-            q_args_list=[[q,*args] for args in args_list]
-            proc_count=len(args_list)
+            I=len(args_list)
+            q_args_list=[[q,i,*args_list[i]] for i in range(I)]
+            proc_count=I
             procs=[the_proc(*q_args_list[i],**kwargs) for i in range(proc_count)]
             if no_mp:
                 self.procs=procs
@@ -279,7 +291,7 @@ class MpHelper(myLogger):
                 return results
             else:
                 [proc.start() for proc in procs]
-            outlist=[]
+            outlist=[None for _ in range(I)]
             countdown=proc_count
         except:
             self.logger.exception('error in runasmultiproc')
@@ -290,9 +302,9 @@ class MpHelper(myLogger):
         while countdown and not no_mp:
             try:
                 self.logger.info(f'multiproc checking q. countdown:{countdown}')
-                result=q.get(True,20)
+                i,result=q.get(True,20)
                 self.logger.info(f'multiproc has something from the q!')
-                outlist.append(result)
+                outlist[i]=result
                 countdown-=1
                 self.logger.info(f'proc completed. countdown:{countdown}')
             except:

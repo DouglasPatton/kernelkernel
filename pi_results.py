@@ -107,23 +107,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
             #args_list_list.append(args_list)
             if right>=len(spec_list):break
         
-        """    
-        q=Queue()
-        self.mxb=MulXB(q,*args_list_list[0][0])
-        self.mxb.run()
-        result=q.get_nowait()
-        ####
-        
-        self.logger.info(f'staring up MulXB procs')
-        df=pd.DataFrame()
-        for a,args_list in enumerate(args_list_list):
-            self.logger.info(f'starting cycle# {a}/{cycles}')
-            df=pd.concat([df,*MpHelper().runAsMultiProc(MulXB,args_list)],axis=0)
-        self.logger.info(f'about to concat dflist rom MulXB')
-        XB_df=df#pd.concat(dflist,axis=0)
-        ####
-        """
-        
         XB_df.to_hdf(name,key,complevel=5)
         return XB_df
     
@@ -165,13 +148,19 @@ class PiResults(DBTool,DataPlotter,myLogger):
             if type(rebuild) is int:
                 rebuild-=1
         
-        datadict=self.stack_predictions(rebuild=rebuild)
+        
+        coef_df,scor_df,y,yhat=self.get_coef_stack(
+            rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
+            drop_nocoef_scors=True)
+        
+        #datadict=self.stack_predictions(rebuild=rebuild)
 
-        y=datadict['y']#.astype('Int8')
-        yhat=datadict['yhat']#.astype('Int8')
+        #y=datadict['y']#.astype('Int8')
+        #yhat=datadict['yhat']#.astype('Int8')
 
-        coef_scor_df=datadict['coef_scor_df']#.astype('float32')
-        coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=True)
+        #coef_scor_df=datadict['coef_scor_df']#.astype('float32')
+        
+        #coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=True)
         self.logger.info('coef_df,scor_df retrieved')
         if scale_by_X:
             self.logger.info(f'building coef_df scaled_by_X')
@@ -199,7 +188,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
 
         scor_select.columns=scor_select.columns.droplevel('var')
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
-        """need to drop zzzno_fish before summing for weight normalization"""
+        '''"""need to drop zzzno_fish before summing for weight normalization"""
         if zzzno_fish:
             ztup=(['zzzno fish'],slice(None),slice(None),slice(None))
             scor_select=scor_select.loc[ztup]
@@ -216,7 +205,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             if not scale_by_X: #already done if scale_by_X
                 coef_df.drop('zzzno fish',level='species',inplace=True)
             adiff_scor.drop('zzzno fish',level='species',inplace=True)
-            y.drop('zzzno fish',level='species',inplace=True)
+            y.drop('zzzno fish',level='species',inplace=True)'''
 
             
         if zzzno_fish: # no need for mp
@@ -229,42 +218,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
         wtd_coef_df=self.mul_wt_norm_coefs(
                 adiff_scor,scor_select,coef_df,y,proc_count=proc_count,mch_kwargs=mch_kwargs)
         
-        
-        
-        
-        
         save_data={'data':wtd_coef_df} 
         self.getsave_postfit_db_dict(name,save_data)
         return wtd_coef_df
-    #below moved to pi_mp_helper
-    '''def presence_filter_coefs(self,coef_df,y=None):
-        self.logger.info(f'starting presence filter coefs')
-        if y is None:
-            datadict=self.pr.stack_predictions(rebuild=0)
-            y=datadict['y']
-        y_series=y.loc[:,'y']
-        
-        spec_pos_c=coef_df.index.names.index('species')
-        spec_pos_y=y_series.index.names.index('species')
-        spec_list=y_series.index.unique(level='species')
-        
-        args_list=[]
-        chunks=10
-        ch_size=-(-len(spec_list)//chunks) # ceil divide
-        y_slice=[slice(None) for _ in range(len(y_series.index.levels))]
-        coef_slice=[slice(None) for _ in range(len(coef_df.index.levels))]
-        for ch in range(chunks):
-            bite=slice(ch_size*ch,ch_size*(ch+1))
-            y_slice[spec_pos_y]=bite
-            coef_slice[spec_pos_c]=bite
-            args_list.append([coef_df.loc[tuple(coef_slice)],y_series.loc[tuple(y_slice)],'species'])
-        dflistlist=self.runAsMultiProc(StackY01Select,args_list,no_mp=False)
-        a0_df_list,a1_df_list=zip(*dflistlist) # always 0,1 order
-        a0_df=pd.concat(a0_df_list,axi=0)
-        a1_df=pd.concat(a1_df_list,axi=0)
-        #coef_df0=self.spec_batch_y_select(coef_df,1-y_series)
-        return [a0_df,a1_df]'''
-            
+           
     
     
     def mul_wt_norm_coefs(self,adiff_scor,scor_select,coef_df,y,proc_count=4 ,mch_kwargs={}):
@@ -272,8 +229,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
         huc12_list=adiff_scor.index.levels[1].to_list()
         
-        '''chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
-        huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]'''
+        chunk_size=-(-len(huc12_list)//proc_count) # ceiling divide
+        huc12chunk=[huc12_list[chunk_size*i:chunk_size*(i+1)] for i in range(proc_count)]
         
         if mch_kwargs['return_weights']:
             coef_df=None
@@ -311,13 +268,13 @@ class PiResults(DBTool,DataPlotter,myLogger):
             wtd_coef_df=[pd.concat(dflist0,axis=0),pd.concat(dflist1,axis=1)]
         else:
             wtd_coef_df=pd.concat(dflist,axis=0) 
-        return wtd_coef
+        return wtd_coef_df
     
     def chunker(self,df,name,partlist,split_count):
         df_chunk_list=[]
         part_count=len(partlist)
         parts_per_split=-(-part_count//split_count)
-        part_chunks=[splitlist[ch*parts_per_split:(ch+1)*parts_per_split] for ch in split_count]
+        part_chunks=[partlist[ch*parts_per_split:(ch+1)*parts_per_split] for ch in range(split_count)]
         part_pos=df.index.names.index(name)
         selectors=[[slice(None) for _ in range(len(df.index.names))] for __ in range(split_count)]
         for i in range(split_count):
@@ -384,12 +341,12 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return huc12str
     
     
-    def get_coef_stack(self,rebuild=0,drop_zzz=True,return_y_yhat=False):
+    def get_coef_stack(self,rebuild=0,drop_zzz=True,return_y_yhat=False,drop_nocoef_scors=True):
         pdict=self.stack_predictions(rebuild=rebuild)
         if drop_zzz:
             pdict=self.drop_zzz(pdict)
         coef_scor_df=pdict['coef_scor_df']
-        coef_df,scor_df=self.split_coef_scor_df(coef_scor_df)
+        coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=drop_nocoef_scors)
         if return_y_yhat: 
             return coef_df,scor_df,pdict['y'],pdict['yhat']
         else: 
@@ -666,9 +623,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
         
     def build_dghash_hash_id_dict(self,rebuild=0,add=0):
         name='dghash_hash_id_dict'
+        db=lambda: self.anyNameDB(name,tablename='data')
         if not rebuild:
             try:
-                dghash_hash_id_dict=self.getsave_postfit_db_dict(name)
+                dghash_hash_id_dict=db()
                 if not add:
                     if len(dghash_hash_id_dict)==0:
                         rebuild=1
@@ -684,20 +642,22 @@ class PiResults(DBTool,DataPlotter,myLogger):
             except:self.results_dict=self.resultsDBdict()
             datagenhash_hash_id_dict={}
             self.logger.info(f'building datagen hash hash_id dict ')
-            for hash_id,model_dict in self.results_dict.items(): 
-                    data_gen=model_dict["data_gen"]
-                    datagenhash=joblib.hash(data_gen)
-                    try:
-                        datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
-                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
-                    except KeyError:
-                        datagenhash_hash_id_dict[datagenhash]=[hash_id]
-                    except:
-                        self.logger.exception(f'not a keyerror, unexpected error')
-                        assert False,'halt'
+            with db() as datagenhash_hash_id_dict:
+                for hash_id,model_dict in self.results_dict.items(): 
+                        data_gen=model_dict["data_gen"]
+                        datagenhash=joblib.hash(data_gen)
+                        try:
+                            datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
+                                #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                            datagenhash_hash_id_dict.commit()
+                        except KeyError:
+                            datagenhash_hash_id_dict[datagenhash]=[hash_id]
+                            datagenhash_hash_id_dict.commit()
+                        except:
+                            self.logger.exception(f'not a keyerror, unexpected error')
+                            assert False,'halt'
             self.logger.info('datagen hash hash_id dict complete')
-        self.getsave_postfit_db_dict(name,datagenhash_hash_id_dict)
-        return datagenhash_hash_id_dict
+        return db()
     
     
     def build_species_estimator_prediction_dict(self,rebuild=0):
