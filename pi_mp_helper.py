@@ -284,6 +284,8 @@ class MpHelper(myLogger):
             procs=[the_proc(*q_args_list[i],**kwargs) for i in range(proc_count)]
             if no_mp:
                 self.procs=procs
+                if type(no_mp) is int:procs=procs[-no_mp:]
+                self.procs=procs
                 for proc in procs:
                     proc.run()
                 self.logger.info(f'procs have run with no_mp:{no_mp}')
