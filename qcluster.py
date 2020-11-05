@@ -18,7 +18,7 @@ from pisces_params import PiSetup,MonteSetup
 from pi_db_tool import DBTool
 from mylogger import myLogger
 #class QueueManager(BaseManager): pass
-
+import json
         
 
 class TheQManager(mp.Process,BaseManager,myLogger):
@@ -189,15 +189,22 @@ class JobQFiller(mp.Process,myLogger):
                 
 
 class RunNode(mp.Process,BaseManager,myLogger):
-    def __init__(self,local_run=None,source=None,qdict=None):
+    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit'):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         self.qdict=qdict
         self.source=source
         if not local_run:
-            self.netaddress=('10.0.0.3',50002)
-            self.BaseManager=BaseManager
+            try:
+                with open('ip.json',r) as f:
+                    ipdict=json.load(f)
+                self.netaddress=(ipdict['ip'],ipdict[f'ip_{run_type}'])
+            except:
+                self.logger.exception(f'ip address error')
+                assert False, 'Halt'
+                self.netaddress=('10.0.0.3',50002)
+                self.BaseManager=BaseManager
         super().__init__()
     
     
@@ -247,7 +254,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
     '''
     '''
     
-    def __init__(self,source=None,local_run=None,nodecount=0,qdict=None):
+    def __init__(self,source=None,local_run=None,nodecount=0,qdict=None,run_type='fit'):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -256,7 +263,15 @@ class RunCluster(mp.Process,DBTool,myLogger):
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
-            self.netaddress=('10.0.0.3',50002)
+            try:
+                with open('ip.json',r) as f:
+                    ipdict=json.load(f)
+                self.netaddress=(ipdict['ip'],ipdict[f'ip_{run_type}'])
+            except:
+                self.logger.exception(f'ip address error')
+                assert False, 'Halt'
+                self.netaddress=('10.0.0.3',50002)
+                self.BaseManager=BaseManager
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
@@ -273,7 +288,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         else:
             self.source=source
         if self.source=='pisces':
-            self.setup=PiSetup() # in pisces_params, this file/object determines how things run
+            self.setup=PiSetup(run_type=run_type) # in pisces_params, this file/object determines how things run
         if self.source=='monte':
             self.setup=MonteSetup()
             

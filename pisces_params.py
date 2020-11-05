@@ -11,7 +11,7 @@ from pi_runners import FitRunner,PredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
-    def __init__(self,test=False):
+    def __init__(self,test=False,run_type='fit'):
         self.test=test#True # reduces repeats to speed things up
         splits=5
         if self.test:
@@ -20,7 +20,7 @@ class PiSetup(myLogger):
             repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type='predict'#'fit'#'predict'# 'fit_fill'#'predict'# 
+        self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
