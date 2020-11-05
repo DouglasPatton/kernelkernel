@@ -65,6 +65,8 @@ class Mapper(myLogger):
             title+='_zzzno fish'
         if filter_vars:
             title+='_var-filter'
+        if spec_wt=='even':
+            title+='_even-wt-spec'
         title+='_'+fit_scorer
         
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
@@ -73,8 +75,6 @@ class Mapper(myLogger):
         self.wtd_coef_dfs=wtd_coef_dfs
         if type(wtd_coef_dfs) is pd.DataFrame:
             wtd_coef_dfs=[wtd_coef_dfs]
-        
-        
         
         for i,wtd_coef_df_ in enumerate(wtd_coef_dfs):
             self.logger.info(f'pi_map dropping cols from wtd_coef_df i:{i}')
@@ -95,8 +95,8 @@ class Mapper(myLogger):
                             
                             break #stop searching
         if split is None:
-            cols_sorted_list=[]
-            self.plot_hilo_coefs(wtd_coef_dfs,title)
+            
+            self.plot_hilo_coefs(wtd_coef_dfs,top_n,title)
             return
         elif split[:3]=='huc': # add a new index level on lhs for huc2,etc
             split=int(split[3:])
@@ -109,7 +109,8 @@ class Mapper(myLogger):
         split_coef_mean=wtd_coef_df2.mean(axis=0,level=split) # mean across huc
         split_coef_rank=np.argsort(split_coef_mean,axis=1)
         
-    def plot_hilo_coefs(self,wt_coef_dfs,title):
+    def plot_hilo_coefs(self,wtd_coef_dfs,top_n,title):
+        cols_sorted_list=[]
         for wtd_coef_df in wtd_coef_dfs:
 
             big_mean=wtd_coef_df.mean(axis=0)
@@ -117,8 +118,8 @@ class Mapper(myLogger):
 
         big_top_2n=(cols_sorted_list[0][:top_n],
                     cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
-        top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
-        top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
+        top_neg_coef_df=wtd_coef_dfs[0].loc[:,big_top_2n[0]]
+        top_pos_coef_df=wtd_coef_dfs[-1].loc[:,big_top_2n[1]]
         #self.big_top_wtd_coef_df=big_top_wtd_coef_df
         pos_sort_idx=np.argsort(top_pos_coef_df,axis=1) #ascending
         neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
@@ -140,8 +141,9 @@ class Mapper(myLogger):
 
 
         fig=plt.figure(dpi=300,figsize=[10,14])
-        
+        fig.suptitle(title)
         ax=fig.add_subplot(2,1,1)
+        ax.set_title('top positive features')
         #divider = make_axes_locatable(ax)
         #cax = divider.append_axes("right", size="5%", pad=0.1)
         geo_pos_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
@@ -151,6 +153,7 @@ class Mapper(myLogger):
         geo_neg_cols=self.hucBoundaryMerge(big_top_cols_neg)
 
         ax=fig.add_subplot(2,1,2)
+        ax.set_title('top negative features')
         #divider = make_axes_locatable(ax)
         #cax = divider.append_axes("right", size="5%", pad=0.1)
         geo_neg_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
@@ -161,12 +164,15 @@ class Mapper(myLogger):
             self.print_dir,f'huc12_top{top_n}_features.png')))
     
         
-    def add_huc2_conus(self,ax):
+    def add_huc2_conus(self,ax,huc2_select=None):
         try: huc2=self.boundary_dict['huc02']
         except: 
             self.getHucBoundary('huc02')
             huc2=self.boundary_dict['huc02']
-        huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
+        if huc2_select is None:
+            huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
+        else:
+            huc2_conus=huc2.loc[huc2.loc[huc2_select,'huc2'].astype('int')<19,'geometry']
         huc2_conus.boundary.plot(linewidth=1,color=None,edgecolor='k',ax=ax)
     
     def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True):
