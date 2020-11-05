@@ -197,14 +197,14 @@ class RunNode(mp.Process,BaseManager,myLogger):
         self.source=source
         if not local_run:
             try:
-                with open('ip.json',r) as f:
+                with open('ip.json','r') as f:
                     ipdict=json.load(f)
-                self.netaddress=(ipdict['ip'],ipdict[f'ip_{run_type}'])
+                self.netaddress=(ipdict['ip'],ipdict[f'port_{run_type}'])
             except:
                 self.logger.exception(f'ip address error')
                 assert False, 'Halt'
                 self.netaddress=('10.0.0.3',50002)
-                self.BaseManager=BaseManager
+            self.BaseManager=BaseManager
         super().__init__()
     
     
@@ -231,13 +231,18 @@ class RunNode(mp.Process,BaseManager,myLogger):
             try:
                 havejob=0
                 jobsuccess=0
+                tries=0
                 try:
-                    self.logger.debug('RunNode about to check jobq')
-                    runner=jobq.get(True,10)
+                    #self.logger.debug('RunNode about to check jobq')
+                    runner=jobq.get(True,20)
                     self.logger.debug(f'RunNode has job') #:runner.rundict:{runner.rundict}')
                     havejob=1
+                    tries=0
                 except:
-                    self.logger.exception('')
+                    tries+=1
+                    if tries>10:
+                        self.logger.exception('tried 10 times')
+                        tries=0
                 if havejob:
                     if type(runner) is str:
                         if runner=='shutdown':
@@ -247,7 +252,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                     runner.passQ(saveq)
                     runner.run()
             except:
-                self.logger.exception('')           
+                self.logger.exception('runnode outer catch!')           
     
     
 class RunCluster(mp.Process,DBTool,myLogger):
@@ -264,14 +269,14 @@ class RunCluster(mp.Process,DBTool,myLogger):
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
         else:
             try:
-                with open('ip.json',r) as f:
+                with open('ip.json','r') as f:
                     ipdict=json.load(f)
-                self.netaddress=(ipdict['ip'],ipdict[f'ip_{run_type}'])
+                self.netaddress=(ipdict['ip'],ipdict[f'port_{run_type}'])
             except:
                 self.logger.exception(f'ip address error')
                 assert False, 'Halt'
                 self.netaddress=('10.0.0.3',50002)
-                self.BaseManager=BaseManager
+            self.BaseManager=BaseManager
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)

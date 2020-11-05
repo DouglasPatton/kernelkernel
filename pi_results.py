@@ -640,34 +640,42 @@ class PiResults(DBTool,DataPlotter,myLogger):
         if rebuild:
             try: self.results_dict
             except:self.results_dict=self.resultsDBdict()
+            try: self.gen_dict
+            except: self.gen_dict=self.genDBdict()
             datagenhash_hash_id_dict={}
             self.logger.info(f'building datagen hash hash_id dict ')
             hash_id_list=list(self.results_dict.keys())
-            hash_id_count=len(hash_id_list)
-            blocksize=20
+            """hash_id_count=len(hash_id_list)
+            blocksize=100
             block_count=-(-hash_id_count//blocksize) #ceil divide
             hash_id_chunks=[hash_id_list[ch*blocksize:(ch+1)*blocksize] for ch in range(block_count)]
-            for h,hash_id_chunk in enumerate(hash_id_chunks):
+            for h,hash_id_chunk in enumerate(hash_id_chunks):"""
+            try:
                 #self.results_dict=self.resultsDBdict()
-                self.logger.info(f'starting block {h+1} of {block_count}')
-                with db() as datagenhash_hash_id_dict:
-                    for hash_id in hash_id_chunk:
-                        model_dict=self.results_dict[hash_id]
-                        data_gen=model_dict["data_gen"]
-                        datagenhash=joblib.hash(data_gen)
-                        try:
-                            datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
-                                #     datagen_dicts. if wrong random_state passed to cv, split is wrong
-                            #datagenhash_hash_id_dict.commit()
-                        except KeyError:
-                            datagenhash_hash_id_dict[datagenhash]=[hash_id]
-                            #datagenhash_hash_id_dict.commit()
-                        except:
-                            self.logger.exception(f'not a keyerror, unexpected error')
-                            assert False,'halt'
-                    self.logger.info(f'hash_id block {h+1} of {block_count} commiting to datagenhash_hash_id_dict')
-                    datagenhash_hash_id_dict.commit()
-                    
+                #self.logger.info(f'starting block {h+1} of {block_count}')
+                hash_id_chunk=hash_id_list
+                for hash_id in hash_id_chunk:
+                    run_record=self.gen_dict[hash_id]
+                    data_gen=run_record["data_gen"]
+                    datagenhash=joblib.hash(data_gen)
+                    try:
+                        datagenhash_hash_id_dict[datagenhash].append(hash_id) # in case diff species have diff 
+                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
+                        #datagenhash_hash_id_dict.commit()
+                    except KeyError:
+                        datagenhash_hash_id_dict[datagenhash]=[hash_id]
+                        #datagenhash_hash_id_dict.commit()
+                    except:
+                        self.logger.exception(f'not a keyerror, unexpected error')
+                        assert False,'halt'
+                with db() as dghash_db:
+                    self.logger.info(f'adding to datagenhash_hash_id_dict')
+                    for key,val in datagenhash_hash_id_dict.items():
+                        dghash_db[key]=val
+                    dghash_db.commit()
+                    self.logger.info(f'datagenhash_hash_id_dict built')
+            except:
+                self.logger.exception('unexpected error building dghash...')
             self.logger.info('datagen hash hash_id dict complete')
         return db()
     
