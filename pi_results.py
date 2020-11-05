@@ -471,7 +471,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                            'coef_scor_df':new_coef_scor_df}
         return new_predictresult
     
-    def build_prediction_rundicts(self,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+    def build_prediction_rundicts(self,rebuild=0,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
             self.results_dict
         except:
@@ -479,7 +479,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         try: self.predictDB
         except:self.predictDB=self.predictDBdict()
         try:
-            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict()
+            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0)
             rundict_list=[]
             keep_hash_id_list=[]
             self.logger.info(f'building rundict_list')
