@@ -84,9 +84,7 @@ class PiSetup(myLogger):
             data_gen_list.append(params)
         return data_gen_list
      
-    def build_dghash_hash_id_dict_from_run_records(self,run_record_dict==run_record_dict):
-        if run_record_dict is None:
-            run_record_dict=DBTool().genDBdict()
+    def build_dghash_hash_id_dict_from_run_records(self,run_record_dict):
         datagenhash_hash_id_run_records={}
         self.logger.info(f'building datagenhash_hash_id_run_records')
         for hash_id,run_record in run_record_dict.items(): 
@@ -116,7 +114,7 @@ class PiSetup(myLogger):
         #the model_dict and data_gen
         if self.run_type=='fit_fill':
             no_results_run_record_dict=self.dbt.get_no_results_run_record_dict()
-            datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(run_record_dict=no_results_run_record_dict)
+            datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(no_results_run_record_dict)
             self.logger.info(f'datagenhash_hash_id_run_records:{datagenhash_hash_id_run_records}')
             rundict_list=[];hash_id_list=[] #latter is for tracking completion
             for _,hash_id_run_record_dict in datagenhash_hash_id_run_records.items():
