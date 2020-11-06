@@ -127,10 +127,14 @@ class MatchCollapseHuc12(Process,myLogger):
         self.logger.info(f'mch is running at pid:{pid}')
         try:
             hcount=len(self.huc12list)
-            blocksize=100
+            blocksize=50
             blockcount=-(-hcount//blocksize) # ceiling divide
             block_selector=[(blocksize*i,blocksize*(i+1))for i in range(blockcount)]
             for b,block_idx in enumerate(block_selector):
+                """if b==2:
+                    self.logger.error(f'breaking the block loop for debugging!!!!')
+                    break
+                """    
                 self.logger.info(f'pid:{pid} on block_idx:{block_idx}, {b}/{blockcount}')
                 huc12block=self.huc12list[block_idx[0]:block_idx[1]]
                 huc12_adiff_scor=self.adiff_scor_chunk.loc[
@@ -156,7 +160,9 @@ class MatchCollapseHuc12(Process,myLogger):
                     selector=[slice(None) for _ in range(len(self.coef_df.index.names))]
                     selector[h12_pos]=huc12block
                     selector=tuple(selector)
-                    varnorm_coef=self.coef_df.loc[selector] # coef_df already has been aligned with huc12's,
+                    varnorm_coef=self.coef_df.loc[selector] 
+                    varnorm_coef.index=varnorm_coef.index.remove_unused_levels()
+                    # coef_df already has been aligned with huc12's,
                     ##so can use .loc on it to make next aligns easy. Also wts already applied 
                     ##and summed over CV when scaled-by-X'''
 
@@ -166,6 +172,9 @@ class MatchCollapseHuc12(Process,myLogger):
                     selector=[slice(None) for _ in range(len(y_chunk))]
                     selector[h12_pos]=huc12block
                     y_ch_ch=y_chunk.loc[tuple(selector)]
+                    y_ch_ch.index=y_ch_ch.index.remove_unused_levels()
+                    
+                    
                     varnorm_coefs=self.presence_filter_coefs(varnorm_coef,y_ch_ch)
                     hucnorm_varnorm_coefs=[]
                     for varnorm_coef in varnorm_coefs:
@@ -195,8 +204,8 @@ class MatchCollapseHuc12(Process,myLogger):
         coef_,y_=varnorm_coef.align(y_chunk,axis=0,join='left') # drop extra hucs and add estimator
         #y_ser=y_.loc[:,'y']
         #coef__,y__=coef_.align(y_ser,axis=1,level='var') # broadcast y across vars,reps,splits
-        coef0=coef_[y_==0].copy()
-        coef1=coef_[y_==1].copy()
+        coef0=coef_.loc[y_.values==0].copy()
+        coef1=coef_.loc[y_.values==1].copy()
         self.logger.info(f'presence_filter coef0.shape:{coef0.shape}')
         self.logger.info(f'presence_filter coef1.shape:{coef1.shape}')
         return([coef0,coef1])
@@ -283,6 +292,8 @@ class MpHelper(myLogger):
             proc_count=I
             procs=[the_proc(*q_args_list[i],**kwargs) for i in range(proc_count)]
             if no_mp:
+                self.procs=procs
+                if type(no_mp) is int:procs=procs[-no_mp:]
                 self.procs=procs
                 for proc in procs:
                     proc.run()

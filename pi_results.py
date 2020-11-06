@@ -113,9 +113,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return XB_df
     
     
-    
-    
-    
     def build_wt_comid_feature_importance(
         self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
         spec_wt=None,scale_by_X=False,presence_filter=False ):
@@ -190,31 +187,11 @@ class PiResults(DBTool,DataPlotter,myLogger):
 
         scor_select.columns=scor_select.columns.droplevel('var')
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
-        '''"""need to drop zzzno_fish before summing for weight normalization"""
-        if zzzno_fish:
-            ztup=(['zzzno fish'],slice(None),slice(None),slice(None))
-            scor_select=scor_select.loc[ztup]
-            scor_select.index=scor_select.index.remove_unused_levels()
-            if not scale_by_X:#already done if scale_by_X
-                coef_df=coef_df.loc[ztup]
-                coef_df.index=coef_df.index.remove_unused_levels()
-            adiff_scor=adiff_scor.loc[ztup]
-            adiff_scor.index=adiff_scor.index.remove_unused_levels()
-            y=y.loc[['zzzno fish']]
-            #self.scor_select=scor_select;self.coef_df=coef_df;self.adiff_scor=adiff_scor
-        else:
-            scor_select.drop('zzzno fish',level='species',inplace=True)
-            if not scale_by_X: #already done if scale_by_X
-                coef_df.drop('zzzno fish',level='species',inplace=True)
-            adiff_scor.drop('zzzno fish',level='species',inplace=True)
-            y.drop('zzzno fish',level='species',inplace=True)'''
-
-            
         if zzzno_fish: # no need for mp
             proc_count=1
         else: # to split list of huc's for parallel processing, 
             ##   with internal splits as well for ram savings
-            proc_count=10
+            proc_count=14
         mch_kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights,
                     'presence_filter':presence_filter}
         wtd_coef_df=self.mul_wt_norm_coefs(
@@ -259,15 +236,18 @@ class PiResults(DBTool,DataPlotter,myLogger):
                        for i in range(proc_count)]
         
         print(f'starting {proc_count} procs')
-        dflistlist=MpHelper().runAsMultiProc(MatchCollapseHuc12,args_list,kwargs=mch_kwargs)
+        dflistlist=MpHelper().runAsMultiProc(MatchCollapseHuc12,args_list,kwargs=mch_kwargs,no_mp=False)
         print('multiprocessing complete')
+        #self.dflistlist=dflistlist
+        #self.logger.info(f'self.dflistlist:{self.dflistlist}')
+        #assert False, 'no_mp for debugging'
         dflist=[]
         for dfl in dflistlist:
-            dflist.extend(dfl)
+            dflist.extend(dfl) 
         print('concatenating dflist')
-        if type(dflist[0]) is list: #i.e., presence_filter
+        if mch_kwargs['presence_filter']:
             dflist0,dflist1=zip(*dflist)
-            wtd_coef_df=[pd.concat(dflist0,axis=0),pd.concat(dflist1,axis=1)]
+            wtd_coef_df=[pd.concat(dflist0,axis=0),pd.concat(dflist1,axis=0)]
         else:
             wtd_coef_df=pd.concat(dflist,axis=0) 
         return wtd_coef_df

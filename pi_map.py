@@ -1,3 +1,7 @@
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Polygon
+import shapely
+
 from multiprocessing import Process,Queue
 from time import time,sleep
 import re
@@ -34,25 +38,116 @@ class Mapper(myLogger):
     
     def getHucBoundary(self,huc_level):
         level_digits=huc_level[-2:]
-        if level_digits[0]=='0':
+        if level_digits[0]=='0' or not level_digits[0].isdigit():
             level_digits=level_digits[1] #e.g. HUC02 --> 2
-        self.boundary_dict[huc_level]=gpd.read_file(self.boundary_data_path,layer=f'WBDHU{level_digits}')
+        return gpd.read_file(self.boundary_data_path,layer=f'WBDHU{level_digits}')
         
     def hucBoundaryMerge(self,data_df,right_on='HUC12'):
+        # hucboundary files have index levels like 'huc2' not 'HUC02'
         #if right_on.lower()=='huc12':
         huc_level=right_on.lower()
-        merge_kwargs={'left_on':huc_level,'right_on':right_on}
+        level_digits=huc_level[-2:]
+        if huc_level[-2]=='0':
+            huc_level=huc_level[:-2]+huc_level[-1]
+        h12_list=data_df.index.unique(level=right_on)
         boundary=self.getHucBoundary(huc_level)
-        try: self.boundary_dict[huc_level]
-        except: self.getHucBoundary(huc_level)
-        return self.boundary_dict[huc_level].merge(data_df,left_on=huc_level,right_on=right_on)
+        #print('huc_level',huc_level)
+        #print('boundary.index.names',boundary.index.names.index)
+        #boundary_huc_pos=boundary.columns.names.index(huc_level)
+        #selector=[slice(None) for _ in range(len())]
+        #selector[boundary_huc_pos]=h12_list
+        boundary_clip=boundary.loc[boundary[huc_level].isin(h12_list)]
+        #boundary_clip=boundary.loc[selector]
+        return boundary_clip.merge(data_df,left_on=huc_level,right_on=right_on)
     
+    def plot_y01(self,zzzno_fish=False,rebuild=0,huc_level=None):
+        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
+            rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
+            drop_nocoef_scors=False)
+        
+        h12_y1sum=y.sum(axis=0,level=['HUC12','COMID']).mean(axis=0,level='HUC12')
+        h12_y1sum.columns=['species found']
+        h12_y0sum=(1-y).sum(axis=0,level=['HUC12','COMID']).mean(axis=0,level='HUC12')
+        h12_y0sum.columns=['species not found']
+        h12_y1mean=y.mean(axis=0,level=['HUC12','COMID']).mean(axis=0,level='HUC12')
+        h12_y1mean.columns=['share of species found']
+        h12_ycount=h12_y1sum+h12_y0sum.values
+        h12_ycount.columns=['potential species found']
+        dfs=pd.concat([h12_y1sum,h12_y0sum,h12_y1mean,h12_ycount])
+        cols=list(dfs.columns)
+        c=2 # c* of olumns
+        r=-(-len(cols)//c)
+        tuplist=[(r,c,i+1) for i in range(len(cols))]
+        #tuplist=[(len(cols),x+1,c) for x in range(len(cols)//c) for y in range(r)]
+        
+        df=pd.concat([h12_y1sum,h12_y0sum,h12_y1mean,h12_ycount])
+        geo_h12_df=self.hucBoundaryMerge(df)
+        self.geo_h12_df=geo_h12_df
+        
+        fig=plt.figure(dpi=600,figsize=[12,8])
+        fig.suptitle('dependent variable')
+        for i in range(len(cols)):
+            col=cols[i]
+            self.map_plot(geo_h12_df,col,subplot_tup=tuplist[i],fig=fig)
+        fig.savefig(Helper().getname(os.path.join(self.print_dir,'y01'+'.png')))
+        fig.show()
+        
+        
+    def map_plot(self,gdf,col,add_huc_geo=False,fig=None,ax=None,subplot_tup=(1,1,1),title=None):
+        if ax is None:
+            if fig is None:
+                savefig=1
+                fig=plt.figure(dpi=300,figsize=[10,8])
+            else:
+                savefig=0
+             
+            ax=fig.add_subplot(*subplot_tup)
+        if title is None:
+            title=col
+        ax.set_title(title)
+        if add_huc_geo:
+            gdf=self.hucBoundaryMerge(gdf)
+        self.gdf=gdf
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+
+        gdf.plot(column=col,ax=ax,cax=cax,legend=True,)#,legend_kwds={'orientation':'vertical'})
+        #collection=self.plot_collection(ax,gdf.geometry,values=gdf[col],colormap='cool')
+        
+        if savefig:fig.savefig(Helper().getname(os.path.join(self.print_dir,title+'.png')))
+
+    def plot_collection(self,ax, geoms, values=None, colormap='Set1',  facecolor=None, edgecolor=None,
+                            alpha=.9, linewidth=1.0, **kwargs):
+        patches = []
+
+        for multipoly in geoms:
+            for poly in multipoly:
+
+                a = np.asarray(poly.exterior)
+                if poly.has_z:
+                    poly = shapely.geometry.Polygon(zip(*poly.exterior.xy))
+
+                patches.append(Polygon(a))
+
+        patches = PatchCollection(patches, facecolor=facecolor, linewidth=linewidth, edgecolor=edgecolor, alpha=alpha, **kwargs)
+
+        if values is not None:
+            patches.set_array(values)
+            patches.set_cmap(colormap)
+
+        ax.add_collection(patches, autolim=True)
+        ax.autoscale_view()
+        return patches
     
+         
     
             
     def plot_top_features(
-        self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
-        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=True,presence_filter=False):
+        self,split=None,top_n=10,rebuild=0,zzzno_fish=False,):
+        coef_df,scor_df,y,yhat=self.get_coef_stack(
+            rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
+            drop_nocoef_scors=True)
+        
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
         if presence_filter:
@@ -65,6 +160,8 @@ class Mapper(myLogger):
             title+='_zzzno fish'
         if filter_vars:
             title+='_var-filter'
+        if spec_wt=='even':
+            title+='_even-wt-spec'
         title+='_'+fit_scorer
         
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
@@ -73,8 +170,6 @@ class Mapper(myLogger):
         self.wtd_coef_dfs=wtd_coef_dfs
         if type(wtd_coef_dfs) is pd.DataFrame:
             wtd_coef_dfs=[wtd_coef_dfs]
-        
-        
         
         for i,wtd_coef_df_ in enumerate(wtd_coef_dfs):
             self.logger.info(f'pi_map dropping cols from wtd_coef_df i:{i}')
@@ -95,8 +190,8 @@ class Mapper(myLogger):
                             
                             break #stop searching
         if split is None:
-            cols_sorted_list=[]
-            self.plot_hilo_coefs(wtd_coef_dfs,title)
+            
+            self.plot_hilo_coefs(wtd_coef_dfs,top_n,title)
             return
         elif split[:3]=='huc': # add a new index level on lhs for huc2,etc
             split=int(split[3:])
@@ -109,7 +204,8 @@ class Mapper(myLogger):
         split_coef_mean=wtd_coef_df2.mean(axis=0,level=split) # mean across huc
         split_coef_rank=np.argsort(split_coef_mean,axis=1)
         
-    def plot_hilo_coefs(self,wt_coef_dfs,title):
+    def plot_hilo_coefs(self,wtd_coef_dfs,top_n,title):
+        cols_sorted_list=[]
         for wtd_coef_df in wtd_coef_dfs:
 
             big_mean=wtd_coef_df.mean(axis=0)
@@ -117,8 +213,8 @@ class Mapper(myLogger):
 
         big_top_2n=(cols_sorted_list[0][:top_n],
                     cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
-        top_neg_coef_df=wtd_coef_df.loc[:,big_top_2n[0]]
-        top_pos_coef_df=wtd_coef_df.loc[:,big_top_2n[1]]
+        top_neg_coef_df=wtd_coef_dfs[0].loc[:,big_top_2n[0]]
+        top_pos_coef_df=wtd_coef_dfs[-1].loc[:,big_top_2n[1]]
         #self.big_top_wtd_coef_df=big_top_wtd_coef_df
         pos_sort_idx=np.argsort(top_pos_coef_df,axis=1) #ascending
         neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
@@ -140,8 +236,9 @@ class Mapper(myLogger):
 
 
         fig=plt.figure(dpi=300,figsize=[10,14])
-        
+        fig.suptitle(title)
         ax=fig.add_subplot(2,1,1)
+        ax.set_title('top positive features')
         #divider = make_axes_locatable(ax)
         #cax = divider.append_axes("right", size="5%", pad=0.1)
         geo_pos_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
@@ -151,6 +248,7 @@ class Mapper(myLogger):
         geo_neg_cols=self.hucBoundaryMerge(big_top_cols_neg)
 
         ax=fig.add_subplot(2,1,2)
+        ax.set_title('top negative features')
         #divider = make_axes_locatable(ax)
         #cax = divider.append_axes("right", size="5%", pad=0.1)
         geo_neg_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
@@ -161,12 +259,15 @@ class Mapper(myLogger):
             self.print_dir,f'huc12_top{top_n}_features.png')))
     
         
-    def add_huc2_conus(self,ax):
+    def add_huc2_conus(self,ax,huc2_select=None):
         try: huc2=self.boundary_dict['huc02']
         except: 
             self.getHucBoundary('huc02')
             huc2=self.boundary_dict['huc02']
-        huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
+        if huc2_select is None:
+            huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
+        else:
+            huc2_conus=huc2.loc[huc2.loc[huc2_select,'huc2'].astype('int')<19,'geometry']
         huc2_conus.boundary.plot(linewidth=1,color=None,edgecolor='k',ax=ax)
     
     def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True):
