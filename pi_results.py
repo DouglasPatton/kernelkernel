@@ -78,36 +78,35 @@ class PiResults(DBTool,DataPlotter,myLogger):
         else:
             wt_df=None
             
-        cycles=1
-        cycle_n=-(-len(spec_list)//cycles)
-        chunks=5
-        chunk_n=-(-cycle_n//chunks)
+        
+        chunks=4
+        chunk_n=-(-len(spec_list)//chunks)
         #args_list_list=[]
         XB_df=pd.DataFrame()
-        for cy in range(cycles): # 1 cycle for debugging
-            args_list=[]
-            for c in range(chunks):
-                left=cy*cycle_n+c*chunk_n
-                right=left+chunk_n
-                spec_list_ch=spec_list[left:right]
-                
-                if wt_df is None:
-                    spec_wt=None
-                else:
-                    spec_wt=wt_df.loc[spec_list_ch]
+        args_list=[]
+        for c in range(chunks):
+            left=c*chunk_n
+            right=left+chunk_n
+            spec_list_ch=spec_list[left:right]
+
+            if wt_df is None:
+                spec_wt=None
+            else:
+                spec_wt=wt_df.loc[spec_list_ch]
                 spec_wt.index=spec_wt.index.remove_unused_levels()
-                spec_x=Big_X_train_df.loc[spec_list_ch].astype(np.float32)
-                spec_x.index=spec_x.index.remove_unused_levels()
-                spec_b=coef_df.loc[spec_list_ch].astype(np.float32)
-                spec_b.index=spec_b.index.remove_unused_levels()  
-                args_list.append([spec_x,spec_b,spec_wt])
-                if right>=len(spec_list):break
-            self.logger.info(f'starting cycle:{cy+1}/{cycles}')
-            mph=MpHelper()
-            #self.mph=mph
-            XB_df=pd.concat([XB_df,*mph.runAsMultiProc(MulXB,args_list,no_mp=False)],axis=0) #no_mp for debugging
-            #args_list_list.append(args_list)
-            if right>=len(spec_list):break
+                spec_wt=spec_wt.astype(np.float32)
+            spec_x=Big_X_train_df.loc[spec_list_ch].astype(np.float32)
+            spec_x.index=spec_x.index.remove_unused_levels()
+            spec_b=coef_df.loc[spec_list_ch].astype(np.float32)
+            spec_b.index=spec_b.index.remove_unused_levels()  
+            args_list.append([spec_x,spec_b,spec_wt])
+            #if right>=len(spec_list):break
+        mph=MpHelper()
+        #self.mph=mph
+        dflist=mph.runAsMultiProc(MulXB,args_list,no_mp=False)
+        self.dflist=dflist
+        XB_df=pd.concat(dflist,axis=0) #no_mp for debugging
+        #args_list_list.append(args_list)
         
         XB_df.to_hdf(name,key,complevel=5)
         return XB_df
@@ -191,7 +190,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
             proc_count=1
         else: # to split list of huc's for parallel processing, 
             ##   with internal splits as well for ram savings
-            proc_count=14
+            proc_count=10
         mch_kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights,
                     'presence_filter':presence_filter}
         wtd_coef_df=self.mul_wt_norm_coefs(
