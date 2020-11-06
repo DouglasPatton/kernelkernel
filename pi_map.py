@@ -45,7 +45,8 @@ class Mapper(myLogger):
     def hucBoundaryMerge(self,data_df,right_on='HUC12'):
         # hucboundary files have index levels like 'huc2' not 'HUC02'
         #if right_on.lower()=='huc12':
-        huc_level=right_on.lower()
+        if type(huc_level) is str:
+            huc_level=right_on.lower()
         level_digits=huc_level[-2:]
         if huc_level[-2]=='0':
             huc_level=huc_level[:-2]+huc_level[-1]
@@ -81,7 +82,11 @@ class Mapper(myLogger):
         #tuplist=[(len(cols),x+1,c) for x in range(len(cols)//c) for y in range(r)]
         
         df=pd.concat([h12_y1sum,h12_y0sum,h12_y1mean,h12_ycount])
-        geo_h12_df=self.hucBoundaryMerge(df)
+        if huc_level is None:
+            geo_df=self.hucBoundaryMerge(df)
+        else:
+            df_h=self.hucAggregate(df,huc_level)
+            geo_df,huc_level=self.hucBoundaryMerge(df_h,right_on=huc_level)
         self.geo_h12_df=geo_h12_df
         
         fig=plt.figure(dpi=600,figsize=[12,8])
@@ -92,7 +97,46 @@ class Mapper(myLogger):
         fig.savefig(Helper().getname(os.path.join(self.print_dir,'y01'+'.png')))
         fig.show()
         
+    def hucAggregate(self,df,huc_level):
+        if type(huc_level) is int:
+            if huc_level<10:
+                huc_name='HUC0'+str(huc_level)
+            else:
+                huc_name='HUC'+str(huc_level)
+            huc_name='HUC'+str(int)
+            huc_digs=str(huc_level)
+        elif huc_level[:3].lower()=='huc':
+            huc_digs=huc_level[3:]
+            huc_name=huc_level
+        else:
+            huc_digs=huc_level
+            huc_name='HUC'+str(huc_level)
+        if huc_digs[0]==0:
+            huc_digs=huc_digs[1:]
+        huc_dig_int=int(huc_digs)
+        idx1=df.index
+        if not type(idx1) is pd.MultiIndex:
+            idx1=pd.MultiIndex.from_tuples([(idx,) for idx in idx1],names=['HUC12']) # make into a tuple, so iterates like a multiindex
+            huc_pos=0
+        else:
+            huc_pos=None
+            for pos,name in enumerate(idx1.index.names):
+                if re.search('huc',name.lower()):
+                    huc_pos=pos
+                    break
+            assert not huc_pos is None, f'huc_pos is None!, idx1.index.names:{idx1.index.names}'
         
+        idx2=[(idx1[i][huc_pos][:huc_dig_int],*idx1[i]) for i in range(len(idx1))] # idx1 is a list of tuples 
+        ##'species','estimator','HUC12','COMID', so [-2]  is 'HUC12'
+        #idx2=[(idx_add,*idx1[i]) for i in range(len(idx1))] # prepend idx_add
+        
+        
+        expanded_midx=pd.MultiIndex.from_tuples(idx2,names=(huc_name,*idx1.names))
+        
+        df.index=expanded_midx
+        df_mean=df.mean(axis=0,level=huc_name) # mean across huc
+        return df_mean,huc_name
+    
     def map_plot(self,gdf,col,add_huc_geo=False,fig=None,ax=None,subplot_tup=(1,1,1),title=None):
         if ax is None:
             if fig is None:
@@ -105,6 +149,7 @@ class Mapper(myLogger):
         if title is None:
             title=col
         ax.set_title(title)
+        self.add_huc2_conus(self,ax,huc2_select=None)
         if add_huc_geo:
             gdf=self.hucBoundaryMerge(gdf)
         self.gdf=gdf
