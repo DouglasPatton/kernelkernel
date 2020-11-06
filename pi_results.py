@@ -53,6 +53,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
             wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=zzzno_fish,return_weights=True,spec_wt=spec_wt,scale_by_X=False)
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
         key='data'
+        if spec_wt:
+            key+=f'_{spec_wt}'
+        if zzzno_fish:
+            key+='_zzzno_fish'
         if not rebuild:
             try:
                 XB_df=pd.read_hdf(name,key)
@@ -65,7 +69,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         if coef_df is None:
             coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish)
         spec_list=coef_df.index.unique(level='species')
-        Big_X_train_df=self.build_X_train_df(spec_list=spec_list,std=True)
+        Big_X_train_df=self.build_X_train_df(std=True)
         if type(wt) is dict:
             self.logger.info('getting weights')
             wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,**wt)
@@ -73,10 +77,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             wt_df=wt
         else:
             wt_df=None
-        #xvars=Big_X_train_df.columns
-        #col_index=pd.MultiIndex.from_tuples([(xvar,) for xvar in xvars],names=['var'])
-        #Big_X_train_df.columns=col_index
-        cycles=5
+            
+        cycles=1
         cycle_n=-(-len(spec_list)//cycles)
         chunks=5
         chunk_n=-(-cycle_n//chunks)
@@ -283,7 +285,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return df_chunk_list
     
     
-    def build_X_train_df(self,rebuild=0,spec_list=None,std=True):
+    def build_X_train_df(self,rebuild=0,std=True):
         name=os.path.join(os.getcwd(),'results','bigX.h5')
         if std:
             key='std_data'
@@ -299,12 +301,11 @@ class PiResults(DBTool,DataPlotter,myLogger):
             if type(rebuild) is int:
                 rebuild-=1
         try:
-            self.results_dict
+            self.gen_dict
         except:
-            self.results_dict=self.resultsDBdict()
+            self.gen_dict=self.genDBdict()
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
-        if spec_list is None:
-            spec_list=list(species_hash_id_dict.keys())
+        spec_list=list(species_hash_id_dict.keys())
         if std:
             metadict=self.metadataDBdict()
             
@@ -312,10 +313,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
         for spec in spec_list:
             spec_meta_dict=metadict[spec]
             a_hash_id=species_hash_id_dict[spec][0]
-            modeldict=self.results_dict[a_hash_id]
-            datagen_dict=modeldict['data_gen']
+            run_record=self.gen_dict[a_hash_id]
+            datagen_dict=run_record['data_gen']
             species=datagen_dict['species']
-            data=dataGenerator(datagen_dict)
+            data=dataGenerator(datagen_dict,fit_gen=False)
             n=data.y_train.shape[0]
             X_train=data.X_train
             if std:
@@ -330,7 +331,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             X_train.index=index
             spec_df_list.append(X_train)
         Big_X_train_df=pd.concat(spec_df_list,axis=0) 
-        Big_X_train_df.to_hdf(name,key,complevel=5)
+        self.logger.info(f'writing Big_X_train_df to hdf. shape:{Big_X_train_df.shape}, name:{name},key:{key}')
+        Big_X_train_df.to_hdf(name,key,complevel=1)
         return Big_X_train_df
         
                 
@@ -401,6 +403,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 rebuild-=1
         try: self.predict_dict
         except: self.predict_dict=self.predictDBdict()
+        try: self.gen_dict
+        except: self.gen_dict=self.genDBdict()
         species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
         predictresults_tostack=[];species_y_dict={}
         for species,hash_id_list in species_hash_id_dict.items():
@@ -410,7 +414,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 
                 try:
                     predict_dict=self.predict_dict[hash_id]
-                    est_name=self.results_dict[hash_id]['model_gen']['name']
+                    est_name=self.gen_dict[hash_id]['model_gen']['name']
                     
                     success=1
                 except:
@@ -437,7 +441,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         stacked_predict_dict={'y':None,'yhat':None,'coef_scor_df':None}
         for key in ['yhat','coef_scor_df']:
             dflist=[pr[key] for pr in predictresults_tostack]
-            stacked_df=pd.concat(dflist,axis=0).sort_index(axis=0)
+            stacked_df=pd.concat(dflist,axis=0).sort_index(axis=0) #sort_index groups levels together
             self.logger.info(f'key:{key} and stacked_df:{stacked_df}')
             stacked_predict_dict[key]=stacked_df
         y_df_list=list(species_y_dict.values())
@@ -451,6 +455,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         hstack_dict={key:[predict_list[0][key]] for key in keys_with_reps}
         #col_midx_stack_dict={'yhat':[],'coef_scor_df':[]}
         cols=predict_list[0]['yhat'].columns # using this as the starting
+        colnames=cols.names
         ## point for adjusting reps in both df's (yhat has fewer columns!)
         _,reps,_=zip(*cols)
         maxr=max(reps)
@@ -460,13 +465,19 @@ class PiResults(DBTool,DataPlotter,myLogger):
                 df=pr[key]
                 oldtuplist=df.columns #each tup is ['var','rep_idx','split_idx']
                 newtuplist=[(tup[0],tup[1]+maxr+1,tup[2]) for tup in oldtuplist]# add old max+1 to each rep
-                df.columns=newtuplist #p off by 1.
+                df.columns=pd.MultiIndex.from_tuples(newtuplist,names=colnames) #p off by 1.
                 hstack_dict[key].append(df)
-            maxr=+maxr+1
+            cols=pr['yhat'].columns 
+            _,reps,_=zip(*cols)
+            maxr=max(reps)
         self.hstack_dict=hstack_dict
-        new_yhat=pd.concat(hstack_dict['yhat'],axis=1).sort_index(axis=1)
-        new_coef_scor_df=pd.concat(hstack_dict['coef_scor_df'],axis=1).sort_index(axis=1)
-        y=predict_list[0]['y']
+        yhat_list=hstack_dict['yhat']
+        new_yhat=yhat_list[0].join(yhat_list[1:])
+        #new_yhat=pd.concat(hstack_dict['yhat'],axis=1).sort_index(axis=1)
+        coef_scor_list=hstack_dict['coef_scor_df']
+        new_coef_scor_df=coef_scor_list[0].join(coef_scor_list[1:])
+        #new_coef_scor_df=pd.concat(hstack_dict['coef_scor_df'],axis=1).sort_index(axis=1)
+        y=predict_list[0]['y'] # just need one of them
         new_predictresult={'y':y,'yhat':new_yhat,
                            'coef_scor_df':new_coef_scor_df}
         return new_predictresult
@@ -584,8 +595,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
     
     def build_species_hash_id_dict(self,rebuild=0):
-        try: self.results_dict
-        except:self.results_dict=self.resultsDBdict()
+        try: self.gen_dict
+        except:self.gen_dict=self.genDBdict
         name='species_hash_id_dict'
         if not rebuild:
             try:
@@ -594,8 +605,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             except:
                 self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
         species_hash_id_dict={}
-        for hash_id,model_dict in self.results_dict.items():
-            species=model_dict['data_gen']['species']
+        for hash_id,run_record in self.gen_dict.items():
+            species=run_record['data_gen']['species']
             try: species_hash_id_dict[species].append(hash_id)
             except KeyError: species_hash_id_dict[species]=[hash_id]
             except: assert False, 'halt'
