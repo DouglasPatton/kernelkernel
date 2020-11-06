@@ -111,9 +111,6 @@ class PiResults(DBTool,DataPlotter,myLogger):
         return XB_df
     
     
-    
-    
-    
     def build_wt_comid_feature_importance(
         self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
         spec_wt=None,scale_by_X=False,presence_filter=False ):
