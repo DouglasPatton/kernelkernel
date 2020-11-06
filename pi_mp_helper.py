@@ -73,30 +73,56 @@ class MulXB(Process,myLogger):
     def run(self,):
         myLogger.__init__(self,name='MulXB.log')
         self.logger.info(f'running a MulXB proc')
+        
+        chunk_count=200
+        h12_list=self.x.index.unique(level='HUC12')
+        h12_count=len(h12_list)
+        h12_pos_x=self.x.index.names.index('HUC12')
+        x_selector=[slice(None) for _ in range(len(self.x.index.names))]
+        if (not self.wt is None) and 'HUC12' in self.wt.index.names:
+            h12_pos_wt=self.wt.index.names.index('HUC12')
+            wt_selector=[slice(None) for _ in range(len(self.wt.index.names))]
+        
+       
+        chunk_n=-(-h12_count//chunk_count)
+        results=[]
         try:
-            x,b=self.x.align(self.b,axis=0) #add comids,huc12's from bigX
-            x,b=x.align(b,axis=1,level='var')#add reps,splits from coefs
-            self.x_,self.b_=x,b
-            xb=x.mul(b,axis=0)
-            if not self.wt is None:
-                xb,w=xb.align(self.wt,axis=0)
-                #xb,w=xb.align(w,axis=1)
-                w.columns=w.columns.droplevel('var')
-                self.xb=xb;self.w=w
-                self.logger.info(f'xb:{xb}')
-                self.logger.info(f'w:{w}')
-                xbw=xb.mul(w,axis=0)
-                xbw_=xbw.sum(axis=1,level='var') 
-                
-                
-                result=xbw_            
-            else:
-                result=xb
-            self.logger.info(f'MulXB result:{result}')
+            for ch in range(chunk_count):
+                h12_ch=h12_list[ch*chunk_n:(ch+1)*chunk_n]
+                x_selector[h12_pos_x]=h12_ch
+                x_ch=self.x.loc[tuple(x_selector)]
+                x,b=x_ch.align(self.b,axis=0) #add comids,huc12's from bigX
+                x,b=x.align(b,axis=1,level='var')#add reps,splits from coefs
+                self.x_,self.b_=x,b
+                xb=x.mul(b,axis=0)
+                if not self.wt is None:
+                    if 'HUC12' in self.wt.index.names:
+                        wt_selector[h12_pos_wt]=h12_ch
+                        wt_ch=self.wt.loc[tuple(wt_selector)]
+                    else:
+                        self.logger.warning(f'HUC12 not found in wt.index.names:{self.wt.index.names}')
+                        wt_ch=self.wt
+                    xb,w=xb.align(wt_ch,axis=0)
+                    #xb,w=xb.align(w,axis=1)
+                    w.columns=w.columns.droplevel('var')
+                    #self.xb=xb;self.w=w
+                    self.logger.info(f'xb:{xb}')
+                    self.logger.info(f'w:{w}')
+                    xbw=xb.mul(w,axis=0)
+                    xbw_=xbw.sum(axis=1,level='var') 
+
+
+                    result=xbw_            
+                else:
+                    result=xb
+                results.append(result)
+            #self.logger.info(f'MulXB result:{result}')\
+            self.logger.info('MUlXb concatenating results')
+            resultdf=pd.concat(results,axis=0)
             if not self.q is None:
-                self.q.put((self.i,result))
+                self.q.put((self.i,resultdf))
             else:
-                self.result=result
+                self.result=resultdf
         except:
             self.logger.exception(f'error with MulXB')
             assert False,'halt'

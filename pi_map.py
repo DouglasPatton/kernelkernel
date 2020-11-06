@@ -187,8 +187,8 @@ class Mapper(myLogger):
          
     
             
-    def plot_top_features(
-        self,split=None,top_n=10,rebuild=0,zzzno_fish=False,):
+    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False):
         coef_df,scor_df,y,yhat=self.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
