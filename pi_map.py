@@ -45,19 +45,27 @@ class Mapper(myLogger):
     def hucBoundaryMerge(self,data_df,right_on='HUC12'):
         # hucboundary files have index levels like 'huc2' not 'HUC02'
         #if right_on.lower()=='huc12':
-        if type(huc_level) is str:
+        self.data_df=data_df
+        if type(right_on) is str:
             huc_level=right_on.lower()
+        elif type(right_on) is int:
+            huc_level='huc'+str(right_on) #'huc' not necessry
+        else:
+            assert False, f'unexepected right_on:{right_on} not str or int'
         level_digits=huc_level[-2:]
         if huc_level[-2]=='0':
             huc_level=huc_level[:-2]+huc_level[-1]
-        h12_list=data_df.index.unique(level=right_on)
+        if type(data_df.index) is pd.MultiIndex:
+            h_list=data_df.index.unique(level=right_on)
+        else:
+            h_list=list(data_df.index)
         boundary=self.getHucBoundary(huc_level)
         #print('huc_level',huc_level)
         #print('boundary.index.names',boundary.index.names.index)
         #boundary_huc_pos=boundary.columns.names.index(huc_level)
         #selector=[slice(None) for _ in range(len())]
         #selector[boundary_huc_pos]=h12_list
-        boundary_clip=boundary.loc[boundary[huc_level].isin(h12_list)]
+        boundary_clip=boundary.loc[boundary[huc_level].isin(h_list)]
         #boundary_clip=boundary.loc[selector]
         return boundary_clip.merge(data_df,left_on=huc_level,right_on=right_on)
     
@@ -85,8 +93,8 @@ class Mapper(myLogger):
         if huc_level is None:
             geo_df=self.hucBoundaryMerge(df)
         else:
-            df_h=self.hucAggregate(df,huc_level)
-            geo_df,huc_level=self.hucBoundaryMerge(df_h,right_on=huc_level)
+            df_h,huc_level=self.hucAggregate(df,huc_level)
+            geo_df=self.hucBoundaryMerge(df_h,right_on=huc_level)
         self.geo_h12_df=geo_h12_df
         
         fig=plt.figure(dpi=600,figsize=[12,8])
