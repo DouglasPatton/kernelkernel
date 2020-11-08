@@ -122,30 +122,38 @@ class Mapper(myLogger):
     def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-        wt_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
-        
-        
+        if not wt is None:
+            wt_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
+            assert False,'not developed'
+
         yhat_a,y_a=yhat.align(y,axis=0)
         y_vals=y_a.values
         diff=yhat_a.subtract(y_vals,axis=0).astype(np.float16)*-1 # y-yhat
+
+
+        pos=diff[y_vals==1]
+        neg=diff[y_vals==0]
         
-        tp=1-diff[y_vals==1]
-        tn=1-diff[y_vals==0].abs()
-        fp=diff[diff<0]*-1 #dif is neg for an fp, so reverse it to signal fp
-        fn=diff[diff>0]
+        tp=(1-pos).mean(axis=1)
+        tn=(1-neg).abs().mean(axis=1)
+        fp=neg.abs().mean(axis=1) #dif is neg for an fp, so reverse it to signal fp
+        fn=pos.mean(axis=1)
+        
+        
+        
         confu_list=[tp,fp,fn,tn]
         confu_varnames=['true positive','false positive','false negative','true negative']
+        for i in range(len(confu_list)):confu_list[i].rename(confu_varnames[i],inplace=True)
         
         self.confu_list=confu_list
-        confu_list=[self.swap_index_by_level(confu_list[i],'var',confu_varnames[i],axis=1) for i in range(4)]
-        if wt is None:
-            #confu_df=confu_df.mean(axis=1,level=['var'])
-            confu_list=[df.mean(axis=1,level=['var']) for df in confu_list]
-        else: 
+        #confu_list=[self.swap_index_by_level(confu_list[i],'var',confu_varnames[i],axis=1) for i in range(4)]                 
+        
+        if not wt is None:
             assert False,'not developed'
         if huc_level is None:
-             huc_level='HUC12'
+            huc_level='HUC12' 
+            confu_list=[ser.mean(axis=0,level=huc_level) for ser in confu_list] #ser for series
         else:
             #confu_df,huc_level=self.hucAggregate(confu_df,huc_level,collapse='mean')    
             confu_list,huc_levels=zip(*[self.hucAggregate(df,huc_level,collapse='mean') for df in confu_list])  
@@ -164,19 +172,19 @@ class Mapper(myLogger):
         tuplist=[(r,c,i+1) for i in range(len(df_col_vars))]
         
         fig=plt.figure(dpi=600,figsize=[12,8])
-        fig.suptitle(f'all species confusion matrix by {huc_level}')
+        fig.suptitle(f'all species normalized confusion matrix by {huc_level}')
         for i in range(len(df_col_vars)):
             col=df_col_vars[i]
             geo_df=geo_dfs[i]
             self.logger.info(f'adding plot {i+1} of {len(df_col_vars)}')
-            self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig)
+            self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig,plotkwargs={'vmin':0,'vmax':1})
 
         name=f'confusion_matrix_map_{huc_level}.png'
         
         fig.savefig(Helper().getname(os.path.join(self.print_dir,name)))
         fig.show() 
                      
-                     
+        
                      
     def swap_index_by_level(self,df,level,new,axis=0):
         if axis==0:
@@ -250,7 +258,7 @@ class Mapper(myLogger):
             else: assert False, 'not developed'
         return df,huc_name
     
-    def map_plot(self,gdf,col,add_huc_geo=False,fig=None,ax=None,subplot_tup=(1,1,1),title=None):
+    def map_plot(self,gdf,col,add_huc_geo=None ,fig=None,ax=None,subplot_tup=(1,1,1),title=None,plotkwargs={}):
         if ax is None:
             if fig is None:
                 savefig=1
@@ -270,7 +278,7 @@ class Mapper(myLogger):
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.1)
 
-        gdf.plot(column=col,ax=ax,cax=cax,legend=True,)#,legend_kwds={'orientation':'vertical'})
+        gdf.plot(column=col,ax=ax,cax=cax,legend=True,**plotkwargs)#,legend_kwds={'orientation':'vertical'})
         #collection=self.plot_collection(ax,gdf.geometry,values=gdf[col],colormap='cool')
         
         if savefig:fig.savefig(Helper().getname(os.path.join(self.print_dir,title+'.png')))
