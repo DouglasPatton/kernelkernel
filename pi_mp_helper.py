@@ -153,7 +153,7 @@ class MatchCollapseHuc12(Process,myLogger):
         self.logger.info(f'mch is running at pid:{pid}')
         try:
             hcount=len(self.huc12list)
-            blocksize=10
+            blocksize=50
             blockcount=-(-hcount//blocksize) # ceiling divide
             block_selector=[(blocksize*i,blocksize*(i+1))for i in range(blockcount)]
             for b,block_idx in enumerate(block_selector):

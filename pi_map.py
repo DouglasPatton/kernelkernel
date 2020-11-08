@@ -313,14 +313,12 @@ class Mapper(myLogger):
          
     
             
-    def plot_top_features(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+    def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
         filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False):
         
-        """
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
-        """
         
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -336,8 +334,6 @@ class Mapper(myLogger):
             title+='_var-filter'
         if spec_wt=='even':
             title+='_even-wt-spec'
-        if huc_level:
-            title+=f'_{huc_level}'
         title+='_'+fit_scorer
         
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
@@ -367,9 +363,8 @@ class Mapper(myLogger):
                             break #stop searching
         if split is None:
             
-            self.plot_hilo_coefs(wtd_coef_dfs,top_n,title,huc_level=huc_level)
+            self.plot_hilo_coefs(wtd_coef_dfs,top_n,title)
             return
-        
         elif split[:3]=='huc': # add a new index level on lhs for huc2,etc
             split=int(split[3:])
             idx1=wtd_coef_df.index
@@ -381,54 +376,15 @@ class Mapper(myLogger):
         split_coef_mean=wtd_coef_df2.mean(axis=0,level=split) # mean across huc
         split_coef_rank=np.argsort(split_coef_mean,axis=1)
         
-    def plot_hilo_coefs(self,wtd_coef_dfs,top_n,title,huc_level=None):
+    def plot_hilo_coefs(self,wtd_coef_dfs,top_n,title):
         cols_sorted_list=[]
-        selector=[0,-1]
-        select_cols_list=[]
-        lo_hi_names=['lowest_coef','highest_coef']
-        for df_idx in selector:
-            wtd_coef_df=wtd_coef_dfs[df_idx]
-            if not huc_level is None:
-                wtd_coef_df,_=self.hucAggregate(wtd_coef_df,huc_level)
-        
-            
-            #the variable names    
-            cols=wtd_coef_df.columns
-            #sort acros cols, i.e., each row
-            coef_sort_idx=np.argsort(wtd_coef_df,axis=1) 
-            
-            select_cols=coef_sort_idx.apply(
-                lambda x:cols[x.iloc[df_idx]],axis=1,) #df_idx will choose the first or last from each sorted list
-            
-            n_select_cols=select_cols.value_counts(ascending=False).index.tolist()[:top_n]
-            select_cols_list.append(n_select_cols)
-            
-            
-            '''below code won't work for separate wtd_dfs
-            # for each row, take best and worst in dataframe with col for lo, col for hi.
-            lo_hi_cols=coef_sort_idx.apply(
-                lambda x:pd.Series([cols[x.iloc[0]],cols[x.iloc[-1]]],index=lo_hi_names,dtype='category'),axis=1,)
-            #count frequency of each list of worst then best. creating a series for worst and best since ordering is different
-            #lo_val_counts=[lo_hi_cols.loc[:,n].value_counts(ascending=False) for n in lo_hi_names]
-            #lo_hi_val_counts=lo_hi_cols.apply(lambda col:col.value_counts(ascending=True),axis=0)
-            
-            #get the most frequent big and small            
-            big_vote_lo_hi=[lo_val_counts[i].iloc[slice(None,top_n).index] for i in range(2)]            
-            self.big_vote_lo_hi=big_vote_lo_hi'''
-    
-        """ 
-            ###################
-            assert False, 'developing new ranking approach!'
-            ####################
-            big_mean=wtd_coef_df.mean(axis=0)#mean aross all hucs
-            #sort_ord=np.argsort(big_mean)
-            #cols_sorted_list.append(wtd_coef_df.columns.to_list()[sort_ord])
+        for wtd_coef_df in wtd_coef_dfs:
+
+            big_mean=wtd_coef_df.mean(axis=0)
             cols_sorted_list.append(list(big_mean.sort_values().index))#ascending
 
         big_top_2n=(cols_sorted_list[0][:top_n],
                     cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
-        """
-        big_top_2n=tuple(select_cols_list)
         top_neg_coef_df=wtd_coef_dfs[0].loc[:,big_top_2n[0]]
         top_pos_coef_df=wtd_coef_dfs[-1].loc[:,big_top_2n[1]]
         #self.big_top_wtd_coef_df=big_top_wtd_coef_df
@@ -436,18 +392,18 @@ class Mapper(myLogger):
         neg_sort_idx=np.argsort(top_neg_coef_df,axis=1)#.iloc[:,::-1] # ascending
         #select the best and worst columns
         big_top_cols_pos=pos_sort_idx.apply(
-            lambda x: big_top_2n[1][x.iloc[-1]],axis=1)
+            lambda x: big_top_2n[1][x[-1]],axis=1)
         big_top_cols_neg=neg_sort_idx.apply(
-            lambda x: big_top_2n[0][x.iloc[0]],axis=1)
+            lambda x: big_top_2n[0][x[0]],axis=1)
         colname='top_predictive_variable'
         big_top_cols_pos=big_top_cols_pos.rename(colname)
         big_top_cols_neg=big_top_cols_neg.rename(colname)
-        
+
+
         self.big_top_cols_pos=big_top_cols_pos
         self.big_top_cols_neg=big_top_cols_neg
 
         self.logger.info('starting boundary merge pos')
-        
         geo_pos_cols=self.hucBoundaryMerge(big_top_cols_pos)
 
 
