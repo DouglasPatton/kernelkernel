@@ -119,7 +119,7 @@ class Mapper(myLogger):
         fig.savefig(Helper().getname(os.path.join(self.print_dir,name)))
         fig.show() 
         
-    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None):
+    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None,normal_color=True):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
@@ -133,11 +133,11 @@ class Mapper(myLogger):
 
 
         pos=diff[y_vals==1]
-        neg=diff[y_vals==0]
+        neg=diff[y_vals==0].abs()
         
         tp=(1-pos).mean(axis=1)
-        tn=(1-neg).abs().mean(axis=1)
-        fp=neg.abs().mean(axis=1) #dif is neg for an fp, so reverse it to signal fp
+        tn=(1-neg).mean(axis=1)
+        fp=neg.mean(axis=1) #dif is neg for an fp, so reverse it to signal fp
         fn=pos.mean(axis=1)
         
         
@@ -177,7 +177,11 @@ class Mapper(myLogger):
             col=df_col_vars[i]
             geo_df=geo_dfs[i]
             self.logger.info(f'adding plot {i+1} of {len(df_col_vars)}')
-            self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig,plotkwargs={'vmin':0,'vmax':1})
+            if normal_color:
+                plotkwargs={'vmin':0,'vmax':1}
+            else:
+                plotkwargs={}
+            self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig,plotkwargs=plotkwargs)
 
         name=f'confusion_matrix_map_{huc_level}.png'
         
