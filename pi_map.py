@@ -282,7 +282,7 @@ class Mapper(myLogger):
             select_cols=coef_sort_idx.apply(
                 lambda x:cols[x.iloc[df_idx]],axis=1,) #df_idx will choose the first or last from each sorted list
             
-            n_select_cols=select_cols.value_counts(ascending=False).iloc[:top_n]
+            n_select_cols=select_cols.value_counts(ascending=False).index.tolist()[:top_n]
             select_cols_list.append(n_select_cols)
             
             
