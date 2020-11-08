@@ -26,7 +26,12 @@ class Mapper(myLogger):
         self.boundary_dict={}
         self.pr=PiResults()
         self.fit_scorer=self.pr.fit_scorer
-    
+        plt.rc_context({
+            
+            'figure.autolayout': True,
+            'axes.edgecolor':'k', 
+            'xtick.color':'k', 'ytick.color':'k', 
+            'figure.facecolor':'grey'})
       
     def boundaryDataCheck(self):
         #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
@@ -37,6 +42,7 @@ class Mapper(myLogger):
         return boundary_data_path
     
     def getHucBoundary(self,huc_level):
+        print(huc_level)
         level_digits=huc_level[-2:]
         if level_digits[0]=='0' or not level_digits[0].isdigit():
             level_digits=level_digits[1] #e.g. HUC02 --> 2
@@ -45,11 +51,12 @@ class Mapper(myLogger):
     def hucBoundaryMerge(self,data_df,right_on='HUC12'):
         # hucboundary files have index levels like 'huc2' not 'HUC02'
         #if right_on.lower()=='huc12':
+        self.logger.info(f'starting boundary merge')
         self.data_df=data_df
         if type(right_on) is str:
             huc_level=right_on.lower()
         elif type(right_on) is int:
-            huc_level='huc'+str(right_on) #'huc' not necessry
+            huc_level=f'huc{right_on}' #'huc' not necessry
         else:
             assert False, f'unexepected right_on:{right_on} not str or int'
         level_digits=huc_level[-2:]
@@ -67,7 +74,9 @@ class Mapper(myLogger):
         #selector[boundary_huc_pos]=h12_list
         boundary_clip=boundary.loc[boundary[huc_level].isin(h_list)]
         #boundary_clip=boundary.loc[selector]
-        return boundary_clip.merge(data_df,left_on=huc_level,right_on=right_on)
+        merged=boundary_clip.merge(data_df,left_on=huc_level,right_on=right_on)
+        self.logger.info(f'boundary merge completed')
+        return merged
     
     def plot_y01(self,zzzno_fish=False,rebuild=0,huc_level=None):
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
@@ -93,19 +102,112 @@ class Mapper(myLogger):
         if huc_level is None:
             geo_df=self.hucBoundaryMerge(df)
         else:
-            df_h,huc_level=self.hucAggregate(df,huc_level)
+            df_h,huc_level=self.hucAggregate(df,huc_level,collapse='mean')
             geo_df=self.hucBoundaryMerge(df_h,right_on=huc_level)
-        self.geo_h12_df=geo_h12_df
+        self.geo_df=geo_df
         
         fig=plt.figure(dpi=600,figsize=[12,8])
         fig.suptitle('dependent variable')
         for i in range(len(cols)):
             col=cols[i]
-            self.map_plot(geo_h12_df,col,subplot_tup=tuplist[i],fig=fig)
-        fig.savefig(Helper().getname(os.path.join(self.print_dir,'y01'+'.png')))
-        fig.show()
+            self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig)
+        if huc_level:
+            name=f'y01_{huc_level}.png'
+        else:
+            name='y01'+'.png'
         
-    def hucAggregate(self,df,huc_level):
+        fig.savefig(Helper().getname(os.path.join(self.print_dir,name)))
+        fig.show() 
+        
+    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None):
+        if fit_scorer is None:
+            fit_scorer=self.fit_scorer
+        wt_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
+        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
+        
+        
+        yhat_a,y_a=yhat.align(y,axis=0)
+        y_vals=y_a.values
+        diff=yhat_a.subtract(y_vals,axis=0).astype(np.float16)*-1 # y-yhat
+        
+        tp=1-diff[y_vals==1]
+        tn=1-diff[y_vals==0].abs()
+        fp=diff[diff<0]*-1 #dif is neg for an fp, so reverse it to signal fp
+        fn=diff[diff>0]
+        confu_list=[tp,fp,fn,tn]
+        confu_varnames=['true positive','false positive','false negative','true negative']
+        
+        self.confu_list=confu_list
+        confu_list=[self.swap_index_by_level(confu_list[i],'var',confu_varnames[i],axis=1) for i in range(4)]
+        if wt is None:
+            #confu_df=confu_df.mean(axis=1,level=['var'])
+            confu_list=[df.mean(axis=1,level=['var']) for df in confu_list]
+        else: 
+            assert False,'not developed'
+        if huc_level is None:
+             huc_level='HUC12'
+        else:
+            #confu_df,huc_level=self.hucAggregate(confu_df,huc_level,collapse='mean')    
+            confu_list,huc_levels=zip(*[self.hucAggregate(df,huc_level,collapse='mean') for df in confu_list])  
+            huc_level=huc_levels[0]
+        """   
+        self.logger.info(f'starting confu_list join')
+        confu_df=confu_list[0].join(confu_list[1:])
+        self.logger.info(f'completed join')
+        """
+        
+        geo_dfs=[self.hucBoundaryMerge(df,right_on=huc_level) for df in confu_list]
+        self.geo_dfs=geo_dfs
+        df_col_vars=confu_varnames #
+        c=2 #  of columns
+        r=2
+        tuplist=[(r,c,i+1) for i in range(len(df_col_vars))]
+        
+        fig=plt.figure(dpi=600,figsize=[12,8])
+        fig.suptitle(f'all species confusion matrix by {huc_level}')
+        for i in range(len(df_col_vars)):
+            col=df_col_vars[i]
+            geo_df=geo_dfs[i]
+            self.logger.info(f'adding plot {i+1} of {len(df_col_vars)}')
+            self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig)
+
+        name=f'confusion_matrix_map_{huc_level}.png'
+        
+        fig.savefig(Helper().getname(os.path.join(self.print_dir,name)))
+        fig.show() 
+                     
+                     
+                     
+    def swap_index_by_level(self,df,level,new,axis=0):
+        if axis==0:
+            idx=df.index
+        elif axis==1:
+            idx=df.columns
+        else:
+            assert False,'no other option'
+        level_names=idx.names
+        level_pos=level_names.index(level)
+        assert type(idx) is pd.MultiIndex, f'expecting df to have multiindex index. but type(idx):{type(idx)}'
+        new_idx=[]
+        for tup in idx:
+            not_tup=list(tup)
+            not_tup[level_pos]=new
+            new_idx.append(tuple(not_tup))
+        new_midx=pd.MultiIndex.from_tuples(new_idx,names=level_names)
+        if axis==0:
+            df.index=new_midx
+        elif axis==1:
+            df.columns=new_midx
+        else: 
+            assert False,'no other option'
+        return df    
+        
+        
+    
+        
+        
+        
+    def hucAggregate(self,df,huc_level,collapse='mean'):
         if type(huc_level) is int:
             if huc_level<10:
                 huc_name='HUC0'+str(huc_level)
@@ -128,7 +230,7 @@ class Mapper(myLogger):
             huc_pos=0
         else:
             huc_pos=None
-            for pos,name in enumerate(idx1.index.names):
+            for pos,name in enumerate(idx1.names):
                 if re.search('huc',name.lower()):
                     huc_pos=pos
                     break
@@ -142,8 +244,11 @@ class Mapper(myLogger):
         expanded_midx=pd.MultiIndex.from_tuples(idx2,names=(huc_name,*idx1.names))
         
         df.index=expanded_midx
-        df_mean=df.mean(axis=0,level=huc_name) # mean across huc
-        return df_mean,huc_name
+        if not collapse is None:
+            if collapse=='mean':
+                return df.mean(axis=0,level=huc_name),huc_name # mean across huc
+            else: assert False, 'not developed'
+        return df,huc_name
     
     def map_plot(self,gdf,col,add_huc_geo=False,fig=None,ax=None,subplot_tup=(1,1,1),title=None):
         if ax is None:
@@ -157,9 +262,10 @@ class Mapper(myLogger):
         if title is None:
             title=col
         ax.set_title(title)
-        self.add_huc2_conus(self,ax,huc2_select=None)
-        if add_huc_geo:
-            gdf=self.hucBoundaryMerge(gdf)
+        self.add_huc2_conus(ax,huc2_select=None)
+        if not add_huc_geo is None:
+            assert type(add_huc_geo) is str,f'expecting string like HUC8, but got: {add_huc_geo}'
+            gdf=self.hucBoundaryMerge(gdf,right_on=add_huc_geo)
         self.gdf=gdf
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.1)
@@ -197,6 +303,7 @@ class Mapper(myLogger):
             
     def plot_top_features(self,split=None,top_n=10,rebuild=0,zzzno_fish=False,
         filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False):
+        
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
@@ -312,25 +419,17 @@ class Mapper(myLogger):
             self.print_dir,f'huc12_top{top_n}_features.png')))
     
         
-    def add_huc2_conus(self,ax,huc2_select=None):
+    def add_huc2_conus(self,ax,huc2_select='None'):
         try: huc2=self.boundary_dict['huc02']
         except: 
-            self.getHucBoundary('huc02')
-            huc2=self.boundary_dict['huc02']
+            huc2=self.getHucBoundary('huc02')
         if huc2_select is None:
             huc2_conus=huc2.loc[huc2.loc[:,'huc2'].astype('int')<19,'geometry']
         else:
             huc2_conus=huc2.loc[huc2.loc[huc2_select,'huc2'].astype('int')<19,'geometry']
         huc2_conus.boundary.plot(linewidth=1,color=None,edgecolor='k',ax=ax)
     
-    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True):
-        if fit_scorer is None:
-            fit_scorer=self.fit_scorer
-        wt_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
-        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
-        
-        
-        
+   
         
     def draw_huc12_truefalse(self,rebuild=0):
         try: self.boundary_dict['huc12']

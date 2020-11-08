@@ -26,8 +26,9 @@ from pisces_data_huc12 import PiscesDataTool as PDT
 from pi_runners import PredictRunner
 from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12
 #from sklearn.inspection import permutation_importance
-
-class PiResults(DBTool,DataPlotter,myLogger):
+ 
+class PiResults(DBTool,myLogger): 
+#class PiResults(DBTool,DataPlotter,myLogger):
     '''
     from qcluster.runnode: 
         model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
@@ -37,7 +38,7 @@ class PiResults(DBTool,DataPlotter,myLogger):
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         DBTool.__init__(self)
-        DataPlotter.__init__(self)
+        #DataPlotter.__init__(self)
         #self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
         self.printdir=os.path.join(os.getcwd(),'print')
         if not os.path.exists(self.printdir):os.mkdir(self.printdir)
@@ -49,8 +50,10 @@ class PiResults(DBTool,DataPlotter,myLogger):
         self.fit_scorer='f1_micro'
         
     def scale_coef_by_X(self,coef_df=None,wt='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False):
+        
         if type(wt) is str and wt=='fitscor_diffscor':
             wt=dict(fit_scorer=self.fit_scorer,zzzno_fish=zzzno_fish,return_weights=True,spec_wt=spec_wt,scale_by_X=False)
+            
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
         key='data'
         if spec_wt:
@@ -151,11 +154,8 @@ class PiResults(DBTool,DataPlotter,myLogger):
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
         
-        #datadict=self.stack_predictions(rebuild=rebuild)
-
         #y=datadict['y']#.astype('Int8')
         #yhat=datadict['yhat']#.astype('Int8')
-
         #coef_scor_df=datadict['coef_scor_df']#.astype('float32')
         
         #coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=True)
