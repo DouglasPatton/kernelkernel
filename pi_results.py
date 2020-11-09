@@ -472,7 +472,7 @@ class PiResults(DBTool,myLogger):
                            'coef_scor_df':new_coef_scor_df}
         return new_predictresult
     
-    def build_prediction_rundicts(self,rebuild=0,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+    def build_prediction_rundicts(self,rebuild=1,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
             self.results_dict
         except:
@@ -712,65 +712,6 @@ class PiResults(DBTool,myLogger):
             self.addToDBDict(spec_est_prediction_dict,predict=1)
         except:
             self.logger.exception(f'outer catch in building spec_est predictions')
-
-      
-    def build_spec_est_permutation_dict(self,rebuild=0):
-        try:
-            savename=os.path.join('results','spec_est_permutation_dict.pkl')
-
-            if rebuild:
-                #try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
-                #except:self.build_mean_score_sort_spec_and_MLU()
-                datagenhash_data_dict={}
-                r_count=len(self.results_dict)
-                spec_est_permutation_dict={}
-                #permutation_kwargs=PiSetup().permutation_kwargs
-                for r_idx,(hash_id,model_dict) in enumerate(self.results_dict.items()): 
-                    if not (r_idx+1)%100: print(f'{100*r_idx/r_count}% ')
-                    data_gen=model_dict["data_gen"]
-                    datagenhash=joblib.hash(data_gen)
-                    species=data_gen["species"]
-                    est_name=model_dict["model_gen"]["name"]
-
-                    try:
-                        spec_est_permutation_dict[species]
-                    except KeyError:
-                        spec_est_permutation_dict[species]={est_name:[]}
-                    except:
-                        assert False,'unexpected'
-                    try:
-                        spec_est_permutation_dict[species][est_name]
-                    except KeyError:
-                        spec_est_permutation_dict[species][est_name]=[]
-                    if type(model_dict['model']) is dict:
-                        try:
-                            data=datagenhash_data_dict[datagenhash] # in case diff species have diff 
-                            #     datagen_dicts. if wrong random_state passed to cv, split is wrong
-                        except KeyError:
-                            self.logger.info(f'key error for {species}:{est_name}, so calling dataGenerator')
-                            data=dataGenerator(data_gen)
-                            datagenhash_data_dict[datagenhash]=data
-                        except:
-                            self.logger.exception(f'not a keyerror, unexpected error')
-                            assert False,'halt'
-                        _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
-                        cv_count=len(model_dict['model']['estimator'])
-                        for m in range(cv_count): # cross_validate stores a list of the estimators
-                            self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
-                            model=model_dict['model']['estimator'][m]
-                            m_idx=cv_test_idx[m]
-                            X=data.X_train.iloc[m_idx]
-                            y=data.y_train.iloc[m_idx]
-                            xvar_perm_tup=(data.x_vars,permutation_importance(model,X,y,**permutation_kwargs))
-                            self.logger.info(f'xvar_perm_tup:{xvar_perm_tup}')
-                            spec_est_permutation_dict[species][est_name].append(xvar_perm_tup)
-                self.spec_est_permutation_dict=spec_est_permutation_dict
-                self.save_dict(spec_est_permutation_dict,filename=savename,bump=1,load=0)
-            else:
-                self.spec_est_permutation_dict=self.save_dict(None,filename=savename,load=1)
-        except:
-            self.logger.exception(f'outer catch in building spec_est Permutations')
-                                           
     def spec_est_scor_df_from_dict(self,rebuild=0,scorer=None):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -866,8 +807,36 @@ class PiResults(DBTool,myLogger):
         with open(filename,'wb') as f:
             pickle.dump(a_dict,f)
             
-                
-                
+    def plot_scor_df(self,alpha=0.05):
+        """
+        this is the updated version that uses df framework rather than nested dicts
+        """
+        coef_df,scor_df,y,yhat=self.get_coef_stack(
+            rebuild=rebuild,drop_zzz=True,return_y_yhat=True,
+            drop_nocoef_scors=False)
+        
+        scor_df.columns=scor_df.columns.map(lambda x: (x[0],(*x[1:])))
+        scor_df.columns.names=['var','rep_split']
+        self.scor_df=scor_df
+        quan=np.array(alpha/2,1=alpha/2)
+        scorers=scor_df.columns.unique(level='var')
+        dflist=[]
+        for scorer in scorers:
+            scorer_scor_df=scor_df.loc[:,scorer].apply(lambda x:x.quantile(q=quan),axis=1)
+            scor_df_low_q=scorer_scor_df
+        scor_df_mean=scor_df.mean(axis=1,level='var')
+        
+    def cv_split_merge(self,mindex):
+        """
+        assuming levels are var,rep,split
+        """
+        
+        new_tups=[]
+        for tup in mindex:
+            new_tups.append()
+            
+        
+        
     def plot_species_estimator_scores(self,):
         scorer_list=self.scorer_list
         scorer_count=len(scorer_list)
