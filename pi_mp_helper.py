@@ -1,4 +1,5 @@
 import os
+import re
 from multiprocessing import Process,Queue
 from mylogger import myLogger
 from time import time,sleep
@@ -74,7 +75,7 @@ class MulXB(Process,myLogger):
         myLogger.__init__(self,name='MulXB.log')
         self.logger.info(f'running a MulXB proc')
         
-        chunk_count=200
+        chunk_count=300
         h12_list=self.x.index.unique(level='HUC12')
         h12_count=len(h12_list)
         h12_pos_x=self.x.index.names.index('HUC12')
@@ -128,7 +129,7 @@ class MulXB(Process,myLogger):
             assert False,'halt'
     
 class MatchCollapseHuc12(Process,myLogger):
-    def __init__(self,q,i,huc12list,coef_df,fitscor,adiff_scor_chunk,y_chunk,spec_wt=None,scale_by_X=False,return_weights=False,presence_filter=False):
+    def __init__(self,q,i,huc12list,coef_df,fitscor,adiff_scor_chunk,y_chunk,spec_wt=None,scale_by_X=False,return_weights=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False):
         #myLogger.__init__(self,name='MatchCollapseHuc12.log')
         #self.logger.info(f'starting up a MatchCollapseHuc12 proc')
         super().__init__()
@@ -143,8 +144,11 @@ class MatchCollapseHuc12(Process,myLogger):
         self.scale_by_X=scale_by_X
         self.return_weights=return_weights
         self.presence_filter=presence_filter
+        self.wt_type=wt_type
+        self.cv_collapse=cv_collapse
         
         self.dflist=[]
+        
     
     def run(self,):
         myLogger.__init__(self,name='MatchCollapseHuc12.log')
@@ -153,7 +157,7 @@ class MatchCollapseHuc12(Process,myLogger):
         self.logger.info(f'mch is running at pid:{pid}')
         try:
             hcount=len(self.huc12list)
-            blocksize=50
+            blocksize=10
             blockcount=-(-hcount//blocksize) # ceiling divide
             block_selector=[(blocksize*i,blocksize*(i+1))for i in range(blockcount)]
             for b,block_idx in enumerate(block_selector):
@@ -168,17 +172,17 @@ class MatchCollapseHuc12(Process,myLogger):
                 huc12_adiff_scor.index=huc12_adiff_scor.index.remove_unused_levels()
                 #self.huc12_adiff_scor=huc12_adiff_scor
                 #this should add comids and huc12s to fitscor
-                wt=self.make_wt(self.fitscor,huc12_adiff_scor)
+                wt=self.make_wt(self.fitscor,huc12_adiff_scor,wt_type=self.wt_type)
                 if self.return_weights:
                     coef_df=None
 
-                    wt_cvnorm=self.fitscor_diffscor_CV_wtd_mean_coef(wt,coef_df,return_weights=True)
+                    wt_cvnorm=self.fitscor_diffscor_CV_wtd_mean_coef(wt,coef_df,return_weights=True,cv_collapse=self.cv_collapse)
                     self.dflist.append(wt_cvnorm)
                     continue
                 elif not self.scale_by_X:
                     coef_df=self.coef_df
                     varnorm_coef,wt=self.fitscor_diffscor_CV_wtd_mean_coef(
-                        wt,coef_df,return_weights=False)
+                        wt,coef_df,return_weights=False,cv_collapse=self.cv_collapse)
                     self.varnorm_coef=varnorm_coef
 
                 else: #only use part of coef_df at a time, accomplished by right join above. 
@@ -238,8 +242,10 @@ class MatchCollapseHuc12(Process,myLogger):
     
     def huc12_wtd_coef(self,wt,varnorm_coef):
         try:
+            if type(wt) is int:
+                return varnorm_coef
             wtmean=wt.mean(axis=1,level='var') #for combining across ests/specs, 
-            self.wtmean=wtmean
+            #self.wtmean=wtmean
             ##get average weight for each coef
             if self.spec_wt=='equal':
                 level=['HUC12','species']
@@ -250,56 +256,83 @@ class MatchCollapseHuc12(Process,myLogger):
             denom2_a,_=denom2.align(wtmean,axis=0)
 
             #denom2_a.columns=denom2_a.columns.droplevel('var')
-            self.denom2=denom2;self.denom2_a=denom2_a
+            #self.denom2=denom2;self.denom2_a=denom2_a
             normwt_huc=wtmean.divide(denom2_a,axis=0)
 
-            self.normwt_huc=normwt_huc
+            #self.normwt_huc=normwt_huc
             varnorm_coef,normwt_huc=varnorm_coef.align(normwt_huc,axis=0,join='inner')
             #normwt_huc.columns=normwt_huc.columns.droplevel('var')
             wt2_coef=varnorm_coef.mul(normwt_huc.values,axis=0)
-            self.wt2_coef=wt2_coef
+            #self.wt2_coef=wt2_coef
             if self.spec_wt=='equal':
                 spec_varnorm_coef=wt2_coef.sum(axis=0,level=level)
                 hucnorm_varnorm_coef=spec_varnorm_coef.mean(axis=0,level='HUC12')
             else:
                 hucnorm_varnorm_coef=wt2_coef.sum(axis=0,level='HUC12')
-            self.hucnorm_varnorm_coef=hucnorm_varnorm_coef
+            #self.hucnorm_varnorm_coef=hucnorm_varnorm_coef
             return hucnorm_varnorm_coef
         except: 
             self.logger.exception(f'outer catch')
-    @staticmethod
-    def cvnorm_wts(wt):
+    
+    def cvnorm_wts(self,wt):
+        if type(wt) is int:
+            return wt
         denom=wt.sum(axis=1,level='var') # sum across rep_idx, cv_idx  #.sum(axis=0,level='HUC12')
         denom_a,_=denom.align(wt,axis=1,level='var')
         wt_cvnorm=wt.divide(denom_a.values)
         return wt_cvnorm
     
-    @staticmethod
-    def make_wt(fitscor,huc12_adiff_scor):
+    
+    def make_wt(self,fitscor,huc12_adiff_scor,wt_type='fitscor_diffscor'):
         _,fitscor_a=huc12_adiff_scor.align(fitscor,axis=0,join='left')
-        wt=huc12_adiff_scor.multiply(fitscor_a,axis=0)
+        
+        if re.search('fit',wt_type):
+            fit=True
+        else:
+            fit=False
+        if re.search('diff',wt_type):
+            diff=True
+        else:
+            diff=False
+            
+        if diff and fit:
+            wt=huc12_adiff_scor.multiply(fitscor_a,axis=0)     
+        elif fit:
+            wt=fitscor_a
+        elif diff:
+            wt=huc12_adiff_scor
+        else:
+            self.logger.warning(f'wt_type:{wt_type}, fit:{fit}, diff:{diff} so setting wt=1')
+            wt=1
         return wt
     
-    def fitscor_diffscor_CV_wtd_mean_coef(self,wt,coef_df,return_weights=False):
+    def fitscor_diffscor_CV_wtd_mean_coef(self,wt,coef_df,return_weights=False,cv_collapse=False):
         
         
+        if not cv_collapse:
+            wt_cvnorm=self.cvnorm_wts(wt)
+            #self.wt=wt
+
+            #self.denom=denom;self.denfom_a=denom_a;#self.denom_aa=denom_aa
+            #self.wt_cvnorm=wt_cvnorm
+            #self.huc12_adiff_scor=huc12_adiff_scor
+            if return_weights:
+                return wt_cvnorm #move to next block
+            ###coef_df enters
+            if type(wt_cvnorm) is int:
+                return coef_df,wt
+
+            wt_cvnorm.columns=wt_cvnorm.columns.droplevel('var')
+            coef_df,wt_cvnorm=coef_df.align(wt_cvnorm,axis=0,join='right')
+            coef_df,wt_cvnorm=coef_df.align(wt_cvnorm,axis=1)
+            wtd_coef=coef_df.mul(wt_cvnorm,axis=0)
+            varnorm_coef=wtd_coef.sum(axis=1,level='var')# 
+            return varnorm_coef,wt
+        else:
+            wt_clps=wt.mean(axis=1,level='var')
+            coef_df_clps=coef_df.mean(axis=1,level='var')
+            return coef_df_clps,wt
         
-        wt_cvnorm=self.cvnorm_wts(wt)
-        #self.wt=wt
-        
-        #self.denom=denom;self.denom_a=denom_a;#self.denom_aa=denom_aa
-        #self.wt_cvnorm=wt_cvnorm
-        #self.huc12_adiff_scor=huc12_adiff_scor
-        if return_weights:
-            return wt_cvnorm #move to next block
-        ###coef_df enters
-        
-        wt_cvnorm.columns=wt_cvnorm.columns.droplevel('var')
-        coef_df,wt_cvnorm=coef_df.align(wt_cvnorm,axis=0,join='right')
-        coef_df,wt_cvnorm=coef_df.align(wt_cvnorm,axis=1)
-        wtd_coef=coef_df.mul(wt_cvnorm,axis=0)
-        varnorm_coef=wtd_coef.sum(axis=1,level='var')# 
-        return varnorm_coef,wt
                     
             
             

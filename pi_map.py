@@ -313,7 +313,7 @@ class Mapper(myLogger):
          
     
     def plot_top_features(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
-        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False):
+        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor'):
         
         """
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
@@ -335,13 +335,15 @@ class Mapper(myLogger):
             title+='_var-filter'
         if spec_wt=='even':
             title+='_even-wt-spec'
+        if type(wt_type) is str:
+            title+=f'_{wt_type}'
         if huc_level:
             title+=f'_{huc_level}'
         title+='_'+fit_scorer
         
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
             presence_filter=presence_filter,rebuild=rebuild,zzzno_fish=zzzno_fish,
-            spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X)
+            spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X,wt_type=wt_type)
         self.wtd_coef_dfs=wtd_coef_dfs
         if type(wtd_coef_dfs) is pd.DataFrame:
             wtd_coef_dfs=[wtd_coef_dfs]
@@ -387,8 +389,8 @@ class Mapper(myLogger):
         lo_hi_names=['lowest_coef','highest_coef']
         for df_idx in selector:
             wtd_coef_df=wtd_coef_dfs[df_idx]
-            if not huc_level is None:
-                wtd_coef_df,_=self.hucAggregate(wtd_coef_df,huc_level)
+            #if not huc_level is None:
+            #    wtd_coef_df,_=self.hucAggregate(wtd_coef_df,huc_level)
         
             
             #the variable names    
