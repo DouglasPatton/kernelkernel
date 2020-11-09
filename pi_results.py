@@ -49,7 +49,7 @@ class PiResults(DBTool,myLogger):
         self.helper=Helper()
         self.fit_scorer='f1_micro'
         
-    def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False):
+    def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False):
         
         if type(wt_type) is str: 
             if wt_type =='none':
@@ -57,16 +57,18 @@ class PiResults(DBTool,myLogger):
             else:
                 wt=dict(fit_scorer=self.fit_scorer,
                     zzzno_fish=zzzno_fish,return_weights=True,
-                    wt_type=wt_type,spec_wt=spec_wt,scale_by_X=False)
+                    wt_type=wt_type,spec_wt=spec_wt,scale_by_X=False,cv_collapse=cv_collapse)
             
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
         key='data'
         if spec_wt:
             key+=f'_{spec_wt}'
         if zzzno_fish:
-            key+='_zzzno_fish'
+            key+='_zzzno-fish'
         if type(wt) is str:
             key+=f'_{wt}'
+        if cv_collapse:
+            key+='_cv-collapse'
         if not rebuild:
             try:
                 XB_df=pd.read_hdf(name,key)
@@ -125,7 +127,7 @@ class PiResults(DBTool,myLogger):
     
     def build_wt_comid_feature_importance(
         self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
-        spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor' ):
+        spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False ):
         #get data
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -136,12 +138,13 @@ class PiResults(DBTool,myLogger):
             if type(spec_wt) is str:#not relevant for return_weights
                 name+='_'+spec_wt
         if zzzno_fish:
-            name+='_zzzno fish'
+            name+='_zzzno-fish'
         if scale_by_X:
             name+='_scaled_by_X'
         if presence_filter:
             name+='_presence_filter'
-        
+        if cv_collapse:
+            name+='_cv-collapse'
         name+='_'+fit_scorer
         
         
@@ -171,7 +174,7 @@ class PiResults(DBTool,myLogger):
         if scale_by_X:
             self.logger.info(f'building coef_df scaled_by_X')
             coef_df=self.scale_coef_by_X(
-                coef_df=coef_df,wt_type=wt_type,rebuild=rebuild,zzzno_fish=zzzno_fish)
+                coef_df=coef_df,wt_type=wt_type,rebuild=rebuild,zzzno_fish=zzzno_fish,cv_collapse=cv_collapse)
             self.logger.info(f'sucessfully built coef_df scaled_by_X')
         #get the scorer
         scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
@@ -200,7 +203,7 @@ class PiResults(DBTool,myLogger):
             ##   with internal splits as well for ram savings
             proc_count=10
         mch_kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights,
-                    'presence_filter':presence_filter,'wt_type':wt_type}
+                    'presence_filter':presence_filter,'wt_type':wt_type,'cv_collapse':cv_collapse}
         wtd_coef_df=self.mul_wt_norm_coefs(
                 adiff_scor,scor_select,coef_df,y,proc_count=proc_count,mch_kwargs=mch_kwargs)
         
