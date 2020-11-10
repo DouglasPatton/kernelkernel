@@ -806,7 +806,7 @@ class PiResults(DBTool,myLogger):
             
         
         
-    def plot_species_estimator_scores(self,):
+    def plot_species_estimator_scores(self,ci_off=False):
         scorer_list=self.scorer_list
         scorer_count=len(scorer_list)
         est_list=list(self.sk_est_dict.keys())
@@ -833,13 +833,14 @@ class PiResults(DBTool,myLogger):
                 self.dp.makePlotWithCI(
                         just_numbers,mean_arr,None,
                         ax,plottitle=est_name,color=e,
-                        hatch=e,ls=e,lower=lower_arr,upper=upper_arr)
-            ax.plot(just_numbers,ymean_list,ls='--',linewidth=0.5,label="share of 1's")
+                        hatch=e,ls=e,lower=lower_arr,upper=upper_arr,ci_off=ci_off)
+            ax.plot(just_numbers,ymean_list,ls='dashdot',linewidth=0.5,label="share of 1's")
             ax.plot(just_numbers,np.log10(np.array(n_list))/10,ls='--',linewidth=0.5,label="relative sample size (log scale)")
-            ax.legend(loc=8,ncol=3)
+            ax.legend(loc='upper center',ncol=3,bbox_to_anchor=(0.5,-0.05))
             ax.set_xticks([])
+        plt.tight_layout()
         fig.show()
-        self.fig1=fig
+        #self.fig1=fig
         figpath=self.helper.getname(os.path.join(self.printdir,f'test_scores_by_species_scorer_est.png'))
         fig.savefig(figpath)
         
@@ -955,5 +956,7 @@ class PiResults(DBTool,myLogger):
         for key,data in viz_dict.items():
             args.extend([data,key])
         self.dp.my2dscatter(*args,ax=ax,log_scale=log_scale)
-            
+        fig.savefig(
+            self.helper.getname(
+                os.path.join(self.printdir,f'xy_scatter.png')))
     

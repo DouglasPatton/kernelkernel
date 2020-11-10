@@ -35,7 +35,7 @@ class DataPlotter:
             (0, (3, 10, 1, 10, 1, 10)),(0, (3, 1, 1, 1, 1, 1))]
         #self.fig=plt.figure(figsize=[14,80])
         
-    def makePlotWithCI(self,x,y,std_err,ax,plottitle='',color='b',hatch='x',ls='-',lower=None,upper=None):
+    def makePlotWithCI(self,x,y,std_err,ax,plottitle='',color='b',hatch='x',ls='-',lower=None,upper=None,ci_off=False):
         if type(color) is int:
             color=cm.Set1(color)
         if type(hatch) is int:
@@ -47,10 +47,11 @@ class DataPlotter:
         self.logger.info(f'plotting type(y):{type(y)},x:{y}')
         self.logger.info(f'ls:{ls},plottitle:{plottitle},color:{color}')
         ax.plot(x,y,label=plottitle,color=color,alpha=0.7,linewidth=0.5,)#,ls,label=plottitle,color=color)
-        if not std_err is None:
-            lower,upper=zip(*[(y[i]-std_err[i]*1.96,y[i]+std_err[i]*1.96) for i in range(k)])
-        else: assert not (lower is None or upper is None), f'expected None but lower:{lower},upper:{upper}'
-        ax.fill_between(x,lower,upper,alpha=0.01,color=color,hatch=5*hatch,)#label=f'95% CI for {plottitle}')
+        if not ci_off:
+            if not std_err is None:
+                lower,upper=zip(*[(y[i]-std_err[i]*1.96,y[i]+std_err[i]*1.96) for i in range(k)])
+            else: assert not (lower is None or upper is None), f'expected None but lower:{lower},upper:{upper}'
+            ax.fill_between(x,lower,upper,alpha=0.01,color=color,hatch=5*hatch,)#label=f'95% CI for {plottitle}')
         #ax.plot(x,[0]*len(x),':',label='_0',color='k',alpha=0.5)
         #[ax.axvline(x=x[i],ls=':',alpha=0.3,label='_band',color='k') for i in range(k)]
         
