@@ -275,7 +275,7 @@ class MatchCollapseHuc12(Process,myLogger):
             self.logger.exception(f'outer catch')
     
     def cvnorm_wts(self,wt):
-        if type(wt) is int:
+        if not type(wt) is pd.DataFrame:
             return wt
         denom=wt.sum(axis=1,level='var') # sum across rep_idx, cv_idx  #.sum(axis=0,level='HUC12')
         denom_a,_=denom.align(wt,axis=1,level='var')
@@ -285,6 +285,7 @@ class MatchCollapseHuc12(Process,myLogger):
     
     def make_wt(self,fitscor,huc12_adiff_scor,wt_type='fitscor_diffscor'):
         _,fitscor_a=huc12_adiff_scor.align(fitscor,axis=0,join='left')
+        
         
         if re.search('fit',wt_type):
             fit=True
@@ -296,6 +297,7 @@ class MatchCollapseHuc12(Process,myLogger):
             diff=False
             
         if diff and fit:
+            fitscor_a.columns=fitscor_a.columns.droplevel('var')
             wt=huc12_adiff_scor.multiply(fitscor_a,axis=0)     
         elif fit:
             wt=fitscor_a
@@ -319,7 +321,7 @@ class MatchCollapseHuc12(Process,myLogger):
             if return_weights:
                 return wt_cvnorm #move to next block
             ###coef_df enters
-            if type(wt_cvnorm) is int:
+            if type(wt_cvnorm) in [int,str]:
                 return coef_df,wt
 
             wt_cvnorm.columns=wt_cvnorm.columns.droplevel('var')
@@ -329,7 +331,12 @@ class MatchCollapseHuc12(Process,myLogger):
             varnorm_coef=wtd_coef.sum(axis=1,level='var')# 
             return varnorm_coef,wt
         else:
-            wt_clps=wt.mean(axis=1,level='var')
+            if type(wt) is int:
+                pass
+            else:
+                wt_clps=wt.mean(axis=1,level='var')
+            if return_weights:
+                return wt_clps
             coef_df_clps=coef_df.mean(axis=1,level='var')
             return coef_df_clps,wt
         

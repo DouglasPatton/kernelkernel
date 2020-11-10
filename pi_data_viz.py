@@ -70,8 +70,58 @@ class DataPlotter:
         self.ax.yaxis.label.set_color('blue')                                  
         self.ax.spines['top'].set_color('blue') '''
         return fig
-        
-                                  
+    
+    def my2dscatter(self,x,x_name,y,y_name,ax=None,log_scale=False):
+        if ax is None:
+            plotter=plt
+            plt_kwargs={'axes':ax}
+        else:
+            plotter=ax
+            plt_kwargs={}
+        plotter.scatter(x,y)
+        plt.xlabel(x_name,**plt_kwargs)
+        plt.ylabel(y_name,**plt_kwargs)
+        if log_scale:
+            plt.xscale('log',**plt_kwargs)
+            plt.yscale('log',**plt_kwargs)
+        if  ax is None:
+            plotter.show()
+            plotter.savefig(f'{x_name}_by_{y_name}_scatter.png')
+    
+    def my2dHist(self,data,name,ax=None,log_bins=False,bin_count=50):
+        if type(data) is dict:
+            data_=data[name]
+        else:
+            data_=data
+        if ax is None:
+            plotter=plt
+            plt_kwargs={'axes':ax}
+        else:
+            plotter=ax
+            plt_kwargs={}
+        if log_bins:
+            min_val=min(data_)
+            max_val=max(data_)
+            hist_kwargs={
+                'bins':np.logspace(np.log10(min_val),np.log10(max_val),bin_count)}
+        else:
+            hist_kwargs={'bins':bin_count}
+        n,bins,patches=plotter.hist(data_,density=False,**hist_kwargs)
+        plt.xlabel(name,**plt_kwargs)
+        plt.ylabel('count',**plt_kwargs)
+        #plt.title(f'Histogram of {name}',**plt_kwargs)
+        #plotter.text(60, .025, r'$\mu=100,\ \sigma=15$')
+        #plotter.xlim(40, 160)
+        #plotter.ylim(0, 0.03)
+        plt.grid(True,**plt_kwargs)
+        if log_bins:
+            plt.xscale('log',**plt_kwargs)
+        if  ax is None:
+            plotter.show()
+            plotter.savefig(f'{name}_dhist.png')
+            
+            
+            
     def my3dHistogram(self,arraylist,varname,dim3list,subplot_idx=[1,1,1],fig=None,norm_hist=1,ylabel='time'): 
         if fig is None:
             fig=plt.figure(dpi=self.dpi,figsize=[self.figwidth,self.figheight])

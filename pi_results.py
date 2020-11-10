@@ -48,6 +48,7 @@ class PiResults(DBTool,myLogger):
         self.scorer_list=list(SKToolInitializer(None).get_scorer_dict().keys())
         self.helper=Helper()
         self.fit_scorer='f1_micro'
+        self.dp=DataPlotter()
         
     def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False):
         
@@ -195,7 +196,7 @@ class PiResults(DBTool,myLogger):
         #self.scor_select=scor_select
         #self.coef_df=coef_df
 
-        scor_select.columns=scor_select.columns.droplevel('var')
+        
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
         if zzzno_fish: # no need for mp
             proc_count=1
@@ -542,39 +543,7 @@ class PiResults(DBTool,myLogger):
             
         
         
-    def build_aggregate_predictions_by_species(self,rebuild=0):
-        name='aggregate_predictions_by_species'
-        if not rebuild:
-            try:
-                datadict=self.getsave_postfit_db_dict(name)
-                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
-            except:
-                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-        else:
-            if type(rebuild) is int:
-                rebuild-=1
-        try: self.predictDB
-        except:self.predictDB={key:val for key,val in self.predictDBdict().items()}  
-        species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild)    
-        #aggregate_predictions_by_species={spec:None for spec in species_hash_id_dict.keys()}
-        #species_df_list_dict={}
-        dflist=[]
-        for species,hash_id_list in species_hash_id_dict.items():
-            for hash_id in hash_id_list:
-                try:
-                    df=self.predictDB[hash_id]
-                    dflist.append(df)
-                except:
-                    self.logger.exception(f'no prediction for species:{species} and hash_id:{hash_id}')
-        big_df_stack=pd.concat(dflist,axis=0)# axis for multi-reps of cv.
-        y_df=self.build_y_like_agg_pred_spec(rebuild=rebuild,species_hash_id_dict=species_hash_id_dict)
-        #self.logger.info(f'about to concatenate y_df:{y_df}')
-        #self.logger.info(f'and big_df_stack:{big_df_stack}')
-        y_yhat_df=pd.concat([y_df,big_df_stack],axis=0)#estimators don't match, align later.
-        
-        data_dict={'data':y_yhat_df} 
-        self.getsave_postfit_db_dict(name,data_dict)
-        return y_yhat_df # just returning the df
+    
     
     def getsave_postfit_db_dict(self,name,data=None,):
         if data is None:
@@ -807,7 +776,7 @@ class PiResults(DBTool,myLogger):
         with open(filename,'wb') as f:
             pickle.dump(a_dict,f)
             
-    def plot_scor_df(self,alpha=0.05):
+    '''def plot_scor_df(self,alpha=0.05):
         """
         this is the updated version that uses df framework rather than nested dicts
         """
@@ -818,7 +787,7 @@ class PiResults(DBTool,myLogger):
         scor_df.columns=scor_df.columns.map(lambda x: (x[0],(*x[1:])))
         scor_df.columns.names=['var','rep_split']
         self.scor_df=scor_df
-        quan=np.array(alpha/2,1=alpha/2)
+        quan=np.array(alpha/2,1-alpha/2)
         scorers=scor_df.columns.unique(level='var')
         dflist=[]
         for scorer in scorers:
@@ -833,7 +802,7 @@ class PiResults(DBTool,myLogger):
         
         new_tups=[]
         for tup in mindex:
-            new_tups.append()
+            new_tups.append()'''
             
         
         
@@ -846,6 +815,7 @@ class PiResults(DBTool,myLogger):
         try: self.fit_sorted_species_dict,self.scor_est_spec_MLU
         except:self.build_mean_score_sort_spec_and_MLU()
         fig=plt.figure(dpi=300,figsize=[10,scorer_count*4])
+        
         for s,scorer in list(enumerate(scorer_list)):
             sorted_species_list=self.fit_sorted_species_dict[scorer]
             n_list,ymean_list=zip(*[(metadata[spec]['n'],metadata[spec]['ymean']) for spec in sorted_species_list])
@@ -860,7 +830,7 @@ class PiResults(DBTool,myLogger):
                 lower_arr=np.array(lower)
                 upper_arr=np.array(upper)
                 ax.margins(0)
-                self.makePlotWithCI(
+                self.dp.makePlotWithCI(
                         just_numbers,mean_arr,None,
                         ax,plottitle=est_name,color=e,
                         hatch=e,ls=e,lower=lower_arr,upper=upper_arr)
@@ -949,4 +919,41 @@ class PiResults(DBTool,myLogger):
                 spec_best_est_dict[spec]=(scors[max_idx],ests[max_idx]) # (val,name) for sorting later
             scor_spec_bestesttup_dict[scorer]=spec_best_est_dict
         return scor_spec_bestesttup_dict
-                
+    
+    def get_basic_meta(self,):
+        m_db=self.metadataDBdict()
+        spec_list=[]
+        n_str='species N' # labels for x axis on histograms
+        ymean_str='species Y mean'
+        viz_dict={n_str:[],ymean_str:[]}
+        for key,metadict in m_db.items():
+            spec_list.append(key)
+            viz_dict[n_str].append(metadict['n'])
+            viz_dict[ymean_str].append(metadict['y_train_mean'])
+        return viz_dict
+    
+    
+    def plot_basic_hists(self,log_bins=True,bin_count=50):
+        viz_dict=self.get_basic_meta()
+        fig=plt.figure(dpi=200,figsize=[6,5])
+        #fig.suptitle('Histograms',size='medium')
+        sub_tups=[(2,1,1),(2,1,2)]
+        for i,(name,data) in enumerate(viz_dict.items()):
+            
+            ax=fig.add_subplot(*sub_tups[i])
+            self.dp.my2dHist(data,name,ax=ax,log_bins=log_bins,bin_count=bin_count)
+        plt.tight_layout()
+        fig.savefig(
+            self.helper.getname(
+                os.path.join(self.printdir,f'{name}_histogram.png')))
+     
+    def plot_basic_scatter(self,log_scale=True):
+        viz_dict=self.get_basic_meta()
+        fig=plt.figure(dpi=200,figsize=[6,5])
+        ax=fig.add_subplot(111)
+        args=[]
+        for key,data in viz_dict.items():
+            args.extend([data,key])
+        self.dp.my2dscatter(*args,ax=ax,log_scale=log_scale)
+            
+    
