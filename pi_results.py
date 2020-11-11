@@ -50,6 +50,41 @@ class PiResults(DBTool,myLogger):
         self.fit_scorer='f1_micro'
         self.dp=DataPlotter()
         
+    def clusterSpecsByCoefs(self,clusterer='kmeans',k=None,zzzno_fish=False,cv_collapse=False,scor_wt=True,est=None,fit_scorer=None):
+        if fit_scorer is None:
+            fit_scorer=self.fit_scorer
+        
+        coef_df,scor_df=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True)
+        if not est is None:
+            if type(est) is str:
+                ests=[est]
+            else:
+                ests=est
+            coef_df,scor_df=self.select_by_index_level_vals([coef_df,scor_df],ests,level_name='estimator')
+        scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
+        
+        if cv_collapse:
+            coef_df=coef_df.mean(axis=1,level='var')
+            scor_select=scor_select.mean(axis=1,level='var')
+            if scor_wt:
+                denom=scor_select.sum(axis=0,level='species')
+                _,denom=scor_select.align(denom,axis=0,join='left')
+                scor_select_normed=scor_select.divide(denom,axis=0)
+                wtd_coef_df=(coef_df*scor_select_normed).sum(axis=0,level='species')
+            else:
+                wtd_coef_df=coef_df.mean(axis=0,level='species')
+        else:        
+            if scor_wt:
+                scor_select.columns=scor_select.columns.droplevel('var') #
+                denom=scor_select.sum(axis=1).sum(axis=0,level='species')
+                _,denom=scor_select.align(denom,axis=0,join='left')
+                scor_select_normed=scor_select.divide(denom,axis=0) #broacast over axis1
+                wtd_coef_df=(scor_select_normed*coef_df).sum(axis=1,level='var').sum(axis=0,level='species')
+            else: assert False,'no cv_collapse requires scor_wt'
+            
+        
+        
+        
     def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False):
         
         if type(wt_type) is str: 
@@ -70,6 +105,7 @@ class PiResults(DBTool,myLogger):
             key+=f'_{wt}'
         if cv_collapse:
             key+='_cv-collapse'
+        key+=f'_{fit_scorer}'
         if not rebuild:
             try:
                 XB_df=pd.read_hdf(name,key)
@@ -94,6 +130,8 @@ class PiResults(DBTool,myLogger):
             wt_df=None
         proc_count=4
         chunks=proc_count
+        if chunks<len(spec_list):
+            chunks=len(spec_list)
         chunk_n=-(-len(spec_list)//chunks)
         #args_list_list=[]
         XB_df=pd.DataFrame()
@@ -128,7 +166,7 @@ class PiResults(DBTool,myLogger):
     
     def build_wt_comid_feature_importance(
         self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
-        spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False ):
+        spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,):
         #get data
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -148,7 +186,6 @@ class PiResults(DBTool,myLogger):
             name+='_cv-collapse'
         name+='_'+fit_scorer
         
-        
             
         if not rebuild: #just turning off rebuild here
              
@@ -165,17 +202,18 @@ class PiResults(DBTool,myLogger):
         coef_df,scor_df,y,yhat=self.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
-        
+
+                    
         #y=datadict['y']#.astype('Int8')
         #yhat=datadict['yhat']#.astype('Int8')
         #coef_scor_df=datadict['coef_scor_df']#.astype('float32')
         
         #coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=True)
-        self.logger.info('coef_df,scor_df retrieved')
+        
         if scale_by_X:
             self.logger.info(f'building coef_df scaled_by_X')
             coef_df=self.scale_coef_by_X(
-                coef_df=coef_df,wt_type=wt_type,rebuild=rebuild,zzzno_fish=zzzno_fish,cv_collapse=cv_collapse)
+                coef_df=coef_df,wt_type=wt_type,rebuild=rebuild,zzzno_fish=zzzno_fish,cv_collapse=cv_collapse,)
             self.logger.info(f'sucessfully built coef_df scaled_by_X')
         #get the scorer
         scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
@@ -195,7 +233,9 @@ class PiResults(DBTool,myLogger):
         #wt coefs w/ score
         #self.scor_select=scor_select
         #self.coef_df=coef_df
-
+        mch_kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights,
+                    'presence_filter':presence_filter,'wt_type':wt_type,'cv_collapse':cv_collapse}
+        
         
         #coef_a,scor_a=coef_df.align(scor_select,axis=1)
         if zzzno_fish: # no need for mp
@@ -203,16 +243,42 @@ class PiResults(DBTool,myLogger):
         else: # to split list of huc's for parallel processing, 
             ##   with internal splits as well for ram savings
             proc_count=10
-        mch_kwargs={'spec_wt':spec_wt,'scale_by_X':scale_by_X,'return_weights':return_weights,
-                    'presence_filter':presence_filter,'wt_type':wt_type,'cv_collapse':cv_collapse}
+        
         wtd_coef_df=self.mul_wt_norm_coefs(
                 adiff_scor,scor_select,coef_df,y,proc_count=proc_count,mch_kwargs=mch_kwargs)
         
         save_data={'data':wtd_coef_df} 
         self.getsave_postfit_db_dict(name,save_data)
         return wtd_coef_df
-           
     
+    
+    def select_by_index_level_vals(self,df_list,level_vals,level_name='species'):
+        new_list=[]
+        if not type(df) is list:
+            returndf=True
+            df=[df]
+        else:
+            returndf=False
+        for df in df_list:
+            spec_pos=df.index.names.index(level_name)
+            selector=(slice(None) for _ in range(len(df.index.names)))
+            selector[spec_pos]=spec_list
+            new_list.append(df.loc[selector])
+        if returndf:
+            return new_list[0]
+        else:
+            return new_list
+        
+    """below replaced by general version above
+    def select_specs(self,df_list,spec_list): 
+        new_list=[]
+        for df in df_list:
+            spec_pos=df.index.names.index('species')
+            selector=(slice(None) for _ in range(len(df.index.names)))
+            selector[spec_pos]=spec_list
+            new_list.append(df.loc[selector])
+        return new_list"""
+        
     
     def mul_wt_norm_coefs(self,adiff_scor,scor_select,coef_df,y,proc_count=4 ,mch_kwargs={}):
         
@@ -383,6 +449,7 @@ class PiResults(DBTool,myLogger):
         #combines different models (species+data+fit) over DF index and repetitions over columns (rep_idx level) 
         keys=['y','yhat','coef_scor_df']
         name=os.path.join(os.getcwd(),'results','prediction_stack.h5')
+        
         if not rebuild:
             try:
                 stacked_predict_dict={key:pd.read_hdf(name,key) for key in keys}

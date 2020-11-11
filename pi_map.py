@@ -313,7 +313,7 @@ class Mapper(myLogger):
          
     
     def plot_top_features(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
-        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False):
+        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,spec_list=None):
         
         """
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
@@ -351,6 +351,7 @@ class Mapper(myLogger):
             wtd_coef_dfs=[wtd_coef_dfs]
         
         for i,wtd_coef_df_ in enumerate(wtd_coef_dfs):
+            
             self.logger.info(f'pi_map dropping cols from wtd_coef_df i:{i}')
             #wtd_coef_df_.astype(np.float32,copy=False)
             cols=wtd_coef_df_.columns
@@ -368,11 +369,23 @@ class Mapper(myLogger):
                                 self.logger.info(f'failed trying to drop col:{col} matching varstr:{varstr} and current cols:{list(wtd_coef_df_.columns)}')
                             
                             break #stop searching
-        if split is None:
+        if split is None and spec_list is None:
             
             self.plot_hilo_coefs(wtd_coef_dfs,top_n,title,huc_level=huc_level)
             return
-        
+        elif not spec_list is None:
+            if not type spec_list[0] is list:
+                spec_list=[spec_list]
+            for specs in spec_list:
+                wtd_coef_dfs_sp=self.pr.select_by_index_level_vals(wtd_coef_dfs,specs,level_name='species')
+                if len(specs)<10:
+                    title_sp=title+'_'.join(specs)
+                else: 
+                    sp_hash=joblib.hash(spec_list)
+                    self.pr.getsave_postfit_db_dict('spec_list',{sp_hash:spec_list})
+                    title_sp=title+ f'sp_count:{len(specs)}-hash:{sp_hash}'
+                self.plot_hilo_coefs(wtd_coef_dfs_sp,top_n,title_sp,huc_level=huc_level)
+            return
         elif split[:3]=='huc': # add a new index level on lhs for huc2,etc
             split=int(split[3:])
             idx1=wtd_coef_df.index
