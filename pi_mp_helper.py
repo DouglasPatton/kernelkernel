@@ -75,7 +75,7 @@ class MulXB(Process,myLogger):
         myLogger.__init__(self,name='MulXB.log')
         self.logger.info(f'running a MulXB proc')
         
-        chunk_count=300
+        
         h12_list=self.x.index.unique(level='HUC12')
         h12_count=len(h12_list)
         h12_pos_x=self.x.index.names.index('HUC12')
@@ -83,15 +83,16 @@ class MulXB(Process,myLogger):
         if (not self.wt is None) and 'HUC12' in self.wt.index.names:
             h12_pos_wt=self.wt.index.names.index('HUC12')
             wt_selector=[slice(None) for _ in range(len(self.wt.index.names))]
-        
-       
-        chunk_n=-(-h12_count//chunk_count)
+        chunk_n=100
+        chunk_count=-(-h12_count//chunk_n)
         results=[]
+        #results=None
         try:
             for ch in range(chunk_count):
                 h12_ch=h12_list[ch*chunk_n:(ch+1)*chunk_n]
                 x_selector[h12_pos_x]=h12_ch
                 x_ch=self.x.loc[tuple(x_selector)]
+                x_ch.index=x_ch.index.remove_unused_levels()
                 x,b=x_ch.align(self.b,axis=0) #add comids,huc12's from bigX
                 x,b=x.align(b,axis=1,level='var')#add reps,splits from coefs
                 self.x_,self.b_=x,b
@@ -115,15 +116,21 @@ class MulXB(Process,myLogger):
 
                     result=xbw_            
                 else:
-                    result=xb
+                    result=xb.mean(axis=1,level='var')
+                self.logger.info(f'MUlXb appending results {ch+1} of {chunk_count}')
+                """if results is None:
+                    results=result
+                else:
+                    results=pd.concat([results,result],axis=0)
+                """
                 results.append(result)
             #self.logger.info(f'MulXB result:{result}')\
-            self.logger.info('MUlXb concatenating results')
-            resultdf=pd.concat(results,axis=0)
+            
+            results=pd.concat(results,axis=0)
             if not self.q is None:
-                self.q.put((self.i,resultdf))
+                self.q.put((self.i,results))
             else:
-                self.result=resultdf
+                self.result=results
         except:
             self.logger.exception(f'error with MulXB')
             assert False,'halt'
@@ -311,7 +318,10 @@ class MatchCollapseHuc12(Process,myLogger):
     def fitscor_diffscor_CV_wtd_mean_coef(self,wt,coef_df,return_weights=False,cv_collapse=False):
         
         
-        if not cv_collapse:
+        if not cv_collapse==True:
+            if cv_collapse=='split':
+                wt=wt.mean(axis=1,level=['rep_idx','var'])
+                coef_df=coef_df.mean(axis=1,level=['rep_idx','var'])
             wt_cvnorm=self.cvnorm_wts(wt)
             #self.wt=wt
 
@@ -348,7 +358,7 @@ class MpHelper(myLogger):
         myLogger.__init__(self,name='mphelper.log')
         
             
-    def runAsMultiProc(self,the_proc,args_list,kwargs={},no_mp=False):
+    def runAsMultiProc(self,the_proc,args_list,kwargs={},no_mp=False,concat=None):
         try:
             starttime=time()
             if no_mp:q=None
@@ -368,7 +378,10 @@ class MpHelper(myLogger):
                 return results
             else:
                 [proc.start() for proc in procs]
-            outlist=[None for _ in range(I)]
+            if concat is None:
+                outlist=[None for _ in range(I)]
+            else:
+                outdf=pd.DataFrame()
             countdown=proc_count
         except:
             self.logger.exception('error in runasmultiproc')
@@ -381,7 +394,10 @@ class MpHelper(myLogger):
                 self.logger.info(f'multiproc checking q. countdown:{countdown}')
                 i,result=q.get(True,20)
                 self.logger.info(f'multiproc has something from the q!')
-                outlist[i]=result
+                if concat is None:
+                    outlist[i]=result
+                else:
+                    outdf=pd.concat([outdf,result],axis=concat)
                 countdown-=1
                 self.logger.info(f'proc completed. countdown:{countdown}')
             except:
@@ -393,5 +409,8 @@ class MpHelper(myLogger):
         self.logger.info(f'all procs joined sucessfully')
         endtime=time()
         self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
-        return outlist
+        if concat is None:
+            return outlist
+        else:
+            return outdf
     

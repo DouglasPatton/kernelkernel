@@ -310,7 +310,21 @@ class Mapper(myLogger):
         ax.autoscale_view()
         return patches
     
-         
+ 
+    def top_features_by_species_cluster(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,):
+        
+        coef_df,scor_df=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True)
+        SkCluster().clusterSpecsByCoefs(coef_df,scor_df,
+        clusterer='AgglomerativeClustering',n_clusters=5,zzzno_fish=False,
+        cv_collapse='split',scor_wt=True,est=None,fit_scorer=None
+        )
+    
+    
+    
+    
+    
+
     
     def plot_top_features(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
         filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,spec_list=None):
@@ -374,7 +388,7 @@ class Mapper(myLogger):
             self.plot_hilo_coefs(wtd_coef_dfs,top_n,title,huc_level=huc_level)
             return
         elif not spec_list is None:
-            if not type spec_list[0] is list:
+            if not type(spec_list[0]) is list:
                 spec_list=[spec_list]
             for specs in spec_list:
                 wtd_coef_dfs_sp=self.pr.select_by_index_level_vals(wtd_coef_dfs,specs,level_name='species')

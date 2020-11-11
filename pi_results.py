@@ -2,6 +2,7 @@ import joblib
 import pickle
 import os,sys,psutil
 import re
+import gc
 from time import strftime,sleep
 import datetime
 import traceback
@@ -50,48 +51,18 @@ class PiResults(DBTool,myLogger):
         self.fit_scorer='f1_micro'
         self.dp=DataPlotter()
         
-    def clusterSpecsByCoefs(self,clusterer='kmeans',k=None,zzzno_fish=False,cv_collapse=False,scor_wt=True,est=None,fit_scorer=None):
+    
+        
+        
+        
+    def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False,fit_scorer=None):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-        
-        coef_df,scor_df=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True)
-        if not est is None:
-            if type(est) is str:
-                ests=[est]
-            else:
-                ests=est
-            coef_df,scor_df=self.select_by_index_level_vals([coef_df,scor_df],ests,level_name='estimator')
-        scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
-        
-        if cv_collapse:
-            coef_df=coef_df.mean(axis=1,level='var')
-            scor_select=scor_select.mean(axis=1,level='var')
-            if scor_wt:
-                denom=scor_select.sum(axis=0,level='species')
-                _,denom=scor_select.align(denom,axis=0,join='left')
-                scor_select_normed=scor_select.divide(denom,axis=0)
-                wtd_coef_df=(coef_df*scor_select_normed).sum(axis=0,level='species')
-            else:
-                wtd_coef_df=coef_df.mean(axis=0,level='species')
-        else:        
-            if scor_wt:
-                scor_select.columns=scor_select.columns.droplevel('var') #
-                denom=scor_select.sum(axis=1).sum(axis=0,level='species')
-                _,denom=scor_select.align(denom,axis=0,join='left')
-                scor_select_normed=scor_select.divide(denom,axis=0) #broacast over axis1
-                wtd_coef_df=(scor_select_normed*coef_df).sum(axis=1,level='var').sum(axis=0,level='species')
-            else: assert False,'no cv_collapse requires scor_wt'
-            
-        
-        
-        
-    def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False):
-        
         if type(wt_type) is str: 
             if wt_type =='none':
                 wt=1
             else:
-                wt=dict(fit_scorer=self.fit_scorer,
+                wt=dict(fit_scorer=fit_scorer,
                     zzzno_fish=zzzno_fish,return_weights=True,
                     wt_type=wt_type,spec_wt=spec_wt,scale_by_X=False,cv_collapse=cv_collapse)
             
@@ -104,7 +75,7 @@ class PiResults(DBTool,myLogger):
         if type(wt) is str:
             key+=f'_{wt}'
         if cv_collapse:
-            key+='_cv-collapse'
+            key+=f'_cv-collapse-{cv_collapse}'
         key+=f'_{fit_scorer}'
         if not rebuild:
             try:
@@ -119,6 +90,7 @@ class PiResults(DBTool,myLogger):
             coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish)
         spec_list=coef_df.index.unique(level='species')
         Big_X_train_df=self.build_X_train_df(std=True)
+        self.logger.info(f'Big_X_train_df.shape:{Big_X_train_df.shape}')
         if type(wt) is dict:
             self.logger.info('getting weights')
             wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,**wt)
@@ -128,37 +100,68 @@ class PiResults(DBTool,myLogger):
             wt_df=None
         if type(wt_df) is int:
             wt_df=None
-        proc_count=4
-        chunks=proc_count
-        if chunks<len(spec_list):
-            chunks=len(spec_list)
+        proc_count=10
+        cycles=2
+        chunks=proc_count*cycles
+        while chunks>len(spec_list):
+            self.logger.info(f'chunks bigger than spec_list, modifying')
+            if cycles>1:
+                cycles-=1
+            else:
+                proc_count-=1
+                if proc_count==1:
+                    chunks=1
+                    
+            chunks=proc_count*cycles
+            self.logger.warning(f'chunks>len(spec_list, so now chunks:{chunks},proc_count:{proc_count} and len(spec_list):{len(spec_list)}')
         chunk_n=-(-len(spec_list)//chunks)
         #args_list_list=[]
-        XB_df=pd.DataFrame()
         args_list=[]
+        self.logger.info(f'building MulXB args_list. chunk_n:{chunk_n}, chunks:{chunks}')
         for c in range(chunks):
+            
             left=c*chunk_n
             right=left+chunk_n
             spec_list_ch=spec_list[left:right]
-
+            self.logger.info(f'spec_list_ch:{spec_list_ch}')
+            if len(spec_list_ch)==0:
+                self.logger.warning(f'spec_list_ch is empty, break. len(args_list):{len(args_list)}')
+                break
             if wt_df is None:
                 spec_wt=None
             else:
                 spec_wt=wt_df.loc[spec_list_ch]
                 spec_wt.index=spec_wt.index.remove_unused_levels()
-                spec_wt=spec_wt.astype(np.float32)
-            spec_x=Big_X_train_df.loc[spec_list_ch].astype(np.float32)
+                spec_wt=spec_wt
+            spec_x=Big_X_train_df.loc[spec_list_ch]
             spec_x.index=spec_x.index.remove_unused_levels()
-            spec_b=coef_df.loc[spec_list_ch].astype(np.float32)
+            spec_b=coef_df.loc[spec_list_ch]
             spec_b.index=spec_b.index.remove_unused_levels()  
-            args_list.append([spec_x,spec_b,spec_wt])
+            args=[spec_x,spec_b,spec_wt]
+            for i in range(len(args)):
+                if type(args[i]) is pd.DataFrame:
+                    args[i]=args[i].astype(np.float32)
+            args_list.append(args)
             #if right>=len(spec_list):break
+        #del(Big_X_train_df)
+        #del(coef_df)
+        #del(wt_df)
+        #gc.collect()
         mph=MpHelper()
         #self.mph=mph
-        dflist=mph.runAsMultiProc(MulXB,args_list,no_mp=False)
-        self.dflist=dflist
-        XB_df=pd.concat(dflist,axis=0) #no_mp for debugging
-        #args_list_list.append(args_list)
+        dflist=[]
+        XB_df=None
+        for cy in range(cycles):
+            self.logger.info(f'MulXB cycle {cy+1} of {cycles}')
+            mp_result=mph.runAsMultiProc(MulXB,args_list[cy*proc_count:(cy+1)*proc_count],no_mp=False,concat=0)
+            if XB_df is None:
+                XB_df=mp_result
+            else:XB_df=pd.concat([XB_df,mp_result],axis=0)
+        """self.dflist=dflist
+        if type(dflist[0]) is list:
+            dflist=[df for dfl in dflist for df in dfl]
+        self.logger.info(f'concatenating dflist after MulXB')
+        XB_df=pd.concat(dflist,axis=0) """
         
         XB_df.to_hdf(name,key,complevel=5)
         return XB_df
@@ -183,7 +186,7 @@ class PiResults(DBTool,myLogger):
         if presence_filter:
             name+='_presence_filter'
         if cv_collapse:
-            name+='_cv-collapse'
+            name+=f'_cv-collapse-{cv_collapse}'
         name+='_'+fit_scorer
         
             
