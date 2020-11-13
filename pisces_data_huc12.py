@@ -39,14 +39,6 @@ class PiscesDataTool(myLogger,DBTool):
                 return self.pi_db[species_name]
             else:
                 assert False,'expecting a species name or species idx'
-                '''try:
-                    with open(os.path.join(datadir,'sitedatakeylist'),'rb') as f:
-                        sitevarlist=pickle.load(f)
-                    return sitevarlist   
-                except: 
-                    self.logger.exception('')
-                    return 'sitevarlist not found'
-                '''
         except: self.logger.exception(f'retrievespeciesdata outer catch')
         
     
@@ -369,11 +361,7 @@ class PiscesDataTool(myLogger,DBTool):
                 self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
                 
                 self.sitedatacomid_dict=savefile[0]
-                self.comidsitedataidx=savefile[1]
-                self.comidsiteinfofindfaillist=savefile[2]
-                self.huc12findfaillist=savefile[3]
                 print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
-                self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
                 return
             except:
                 self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
@@ -392,34 +380,13 @@ class PiscesDataTool(myLogger,DBTool):
             comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
         args_list=[[i,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,geogtool,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
         
-        outlist=self.runAsMultiProc(MpSearchComidHuc12,args_list)
-        comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist=zip(*outlist)
-        self.comidsiteinfofindfaillist=[i for result in comidsiteinfofindfaillist for i in result]
-        self.huc12findfaillist=[i for result in huc12findfaillist for i in result]
+        sitedatacomid_dict_list=self.runAsMultiProc(MpSearchComidHuc12,args_list)
 
-        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict)
+        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict_list)
         self.sitedatacomid_dict=sitedatacomid_dict#{}
-        self.comidsitedataidx=[]
-        for i in range(self.processcount):
-            self.logger.info(f'len(comidsitedataidx[i]) {len(comidsitedataidx[i])}')
-            self.comidsitedataidx.extend([int(j)+com_idx[i] for j in comidsitedataidx[i]])
-        
         
         with open(filepath,'wb') as f:
-            pickle.dump((self.sitedatacomid_dict,self.comidsitedataidx,self.comidsiteinfofindfaillist,self.huc12findfaillist),f)
-        self.sitedatakeylist=[key for key,_ in self.sitedatacomid_dict[self.comidlist[0]].items()]
-        self.comidsiteinfofindfail=[];self.huc12findfail=[]
-        if sum(self.comidsiteinfofindfaillist)>0:
-            for i in range(comidcount):
-                if self.comidsiteinfofindfaillist[i]==1:
-                    self.logger.warning(f'comidsiteinfofind failed for comid:{self.comidlist[i]}')
-                    self.comidsiteinfofindfail.append(self.comidlist[i])
-                
-        if sum(self.huc12findfaillist)>0:
-            for i in range(comidcount):
-                if self.huc12findfaillist[i]==1:
-                    self.logger.warning(f'huc12find failed for comid:{self.comidlist[i]}')
-                    self.huc12findfail.append([self.comidlist[i]])
+            pickle.dump(self.sitedatacomid_dict,f)
 
         return         
 
@@ -469,10 +436,8 @@ class PiscesDataTool(myLogger,DBTool):
         except:self.buildCOMIDlist()
         try: self.sitedata
         except:self.getsitedata()
-        try:self.sitedatacomid_dict,self.comidsitedataidx
+        try:self.sitedatacomid_dict
         except: self.buildCOMIDsiteinfo()
-        with open(os.path.join(datadir,'sitedatakeylist'),'wb') as f:
-            pickle.dump(self.sitedatakeylist,f)
         speciescount=len(self.specieslist)
         
         split_idx=[int(i) for i in np.linspace(0,speciescount,self.processcount+1)]#+1 to include the end

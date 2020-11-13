@@ -25,6 +25,15 @@ class PiscesPredictTool(PiscesDataTool,myLogger):
         specieshuc8list=self.specieshuc8list
         huc12comiddict=self.gethuc12comiddict()
         huc8_huc12dict=self.gt.build_huchuc()['huc8_huc12dict']
+        species_comid_dict={spec:[] for spec in specieshuc8list.keys()}
+        for species in specieshuc8list:
+            for huc8 in specieshuc8list[species]:
+                for huc12 in huc8_huc12dict[huc8]:
+                    species_comid_dict[species].extend(huc12comiddict[huc12])
+                    
+            
+                
+            
         
         
         

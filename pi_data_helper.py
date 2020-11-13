@@ -276,11 +276,9 @@ class MpSearchComidHuc12(mp.Process,myLogger):
         sc_comid_dict=self.gt.getstreamcat(comidlist)
         self.logger.info(f'type(sc_comid_dict):{type(sc_comid_dict)}')
         
-        comidsitedataidx=[]
         sitedatacomid_dict={}
         huc12findfaillist=[0 for _ in range(comidcount)]
         huc12failcount=0
-        comidsiteinfofindfaillist=[0 for _ in range(comidcount)]
         
         printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
         for i,comid_i in enumerate(comidlist):
@@ -288,37 +286,17 @@ class MpSearchComidHuc12(mp.Process,myLogger):
                 progress=np.round(100.0*i/comidcount,1)
                 failrate=np.round(100.0*huc12failcount/i,5)
                 self.logger.info(f"{self.mypid}'s progress:{progress}%, failrate:{failrate}")
-            hucdatadict=self.findcomidhuc12reach(comid_i)
-            if not type(hucdatadict) is dict or not comid_i in sc_comid_dict : 
+            #hucdatadict=self.findcomidhuc12reach(comid_i)
+            if not comid_i in sc_comid_dict : 
                 huc12findfaillist[i]=1
                 huc12failcount+=1
-                found=0
             else:
-                found=1
-            if found:
-                try:
-                    j=self.sitedata_comid_digits.index(comid_i)
-                    sitedict=self.sitedata[j]
-                    comidsitedataidx.append(j)
-                except:                
-                    #sitedatacomid_dict[comid_i]='Not Found'
-                    #comidsitedataidx.append('Not Found')
-                    found=0
-                    comidsiteinfofindfaillist[i]=1
-            if found:
-                try:
-                    sc_dict=sc_comid_dict[comid_i]
-                except:
-                    found=0
-            if found:
-                if type(hucdatadict) is dict:
-                    sitedict=self.mergelistofdicts([sitedict,sc_dict,hucdatadict])#,overwrite=1)
-                    #elf.logger.info(f'sitedict:{sitedict}')
-                sitedatacomid_dict[comid_i]=sitedict
+                sc_dict=sc_comid_dict[comid_i]
+                sitedatacomid_dict[comid_i]=sc_dict
                             
             #if i in printselection:print('i==',i,comid_i)
         self.logger.info(f'pid:{self.mypid} adding to q')
-        self.q.put([self.i,(comidsitedataidx,sitedatacomid_dict,comidsiteinfofindfaillist,huc12findfaillist)])
+        self.q.put([self.i,(sitedatacomid_dict,huc12findfaillist)])
         self.logger.info(f'pid:{self.mypid} completed add to q')
         
     def mergelistofdicts(self,listofdicts,overwrite=0):
