@@ -321,7 +321,8 @@ class MatchCollapseHuc12(Process,myLogger):
         if not cv_collapse==True:
             if cv_collapse=='split':
                 wt=wt.mean(axis=1,level=['rep_idx','var'])
-                coef_df=coef_df.mean(axis=1,level=['rep_idx','var'])
+                if not return_weights:
+                    coef_df=coef_df.mean(axis=1,level=['rep_idx','var'])
             wt_cvnorm=self.cvnorm_wts(wt)
             #self.wt=wt
 

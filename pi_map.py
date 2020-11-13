@@ -2,6 +2,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 import shapely
 
+import joblib
 from multiprocessing import Process,Queue
 from time import time,sleep
 import re
@@ -15,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from helpers import Helper
 from mylogger import myLogger
 from pi_mp_helper import MatchCollapseHuc12,MpHelper
+from pi_cluster import SkCluster
 
 class Mapper(myLogger):
     def __init__(self):
@@ -67,11 +69,6 @@ class Mapper(myLogger):
         else:
             h_list=list(data_df.index)
         boundary=self.getHucBoundary(huc_level)
-        #print('huc_level',huc_level)
-        #print('boundary.index.names',boundary.index.names.index)
-        #boundary_huc_pos=boundary.columns.names.index(huc_level)
-        #selector=[slice(None) for _ in range(len())]
-        #selector[boundary_huc_pos]=h12_list
         boundary_clip=boundary.loc[boundary[huc_level].isin(h_list)]
         #boundary_clip=boundary.loc[selector]
         merged=boundary_clip.merge(data_df,left_on=huc_level,right_on=right_on)
@@ -215,9 +212,6 @@ class Mapper(myLogger):
         return df    
         
         
-    
-        
-        
         
     def hucAggregate(self,df,huc_level,collapse='mean'):
         if type(huc_level) is int:
@@ -311,23 +305,46 @@ class Mapper(myLogger):
         return patches
     
  
-    def top_features_by_species_cluster(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
-        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,):
+    def top_features_by_species_cluster(
+        self,top_clusts=5,row_norm=True,clusterer='AgglomerativeClustering',n_clusters=5,est=None,
+        huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+        filter_vars=True,spec_wt=None,fit_scorer=None,scale_by_X=False,
+        presence_filter=False,wt_type='fitscor_diffscor',cv_collapse='split',):
         
-        coef_df,scor_df=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True)
-        SkCluster().clusterSpecsByCoefs(coef_df,scor_df,
-        clusterer='AgglomerativeClustering',n_clusters=5,zzzno_fish=False,
-        cv_collapse='split',scor_wt=True,est=None,fit_scorer=None
-        )
+        coef_df,scor_df=self.pr.get_coef_stack(
+            rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True)
+        if re.search('fit',wt_type):
+            scor_wt=True
+        else:
+            scor_wt=False
+        if fit_scorer is None:
+            fit_scorer=self.fit_scorer
+        self.skc=SkCluster(fit_scorer=fit_scorer)
+        spec_clust_dict=self.skc.clusterSpecsByCoefs(
+            coef_df,scor_df,clusterer=clusterer,
+            n_clusters=n_clusters,zzzno_fish=zzzno_fish,
+            cv_collapse=cv_collapse,scor_wt=scor_wt,
+            est=est,fit_scorer=fit_scorer,row_norm=row_norm
+            )
+        self.spec_clust_dict=spec_clust_dict
+        #assert False, 'debug'
+        size_sorted_clusts=[key for _,key in sorted([(len(val),key) for key,val in spec_clust_dict.items()])[::-1]]
+        spec_listlist=[]
+        for clustkey in size_sorted_clusts[:top_clusts]:
+            spec_listlist.append(spec_clust_dict[clustkey])
+        for spec_list in spec_listlist:
+            self.plot_top_features(
+                huc_level=huc_level,split=split,top_n=top_n,rebuild=rebuild,
+                zzzno_fish=zzzno_fish,filter_vars=filter_vars,spec_wt=spec_wt,
+                fit_scorer=fit_scorer,scale_by_X=scale_by_X,presence_filter=presence_filter,
+                wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list)
+        
     
-    
-    
-    
-    
-
-    
-    def plot_top_features(self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
-        filter_vars=False,spec_wt=None,fit_scorer=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,spec_list=None):
+    def plot_top_features(
+        self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
+        filter_vars=True,spec_wt=None,fit_scorer=None,scale_by_X=False,
+        presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,
+        spec_list=None,vote=False):
         
         """
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
@@ -338,9 +355,9 @@ class Mapper(myLogger):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
         if presence_filter:
-            title=f'top {top_n} presence-hi/absence-lo features'
+            title=f'top {top_n} presence-hi absence-lo features'
         else:
-            title=f'top {top_n} hi/lo features'
+            title=f'top {top_n} hilo features'
         if scale_by_X:
             title+='_Xscaled'
         if zzzno_fish:
@@ -355,11 +372,24 @@ class Mapper(myLogger):
             title+=f'_{huc_level}'
         if cv_collapse:
             title+="_cv-mean"
+        if vote:
+            title+='_var-vote'
+        else:
+            title+='_var-mean'
+        if not spec_list is None:
+            sp_hash=joblib.hash(spec_list)
+            self.pr.getsave_postfit_db_dict('spec_list',{sp_hash:spec_list})
+            title+=f'sp_count{len(spec_list)}-hash{sp_hash}'
+            print(f'starting plot for {len(spec_list)} species. spec_list:{spec_list}, with hash:{sp_hash}')
+      
+            
+            
         title+='_'+fit_scorer
         
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
             presence_filter=presence_filter,rebuild=rebuild,zzzno_fish=zzzno_fish,
-            spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X,wt_type=wt_type,cv_collapse=cv_collapse)
+            spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X,
+            wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list)
         self.wtd_coef_dfs=wtd_coef_dfs
         if type(wtd_coef_dfs) is pd.DataFrame:
             wtd_coef_dfs=[wtd_coef_dfs]
@@ -383,23 +413,11 @@ class Mapper(myLogger):
                                 self.logger.info(f'failed trying to drop col:{col} matching varstr:{varstr} and current cols:{list(wtd_coef_df_.columns)}')
                             
                             break #stop searching
-        if split is None and spec_list is None:
+        if split is None:
             
-            self.plot_hilo_coefs(wtd_coef_dfs,top_n,title,huc_level=huc_level)
+            self.plot_hilo_coefs(wtd_coef_dfs,top_n,title,huc_level=huc_level,vote=vote)
             return
-        elif not spec_list is None:
-            if not type(spec_list[0]) is list:
-                spec_list=[spec_list]
-            for specs in spec_list:
-                wtd_coef_dfs_sp=self.pr.select_by_index_level_vals(wtd_coef_dfs,specs,level_name='species')
-                if len(specs)<10:
-                    title_sp=title+'_'.join(specs)
-                else: 
-                    sp_hash=joblib.hash(spec_list)
-                    self.pr.getsave_postfit_db_dict('spec_list',{sp_hash:spec_list})
-                    title_sp=title+ f'sp_count:{len(specs)}-hash:{sp_hash}'
-                self.plot_hilo_coefs(wtd_coef_dfs_sp,top_n,title_sp,huc_level=huc_level)
-            return
+       
         elif split[:3]=='huc': # add a new index level on lhs for huc2,etc
             split=int(split[3:])
             idx1=wtd_coef_df.index
@@ -411,8 +429,8 @@ class Mapper(myLogger):
         split_coef_mean=wtd_coef_df2.mean(axis=0,level=split) # mean across huc
         split_coef_rank=np.argsort(split_coef_mean,axis=1)
         
-    def plot_hilo_coefs(self,wtd_coef_dfs,top_n,title,huc_level=None):
-        cols_sorted_list=[]
+    def plot_hilo_coefs(self,wtd_coef_dfs,top_n,title,huc_level=None,vote=False):
+        cols_sorted_list=[];big_top_2n=[]
         selector=[0,-1]
         select_cols_list=[]
         lo_hi_names=['lowest_coef','highest_coef']
@@ -421,44 +439,31 @@ class Mapper(myLogger):
             #if not huc_level is None:
             #    wtd_coef_df,_=self.hucAggregate(wtd_coef_df,huc_level)
         
-            
-            #the variable names    
-            cols=wtd_coef_df.columns
-            #sort acros cols, i.e., each row
-            coef_sort_idx=np.argsort(wtd_coef_df,axis=1) 
-            
-            select_cols=coef_sort_idx.apply(
-                lambda x:cols[x.iloc[df_idx]],axis=1,) #df_idx will choose the first or last from each sorted list
-            
-            n_select_cols=select_cols.value_counts(ascending=False).index.tolist()[:top_n]
-            select_cols_list.append(n_select_cols)
-            
-            
-            '''below code won't work for separate wtd_dfs
-            # for each row, take best and worst in dataframe with col for lo, col for hi.
-            lo_hi_cols=coef_sort_idx.apply(
-                lambda x:pd.Series([cols[x.iloc[0]],cols[x.iloc[-1]]],index=lo_hi_names,dtype='category'),axis=1,)
-            #count frequency of each list of worst then best. creating a series for worst and best since ordering is different
-            #lo_val_counts=[lo_hi_cols.loc[:,n].value_counts(ascending=False) for n in lo_hi_names]
-            #lo_hi_val_counts=lo_hi_cols.apply(lambda col:col.value_counts(ascending=True),axis=0)
-            
-            #get the most frequent big and small            
-            big_vote_lo_hi=[lo_val_counts[i].iloc[slice(None,top_n).index] for i in range(2)]            
-            self.big_vote_lo_hi=big_vote_lo_hi'''
-    
-        """ 
-            ###################
-            assert False, 'developing new ranking approach!'
-            ####################
-            big_mean=wtd_coef_df.mean(axis=0)#mean aross all hucs
-            #sort_ord=np.argsort(big_mean)
-            #cols_sorted_list.append(wtd_coef_df.columns.to_list()[sort_ord])
-            cols_sorted_list.append(list(big_mean.sort_values().index))#ascending
+            if vote:     
+                #the variable names    
+                cols=wtd_coef_df.columns
+                #sort acros cols, i.e., each row
+                coef_sort_idx=np.argsort(wtd_coef_df,axis=1) 
 
-        big_top_2n=(cols_sorted_list[0][:top_n],
-                    cols_sorted_list[-1][-top_n:]) #-1 could be last item or 1st if len=1
-        """
-        big_top_2n=tuple(select_cols_list)
+                select_cols=coef_sort_idx.apply(
+                    lambda x:cols[x.iloc[df_idx]],axis=1,) #df_idx will choose the first or last from each sorted list
+
+                n_select_cols=select_cols.value_counts(ascending=False).index.tolist()[:top_n]
+                big_top_2n.append(n_select_cols)
+                #big_top_2n=tuple(select_cols_list)
+
+            else:
+                big_mean=wtd_coef_df.mean(axis=0)#mean aross all hucs
+                #sort_ord=np.argsort(big_mean)
+                #cols_sorted_list.append(wtd_coef_df.columns.to_list()[sort_ord])
+                cols_sorted=(list(big_mean.sort_values().index))#ascending
+                if df_idx==0:
+                    top_slice=slice(0,top_n)
+                else:
+                    top_slice=slice(-top_n,None)
+                big_top_2n.append(cols_sorted[top_slice],
+                        ) #-1 could be last item or 1st if len=1
+        big_top_2n=tuple(big_top_2n)
         top_neg_coef_df=wtd_coef_dfs[0].loc[:,big_top_2n[0]]
         top_pos_coef_df=wtd_coef_dfs[-1].loc[:,big_top_2n[1]]
         #self.big_top_wtd_coef_df=big_top_wtd_coef_df
@@ -499,10 +504,11 @@ class Mapper(myLogger):
         #cax = divider.append_axes("right", size="5%", pad=0.1)
         geo_neg_cols.plot(column=colname,ax=ax,cmap='tab20c',legend=True)#,legend_kwds={'orientation':'vertical'})
         self.add_huc2_conus(ax)
-
-
-        fig.savefig(Helper().getname(os.path.join(
-            self.print_dir,f'huc12_top{top_n}_features.png')))
+        
+        figname=Helper().getname(os.path.join(
+            self.print_dir,f'huc12_top{top_n}_features_{title}.png'))
+        self.logger.info(f'saving to {figname}')
+        fig.savefig(figname)
     
         
     def add_huc2_conus(self,ax,huc2_select=None):

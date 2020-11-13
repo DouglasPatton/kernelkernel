@@ -169,7 +169,8 @@ class PiResults(DBTool,myLogger):
     
     def build_wt_comid_feature_importance(
         self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
-        spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,):
+        spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,
+        spec_list=None):
         #get data
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -187,6 +188,10 @@ class PiResults(DBTool,myLogger):
             name+='_presence_filter'
         if cv_collapse:
             name+=f'_cv-collapse-{cv_collapse}'
+        if not spec_list is None:
+            sp_hash=joblib.hash(spec_list)
+            self.getsave_postfit_db_dict('spec_list',{sp_hash:spec_list})
+            name+=f'sp_count:{len(spec_list)}-hash:{sp_hash}'
         name+='_'+fit_scorer
         
             
@@ -205,8 +210,9 @@ class PiResults(DBTool,myLogger):
         coef_df,scor_df,y,yhat=self.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
-
-                    
+        if not spec_list is None:
+            df_list=[coef_df,scor_df,y,yhat]
+            df_list= self.select_by_index_level_vals(df_list,spec_list,level_name='species')      
         #y=datadict['y']#.astype('Int8')
         #yhat=datadict['yhat']#.astype('Int8')
         #coef_scor_df=datadict['coef_scor_df']#.astype('float32')
@@ -257,20 +263,22 @@ class PiResults(DBTool,myLogger):
     
     def select_by_index_level_vals(self,df_list,level_vals,level_name='species'):
         new_list=[]
-        if not type(df) is list:
+        if not type(df_list) is list:
             returndf=True
             df=[df]
         else:
             returndf=False
         for df in df_list:
-            spec_pos=df.index.names.index(level_name)
-            selector=(slice(None) for _ in range(len(df.index.names)))
-            selector[spec_pos]=spec_list
-            new_list.append(df.loc[selector])
+            pos=df.index.names.index(level_name)
+            selector=[slice(None) for _ in range(len(df.index.names))]
+            selector[pos]=level_vals
+            selector=tuple(selector)
+            new_list.append(df.loc[selector,:])
         if returndf:
             return new_list[0]
         else:
-            return new_list
+            return new_list 
+        
         
     """below replaced by general version above
     def select_specs(self,df_list,spec_list): 
