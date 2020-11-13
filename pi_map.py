@@ -309,7 +309,7 @@ class Mapper(myLogger):
         self,top_clusts=5,row_norm=True,clusterer='AgglomerativeClustering',n_clusters=5,est=None,
         huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
         filter_vars=True,spec_wt=None,fit_scorer=None,scale_by_X=False,
-        presence_filter=False,wt_type='fitscor_diffscor',cv_collapse='split',):
+        presence_filter=True,wt_type='fitscor_diffscor',cv_collapse='split',):
         
         coef_df,scor_df=self.pr.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True,row_norm=row_norm)

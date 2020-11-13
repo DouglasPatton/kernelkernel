@@ -63,7 +63,7 @@ class PiResults(DBTool,myLogger):
                 wt=1
             else:
                 wt=dict(fit_scorer=fit_scorer,
-                    zzzno_fish=zzzno_fish,return_weights=True,row_norm=row_norm
+                    zzzno_fish=zzzno_fish,return_weights=True,row_norm=row_norm,
                     wt_type=wt_type,spec_wt=spec_wt,scale_by_X=False,cv_collapse=cv_collapse)
             
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
@@ -197,7 +197,7 @@ class PiResults(DBTool,myLogger):
         name+='_'+fit_scorer
         
             
-        if not rebuild: #just turning off rebuild here
+        if False:#not rebuild: #just turning off rebuild here
              
             try:
                 saved_data=self.getsave_postfit_db_dict(name)
@@ -214,7 +214,8 @@ class PiResults(DBTool,myLogger):
             drop_nocoef_scors=True,row_norm=row_norm)
         if not spec_list is None:
             df_list=[coef_df,scor_df,y,yhat]
-            df_list= self.select_by_index_level_vals(df_list,spec_list,level_name='species')      
+            coef_df,scor_df,y,yhat= self.select_by_index_level_vals(
+                df_list,spec_list,level_name='species')      
         #y=datadict['y']#.astype('Int8')
         #yhat=datadict['yhat']#.astype('Int8')
         #coef_scor_df=datadict['coef_scor_df']#.astype('float32')
