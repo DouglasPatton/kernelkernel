@@ -312,7 +312,7 @@ class Mapper(myLogger):
         presence_filter=False,wt_type='fitscor_diffscor',cv_collapse='split',):
         
         coef_df,scor_df=self.pr.get_coef_stack(
-            rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True)
+            rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True,row_norm=row_norm)
         if re.search('fit',wt_type):
             scor_wt=True
         else:
@@ -324,7 +324,7 @@ class Mapper(myLogger):
             coef_df,scor_df,clusterer=clusterer,
             n_clusters=n_clusters,zzzno_fish=zzzno_fish,
             cv_collapse=cv_collapse,scor_wt=scor_wt,
-            est=est,fit_scorer=fit_scorer,row_norm=row_norm
+            est=est,fit_scorer=fit_scorer
             )
         self.spec_clust_dict=spec_clust_dict
         #assert False, 'debug'
@@ -337,14 +337,14 @@ class Mapper(myLogger):
                 huc_level=huc_level,split=split,top_n=top_n,rebuild=rebuild,
                 zzzno_fish=zzzno_fish,filter_vars=filter_vars,spec_wt=spec_wt,
                 fit_scorer=fit_scorer,scale_by_X=scale_by_X,presence_filter=presence_filter,
-                wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list)
+                wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list,row_norm=row_norm)
         
     
     def plot_top_features(
         self,huc_level=None,split=None,top_n=10,rebuild=0,zzzno_fish=False,
         filter_vars=True,spec_wt=None,fit_scorer=None,scale_by_X=False,
         presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,
-        spec_list=None,vote=False):
+        spec_list=None,vote=False,row_norm=False):
         
         """
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
@@ -360,6 +360,8 @@ class Mapper(myLogger):
             title=f'top {top_n} hilo features'
         if scale_by_X:
             title+='_Xscaled'
+        if row_norm:
+            title+='_row-norm'
         if zzzno_fish:
             title+='_zzzno-fish'
         if filter_vars:
@@ -389,7 +391,7 @@ class Mapper(myLogger):
         wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
             presence_filter=presence_filter,rebuild=rebuild,zzzno_fish=zzzno_fish,
             spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X,
-            wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list)
+            wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list,row_norm=row_norm)
         self.wtd_coef_dfs=wtd_coef_dfs
         if type(wtd_coef_dfs) is pd.DataFrame:
             wtd_coef_dfs=[wtd_coef_dfs]

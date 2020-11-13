@@ -55,7 +55,7 @@ class PiResults(DBTool,myLogger):
         
         
         
-    def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False,fit_scorer=None):
+    def scale_coef_by_X(self,coef_df=None,wt_type='fitscor_diffscor',rebuild=0,zzzno_fish=False,spec_wt=False,cv_collapse=False,fit_scorer=None,row_norm=False):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
         if type(wt_type) is str: 
@@ -63,7 +63,7 @@ class PiResults(DBTool,myLogger):
                 wt=1
             else:
                 wt=dict(fit_scorer=fit_scorer,
-                    zzzno_fish=zzzno_fish,return_weights=True,
+                    zzzno_fish=zzzno_fish,return_weights=True,row_norm=row_norm
                     wt_type=wt_type,spec_wt=spec_wt,scale_by_X=False,cv_collapse=cv_collapse)
             
         name=os.path.join(os.getcwd(),'results','bigXB.h5')
@@ -76,6 +76,8 @@ class PiResults(DBTool,myLogger):
             key+=f'_{wt}'
         if cv_collapse:
             key+=f'_cv-collapse-{cv_collapse}'
+        if row_norm:
+            key+='_row-norm'
         key+=f'_{fit_scorer}'
         if not rebuild:
             try:
@@ -87,13 +89,13 @@ class PiResults(DBTool,myLogger):
             if type(rebuild) is int:
                 rebuild-=1
         if coef_df is None:
-            coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish)
+            coef_df,_=self.get_coef_stack(rebuild=rebuild,drop_zzz=not zzzno_fish,row_norm=row_norm)
         spec_list=coef_df.index.unique(level='species')
         Big_X_train_df=self.build_X_train_df(std=True)
         self.logger.info(f'Big_X_train_df.shape:{Big_X_train_df.shape}')
         if type(wt) is dict:
             self.logger.info('getting weights')
-            wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,**wt)
+            wt_df=self.build_wt_comid_feature_importance(rebuild=rebuild,**wt) #wts with no coefs.
         elif type(wt) is pd.DataFrame:
             wt_df=wt
         else:
@@ -168,7 +170,7 @@ class PiResults(DBTool,myLogger):
     
     
     def build_wt_comid_feature_importance(
-        self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,
+        self,rebuild=0,fit_scorer=None,zzzno_fish=False,return_weights=False,row_norm=False,
         spec_wt=None,scale_by_X=False,presence_filter=False,wt_type='fitscor_diffscor',cv_collapse=False,
         spec_list=None):
         #get data
@@ -209,7 +211,7 @@ class PiResults(DBTool,myLogger):
         
         coef_df,scor_df,y,yhat=self.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
-            drop_nocoef_scors=True)
+            drop_nocoef_scors=True,row_norm=row_norm)
         if not spec_list is None:
             df_list=[coef_df,scor_df,y,yhat]
             df_list= self.select_by_index_level_vals(df_list,spec_list,level_name='species')      
@@ -411,12 +413,25 @@ class PiResults(DBTool,myLogger):
         return huc12str
     
     
-    def get_coef_stack(self,rebuild=0,drop_zzz=True,return_y_yhat=False,drop_nocoef_scors=True):
+    def get_coef_stack(
+        self,rebuild=0,drop_zzz=True,
+        return_y_yhat=False,drop_nocoef_scors=True,row_norm=False
+        ):
+        """"""
         pdict=self.stack_predictions(rebuild=rebuild)
         if drop_zzz:
             pdict=self.drop_zzz(pdict)
         coef_scor_df=pdict['coef_scor_df']
         coef_df,scor_df=self.split_coef_scor_df(coef_scor_df,drop_nocoef_scors=drop_nocoef_scors)
+        
+        if row_norm:
+            sum_by_levs=[name for name in coef_df.columns.names if not name=='var']
+            denom=coef_df.sum(axis=1,level=sum_by_levs)
+            _,denom=coef_df.align(denom,axis=1,join='left')
+            coef_df=coef_df.divide(denom,axis=0)
+            #print('coef_df',coef_df)
+        
+        
         if return_y_yhat: 
             return coef_df,scor_df,pdict['y'],pdict['yhat']
         else: 
@@ -856,7 +871,7 @@ class PiResults(DBTool,myLogger):
             
     '''def plot_scor_df(self,alpha=0.05):
         """
-        this is the updated version that uses df framework rather than nested dicts
+        this is the incomplete, updated version that uses df framework rather than nested dicts
         """
         coef_df,scor_df,y,yhat=self.get_coef_stack(
             rebuild=rebuild,drop_zzz=True,return_y_yhat=True,

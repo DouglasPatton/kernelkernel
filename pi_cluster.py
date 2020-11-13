@@ -32,7 +32,7 @@ class SkCluster(myLogger):
         
     def clusterSpecsByCoefs(
         self,coef_df,scor_df,clusterer='AgglomerativeClustering',n_clusters=2,zzzno_fish=False,
-        cv_collapse='split',scor_wt=True,est=None,fit_scorer=None,row_norm=True
+        cv_collapse='split',scor_wt=True,est=None,fit_scorer=None,
         ):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
@@ -47,12 +47,7 @@ class SkCluster(myLogger):
             
         scor_select=scor_df.loc[:,('scorer:'+fit_scorer,slice(None),slice(None))]
         self.coef_df=coef_df
-        if row_norm:
-            sum_by_levs=[name for name in coef_df.columns.names if not name=='var']
-            denom=coef_df.sum(axis=1,level=sum_by_levs)
-            _,denom=coef_df.align(denom,axis=1,join='left')
-            coef_df=coef_df.divide(denom,axis=0)
-            #print('coef_df',coef_df)
+        
         
         if cv_collapse is True:
             coef_df=coef_df.mean(axis=1,level='var')
