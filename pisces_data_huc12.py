@@ -348,41 +348,30 @@ class PiscesDataTool(myLogger,DBTool):
         except: self.logger.exception(f'')
 
 
-    def buildCOMIDsiteinfo(self,):
-        try:self.comidlist
-        except:self.buildCOMIDlist()
+    def buildCOMIDsiteinfo(self,comidlist=None):
+        if comidlist is None:
+            try:self.comidlist
+            except:self.buildCOMIDlist()
+            comidlist=self.comidlist
         filepath=os.path.join(self.savedir,'sitedatacomid_dict')
                 #pool.close()
         if os.path.exists(filepath):
             try:
                 with open(filepath,'rb') as f:
                     savefile=pickle.load(f)
-                self.logger.info(f'buildCOMIDsiteinfo opened {filepath}, type: {type(savefile)}, length:{len(savefile)}')
-                self.logger.info(f'first item has type: {type(savefile[0])}, length:{len(savefile[0])}')
                 
-                self.sitedatacomid_dict=savefile[0]
-                print(f'opening {filepath} with length:{len(savefile)} and has first item length: {len(self.sitedatacomid_dict)} and type:{type(self.sitedatacomid_dict)}')
+                self.sitedatacomid_dict=savefile
+                print(f'opening {filepath}')
                 return
             except:
                 self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
                 
         else:
             print(f'{filepath} does not exist, building COMID site info')   
-        try: self.sitedata
-        except:self.getsitedata()
-        try:self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist
-        except:self.getNHDplus()   
-        comidcount=len(self.comidlist)
+        comidcount=len(comidlist)
         com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
-        comidlistlist=[]
-        geogtool=gt()
-        for i in range(self.processcount):
-            comidlistlist.append(self.comidlist[com_idx[i]:com_idx[i+1]])
-        args_list=[[i,comidlistlist[i],self.NHDplus,self.NHDpluscomidlist,self.NHDvarlist,geogtool,self.sitedata_comid_digits,self.sitedata] for i in range(self.processcount)]
+        sitedatacomid_dict=gt().getstreamcat(comidlist)
         
-        sitedatacomid_dict_list=self.runAsMultiProc(MpSearchComidHuc12,args_list)
-
-        sitedatacomid_dict=self.mergelistofdicts(sitedatacomid_dict_list)
         self.sitedatacomid_dict=sitedatacomid_dict#{}
         
         with open(filepath,'wb') as f:
@@ -425,7 +414,7 @@ class PiscesDataTool(myLogger,DBTool):
     
     
     
-    def buildspeciesdata01_file(self,):
+    def buildspeciesdata01_file(self,predictXonly=False):
         thisdir=self.savedir
         datadir=os.path.join(thisdir,'speciesdata01')
         if not os.path.exists(datadir):
@@ -447,7 +436,7 @@ class PiscesDataTool(myLogger,DBTool):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
         args_list=[
             [i,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
-            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
+            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist,predictXonly] 
             for i in range(self.processcount)]
         outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)
         self.outlist2=outlist # just for debugging

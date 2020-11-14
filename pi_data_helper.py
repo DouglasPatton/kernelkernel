@@ -15,7 +15,7 @@ from pi_db_tool import DBTool
 
         
 class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):       
-    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist):
+    def __init__(self,q,i,speciesidx_list,savedir,specieslist,sitedatacomid_dict,specieshuclist_survey_idx,specieshuclist_survey_idx_newhucs,huccomidlist_survey,speciescomidlist,predictXonly):
         self.mypid=os.getpid()
         myLogger.__init__(self,name=f'build_{self.mypid}.log')
         DBTool.__init__(self)
@@ -31,7 +31,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
         self.specieshuclist_survey_idx_newhucs=specieshuclist_survey_idx_newhucs
         self.huccomidlist_survey=huccomidlist_survey
         self.speciescomidlist=speciescomidlist
-        
+        self.predictXonly=predictXonly
     
     def run(self):
         fail_record=[];recordfailcount=0
@@ -56,6 +56,8 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
                     comid_idx=[idx for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict]
                     c_count=len(comid_idx)
                     assert len(comidlist_i)==len(comid_idx),f'expecting equal lengths but len(comidlist_i):{len(comidlist_i)}!=len(comid_idx):{len(comid_idx)}'
+                    species01=[species01list[comid] for comid in comid_idx]
+                    
                     keylist=[]
                     for comid in comidlist_i:
                         keylist.extend(list(self.sitedatacomid_dict[comid].keys()))
@@ -64,18 +66,13 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
                     badvars=['COMID','COMID_2','HUC8','TOHUC','BMMI','IWI',
                              'WsPctFullRp100','REACHCODE', 'WsAreaSqKmRp100',
                              'CatAreaSqKmRp100','CatPctFullRp100',]#'WA']
-
                     keylist=sorted([key for key in keylist if not key in badvars])
                     keylist=self.drop_multi_version_vars(keylist)
-                    """species_n=len(specieshuc_allcomid)
-                    
-                    #p#rint('varcount',varcount)
-                     # only keep entries with a corresponding comid in sitedatacomid_dict
-                    #speciesdata=np.empty((species_n,varcount+1),dtype=object)#+1 for dep var
-                    #speciesdata[:,0]=np.array(species01list)
-                    #self.missingvals=[]"""
-                    species01=[species01list[comid] for comid in comid_idx]
-                    vardatadict={'presence':species01}
+                    if not self.predictXonly:
+                        
+                        vardatadict={'presence':species01}
+                    else:
+                        vardatadict={}
                     for j,comidj in enumerate(comidlist_i):
                         #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
                         comid_data=self.sitedatacomid_dict[comidj]
@@ -105,20 +102,6 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
                     species_df=pd.DataFrame(data=vardatadict,index=comidlist_i)
                     #self.logger.warning(f'created df for species:{spec_i}')
                     #self.logger.info(f'for species:{spec_i} df.head(): {species_df.head()}')
-                    """try: speciesdata[j,1:]=np.array(sitevars)
-                            except: 
-                                self.logger.exception(f'i:{i},idx:{idx},species:{spec_i}, comid:{comidj}')
-                                keylistj=[key for key,_ in self.sitedatacomid_dict[comidj].items()]
-                                missingkeys=[]
-
-                                for k,key in enumerate(keylist):
-                                    try:#added try: to handle missing bmmi values even if key exists
-                                        data_point=self.sitedatacomid_dict[comidj][key]
-                                        speciesdata[j,1+k]=data_point
-                                    except:
-                                        missingkeys.append(key)
-                                        speciesdata[j,1+k]='999999'
-                                self.logger.warning(f'missing keys from exception are: {missingkeys}')"""
                     #speciesdata=pd.concat(dflist,axis=1)
                     df_dict_add_list.append({spec_i:species_df})
                     self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. species_df.shape:{species_df.shape}')
@@ -245,88 +228,26 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool):
         
         
 
+"""no long needed since getting X vars from streamcat
 class MpSearchComidHuc12(mp.Process,myLogger):
-    def __init__(self,q,i,comidlist,NHDplus,NHDpluscomidlist,NHDvarlist,gt,sitedata_comid_digits,sitedata):
+    def __init__(self,q,i,comidlist,gt):
         self.mypid=os.getpid()
         super().__init__()
         myLogger.__init__(self,name=f'search_{self.mypid}.log')
         self.logger.info(f'search_{self.mypid} starting  logger')
         self.q=q
-        self.NHDplus=NHDplus
-        self.NHDpluscomidlist=NHDpluscomidlist
-        self.NHDvarlist=NHDvarlist
         self.gt=gt
-        self.sitedata=sitedata
-        self.sitedata_comid_digits=sitedata_comid_digits
         self.comidlist=comidlist
         self.i=i
     
     def run(self,):
         comidlist=self.comidlist # a list of comids as strings
-        
-        '''logdir=os.path.join(self.savedir,'log')
-        if not os.path.exists(logdir): os.mkdir(logdir)
-        handlername=f'MpSearchComidHuc12{os.getpid()}.log'
-        handler=logging.FileHandler(os.path.join(logdir,handlername))
-        self.logger = logging.getLogger(__name__+str(os.getpid()))
-        self.logger.addHandler(handler)'''
-        
         comidcount=len(comidlist)
         self.logger.info(f'retrieving streamcat')
         sc_comid_dict=self.gt.getstreamcat(comidlist)
         self.logger.info(f'type(sc_comid_dict):{type(sc_comid_dict)}')
-        
-        sitedatacomid_dict={}
-        huc12findfaillist=[0 for _ in range(comidcount)]
-        huc12failcount=0
-        
-        printselection=[int(idx) for idx in np.linspace(0,comidcount,11)]
-        for i,comid_i in enumerate(comidlist):
-            if i in printselection and i>0:
-                progress=np.round(100.0*i/comidcount,1)
-                failrate=np.round(100.0*huc12failcount/i,5)
-                self.logger.info(f"{self.mypid}'s progress:{progress}%, failrate:{failrate}")
-            #hucdatadict=self.findcomidhuc12reach(comid_i)
-            if not comid_i in sc_comid_dict : 
-                huc12findfaillist[i]=1
-                huc12failcount+=1
-            else:
-                sc_dict=sc_comid_dict[comid_i]
-                sitedatacomid_dict[comid_i]=sc_dict
-                            
-            #if i in printselection:print('i==',i,comid_i)
         self.logger.info(f'pid:{self.mypid} adding to q')
-        self.q.put([self.i,(sitedatacomid_dict,huc12findfaillist)])
+        self.q.put([self.i,sc_comid_dict])
         self.logger.info(f'pid:{self.mypid} completed add to q')
         
-    def mergelistofdicts(self,listofdicts,overwrite=0):
-        mergedict={}
-        for i,dict_i in enumerate(listofdicts):
-            for key,val in dict_i.items():
-                
-                if not key in mergedict:
-                    mergedict[key]=val
-                elif overwrite:
-                    oldval=mergedict[key]
-                    self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
-                    mergedict[key]=val
-                else:
-                    newkey=f'{key}_{i}'
-                    #p#rint(f'for dict_{i} oldkey:{key},newkey:{newkey}')
-                    mergedict[newkey]=val
-        return mergedict
-        
-    def findcomidhuc12reach(self,comid):
-        #self.NHDpluscomidlist is a list of strings!
-        #p#rint('self.NHDpluscomidlist[0]',self.NHDpluscomidlist[0],type(self.NHDpluscomidlist[0]))
-        #comid_digits=comid#''.join(filter(str.isdigit,comid))
-        datadict={}
-        try:
-            i=self.NHDpluscomidlist.index(comid)
-            
-        except:
-            print(f'{comid} huc12find failed.',end=',')
-            return None
-        for key in self.NHDvarlist:
-            datadict[key]=self.NHDplus.loc[i,key]
-        return datadict
+    """
