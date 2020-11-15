@@ -1,4 +1,4 @@
-import os
+import os,joblib
 import csv
 import numpy as np
 import pickle
@@ -9,16 +9,17 @@ import logging
 import pandas as pd
 from geogtools import GeogTool as gt
 from mylogger import myLogger
-from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01
+from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01,Helper
 import re
 from pi_db_tool import DBTool
 
 
-class PiscesDataTool(myLogger,DBTool):
+class PiscesDataTool(myLogger,DBTool,Helper):
     def __init__(self,):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
         DBTool.__init__(self)
+        Helper.__init__(self)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir): os.mkdir(self.savedir)
         self.processcount=11
@@ -329,92 +330,46 @@ class PiscesDataTool(myLogger,DBTool):
         self.comidlist=shortlist # no repeats made of comid_digits, a string
     
 
-    def mergelistofdicts(self,listofdicts,overwrite=0):
-        try:
-            mergedict={}
-            for i,dict_i in enumerate(listofdicts):
-                for key,val in dict_i.items():
-
-                    if not key in mergedict:
-                        mergedict[key]=val
-                    elif overwrite:
-                        oldval=mergedict[key]
-                        self.logger.info(f'merge is overwriting oldval:{oldval} for key:{key} dwith val:{val}')
-                        mergedict[key]=val
-                    else:
-                        newkey=key+f'_{i}'
-                        mergedict[newkey]=val
-            return mergedict
-        except: self.logger.exception(f'')
 
 
-    def buildCOMIDsiteinfo(self,comidlist=None):
+    def buildCOMIDsiteinfo(self,comidlist=None,predict=False,rebuild=False):
         if comidlist is None:
             try:self.comidlist
             except:self.buildCOMIDlist()
             comidlist=self.comidlist
-        filepath=os.path.join(self.savedir,'sitedatacomid_dict')
+        name='sitedatacomid_dict'+joblib.hash(comidlist)
+        db=self.anyNameDB(name)
                 #pool.close()
-        if os.path.exists(filepath):
-            try:
-                with open(filepath,'rb') as f:
-                    savefile=pickle.load(f)
-                
-                self.sitedatacomid_dict=savefile
-                print(f'opening {filepath}')
-                return
+        if not rebuild:
+            if len(db.keys())==len(comidlist):
+                self.logger.info(f'buildComidsiteinfo unpacking existing db')
+                db_dict= {**db}
+                if not predict:
+                    self.sitedatacomid_dict=db_dict
+                    return
+                else:
+                    return db_dict
             except:
                 self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
                 
-        else:
-            print(f'{filepath} does not exist, building COMID site info')   
         comidcount=len(comidlist)
-        com_idx=[int(i) for i in np.linspace(0,comidcount,self.processcount+1)]#+1 to include the end
-        sitedatacomid_dict=gt().getstreamcat(comidlist)
+        com_idx=np.array_split(np.arange(comidcount,dtype=np.int64),self.processcount)
+        args_list=[[comidlist[c] for c in com_idx[i]]for i in range(self.processcount)]
+        outlist=self.runAsMultiProc(self.MpComidlistStreamCat,args_list)
+        sidedatacomid_dict=mergelistofdicts(outlist)
         
-        self.sitedatacomid_dict=sitedatacomid_dict#{}
+        #sitedatacomid_dict=gt().getstreamcat(comidlist)
         
-        with open(filepath,'wb') as f:
-            pickle.dump(self.sitedatacomid_dict,f)
+        self.addToDBDict(sitedatacomid_dict,db=db)
+        if not predict:
+            self.sitedatacomid_dict=sitedatacomid_dict#{}
+            return
+        else:
+            return sitedatacomid_dict
 
-        return         
 
-    def runAsMultiProc(self,the_proc,args_list):
-        try:
-            starttime=time()
-            q=mp.Queue()
-            q_args_list=[[q,*args] for args in args_list]
-            proc_count=len(args_list)
-            procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
-            [proc.start() for proc in procs]
-            outlist=['empty' for _ in range(proc_count)]
-            countdown=proc_count
-        except:
-            self.logger.exception('')
-            assert False,'unexpected error'
-        while countdown:
-            try:
-                self.logger.info(f'multiproc checking q. countdown:{countdown}')
-                list_i=q.get(True,20)
-                self.logger.info(f'multiproc has something from the q!')
-                i=list_i[0]
-                outlist[i]=list_i[1]
-                countdown-=1
-                self.logger.info(f'proc i:{i} completed. ')
-            except:
-                self.logger.exception('error')
-                if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
-                else: sleep(5)
-        [proc.join() for proc in procs]
-        q.close()
-        self.logger.info(f'all procs joined sucessfully')
-        endtime=time()
-        self.logger.info(f'pool complete at {endtime}, time elapsed: {(endtime-starttime)/60} minutes')
-        return outlist
     
-    
-    
-    def buildspeciesdata01_file(self,predictXonly=False):
+    def buildspeciesdata01_file(self,):
         thisdir=self.savedir
         datadir=os.path.join(thisdir,'speciesdata01')
         if not os.path.exists(datadir):
@@ -436,7 +391,7 @@ class PiscesDataTool(myLogger,DBTool):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
         args_list=[
             [i,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
-            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist,predictXonly] 
+            self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
             for i in range(self.processcount)]
         outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)
         self.outlist2=outlist # just for debugging
@@ -447,6 +402,9 @@ class PiscesDataTool(myLogger,DBTool):
         else:
             fail_record=outlist
         self.buildspeciesdata01_file_fail_record=outlist
+        
+        
+    
         
     
 if __name__=='__main__':

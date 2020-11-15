@@ -84,7 +84,7 @@ class GeogTool(myLogger):
             thing=json.load(f)
         return thing     
         
-    def getstreamcat(self,comidlist,process=1,local=1):
+    def getstreamcat(self,comidlist,process=1,local=1,add_huc12=1):
         #url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}&pLandscapeMetricType=Topography"
         url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}"
         #url="https://ofmpub.epa.gov/waters10/Watershed_Characterization.Control?pComID={}"
@@ -94,7 +94,7 @@ class GeogTool(myLogger):
         comidlist_datadict={}
         
         if local:
-            comidlist_datadict=self.pullStreamCatForComidList(comidlist)
+            comidlist_datadict=self.pullStreamCatForComidList(comidlist,add_huc12=add_huc12)
         else:
             for idx,comid in enumerate(comidlist):
                 self.logger.info(f'starting {idx}/{comidcount}')
@@ -181,7 +181,7 @@ class GeogTool(myLogger):
             self.logger.exception('streamcat error') 
                 
                 
-    def pullStreamCatForComidList(self,huc2comid_dict,meta=0,error_lookup=0):
+    def pullStreamCatForComidList(self,huc2comid_dict,meta=0,error_lookup=0,add_huc12=1):
         try:self.rvrs_huc12comiddict
         except: self.reverse_huc12comid()
         #try: self.huchuc
@@ -193,6 +193,7 @@ class GeogTool(myLogger):
             comiddict={}
             comidlist=deepcopy(huc2comid_dict)
             huc2comid_dict={}
+            huc12list=[]
             """if type(comidlist[0]) is str:
                 self.logger.debug(f'converting comids from string to int')
                 comidlist=[int(comid) for comid in comidlist]"""
@@ -200,6 +201,7 @@ class GeogTool(myLogger):
                 
                 try:
                     huc12=self.rvrs_huc12comiddict[comid]
+                    huc12list.append(huc12)
                     huc2=huc12[0:2]
                     if huc2 in huc2comid_dict:
                         huc2comid_dict[huc2].append(comid)
@@ -224,12 +226,12 @@ class GeogTool(myLogger):
             elif type(val) is str:
                 val=[val]
             huc8comid_dict={}
-            for huc8,comidlist in huc8dict.items():
+            for huc8,comids in huc8dict.items():
                 huc8comid_dict[huc8]={}
                 path=self.pathfromhuc8(huc8) # no group by for faster load
                 if meta: path=path[:-5]+'_meta.json'
                 huc8scdata=self.openjson(path)
-                for comid in comidlist:
+                for comid in comids:
                     #self.logger.info(f'comid:{comid}')
                     try:
                         comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
@@ -253,10 +255,16 @@ class GeogTool(myLogger):
                         else:
                             huc8comid_dict[huc8][comid]=comiddata
             if not returncomiddict:
-                SCoutdict[huc2]=huc8comid_dict    
+                SCoutdict[huc2]=huc8comid_dict  
+        
         if returncomiddict:
+            if add_huc12:
+                for i,comid in comidlist:
+                    comiddict[comid]['HUC12']=huc12list[i]
             return comiddict
         else:
+            if add_huc12:
+                assert False,'not developed'
             return SCoutdict    
  
 
