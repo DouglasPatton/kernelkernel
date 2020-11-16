@@ -13,9 +13,10 @@ from collections import OrderedDict
 from geogtools import GeogTool as gt # turned off after data bult
 from mylogger import myLogger
 from pi_db_tool import DBTool
+from pisces_data_huc12 import PiscesDataTool
 
 
-class PiscesPredictTool(PiscesDataTool,myLogger):
+class PiscesPredictDataTool(PiscesDataTool,myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
@@ -36,11 +37,11 @@ class PiscesPredictTool(PiscesDataTool,myLogger):
             name+=f'_{joblib.hash(specieslist)}' # only if list is constrained
         
         if not rebuild:
-            Xdb=self.anyNameDB(name,'X')
+            Xdb=self.anyNameDB(name,'X',folder='data_tool')
             if len(Xdb.keys())==len(spec_list):
                 return Xdb
             else:
-                self.logger.critical(f'Xdb.keys() has len:{len(Xdb.keys())} but spec_list has len:{len(spec_list)}}. rebuilding Xdf at name:{name}')
+                self.logger.critical(f'Xdb.keys() has len:{len(Xdb.keys())} but spec_list has len:{len(spec_list)}. rebuilding Xdf at name:{name}')
         
         species_huc8_dict={species:[] for species in specieslist}
         for idx in range(len(specieslist)): #merge the two sources of huc8s
@@ -67,25 +68,25 @@ class PiscesPredictTool(PiscesDataTool,myLogger):
         
         comid_species_dict={comid:[] for comid in comidlist} #this is comids where they *could* be
         for species,comidlist_sp in species_comid_dict:
-            for comid in comidlist_sp
+            for comid in comidlist_sp:
                 comid_species_dict[comid].append(species)
                 
         sitedatacomid_dict=self.buildCOMIDsiteinfo(
-            comidlist=list(comid_species_dict.keys()),predict=True,rebuild=False) 
-        
-        with self.anyNameDB(name,'raw') as db: # raw b/c 
-            #    initialize the dict
-            for spec in species_comid_dict.keys():
-                db[spec]={}
-            db.commit()
-            for comid,specs in comid_species_dict.items():
-                comid_data=sitedatacomid_dict[comid]
-                for spec in specs:
-                    db[spec][comid]=comid_data
+            comidlist=list(comid_species_dict.keys()),predict=True) 
+        with sitedatacomid_dict() as sitedatacomid_db:
+            with self.anyNameDB(name,'raw',folder='data_tool') as db: # raw b/c 
+                #    initialize the dict
+                for spec in species_comid_dict.keys():
+                    db[spec]={}
                 db.commit()
+                for comid,specs in comid_species_dict.items():
+                    comid_data=sitedatacomid_db[comid]
+                    for spec in specs:
+                        db[spec][comid]=comid_data
+                    db.commit()
         
-        with self.anyNameDB(name,'X') as Xdb:
-            for spec,comid_data_dict in self.anyNameDB(name,'raw').items():
+        with self.anyNameDB(name,'X',folder='data_tool') as Xdb:
+            for spec,comid_data_dict in self.anyNameDB(name,'raw',folder='data_tool').items():
                 comidlist_sp=list(comid_data_dict.keys())
                 self.logger.info(f'Xpredict building DF for {spec} ')
                 species_df=self.buildSpeciesDF(comidlist_sp,comid_data_dict)

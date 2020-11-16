@@ -3,6 +3,7 @@ from shutil import copy
 import sys,os,logging
 from mylogger import myLogger
 import zlib, pickle, sqlite3
+from time import sleep
 
 class DBTool():
     def __init__(self):
@@ -46,8 +47,12 @@ class DBTool():
                         newdict.commit()
             
     
-    def anyNameDB(self,dbname,tablename='data'):
-        path=os.path.join(self.resultsdir,dbname+'.sqlite')
+    def anyNameDB(self,dbname,tablename='data',folder='results'):
+        name=dbname+'.sqlite'
+        if folder=='results':
+            path=os.path.join(self.resultsdir,name)
+        else:
+            path=os.path.join(folder,name)
         return SqliteDict(
             filename=path,tablename=tablename,
             encode=self.my_encode,decode=self.my_decode)
@@ -84,7 +89,8 @@ class DBTool():
     
     def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0):
         try:
-            
+            if type(save_list) is dict:
+                save_list=[save_list]
             if db:
                 pass        
             elif gen:
@@ -99,24 +105,31 @@ class DBTool():
                 db=lambda: self.pidataDBdict(**kwargs)
             else:
                 db=self.resultsDBdict
-            
-            with db() as dbdict:
+            saved=False;tries=0
+            while not saved:
                 try:
-                    if type(save_list) is dict:
-                        save_list=[save_list]
-                    for dict_i in save_list:
-                        for key,val in dict_i.items():
-                            if key in dbdict:
-                                if not gen:
-                                    self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
-                                    dbdict[key]=val
+                    with db() as dbdict:
+                        
+                        for dict_i in save_list:
+                            for key,val in dict_i.items():
+                                if key in dbdict:
+                                    if not gen:
+                                        self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
+                                        dbdict[key]=val
+                                    else:
+                                        self.logger.debug(f'key:{key} already exists in gen table in db dict')
                                 else:
-                                    self.logger.debug(f'key:{key} already exists in gen table in db dict')
-                            else:
-                                dbdict[key]=val
+                                    dbdict[key]=val
+                        dbdict.commit()
+                        saved=True
                 except:
-                    self.logger.exception('dbtool addtoDBDict error! gen:{gen}')
-                dbdict.commit()
+                    tries+=1
+                    self.logger.exception(f'dbtool addtoDBDict error! tries:{tries}')
+                    sleep(2)
+                    if tries>100:
+                        self.logger.warning(f'abandoning save_list:{save_list}')
+                        break
+                
             return  
         except:
             self.logger.exception(f'addToDBDict outer catch')

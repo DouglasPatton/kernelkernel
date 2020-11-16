@@ -1,4 +1,4 @@
-import os
+import os,re
 import csv
 #import traceback
 import numpy as np
@@ -9,7 +9,6 @@ import multiprocessing as mp
 import logging
 import traceback
 import pandas as pd
-#from geogtools import GeogTool as gt # turned off after data bult
 from mylogger import myLogger
 from pi_db_tool import DBTool
 
@@ -37,30 +36,44 @@ class Helper():
         except: self.logger.exception(f'')
     
     
-    def runAsMultiProc(self,the_proc,args_list):
+    def runAsMultiProc(self,the_proc,args_list,kwargs={},no_mp=False):
         try:
             starttime=time()
-            q=mp.Queue()
-            q_args_list=[[q,*args] for args in args_list]
-            proc_count=len(args_list)
-            procs=[the_proc(*q_args_list[i]) for i in range(proc_count)]
-            [proc.start() for proc in procs]
-            outlist=['empty' for _ in range(proc_count)]
+            if no_mp:q=None
+            else:q=mp.Queue()
+            I=len(args_list)
+            q_args_list=[[q,i,*args_list[i]] for i in range(I)]
+            proc_count=I
+            procs=[the_proc(*q_args_list[i],**kwargs) for i in range(proc_count)]
+            if no_mp:
+                self.procs=procs
+                if type(no_mp) is int:procs=procs[-no_mp:]
+                self.procs=procs
+                for proc in procs:
+                    proc.run()
+                self.logger.info(f'procs have run with no_mp:{no_mp}')
+                results=[proc.result for proc in procs]
+                return results
+            else:
+                [proc.start() for proc in procs]
+            outlist=[None for _ in range(I)]
             countdown=proc_count
         except:
-            self.logger.exception('')
+            self.logger.exception('error in runasmultiproc')
             assert False,'unexpected error'
-        while countdown:
+        if no_mp:
+            self.logger.warning(f'something went wrong with no_mp')
+            return
+        while countdown and not no_mp:
             try:
                 self.logger.info(f'multiproc checking q. countdown:{countdown}')
-                list_i=q.get(True,20)
+                i,result=q.get(True,20)
                 self.logger.info(f'multiproc has something from the q!')
-                i=list_i[0]
-                outlist[i]=list_i[1]
+                outlist[i]=result
                 countdown-=1
-                self.logger.info(f'proc i:{i} completed. ')
+                self.logger.info(f'proc completed. countdown:{countdown}')
             except:
-                self.logger.exception('error')
+                #self.logger.exception('error')
                 if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
                 else: sleep(5)
         [proc.join() for proc in procs]
@@ -101,15 +114,18 @@ class Helper():
         return keylist2
     
     
-    def buildSpeciesDF(self,comidlist,sitedatacomid_dict,presence_dict=None,):
+    def buildSpeciesDF(self,comidlist,sitedatacomid_dict,presence_dict={},species_name='none'):
         keylist=[key for klist in [list(sitedatacomid_dict[comid].keys()) for comid in comidlist] for key in klist] 
          
         badvars=['WsPctFullRp100', 'WsAreaSqKmRp100',
-                 'CatAreaSqKmRp100','CatPctFullRp100']
+                 'CatAreaSqKmRp100','CatPctFullRp100',
+                 'CatAreaSqKm','WsAreaSqKm','CatPctFull','WsPctFull']
         keylist=[key for key in dict.fromkeys(keylist) if not key in badvars]#unique keys that aren't bad!
+        keylist=[key for key in keylist if not re.search(r'0[8-9](cat|ws)$',key)]
+        keylist=[key for key in keylist if not re.search(r'^Dam',key)]
         keylist=self.drop_multi_version_vars(keylist)
-        if not presence_dict is None:
-            vardatadict={'presence':species01}
+        vardatadict=presence_dict#may be empty dict
+        c_count=len(comidlist)
         for j,comidj in enumerate(comidlist):
             #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
             comid_data=sitedatacomid_dict[comidj]
@@ -126,16 +142,15 @@ class Helper():
                     vardatadict[key]=[val]
                 else:
                     vardatadict[key].append(val)
-        self.logger.info(f'starting verification of length of data for {spec_i}')  
         v=0
         for var,obs_list in vardatadict.items():
             if len(obs_list)!=c_count:
                 v+=1
-                self.logger.critical(f'for {spec_i}, var:{var} len is {len(obs_list)} but expecting {c_count}')
+                self.logger.critical(f'for {species_name}, var:{var} len is {len(obs_list)} but expecting {c_count}')
         if v:
-            self.logger.info(f'{v} problems came up for {spec_i}') 
+            self.logger.info(f'{v} problems came up for {species_name}') 
         else:
-            self.logger.info(f'data built for {spec_i} with no length errors')
+            self.logger.info(f'data built for {species_name} with no length errors')
         species_df=pd.DataFrame(data=vardatadict,index=comidlist)
         return species_df
         
@@ -161,7 +176,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
     def run(self):
         fail_record=[];recordfailcount=0
         self.pi_db=self.pidataDBdict()
-            
+        sitedatacomid_dict=self.sitedatacomid_dict   
         dbkeys=list(self.pi_db.keys())
         df_dict_add_list=[]
         for i,idx in enumerate(self.speciesidx_list):
@@ -176,20 +191,23 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
                         specieshuc_allcomid_list,species01list_list=self.buildspecieshuccomidlist(species_idx_list=[idx])
                         specieshuc_allcomid=specieshuc_allcomid_list[0]
                         species01list=species01list_list[0]
+                    with self.sitedatacomid_dict() as db:
+                        comidlist_i,comid_idx=zip(*[(comid,idx) for idx,comid in enumerate(specieshuc_allcomid) if comid in db])
                     
-                    comidlist_i=[comid for comid in specieshuc_allcomid if comid in self.sitedatacomid_dict]
-                    comid_idx=[idx for idx,comid in enumerate(specieshuc_allcomid) if comid in self.sitedatacomid_dict]
+                    
                     c_count=len(comid_idx)
                     assert len(comidlist_i)==len(comid_idx),f'expecting equal lengths but len(comidlist_i):{len(comidlist_i)}!=len(comid_idx):{len(comid_idx)}'
                     species01=[species01list[comid] for comid in comid_idx]
                     presence_dict={'presence':species01}
-                    species_df=self.buildSpeciesDF(
-                        comidlist_i,self.sitedatacomid_dict,presence_dict=presence_dict)
+                    with self.sitedatacomid_dict() as db:
+                        species_df=self.buildSpeciesDF(
+                            comidlist_i,db,
+                            presence_dict=presence_dict,species_name=spec_i)
                     #self.logger.warning(f'created df for species:{spec_i}')
                     #self.logger.info(f'for species:{spec_i} df.head(): {species_df.head()}')
                     #speciesdata=pd.concat(dflist,axis=1)
-                    df_dict_add_list.append({spec_i:species_df})
-                    self.logger.info(f'i:{i},idx:{idx},species:{spec_i}. species_df.shape:{species_df.shape}')
+                    self.addToDBDict([{spec_i:species_df}],pi_data='species01')
+                    self.logger.info(f'added to db i:{i},idx:{idx},species:{spec_i}. species_df.shape:{species_df.shape}')
                 else:
                     self.logger.info(f'{spec_i} already in pisces database')
                 fail_record.append(0)
@@ -201,7 +219,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
                 except: 
                     fail_record.append((spec_i,'none'))
                 recordfailcount+=1
-        self.addToDBDict(df_dict_add_list,pi_data='species01')
+        
         if fail_record:
             self.logger.warning(f'succesful completion. len(self.speciesidx_list): {len(self.speciesidx_list)}, recordfailcount: {recordfailcount}')
             self.q.put([self.i,fail_record])
@@ -209,15 +227,6 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
         else:
             self.logger.warning(f'fail record empty,recordfailcount: {recordfailcount}. i:{self.i} exiting')
         
-    
-                                                   
-                                                   
-            
-            
-            
-            
-            
-
 
         
     def buildspecieshuccomidlist(self,species_idx_list=None):
@@ -289,8 +298,8 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
         
         
 
-class MpComidlistStreamCat(mp.Process,myLogger):
-    def __init__(self,q,i,comidlist,gt):
+class MpBuildStreamcatFromComids(mp.Process,myLogger):
+    def __init__(self,q,i,comidlist,gt,callable_db):
         self.mypid=os.getpid()
         super().__init__()
         myLogger.__init__(self,name=f'search_{self.mypid}.log')
@@ -299,14 +308,30 @@ class MpComidlistStreamCat(mp.Process,myLogger):
         self.gt=gt
         self.comidlist=comidlist
         self.i=i
+        self.callable_db=callable_db
     
     def run(self,):
         comidlist=self.comidlist # a list of comids as strings
         comidcount=len(comidlist)
-        self.logger.info(f'retrieving streamcat')
-        sc_comid_dict=self.gt.getstreamcat(comidlist,add_huc12=1)
-        self.logger.info(f'type(sc_comid_dict):{type(sc_comid_dict)}')
-        self.logger.info(f'pid:{self.mypid} adding to q')
-        self.q.put([self.i,sc_comid_dict])
+        blocksize=200
+        blockcount=-(-comidcount//blocksize)
+        com_idx_blocks=np.array_split(np.arange(comidcount),blockcount)
+        comid_blocks=[[comidlist[c_i] for c_i in c_i_block] for c_i_block in com_idx_blocks]
+        for b in range(blockcount):
+            self.logger.info(f'pid:{self.mypid} starting block{b+1} of {blockcount}')
+            sc_comid_dict=self.gt.getstreamcat(comid_blocks[b],add_huc12=1)
+            if len(sc_comid_dict)==0:
+                self.logger.warning(f'sc_comid_dict has len 0 from getstreamcat for comidlist:{comidlist}')
+            else:
+                with self.callable_db() as db:
+                    for comid,data in sc_comid_dict.items():
+                        db[comid]=data
+                    db.commit()
+                    db.close() # so other procs can add to it.
+                self.logger.info(f'block{b+1} added to dbdict')
+            
+        
+        
+        self.q.put([self.i,'complete'])
         self.logger.info(f'pid:{self.mypid} completed add to q')
         

@@ -49,7 +49,7 @@ class GeogTool(myLogger):
         if sc_data_dir is None:
             try: self.sc_data_dir
             except: 
-                localpath=os.path.join(self.cwd,'..','sc_data')
+                localpath=os.path.join(self.cwd,'../../../hdd3','sc_data')
                 if os.path.exists(localpath):
                     self.sc_data_dir=localpath
                 else:
@@ -128,9 +128,10 @@ class GeogTool(myLogger):
                 self.logger.debug(f'streamcatdata type is a str: {streamcatdata}')
                 streamcatdata=self.getpickle(streamcatdata)
             outdict={}
-            
+            error_dict={}
             for comid,data in streamcatdata.items():
                 collapse_dict={}
+                error_dict[comid]={}
                 metricdict={'Ws':{},'Cat':{},'CatRp100':{},'WsRp100':{},'Rp100':{},'other':{}}
                 metadict=None
                 mkeylist=[*metricdict] #the keys or mkeys
@@ -140,6 +141,7 @@ class GeogTool(myLogger):
                 regex_y2k=re.compile('20[0-9][0-9]')
                 #nlcd_regex_y2k=re.compile('nlcd20[0-9][0-9]')
                 #metrics=[*data]
+                
                 for metric,data_pt in data.items():
                     
                     srch_y=re.search(regex_y2k,metric)
@@ -156,7 +158,11 @@ class GeogTool(myLogger):
                                 collapse_dict[metric_drop_yr]=[float_data_pt]
                             else:
                                 collapse_dict[metric_drop_yr].append(float_data_pt)
-                        except:self.logger.exception(f'for metric:{metric}can"t float data_pt:{data_pt}, type(data_pt):{type(data_pt)}')
+                        except:
+                            if not metric in error_dict[comid]:
+                                error_dict[comid][metric]=[data_pt]
+                            else:
+                                error_dict[comid][metric].append(data_pt)
                     else:
                         for k in range(keycount-1):
                             endstring=metric[-keylengths[k]:]
@@ -171,11 +177,12 @@ class GeogTool(myLogger):
                         metricdict[mkey][yr][metric]=data_pt
                     
                 if collapse:
-                    
+                    #many of these are just divided by 1
                     outdict[comid]={metric:sum(val)/len(val) for metric,val in collapse_dict.items()}
                     
                 else:
                     outdict[comid]=metricdict
+            self.logger.exception(f'float error_dict:{error_dict}')
             return outdict
         except:
             self.logger.exception('streamcat error') 
@@ -197,10 +204,12 @@ class GeogTool(myLogger):
             """if type(comidlist[0]) is str:
                 self.logger.debug(f'converting comids from string to int')
                 comidlist=[int(comid) for comid in comidlist]"""
+            new_comidlist=[]
             for comid in comidlist:
                 
                 try:
                     huc12=self.rvrs_huc12comiddict[comid]
+                    new_comidlist.append(comid)
                     huc12list.append(huc12)
                     huc2=huc12[0:2]
                     if huc2 in huc2comid_dict:
@@ -208,6 +217,7 @@ class GeogTool(myLogger):
                     else: huc2comid_dict[huc2]=[comid]
                 except:
                     self.logger.warning(f'no huc12 for comid:{comid}')
+            comidlist=new_comidlist
         else: returncomiddict=0        
         for huc2,val in huc2comid_dict.items():
             
@@ -237,7 +247,10 @@ class GeogTool(myLogger):
                         comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
                     except KeyError:
                         try:
+                            
                             comiddata=huc8scdata[comid]
+                            if add_huc12:
+                                comiddata['HUC12']=self.rvrs_huc12comiddict[comid]
                         except KeyError:
                             
                             self.logger.exception(f'could not find stream cat for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
@@ -258,13 +271,8 @@ class GeogTool(myLogger):
                 SCoutdict[huc2]=huc8comid_dict  
         
         if returncomiddict:
-            if add_huc12:
-                for i,comid in comidlist:
-                    comiddict[comid]['HUC12']=huc12list[i]
             return comiddict
         else:
-            if add_huc12:
-                assert False,'not developed'
             return SCoutdict    
  
 

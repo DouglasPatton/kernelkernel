@@ -9,7 +9,7 @@ import logging
 import pandas as pd
 from geogtools import GeogTool as gt
 from mylogger import myLogger
-from pi_data_helper import MpSearchComidHuc12,MpBuildSpeciesData01,Helper
+from pi_data_helper import MpBuildStreamcatFromComids,MpBuildSpeciesData01,Helper
 import re
 from pi_db_tool import DBTool
 
@@ -330,42 +330,48 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         self.comidlist=shortlist # no repeats made of comid_digits, a string
     
 
-
+    def comidsiteinfo_db(self): #to make the db callable
+        return self.anyNameDB('sitedatacomid_dict',folder='data_tool')
 
     def buildCOMIDsiteinfo(self,comidlist=None,predict=False,rebuild=False):
+        callable_db=self.comidsiteinfo_db
+        
+        if not rebuild:
+            if not predict:
+                self.sitedatacomid_dict=callable_db#{}
+                return
+            else:
+                return callable_db
+            
         if comidlist is None:
             try:self.comidlist
             except:self.buildCOMIDlist()
             comidlist=self.comidlist
-        name='sitedatacomid_dict'+joblib.hash(comidlist)
-        db=self.anyNameDB(name)
+        
                 #pool.close()
-        if not rebuild:
-            if len(db.keys())==len(comidlist):
-                self.logger.info(f'buildComidsiteinfo unpacking existing db')
-                db_dict= {**db}
-                if not predict:
-                    self.sitedatacomid_dict=db_dict
-                    return
-                else:
-                    return db_dict
-            except:
-                self.logger.exception(f'buildCOMIDsiteinfo found {filepath} but could not load it, so rebuilding')
-                
-        comidcount=len(comidlist)
-        com_idx=np.array_split(np.arange(comidcount,dtype=np.int64),self.processcount)
-        args_list=[[comidlist[c] for c in com_idx[i]]for i in range(self.processcount)]
-        outlist=self.runAsMultiProc(self.MpComidlistStreamCat,args_list)
-        sidedatacomid_dict=mergelistofdicts(outlist)
+        with callable_db() as db:
+            build_comidlist=[]
+            for comid in comidlist:
+                if not comid in db:
+                    build_comidlist.append(comid)
+            db.close()
         
-        #sitedatacomid_dict=gt().getstreamcat(comidlist)
-        
-        self.addToDBDict(sitedatacomid_dict,db=db)
+        comidcount=len(build_comidlist)
+        if comidcount>0:
+            com_idx=np.array_split(np.arange(comidcount,dtype=np.int64),self.processcount)
+            gtool=gt()
+            args_list=[[[build_comidlist[c] for c in com_idx[i]],gtool,callable_db] for i in range(self.processcount)]
+            outlist=self.runAsMultiProc(MpBuildStreamcatFromComids,args_list)
+            #sitedatacomid_dict=self.mergelistofdicts(outlist)
+            self.logger.info(f'expecting {self.processcount} all "complete" outlist:{outlist}')
+            #sitedatacomid_dict=gt().getstreamcat(comidlist)
+
+        #self.addToDBDict(sitedatacomid_dict,db=db)
         if not predict:
-            self.sitedatacomid_dict=sitedatacomid_dict#{}
+            self.sitedatacomid_dict=callable_db#{}
             return
         else:
-            return sitedatacomid_dict
+            return callable_db
 
 
     
@@ -390,7 +396,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         for i in range(self.processcount):
             speciesidx_listlist.append(speciesidx_list[split_idx[i]:split_idx[i+1]])
         args_list=[
-            [i,speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
+            [speciesidx_listlist[i],self.savedir,self.specieslist,self.sitedatacomid_dict,
             self.specieshuclist_survey_idx,self.specieshuclist_survey_idx_newhucs,self.huccomidlist_survey,self.speciescomidlist] 
             for i in range(self.processcount)]
         outlist=self.runAsMultiProc(MpBuildSpeciesData01,args_list)
