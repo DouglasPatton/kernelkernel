@@ -1,5 +1,5 @@
 import traceback
-#import geopandas as gpd
+import geopandas as gpd
 import requests
 import json,pickle
 import os
@@ -11,41 +11,21 @@ import re
 from copy import deepcopy
 from random import shuffle
 from mylogger import myLogger
+from sqlitedict import SqliteDict
+import zlib, pickle, sqlite3
 
 class GeogTool(myLogger):
     def __init__(self,sc_data_dir=None):
         myLogger.__init__(self,name='GeogTool.log')
         self.logger.info('starting GeogTool logger')
-        '''try:
-            self.comiddatadir
-            
-        except:
-            self.comiddatadir=os.path.join(os.getcwd(),'data','comid_data')
-            if not os.path.exists(self.comiddatadir):os.makedirs(self.comiddatadir)'''
         self.cwd=os.getcwd()
-        """try:
-            self.logger
-            self.logger = logging.getLogger(__name__)
-            self.logger.info('GeogTool starting')
-        except:
-            
-            self.logdir=os.path.join(self.cwd,'log'); 
-            if not os.path.exists(self.logdir):os.mkdir(self.logdir)
-            handlername=os.path.join(self.logdir,'GeogTool.log')
-            logging.basicConfig(
-                handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=1)],
-                level=logging.DEBUG,
-                format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-                datefmt='%Y-%m-%dT%H:%M:%S')
-            self.logger = logging.getLogger(handlername)
-            self.logger.info('GeogTool starting new logger',exc_info=True)"""
         try: self.geogdatadir
         except:
             self.geogdatadir=os.path.join(os.getcwd(),'NHDplus_data')
-        self.NHDplus_path=os.path.join(self.geogdatadir,'NHDplus.pickle')
-        self.huc12comiddict_path=os.path.join(self.geogdatadir,'huc12comiddict.pickle')
+        self.NHDplus_path=os.path.join(self.geogdatadir,'NHDplus')
+        self.huc12comiddict_path=os.path.join(self.geogdatadir,'huc12comiddict')
         self.NHDdbf_path=os.path.join(self.geogdatadir,'HUC12_PU_COMIDs_CONUS.dbf')
-        self.NHDhuchuc_path=os.path.join(self.geogdatadir,'NHDhuchuc.pickle')
+        self.NHDhuchuc_path=os.path.join(self.geogdatadir,'NHDhuchuc')
         if sc_data_dir is None:
             try: self.sc_data_dir
             except: 
@@ -61,7 +41,30 @@ class GeogTool(myLogger):
         else: self.sc_data_dir=sc_data_dir
         print("streamcat data directory:",self.sc_data_dir)
         self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
-            
+    
+    def my_encode(self,obj):
+        return sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
+    def my_decode(self,obj):
+        return pickle.loads(zlib.decompress(bytes(obj)))
+    #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
+    
+    def anyNameDB(self,dbname,tablename='data',folder=None):
+        name=dbname+'.sqlite'
+        if folder:
+            path=os.path.join(folder,name)
+        else:
+            path=name
+        return SqliteDict(
+            filename=path,tablename=tablename,)
+            #encode=self.my_encode,decode=self.my_decode)
+    
+    def addtoDB(self,dict_to_save,path):
+        with self.anyNameDB(path) as db:
+            for key,val in dict_to_save.items():
+                db[key]=val
+            db.commit()
+
+      
     def getpickle(self,path):
         with open(path,'rb') as f:
             thefile=pickle.load(f)
@@ -83,7 +86,7 @@ class GeogTool(myLogger):
         with open(path,'r') as f:
             thing=json.load(f)
         return thing     
-        
+    
     def getstreamcat(self,comidlist,process=1,local=1,add_huc12=1):
         #url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}&pLandscapeMetricType=Topography"
         url = "https://ofmpub.epa.gov/waters10/streamcat.jsonv25?pcomid={}"
@@ -126,7 +129,7 @@ class GeogTool(myLogger):
         try:
             if type(streamcatdata) is str:
                 self.logger.debug(f'streamcatdata type is a str: {streamcatdata}')
-                streamcatdata=self.getpickle(streamcatdata)
+                streamcatdata=self.anyNameDB(streamcatdata)
             outdict={}
             error_dict={}
             for comid,data in streamcatdata.items():
@@ -153,7 +156,13 @@ class GeogTool(myLogger):
                         yr='all'
                     if collapse:
                         try:
-                            float_data_pt=float(data_pt)
+                            try:
+                                float_data_pt=float(data_pt)
+                            except:
+                                if len(data_pt)==0 or data_pt=='NA':
+                                    float_data_pt=np.nan
+                                else: 
+                                    float(data_pt)#force errors
                             if not metric_drop_yr in collapse_dict:
                                 collapse_dict[metric_drop_yr]=[float_data_pt]
                             else:
@@ -240,33 +249,36 @@ class GeogTool(myLogger):
                 huc8comid_dict[huc8]={}
                 path=self.pathfromhuc8(huc8) # no group by for faster load
                 if meta: path=path[:-5]+'_meta.json'
-                huc8scdata=self.openjson(path)
-                for comid in comids:
-                    #self.logger.info(f'comid:{comid}')
-                    try:
-                        comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
-                    except KeyError:
+                try:
+                    huc8scdata=self.openjson(path)
+                    for comid in comids:
+                        #self.logger.info(f'comid:{comid}')
                         try:
-                            
-                            comiddata=huc8scdata[comid]
-                            if add_huc12:
-                                comiddata['HUC12']=self.rvrs_huc12comiddict[comid]
+                            comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
                         except KeyError:
-                            
-                            self.logger.exception(f'could not find stream cat for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
-                            if error_lookup:
-                                message=self.checkNHDPlus(comid)
-                                self.logger.critical(message)    
-                            comiddata=None
+                            try:
+
+                                comiddata=huc8scdata[comid]
+                                if add_huc12:
+                                    comiddata['HUC12']=self.rvrs_huc12comiddict[comid]
+                            except KeyError:
+
+                                self.logger.exception(f'could not find stream cat for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
+                                if error_lookup:
+                                    message=self.checkNHDPlus(comid)
+                                    self.logger.critical(message)    
+                                comiddata=None
+                            except:
+                                assert False, 'halt, unexpected error'
                         except:
                             assert False, 'halt, unexpected error'
-                    except:
-                        assert False, 'halt, unexpected error'
-                    if comiddata:
-                        if returncomiddict:
-                            comiddict[comid]=comiddata # comid as a string
-                        else:
-                            huc8comid_dict[huc8][comid]=comiddata
+                        if comiddata:
+                            if returncomiddict:
+                                comiddict[comid]=comiddata # comid as a string
+                            else:
+                                huc8comid_dict[huc8][comid]=comiddata
+                except: 
+                    self.logger.exception(f'Streamcat problem for huc8:{huc8}')
             if not returncomiddict:
                 SCoutdict[huc2]=huc8comid_dict  
         
@@ -288,7 +300,7 @@ class GeogTool(myLogger):
     def gethuc12comiddict(self):
         try: 
             huc12comiddict_path=self.huc12comiddict_path
-            self.huc12comiddict=self.getpickle(huc12comiddict_path)
+            self.huc12comiddict=self.anyNameDB(huc12comiddict_path)
             self.logger.info(f'opening {self.huc12comiddict_path} with length:{len(self.huc12comiddict)} and type:{type(self.huc12comiddict)}')
         except: 
             self.logger.exception(f"{self.huc12comiddict_path} exists but could not open, rebuilding")
@@ -304,7 +316,7 @@ class GeogTool(myLogger):
             huchuc=self.huchuc
         except:
             try:
-                huchuc=self.getpickle(self.NHDhuchuc_path)
+                huchuc=self.anyNameDB(self.NHDhuchuc_path)
             except:
                 huchuc=self.build_huchuc()
         huc2_huc8dict=huchuc['huc2_huc8dict']
@@ -409,8 +421,10 @@ class GeogTool(myLogger):
         
     def build_huchuc(self):
         try:
-            self.huchuc=self.getpickle(self.NHDhuchuc_path)
-            return self.huchuc
+            self.huchuc=self.anyNameDB(self.NHDhuchuc_path)
+            if len(self.huchuc)==2:
+                return self.huchuc
+            else: self.logger.info(f'rebuilding huchuc')
         except: pass
         try: self.huc12comiddict
         except: self.gethuc12comiddict()
@@ -433,7 +447,7 @@ class GeogTool(myLogger):
             except:
                 self.logger.exception(f'unexpected error with huc12:{huc12}, a_huc8:{a_huc8}, a_huc2:{a_huc2}')
         huchuc={'huc2_huc8dict':huc2_huc8dict,'huc8_huc12dict':huc8_huc12dict}
-        self.savepickle(huchuc,self.NHDhuchuc_path)
+        self.addtoDB(huchuc,self.NHDhuchuc_path)
         self.huchuc=huchuc
         return huchuc
         
@@ -462,7 +476,7 @@ class GeogTool(myLogger):
         savefilename=self.NHDplus_path
         if os.path.exists(savefilename):
             try: 
-                NHDplus=self.getpickle(savefilename)
+                NHDplus=self.anyNameDB(savefilename)['data']
                 self.logger.info(f'opening {savefilename} with length:{len(NHDplus)} and type:{type(NHDplus)}')
                 # self.logger.info(NHDplus)
             except: 
@@ -477,7 +491,8 @@ class GeogTool(myLogger):
             self.logger.info(f'opened {filename} with length:{len(NHDplus)} and type:{type(NHDplus)}')
         if os.path.exists(self.huc12comiddict_path):
             try: 
-                self.huc12comiddict=self.getpickle(self.huc12comiddict_path)
+                self.huc12comiddict=self.anyNameDB(self.huc12comiddict_path)
+                assert len(self.huc12comiddict)>0,f'len huc12comiddict:{len(self.huc12comiddict)}'
                 self.logger.info(f'opening {self.huc12comiddict_path} with length:{len(self.huc12comiddict)} and type:{type(self.huc12comiddict)}')
                 # self.logger.info(self.huc12comiddict)
                 if setNHDplus_attribute:
@@ -498,8 +513,8 @@ class GeogTool(myLogger):
                 huc12dict[huc12].append(comid)
             else: 
                 huc12dict[huc12]=[comid]
-        self.savepickle(huc12dict,self.huc12comiddict_path)
-        self.savepickle(NHDplus,savefilename)
+        self.addtoDB(huc12dict,self.huc12comiddict_path)
+        self.addtoDB({'data':NHDplus},savefilename)
         self.huc12comiddict=huc12dict
         if setNHDplus_attribute:
             self.NHDplus=NHDplus

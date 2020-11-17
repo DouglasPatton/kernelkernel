@@ -334,14 +334,14 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         return self.anyNameDB('sitedatacomid_dict',folder='data_tool')
 
     def buildCOMIDsiteinfo(self,comidlist=None,predict=False,rebuild=False):
-        callable_db=self.comidsiteinfo_db
+        comidsiteinfo_callable_db=self.comidsiteinfo_db
         
         if not rebuild:
             if not predict:
-                self.sitedatacomid_dict=callable_db#{}
+                self.sitedatacomid_dict=comidsiteinfo_callable_db#{}
                 return
             else:
-                return callable_db
+                return comidsiteinfo_callable_db
             
         if comidlist is None:
             try:self.comidlist
@@ -349,29 +349,31 @@ class PiscesDataTool(myLogger,DBTool,Helper):
             comidlist=self.comidlist
         
                 #pool.close()
-        with callable_db() as db:
-            build_comidlist=[]
-            for comid in comidlist:
-                if not comid in db:
-                    build_comidlist.append(comid)
-            db.close()
-        
+        self.logger.info(f'getting built comid list')    
+        with comidsiteinfo_callable_db() as db:
+            built_comids=dict.fromkeys(db.keys()) #make a dict for search performance
+        self.logger.info(f'there are {len(built_comids)} built comids, creating build list')
+        build_comidlist=[]
+        for comid in comidlist:
+            if not comid in built_comids:
+                build_comidlist.append(comid)
         comidcount=len(build_comidlist)
+        self.logger.info(f'about to build comiddata for {comidcount} comids')
         if comidcount>0:
             com_idx=np.array_split(np.arange(comidcount,dtype=np.int64),self.processcount)
             gtool=gt()
-            args_list=[[[build_comidlist[c] for c in com_idx[i]],gtool,callable_db] for i in range(self.processcount)]
-            outlist=self.runAsMultiProc(MpBuildStreamcatFromComids,args_list)
+            args_list=[[[build_comidlist[c] for c in com_idx[i]],gtool] for i in range(self.processcount)]
+            outlist=self.runAsMultiProc(MpBuildStreamcatFromComids,args_list,add_to_db=comidsiteinfo_callable_db)
             #sitedatacomid_dict=self.mergelistofdicts(outlist)
             self.logger.info(f'expecting {self.processcount} all "complete" outlist:{outlist}')
             #sitedatacomid_dict=gt().getstreamcat(comidlist)
 
         #self.addToDBDict(sitedatacomid_dict,db=db)
         if not predict:
-            self.sitedatacomid_dict=callable_db#{}
+            self.sitedatacomid_dict=comidsiteinfo_callable_db#{}
             return
         else:
-            return callable_db
+            return comidsiteinfo_callable_db
 
 
     

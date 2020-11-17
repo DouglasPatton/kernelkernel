@@ -36,7 +36,7 @@ class Helper():
         except: self.logger.exception(f'')
     
     
-    def runAsMultiProc(self,the_proc,args_list,kwargs={},no_mp=False):
+    def runAsMultiProc(self,the_proc,args_list,kwargs={},no_mp=False,add_to_db=None):
         try:
             starttime=time()
             if no_mp:q=None
@@ -68,10 +68,20 @@ class Helper():
             try:
                 self.logger.info(f'multiproc checking q. countdown:{countdown}')
                 i,result=q.get(True,20)
-                self.logger.info(f'multiproc has something from the q!')
-                outlist[i]=result
-                countdown-=1
-                self.logger.info(f'proc completed. countdown:{countdown}')
+                if not add_to_db is None and type(i) is str:
+                    if i=='partial':
+                        self.logger.info(f'multiproc adding to db')
+                        with add_to_db() as db:
+                            for key,val in result.items():
+                                db[key]=val
+                            db.commit()
+                    else:
+                        assert False, f'i:{i} but no other string understood'
+                else:
+                    self.logger.info(f'multiproc has something from the q!')
+                    outlist[i]=result
+                    countdown-=1
+                    self.logger.info(f'proc completed. countdown:{countdown}')
             except:
                 #self.logger.exception('error')
                 if not q.empty(): self.logger.exception(f'error while checking q, but not empty')
@@ -287,6 +297,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
         #print(f'specieshuc_allcomid length: {len(specieshuc_allcomid)} and type:{type(specieshuc_allcomid)}')
         #print(f'species01list length: {len(species01list)} and type:{type(species01list)}')
         if full_list==1:    
+            assert False, 'needs updating for sqlitedict'
             self.specieshuc_allcomid=specieshuc_allcomid
             self.species01list=species01list    
             with open(filepath,'wb') as f:
@@ -299,11 +310,11 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
         
 
 class MpBuildStreamcatFromComids(mp.Process,myLogger):
-    def __init__(self,q,i,comidlist,gt,callable_db):
-        self.mypid=os.getpid()
+    def __init__(self,q,i,comidlist,gt):
+        
         super().__init__()
-        myLogger.__init__(self,name=f'search_{self.mypid}.log')
-        self.logger.info(f'search_{self.mypid} starting  logger')
+        myLogger.__init__(self,)
+        self.logger.info(f'MpBuildStreamcatFromComids starting  logger')
         self.q=q
         self.gt=gt
         self.comidlist=comidlist
@@ -311,6 +322,7 @@ class MpBuildStreamcatFromComids(mp.Process,myLogger):
         self.callable_db=callable_db
     
     def run(self,):
+        self.mypid=os.getpid()
         comidlist=self.comidlist # a list of comids as strings
         comidcount=len(comidlist)
         blocksize=200
@@ -321,15 +333,10 @@ class MpBuildStreamcatFromComids(mp.Process,myLogger):
             self.logger.info(f'pid:{self.mypid} starting block{b+1} of {blockcount}')
             sc_comid_dict=self.gt.getstreamcat(comid_blocks[b],add_huc12=1)
             if len(sc_comid_dict)==0:
-                self.logger.warning(f'sc_comid_dict has len 0 from getstreamcat for comidlist:{comidlist}')
+                self.logger.warning(f'sc_comid_dict has len 0 from getstreamcat for comid_blocks[{b}]:{comid_blocks[b]}')
             else:
-                with self.callable_db() as db:
-                    for comid,data in sc_comid_dict.items():
-                        db[comid]=data
-                    db.commit()
-                    db.close() # so other procs can add to it.
-                self.logger.info(f'block{b+1} added to dbdict')
-            
+                self.logger.info(f'adding block{b} to queue as partial')
+                self.q.put(['partial',sc_comid_dict])
         
         
         self.q.put([self.i,'complete'])
