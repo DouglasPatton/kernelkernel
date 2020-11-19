@@ -20,7 +20,7 @@ class dataGenerator(PiscesDataTool,myLogger):
         self.datagen_dict=datagen_dict
         try:
             try:
-                random_state=self.datagen_dict['random_state']\
+                random_state=self.datagen_dict['random_state']
                 np.random.seed(random_state)
             except KeyError:
                 np.random.seed(0)

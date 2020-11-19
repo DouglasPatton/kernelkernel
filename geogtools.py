@@ -26,7 +26,7 @@ class GeogTool(myLogger):
         self.huc12comiddict_path=os.path.join(self.geogdatadir,'huc12comiddict')
         self.NHDdbf_path=os.path.join(self.geogdatadir,'HUC12_PU_COMIDs_CONUS.dbf')
         self.NHDhuchuc_path=os.path.join(self.geogdatadir,'NHDhuchuc')
-        self.failed_SC_comid_path=os.path.join(self.geogdatadir,'failedSCcomidlist.dbf')
+        self.failed_SC_comid_path=os.path.join('data_tool','failedSCcomidlist.dbf')
         if sc_data_dir is None:
             try: self.sc_data_dir
             except: 
@@ -198,10 +198,21 @@ class GeogTool(myLogger):
             self.logger.exception('streamcat error') 
     
     def filterfailedcomids(self,comidlist):
-        previously_failed_comids={**self.anyNameDB(self.failed_SC_comid_path)}
+        previously_failed_comids=self.anyNameDB(self.failed_SC_comid_path)['failed']
         comidlist=[comid for comid in comidlist if not comid in previously_failed_comids]
         return comidlist
                 
+    def addfailed(self,comidlist):
+        with self.anyNameDB(self.failed_SC_comid_path) as db:
+            previously_failed_comids=db['failed']
+            comidlist.extend(previously_failed_comids)
+            full_list=list(set(comidlist))
+            db['failed']=comidlist
+            db.commit()
+        return
+            
+        
+        
     def pullStreamCatForComidList(self,comidlist,meta=0,error_lookup=0,add_huc12=1):
         try:self.rvrs_huc12comiddict
         except: self.reverse_huc12comid()
@@ -275,7 +286,7 @@ class GeogTool(myLogger):
                         fail+=1
             except: 
                 self.logger.exception(f'Streamcat problem for huc8:{huc8}')
-        self.addtoDB(self.failed_SC_comid_path,dict.fromkeys(failed_comids))
+        self.addfailed(failed_comids)
         self.logger.info(f'huc8_errordict:{huc8_errordict}')
         self.logger.info(f'counts for found:{found} and fail:{fail}')
         return comiddict

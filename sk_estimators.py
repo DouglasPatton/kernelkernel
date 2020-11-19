@@ -65,6 +65,7 @@ class sk_estimator(myLogger):
         fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now # move to pisces_params?
         estimator_dict={
             #add logistic with e-net
+            'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict},
             'logistic-reg':{'estimator':self.logisticClf,'fit_kwarg_dict':fit_kwarg_dict},
             'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
             'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
@@ -161,17 +162,32 @@ class sk_estimator(myLogger):
         
     def logisticClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
         try:
+            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                ('clf',LogisticRegressionCV(penalty='l1',solver='saga',max_iter=1000))]
+                ('clf',LogisticRegressionCV(Cs=50,penalty='l1',solver='saga',max_iter=1000,cv=inner_cv))]
 
             
             return Pipeline(steps=steps)
         except:
             self.logger.exception('')
         
+    def lpmClf(self,random_state=0,inner_cv_splits=10,inner_cv_reps=2,):
+        try:
+            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
+            steps=[
+                ('prep',missingValHandler(strategy='impute_knn_10')),
+                ('scaler',StandardScaler()),
+                ('clf',LassoLarsCV(penalty='l1',normalize=False,solver='saga',max_iter=1000,cv=inner_cv))]
 
+            
+            inner_pipeline=Pipeline(steps=steps)
+            t_former=binaryYTransformer(threshold=0.5)
+            outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
+            return outer_pipeline
+        except:
+            self.logger.exception('')
     
 if __name__=="__main__":
     X, y= make_regression(n_samples=300,n_features=16,n_informative=3,noise=3)
