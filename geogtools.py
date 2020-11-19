@@ -198,16 +198,22 @@ class GeogTool(myLogger):
             self.logger.exception('streamcat error') 
     
     def filterfailedcomids(self,comidlist):
-        previously_failed_comids=self.anyNameDB(self.failed_SC_comid_path)['failed']
+        try:previously_failed_comids=self.anyNameDB(self.failed_SC_comid_path)['failed']
+        except KeyError:
+            self.logger.info(f'"failed" key not found in failed SC db')
+            return comidlist
+        except:
+            assert False, 'unexpected error'
         comidlist=[comid for comid in comidlist if not comid in previously_failed_comids]
         return comidlist
                 
     def addfailed(self,comidlist):
         with self.anyNameDB(self.failed_SC_comid_path) as db:
-            previously_failed_comids=db['failed']
-            comidlist.extend(previously_failed_comids)
-            full_list=list(set(comidlist))
-            db['failed']=comidlist
+            try:previously_failed_comids=db['failed']
+            except KeyError: previously_failed_comids=[]
+            except:assert False,'unexpected error'
+            comiddict=dict.fromkeys([*previously_failed_comids.keys(),*comidlist])
+            db['failed']=comiddict#just a dict for fast searching
             db.commit()
         return
             
