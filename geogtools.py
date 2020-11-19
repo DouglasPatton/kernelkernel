@@ -26,6 +26,7 @@ class GeogTool(myLogger):
         self.huc12comiddict_path=os.path.join(self.geogdatadir,'huc12comiddict')
         self.NHDdbf_path=os.path.join(self.geogdatadir,'HUC12_PU_COMIDs_CONUS.dbf')
         self.NHDhuchuc_path=os.path.join(self.geogdatadir,'NHDhuchuc')
+        self.failed_SC_comid_path=os.path.join(self.geogdatadir,'failedSCcomidlist.dbf')
         if sc_data_dir is None:
             try: self.sc_data_dir
             except: 
@@ -162,7 +163,7 @@ class GeogTool(myLogger):
                                 if len(data_pt)==0 or data_pt=='NA':
                                     float_data_pt=np.nan
                                 else: 
-                                    float(data_pt)#force errors
+                                    float(data_pt)#force error
                             if not metric_drop_yr in collapse_dict:
                                 collapse_dict[metric_drop_yr]=[float_data_pt]
                             else:
@@ -195,97 +196,89 @@ class GeogTool(myLogger):
             return outdict
         except:
             self.logger.exception('streamcat error') 
+    
+    def filterfailedcomids(self,comidlist):
+        previously_failed_comids={**self.anyNameDB(self.failed_SC_comid_path)}
+        comidlist=[comid for comid in comidlist if not comid in previously_failed_comids]
+        return comidlist
                 
-                
-    def pullStreamCatForComidList(self,huc2comid_dict,meta=0,error_lookup=0,add_huc12=1):
+    def pullStreamCatForComidList(self,comidlist,meta=0,error_lookup=0,add_huc12=1):
         try:self.rvrs_huc12comiddict
         except: self.reverse_huc12comid()
+        comidlist=self.filterfailedcomids(comidlist)
+        if len(comidlist)==0:
+            self.logger.info(f'geogtool has only previously failed comids. returning empty dict')
+            return {}
         #try: self.huchuc
         #except:self.build_huchuc()
         pathlist=[path for path in os.listdir(self.sc_data_dir) if path[-5:]=='.json']
         SCoutdict={}
-        if type(huc2comid_dict) is list:
-            returncomiddict=1 # i.e., comd:data rather than a huc8:comid:data dict
-            comiddict={}
-            comidlist=deepcopy(huc2comid_dict)
-            huc2comid_dict={}
-            huc12list=[]
-            """if type(comidlist[0]) is str:
-                self.logger.debug(f'converting comids from string to int')
-                comidlist=[int(comid) for comid in comidlist]"""
-            new_comidlist=[]
-            for comid in comidlist:
-                
-                try:
-                    huc12=self.rvrs_huc12comiddict[comid]
-                    new_comidlist.append(comid)
-                    huc12list.append(huc12)
-                    huc2=huc12[0:2]
-                    if huc2 in huc2comid_dict:
-                        huc2comid_dict[huc2].append(comid)
-                    else: huc2comid_dict[huc2]=[comid]
-                except:
-                    self.logger.warning(f'no huc12 for comid:{comid}')
-            comidlist=new_comidlist
-        else: returncomiddict=0        
-        for huc2,val in huc2comid_dict.items():
-            
-            if type(val) is list:
-                
-                huc8dict={}
-                for comid in val:
-                    huc8=self.rvrs_huc12comiddict[comid][0:8]
-                    try: huc8dict[huc8].append(comid)
-                    except KeyError: huc8dict[huc8]=[comid]
-                    except: 
-                        self.logger.exception('')
-                        assert False, "halt, unexpected error"
-            elif type(val) is dict:
-                huc8dict=val
-            elif type(val) is str:
-                val=[val]
-            huc8comid_dict={}
-            for huc8,comids in huc8dict.items():
-                huc8comid_dict[huc8]={}
-                path=self.pathfromhuc8(huc8) # no group by for faster load
-                if meta: path=path[:-5]+'_meta.json'
-                try:
-                    huc8scdata=self.openjson(path)
-                    for comid in comids:
-                        #self.logger.info(f'comid:{comid}')
+        assert type(comidlist) is list, f'expecting list got {type(comidlist)}'
+        comiddict={}
+        huc12list=[]
+        """if type(comidlist[0]) is str:
+            self.logger.debug(f'converting comids from string to int')
+            comidlist=[int(comid) for comid in comidlist]"""
+        failed_comids=[]
+        new_comidlist=[]
+        huc8dict={}
+        for comid in comidlist:
+            try:
+                huc8=self.rvrs_huc12comiddict[comid][:8]
+                if not huc8 in huc8dict:
+                    huc8dict[huc8]=[comid]
+                else:
+                    huc8dict[huc8].append(comid)
+            except:
+                failed_comids.append(comid)
+                self.logger.warning(f'no huc12 for comid:{comid}')
+        
+        huc8_errordict={}    
+        found=0
+        fail=0
+        for huc8,comids in huc8dict.items():
+            huc8_errordict[huc8]=[]
+            path=self.pathfromhuc8(huc8) # no group by for faster load
+            if meta: path=path[:-5]+'_meta.json'
+            try:
+                huc8scdata=self.openjson(path)
+                for comid in comids:
+                    #self.logger.info(f'comid:{comid}')
+                    comiddata=None
+                    try:
+                        comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
+                    except KeyError:
                         try:
-                            comiddata=huc8scdata[int(comid)] # streamcat is not yet a string comid in the data
+
+                            comiddata=huc8scdata[comid]
+                            
                         except KeyError:
-                            try:
 
-                                comiddata=huc8scdata[comid]
-                                if add_huc12:
-                                    comiddata['HUC12']=self.rvrs_huc12comiddict[comid]
-                            except KeyError:
-
-                                self.logger.exception(f'could not find stream cat for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
-                                if error_lookup:
-                                    message=self.checkNHDPlus(comid)
-                                    self.logger.critical(message)    
-                                comiddata=None
-                            except:
-                                assert False, 'halt, unexpected error'
+                            self.logger.info(f'could not find streamcat as str or int for huc8:{huc8},comid:{comid}')#,huc8scdata:{huc8scdata}')
+                            if error_lookup:
+                                
+                                message=self.checkNHDPlus(comid)
+                                self.logger.critical(message)    
                         except:
                             assert False, 'halt, unexpected error'
-                        if comiddata:
-                            if returncomiddict:
-                                comiddict[comid]=comiddata # comid as a string
-                            else:
-                                huc8comid_dict[huc8][comid]=comiddata
-                except: 
-                    self.logger.exception(f'Streamcat problem for huc8:{huc8}')
-            if not returncomiddict:
-                SCoutdict[huc2]=huc8comid_dict  
-        
-        if returncomiddict:
-            return comiddict
-        else:
-            return SCoutdict    
+                    except:
+                        assert False, 'halt, unexpected error'
+                    if not comiddata is None:
+                        found+=1
+                        self.logger.info(f'streamcat data found for comid:{comid}')
+                        if add_huc12:
+                                comiddata['HUC12']=self.rvrs_huc12comiddict[comid]
+                        comiddict[comid]=comiddata # comid as a string
+                    else:
+                        failed_comids.append(comid)
+                        huc8_errordict[huc8].append(comid)
+                        fail+=1
+            except: 
+                self.logger.exception(f'Streamcat problem for huc8:{huc8}')
+        self.addtoDB(self.failed_SC_comid_path,dict.fromkeys(failed_comids))
+        self.logger.info(f'huc8_errordict:{huc8_errordict}')
+        self.logger.info(f'counts for found:{found} and fail:{fail}')
+        return comiddict
  
 
     def pathfromhuc8(self,huc8):

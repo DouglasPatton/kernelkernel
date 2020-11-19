@@ -125,17 +125,17 @@ class sk_estimator(myLogger):
                 ('clf',SVC(kernel='rbf',random_state=random_state,tol=1e-3,max_iter=2000, cache_size=2*10**4))]
 
             inner_pipeline=Pipeline(steps=steps)
-            t_former=None#binaryYTransformer()
-            outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
+            #t_former=None#binaryYTransformer()
+            #outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
 
 
             param_grid={
-                'regressor__clf__C':np.logspace(-2,2,gridpoints), 
-                'regressor__clf__gamma':np.logspace(-2,0.5,gridpoints),
-                'regressor__prep__strategy':['impute_knn_10']
+                'clf__C':np.logspace(-2,2,gridpoints), 
+                'clf__gamma':np.logspace(-2,0.5,gridpoints),
+                'prep__strategy':['impute_knn_10']
             }
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
-            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,)
+            return GridSearchCV(inner_pipeline,param_grid=param_grid,cv=inner_cv,)
         except:
             self.logger.exception('')
     
@@ -164,41 +164,19 @@ class sk_estimator(myLogger):
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                #('shrink_k1',shrinkBigKTransformer()), # retain a subset of the best original variables
-                #('polyfeat',PolynomialFeatures(interaction_only=0)), # create interactions among them
+                ('clf',LogisticRegressionCV(penalty='l1',solver='saga',max_iter=1000))]
 
-                #('drop_constant',dropConst()),
-                #('shrink_k2',shrinkBigKTransformer(selector=ElasticNet())), # pick from all of those options
-                ('clf',LogisticRegressionCV(penalty='l1',solver='saga'))]
-
-            '''X_T_pipe=Pipeline(steps=steps)
-            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
-
-
-
-            Y_T_X_T_pipe=TransformedTargetRegressor(transformer=binaryYTransformer(),regressor=X_T_pipe,check_inverse=False)
-            Y_T__param_grid={
-                #'regressor__polyfeat__degree':[2],
-                #'regressor__shrink_k2__selector__alpha':np.logspace(-2,2,gridpoints),
-                #'regressor__shrink_k2__selector__l1_ratio':np.linspace(0,1,gridpoints),
-                #'regressor__shrink_k1__k_share':[1,1/2,1/8],
-                #'regressor__prep__strategy':['impute_knn_10']
-            }
-
-
-
-            lin_reg_Xy_transform=GridSearchCV(Y_T_X_T_pipe,param_grid=Y_T__param_grid,cv=inner_cv,)'''
-
+            
             return Pipeline(steps=steps)
         except:
-            self.loggger.exception('')
+            self.logger.exception('')
         
 
     
 if __name__=="__main__":
-    X, y= make_regression(n_samples=3000,n_features=16,n_informative=3,noise=3)
+    X, y= make_regression(n_samples=300,n_features=16,n_informative=3,noise=3)
     y=(y-np.mean(y))
-    y01=binaryYTransformer().fit(y).transform(y)
+    y01=binaryYTransformer(threshold=0.5).fit(y).transform(y)
     X_train, X_test, y_train, y_test = train_test_split(X, y01, test_size=0.2, random_state=0)
     
     sk_est=sk_estimator()
@@ -208,6 +186,7 @@ if __name__=="__main__":
         est.fit(X_train,y_train)
         s=est.score(X_train,y_train)
         s_out=est.score(X_test,y_test)
+        print('predictions',est.predict(X_test))
         print(f'for {est_name}')
         print(f'    fit r2 score: {s}')
         print(f'    test r2 score: {s_out}')

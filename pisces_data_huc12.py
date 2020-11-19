@@ -27,7 +27,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         #slf.gt=gt() # called later
                 
     
-    def retrievespeciesdata(self,species_idx=None,species_name=None):
+    def retrievespeciesdata(self,species_idx=None,species_name=None,Xpredict=False):
         try: 
             self.specieslist
             #print(type(self.specieslist))
@@ -357,15 +357,21 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         for comid in comidlist:
             if not comid in built_comids:
                 build_comidlist.append(comid)
+        gtool=gt()
+        build_comidlist=gtool.filterfailedcomids(build_comidlist)
         comidcount=len(build_comidlist)
         self.logger.info(f'about to build comiddata for {comidcount} comids')
+        if comidcount<self.processcount:
+            processcount=1
+        else:
+            processcount=self.processcount
         if comidcount>0:
-            com_idx=np.array_split(np.arange(comidcount,dtype=np.int64),self.processcount)
-            gtool=gt()
-            args_list=[[[build_comidlist[c] for c in com_idx[i]],gtool] for i in range(self.processcount)]
+            com_idx=np.array_split(np.arange(comidcount,dtype=np.int64),processcount)
+            
+            args_list=[[[build_comidlist[c] for c in com_idx[i]],gtool] for i in range(processcount)]
             outlist=self.runAsMultiProc(MpBuildStreamcatFromComids,args_list,add_to_db=comidsiteinfo_callable_db)
             #sitedatacomid_dict=self.mergelistofdicts(outlist)
-            self.logger.info(f'expecting {self.processcount} all "complete" outlist:{outlist}')
+            self.logger.info(f'expecting {processcount} all "complete" outlist:{outlist}')
             #sitedatacomid_dict=gt().getstreamcat(comidlist)
 
         #self.addToDBDict(sitedatacomid_dict,db=db)

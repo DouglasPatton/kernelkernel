@@ -11,8 +11,9 @@ from pi_runners import FitRunner,PredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
-    def __init__(self,test=False,run_type='fit'):
+    def __init__(self,test=False,run_type='fit',linear_run=False):
         self.test=test#True # reduces repeats to speed things up
+        self.linear_run=linear_run
         splits=5
         if self.test:
             repeats=2
@@ -28,16 +29,16 @@ class PiSetup(myLogger):
         rs=1
         
         
-        self.permutation_kwargs=dict(
+        """self.permutation_kwargs=dict(
             n_repeats=5,
             random_state=rs,
             #scoring:None
-            )
+            )"""
 
         self.model_setup_dict=dict(
             gridpoints=5,
             inner_cv_splits=splits,
-            inner_cv_reps=1,
+            inner_cv_reps=3,
             random_state=rs # for inner cv and some estimators
             )
         if self.test:
@@ -64,7 +65,11 @@ class PiSetup(myLogger):
     def model_setup(self,):
         #sk_tool uses model_gen to create the estimator
         model_gen_list=[]
-        for est_name in sk_estimator().get_est_dict().keys():
+        if self.linear_run:
+            ests=['logistic-reg','linear-svc']
+        else:
+            ests=sk_estimator().get_est_dict().keys()
+        for est_name in :
             kwargs=self.model_setup_dict
             model_gen={'kwargs':kwargs,'name':est_name}
             model_gen_list.append(model_gen)

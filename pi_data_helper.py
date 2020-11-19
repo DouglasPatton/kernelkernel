@@ -126,32 +126,34 @@ class Helper():
     
     def buildSpeciesDF(self,comidlist,sitedatacomid_dict,presence_dict={},species_name='none'):
         keylist=[key for klist in [list(sitedatacomid_dict[comid].keys()) for comid in comidlist] for key in klist] 
-         
+        keylist=list(dict.fromkeys(keylist))
         badvars=['WsPctFullRp100', 'WsAreaSqKmRp100',
                  'CatAreaSqKmRp100','CatPctFullRp100',
-                 'CatAreaSqKm','WsAreaSqKm','CatPctFull','WsPctFull']
-        keylist=[key for key in dict.fromkeys(keylist) if not key in badvars]#unique keys that aren't bad!
-        keylist=[key for key in keylist if not re.search(r'0[8-9](cat|ws)$',key)]
-        keylist=[key for key in keylist if not re.search(r'^Dam',key)]
+                 'CatAreaSqKm','WsAreaSqKm','CatPctFull','WsPctFull','NARS_Region','NRSA_Frame']
+        keylist=[key for key in keylist if not key in badvars]
+        keylist=[key for key in keylist if not re.search(r'0[8-9](cat|ws)$',key)] #drop 2008,09 prism measures
+        keylist=[key for key in keylist if not re.search(r'^Dam',key)] #drop redun
         keylist=self.drop_multi_version_vars(keylist)
         vardatadict=presence_dict#may be empty dict
+        k_count=len(keylist)
         c_count=len(comidlist)
+        for key in keylist:
+                vardatadict[key]=[np.nan]*c_count
+        self.logger.info(f'vardatadict initialized with {k_count} keys and {c_count} comids')
         for j,comidj in enumerate(comidlist):
             #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
             comid_data=sitedatacomid_dict[comidj]
             for key in keylist:
+                val=None
                 try:
                     val=comid_data[key]
                 except KeyError:
-                    val=np.nan
+                    pass
                 except:
                     self.logger.exception('')
                     assert False,'unexpected error'
-                    val=np.nan
-                if not key in vardatadict:
-                    vardatadict[key]=[val]
-                else:
-                    vardatadict[key].append(val)
+                if not val is None:
+                    vardatadict[key][j]=val
         v=0
         for var,obs_list in vardatadict.items():
             if len(obs_list)!=c_count:
@@ -162,6 +164,7 @@ class Helper():
         else:
             self.logger.info(f'data built for {species_name} with no length errors')
         species_df=pd.DataFrame(data=vardatadict,index=comidlist)
+        species_df.index.name='COMID'
         return species_df
         
 class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):       
@@ -319,7 +322,6 @@ class MpBuildStreamcatFromComids(mp.Process,myLogger):
         self.gt=gt
         self.comidlist=comidlist
         self.i=i
-        self.callable_db=callable_db
     
     def run(self,):
         self.mypid=os.getpid()

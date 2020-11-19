@@ -83,8 +83,11 @@ class binaryYTransformer(BaseEstimator,TransformerMixin):
     def fit(self,X,y=None):
         return self
     def transform(self,X,y=None):
-        Xout=-np.ones(X.shape)
-        Xout[X>0]=1
+        if not self.threshold>0:
+            Xout=-np.ones(X.shape)
+        else:
+            Xout=np.zeros(X.shape)
+        Xout[X>self.threshold]=1
         return Xout
     def inverse_transform(self,X,y=None):
         Xout=-np.ones(X.shape)

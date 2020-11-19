@@ -14,19 +14,26 @@ class dataGenerator(PiscesDataTool,myLogger):
     
     '''
     #def __init__(self, data_shape=(200,5), ftype='linear', xval_size='same', sparsity=0, xvar=1, xmean=0, evar=1, betamax=10):
-    def __init__(self,datagen_dict,fit_gen=True):
+    def __init__(self,datagen_dict,fit_gen=True,Xpredict=False):
         myLogger.__init__(self,name='datagen.log')
         self.logger.info('starting new datagen log')
         self.datagen_dict=datagen_dict
         try:
+            try:
+                random_state=self.datagen_dict['random_state']\
+                np.random.seed(random_state)
+            except KeyError:
+                np.random.seed(0)
+                random_state=None
+            
             source=datagen_dict['source']
             PiscesDataTool.__init__(self,)
             species=datagen_dict['species']
             self.logger.info(f'datagen generating species:{species}')
             if type(species) is str:
-                self.df=self.retrievespeciesdata(species_name=species)
+                self.df=self.retrievespeciesdata(species_name=species,Xpredict=Xpredict)
             elif type(species) is int:
-                self.df=self.retrievespeciesdata(species_idx=species)
+                self.df=self.retrievespeciesdata(species_idx=species,Xpredict=Xpredict)
             self.logger.info(f'type(self.df): {type(self.df)}')
             #self.logger.info(f'self.df:{self.df}')
             all_vars=list(self.df.columns)
@@ -50,8 +57,25 @@ class dataGenerator(PiscesDataTool,myLogger):
                 self.df=self.df.iloc[shuf]
             data_split_dict=self.datagen_dict['data_split']
             test_share=data_split_dict['test_share']
+            if Xpredict:
+                y_df=None
+            else:
+                y_name='presence'
+                y_df=self.df.loc[:,y_name]
+                count1=np.sum(y_df)
+                self.ymean=np.mean(y_df)
+                if fit_gen:
+                    try:
+                        min_1count=self.datagen_dict['min_1count']
+                    except KeyError:
+                        self.logger.warning(f'min_1count not in data_gen for species:{species}')
+                        min_1count=0
+                    except:
+                        assert False,'unexpected error!'
 
-            y_name='presence'
+
+                    assert count1>=min_1count,f'aborting species:{species} because count1:{count1}<min_1count{min_1count}'
+            
             loc_vars=datagen_dict['loc_vars']
             drop_vars=datagen_dict['drop_vars']
             drop_vars.extend(loc_vars)
@@ -59,26 +83,10 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.x_vars=[var for var in all_vars if var not in drop_vars]
             self.datagen_dict['x_vars']=self.x_vars
             X_df=self.df.loc[:,self.x_vars]
-            y_df=self.df.loc[:,y_name]
-            count1=np.sum(y_df)
-            self.ymean=np.mean(y_df)
-            if fit_gen:
-                try:
-                    min_1count=self.datagen_dict['min_1count']
-                except KeyError:
-                    self.logger.warning(f'min_1count not in data_gen for species:{species}')
-                    min_1count=0
-                except:
-                    assert False,'unexpected error!'
-                
-                
-                assert count1>=min_1count,f'aborting species:{species} because count1:{count1}<min_1count{min_1count}'
             
             
             
-            try:random_state=self.datagen_dict['random_state']
-            except KeyError:
-                random_state=None
+            
             if test_share:
                 assert False, '!!!not expecting anything but zero for test_share:{test_share}'
                 X_train, X_test, y_train, y_test = train_test_split(X_df, y_df, test_size=test_share, random_state=random_state)
@@ -91,8 +99,12 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.y_test=y_test
             self.X_train_std=self.X_train.std(axis=0)
             self.X_train_mean=self.X_train.mean(axis=0)
-            self.y_train_mean=np.mean(self.y_train)
-            
+            if not Xpredict:
+                self.y_train_mean=np.mean(self.y_train)
+            else:
+                self.y_train_mean=None
+            if Xpredict:
+                self.logger.info(f'Xpredict datagen complete for self.datagen_dict:{self.datagen_dict}')
             
             if data_split_dict['cv']:
                 if count1<data_split_dict['cv']['n_splits']:
