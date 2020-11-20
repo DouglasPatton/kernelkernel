@@ -22,7 +22,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         Helper.__init__(self)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir): os.mkdir(self.savedir)
-        self.processcount=11
+        self.processcount=15
         self.pi_db=self.pidataDBdict()
         #slf.gt=gt() # called later
                 
@@ -331,7 +331,12 @@ class PiscesDataTool(myLogger,DBTool,Helper):
     
 
     def comidsiteinfo_db(self): #to make the db callable
-        return self.anyNameDB('sitedatacomid_dict',folder='data_tool')
+        name='sitedatacomid_dict'
+        folder='~/gits/kernelkernel/data_tool'
+        if not os.path.exists(os.path.join(folder,name+'.sqlite')):
+            folder='data_tool'
+        
+        return self.anyNameDB(name,folder=folder)
 
     def buildCOMIDsiteinfo(self,comidlist=None,predict=False,rebuild=False):
         comidsiteinfo_callable_db=self.comidsiteinfo_db

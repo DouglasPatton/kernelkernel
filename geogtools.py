@@ -210,7 +210,7 @@ class GeogTool(myLogger):
     def addfailed(self,comidlist):
         with self.anyNameDB(self.failed_SC_comid_path) as db:
             try:previously_failed_comids=db['failed']
-            except KeyError: previously_failed_comids=[]
+            except KeyError: previously_failed_comids={}
             except:assert False,'unexpected error'
             comiddict=dict.fromkeys([*previously_failed_comids.keys(),*comidlist])
             db['failed']=comiddict#just a dict for fast searching

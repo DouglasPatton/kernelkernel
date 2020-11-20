@@ -1,4 +1,4 @@
-import logging
+simport logging
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -90,7 +90,10 @@ class binaryYTransformer(BaseEstimator,TransformerMixin):
         Xout[X>self.threshold]=1
         return Xout
     def inverse_transform(self,X,y=None):
-        Xout=-np.ones(X.shape)
+        if not self.threshold>0:
+            Xout=-np.ones(X.shape)
+        else:
+            Xout=np.zeros(X.shape)
         Xout[X>self.threshold]=1
         return Xout
 

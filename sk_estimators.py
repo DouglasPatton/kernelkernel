@@ -1,5 +1,5 @@
 from sklearn.pipeline import make_pipeline,Pipeline
-from sklearn.linear_model import ElasticNet, LinearRegression,LassoLarsCV,LogisticRegressionCV
+from sklearn.linear_model import ElasticNet, LinearRegression,LassoCV,LogisticRegressionCV
 from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler,PolynomialFeatures
 from sklearn.model_selection import cross_validate, train_test_split, RepeatedStratifiedKFold, GridSearchCV
@@ -166,20 +166,20 @@ class sk_estimator(myLogger):
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                ('clf',LogisticRegressionCV(Cs=50,penalty='l1',solver='saga',max_iter=1000,cv=inner_cv))]
+                ('clf',LogisticRegressionCV(Cs=20,penalty='l1',solver='saga',max_iter=2000,cv=inner_cv,n_jobs=8))]
 
             
             return Pipeline(steps=steps)
         except:
             self.logger.exception('')
         
-    def lpmClf(self,random_state=0,inner_cv_splits=10,inner_cv_reps=2,):
+    def lpmClf(self,gridpoints=None,random_state=0,inner_cv_splits=10,inner_cv_reps=2,):
         try:
-            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
+            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=5*inner_cv_reps, random_state=random_state)
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                ('clf',LassoLarsCV(penalty='l1',normalize=False,solver='saga',max_iter=1000,cv=inner_cv))]
+                ('clf',LassoCV(n_alphas=200,normalize=False,max_iter=5000,cv=inner_cv))]
 
             
             inner_pipeline=Pipeline(steps=steps)
@@ -190,7 +190,7 @@ class sk_estimator(myLogger):
             self.logger.exception('')
     
 if __name__=="__main__":
-    X, y= make_regression(n_samples=300,n_features=16,n_informative=3,noise=3)
+    X, y= make_regression(n_samples=30000,n_features=160,n_informative=100,noise=3)
     y=(y-np.mean(y))
     y01=binaryYTransformer(threshold=0.5).fit(y).transform(y)
     X_train, X_test, y_train, y_test = train_test_split(X, y01, test_size=0.2, random_state=0)

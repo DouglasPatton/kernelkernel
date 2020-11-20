@@ -34,6 +34,8 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         elif key is None:
             with pd.HDFStore(path) as XDB:
                 specs=list(XDB.keys())
+                specs=[w[1:] for w in specs]
+                specs=[w.replace('_',' ') for w in specs]
             return specs
         else:
             return pd.read_hdf(path,key)
@@ -125,7 +127,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                     for c,comid in enumerate(s_comids):
                         if c%(c_count//logint)==0:self.logger.info(f'adding comid {c+1}/{c_count}')
                         sdict[comid]=sitedatacomid_db[comid]
-                    species_df=self.buildSpeciesDF(s_comids,sdict)
+                    species_df=self.buildSpeciesDF(s_comids,sdict,pecies_name=spec)
                     self.logger.info(f'{spec} has df with shape:{species_df.shape}')
                     self.getXdb(key=spec,df=species_df) #save it
                     self.logger.info(f'spec:{spec} added to Xdb')
