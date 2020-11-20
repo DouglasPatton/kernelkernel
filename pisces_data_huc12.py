@@ -332,10 +332,11 @@ class PiscesDataTool(myLogger,DBTool,Helper):
 
     def comidsiteinfo_db(self): #to make the db callable
         name='sitedatacomid_dict'
-        folder='~/gits/kernelkernel/data_tool'
-        if not os.path.exists(os.path.join(folder,name+'.sqlite')):
+        folder=os.path.expanduser('~/gits/kernelkernel/data_tool')
+        path=os.path.join(folder,name+'.sqlite')
+        if not os.path.exists(path):
             folder='data_tool'
-        
+            print(f'using local data_tool bc {path}')
         return self.anyNameDB(name,folder=folder)
 
     def buildCOMIDsiteinfo(self,comidlist=None,predict=False,rebuild=False):

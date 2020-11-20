@@ -57,7 +57,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             #name+=f'_{joblib.hash(specieslist)}' # only if list is constrained
             species_idx_list=[self.specieslist.index(spec) for spec in enumerate(specieslist)]
             
-        xdb_keys=self.getXdb()
+        xdb_keys=dict.fromkeys(self.getXdb())#dict for fast search
         self.logger.info(f'at start, xdb_keys:{xdb_keys}')
         specieslist,species_idx_list=zip(*[
             (specieslist[s_idx],l_idx) for s_idx,l_idx in enumerate(species_idx_list) if not specieslist[s_idx] in xdb_keys])
@@ -127,7 +127,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                     for c,comid in enumerate(s_comids):
                         if c%(c_count//logint)==0:self.logger.info(f'adding comid {c+1}/{c_count}')
                         sdict[comid]=sitedatacomid_db[comid]
-                    species_df=self.buildSpeciesDF(s_comids,sdict,pecies_name=spec)
+                    species_df=self.buildSpeciesDF(s_comids,sdict,species_name=spec)
                     self.logger.info(f'{spec} has df with shape:{species_df.shape}')
                     self.getXdb(key=spec,df=species_df) #save it
                     self.logger.info(f'spec:{spec} added to Xdb')

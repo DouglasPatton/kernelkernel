@@ -21,7 +21,7 @@ class PiSetup(myLogger):
             repeats=20
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
-        self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 
+        self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 'Xpredict'
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         else:
@@ -117,6 +117,8 @@ class PiSetup(myLogger):
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
+        if self.run_type=='Xpredict':
+            pass
         if self.run_type=='fit_fill':
             no_results_run_record_dict=self.dbt.get_no_results_run_record_dict()
             datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(no_results_run_record_dict)
