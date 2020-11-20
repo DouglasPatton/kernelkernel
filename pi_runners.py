@@ -12,14 +12,17 @@ from pi_db_tool import DBTool
 ###but requires data be sent around.
 
 class XPredictRunner(myLogger):
-     def __init__(self,rundict):
+    def __init__(self,rundict):
         myLogger.__init__(self,name='XPredictRunner.log')
         self.logger.info('starting XPredictRunner logger')
         self.rundict=rundict
         self.saveq=None
+        
     def passQ(self,saveq):
         self.saveq=saveq
+        
     def build(self):
+        pass
     
 class PredictRunner(myLogger):
     # runners are initialized by qmulticluster_master and built by pisces_params.py
