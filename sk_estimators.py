@@ -19,11 +19,14 @@ from pi_db_tool import DBTool
 
 
 class sk_estimator(myLogger):
-    def __init__(self,):
+    def __init__(self,scorer='f1_micro'):
         myLogger.__init__(self,name='sk_estimator.log')
         #self.logger.info('starting new sk_estimator log')
         #self.scorer_dict=SKToolInitializer().get_scorer_dict() # for gridsearchCV
         #self.est_dict=self.get_est_dict()
+        
+        self.scorer=scorer #from sk_tool_initializer obj
+        
         self.name=None
         
     def get_spec_std(self,spec):
@@ -65,7 +68,7 @@ class sk_estimator(myLogger):
         fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now # move to pisces_params?
         estimator_dict={
             #add logistic with e-net
-            #'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict},
+            'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict},#{'regressor__clf__sample_weight':'balanced'}},
             'logistic-reg':{'estimator':self.logisticClf,'fit_kwarg_dict':fit_kwarg_dict},
             'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
             'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
@@ -111,7 +114,7 @@ class sk_estimator(myLogger):
                 'regressor__prep__strategy':['impute_knn_10']
             }
 
-            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,)
+            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
         except:
             self.logger.exception('')
     
@@ -136,7 +139,7 @@ class sk_estimator(myLogger):
                 'prep__strategy':['impute_knn_10']
             }
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
-            return GridSearchCV(inner_pipeline,param_grid=param_grid,cv=inner_cv,)
+            return GridSearchCV(inner_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
         except:
             self.logger.exception('')
     
@@ -173,19 +176,19 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
         
-    def lpmClf(self,gridpoints=10,random_state=0,inner_cv_splits=5,inner_cv_reps=2,):
+    def lpmClf(self,gridpoints=5,random_state=0,inner_cv_splits=5,inner_cv_reps=2,):
         try:
-            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=5*inner_cv_reps, random_state=random_state)
+            inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
                 ('clf',Lasso(normalize=False,max_iter=1000,warm_start=True,random_state=random_state))]
 
-            param_grid={'regressor__clf__alpha':np.logspace(np.log10(.01),np.log10(1000),gridpoints)}
+            param_grid={'regressor__clf__alpha':np.logspace(np.log10(.01),np.log10(1000),2*gridpoints)}
             inner_pipeline=Pipeline(steps=steps)
             t_former=binaryYTransformer(threshold=0.5)
             outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
-            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,)
+            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
             
         except:
             self.logger.exception('')

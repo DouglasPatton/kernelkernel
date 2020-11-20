@@ -11,14 +11,15 @@ from pi_runners import FitRunner,PredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
-    def __init__(self,test=False,run_type='fit',linear_run=False):
+    def __init__(self,test=False,run_type='fit',linear_run=False,scorer='f1_micro'):
+        self.scorer=scorer
         self.test=test#True # reduces repeats to speed things up
         self.linear_run=linear_run
         splits=5
         if self.test:
             repeats=2
         else:
-            repeats=20
+            repeats=10
         myLogger.__init__(self,name='PiSetup.log')
         self.logger.info('starting PiSetup logger')
         self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 'Xpredict'
@@ -39,10 +40,11 @@ class PiSetup(myLogger):
             gridpoints=5,
             inner_cv_splits=splits,
             inner_cv_reps=3,
-            random_state=rs # for inner cv and some estimators
+            random_state=rs, # for inner cv and some estimators
+            
             )
         if self.test:
-            species='all'#(0,20)
+            species=(0,20)
         else:
             species='all'
         self.datagen_dict_template=dict(
@@ -66,12 +68,13 @@ class PiSetup(myLogger):
         #sk_tool uses model_gen to create the estimator
         model_gen_list=[]
         if self.linear_run:
-            ests=['logistic-reg','linear-svc']#,'linear-probability-model']
+            ests=['logistic-reg','linear-svc','linear-probability-model']
         else:
             ests=sk_estimator().get_est_dict().keys()
         for est_name in ests:
+            
             kwargs=self.model_setup_dict
-            model_gen={'kwargs':kwargs,'name':est_name}
+            model_gen={'kwargs':kwargs,'scorer':self.scorer,'name':est_name}
             model_gen_list.append(model_gen)
         return model_gen_list
             

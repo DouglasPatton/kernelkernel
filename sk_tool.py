@@ -35,7 +35,9 @@ class SKToolInitializer(myLogger):
             'recall_micro':get_scorer('recall_micro')}
         
     def run(self,datagen_obj):
-        sktool=SkTool(self.model_gen)
+        model_gen=self.model_gen.copy()
+        model_gen_scorer=model_gen.pop('scorer')
+        sktool=SkTool(model_gen,scorer=self.scorer_dict[model_gen_scorer])
         if datagen_obj.cv:
             self.logger.info(f'starting cv for sktool.model_gen["name"]{sktool.model_gen["name"]}')
             cv_dict=cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_dict,n_jobs=1)
@@ -50,11 +52,12 @@ class SKToolInitializer(myLogger):
         
         
 class SkTool(BaseEstimator,TransformerMixin,myLogger,):
-    def __init__(self,model_gen=None):
-        myLogger.__init__(self,name='SkTool.log')
+    def __init__(self,model_gen=None,scorer=None):
+        myLogger.__init__(self,name='SkTool.log',)
         self.logger.info('starting SkTool logger')
         self.model_gen=model_gen
         self.name=model_gen['name']
+        self.scorer=scorer
         
     def transform(self,X,y=None):
         return self.model_.transform(X,y)
@@ -69,9 +72,13 @@ class SkTool(BaseEstimator,TransformerMixin,myLogger,):
             modelgen=self.model_gen
             est_name=modelgen['name']
             self.model_kwargs=modelgen['kwargs']
-            sk_estimator=sk_est()
+            sk_estimator=sk_est(scorer=self.scorer)
             est_dict=sk_estimator.get_est_dict()#used to be stored in each sktool instance.
             est=est_dict[est_name]['estimator']
+            """if 'model_kwarg_dict' in est_dict[est_name]:
+                est_model_kwargs=self.make_est_model_kwargs(
+                    est_dict[est_name]['model_kwarg_dict'])
+                self.model_kwargs={**self.model_kwargs,**est_model_kwargs}"""
             fit_kwarg_dict=est_dict[est_name]['fit_kwarg_dict']
             self.fit_kwargs_=self.make_fit_kwargs(fit_kwarg_dict,X,y)
             self.n_,self.k_=X.shape
