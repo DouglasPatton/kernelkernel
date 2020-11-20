@@ -66,7 +66,7 @@ class PiSetup(myLogger):
         #sk_tool uses model_gen to create the estimator
         model_gen_list=[]
         if self.linear_run:
-            ests=['logistic-reg','linear-svc','linear-probability-model']
+            ests=['logistic-reg','linear-svc']#,'linear-probability-model']
         else:
             ests=sk_estimator().get_est_dict().keys()
         for est_name in ests:
