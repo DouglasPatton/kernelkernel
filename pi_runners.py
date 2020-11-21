@@ -83,7 +83,7 @@ class PredictRunner(myLogger):
             est_name=model['estimator'][0].name  
 
             model_m=model['estimator'][m]
-            if est_name in ['logistic-reg','linear-svc']: 
+            if est_name in ['logistic-reg','linear-svc','linear-probability-model']: 
                 coefs=self.ske.get_coef_from_fit_est(species,est_name,model_m.model_,std_rescale=True)
                 x_vars=model_m.x_vars
             else:

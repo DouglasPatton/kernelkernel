@@ -169,7 +169,7 @@ class sk_estimator(myLogger):
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                ('clf',LogisticRegressionCV(Cs=10,penalty='l1',solver='saga',max_iter=1000,cv=inner_cv,n_jobs=4))]
+                ('clf',LogisticRegressionCV(Cs=10,penalty='l1',solver='saga',max_iter=1000,cv=inner_cv))]
 
             
             return Pipeline(steps=steps)
