@@ -219,6 +219,7 @@ class FitRunner(myLogger):
             model_dict=hash_id_model_dict[hash_id]
             try:
                 success=0
+                data.X_train 
                 self.logger.info(f'fitrunner running hash_id:{hash_id}')
                 model_dict['model']=model_dict['model'].run(data)
                 success=1
