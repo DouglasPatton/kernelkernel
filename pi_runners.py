@@ -90,7 +90,7 @@ class PredictRunner(myLogger):
                 coefs=[]
                 x_vars=[]
             scor_names,scors=zip(*[(f'scorer:{key[5:]}',model[key][m]) for key in model.keys() if key[:5]=='test_'])
-            coefs=[coef[0] for coef in coefs]
+            coefs=list(coefs)
             arr_list=[*scors,*coefs]
             #arr_list=[arr[:,None] for arr in arr_list]
             #data=np.concatenate(arr_list,axis=1)
