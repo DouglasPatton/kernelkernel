@@ -124,16 +124,21 @@ class Helper():
         return keylist2
     
     
-    def buildSpeciesDF(self,comidlist,sitedatacomid_dict,presence_dict={},species_name='none'):
-        keylist=[key for klist in [list(sitedatacomid_dict[comid].keys()) for comid in comidlist] for key in klist] 
-        keylist=list(dict.fromkeys(keylist))
-        badvars=['WsPctFullRp100', 'WsAreaSqKmRp100',
-                 'CatAreaSqKmRp100','CatPctFullRp100',
-                 'CatAreaSqKm','WsAreaSqKm','CatPctFull','WsPctFull','NARS_Region','NRSA_Frame']
-        keylist=[key for key in keylist if not key in badvars]
-        keylist=[key for key in keylist if not re.search(r'0[8-9](cat|ws)$',key)] #drop 2008,09 prism measures
-        keylist=[key for key in keylist if not re.search(r'^Dam',key)] #drop redun
-        keylist=self.drop_multi_version_vars(keylist)
+    def buildSpeciesDF(
+        self,comidlist,sitedatacomid_dict,
+        presence_dict={}, keylist=None, species_name='none'):
+        """
+        """
+        if keylist is None:
+            keylist=[key for klist in [list(sitedatacomid_dict[comid].keys()) for comid in comidlist] for key in klist] 
+            keylist=list(dict.fromkeys(keylist))
+            badvars=['WsPctFullRp100', 'WsAreaSqKmRp100',
+                     'CatAreaSqKmRp100','CatPctFullRp100',
+                     'CatAreaSqKm','WsAreaSqKm','CatPctFull','WsPctFull','NARS_Region','NRSA_Frame']
+            keylist=[key for key in keylist if not key in badvars]
+            keylist=[key for key in keylist if not re.search(r'0[8-9](cat|ws)$',key)] #drop 2008,09 prism measures
+            keylist=[key for key in keylist if not re.search(r'^Dam',key)] #drop redun
+            keylist=self.drop_multi_version_vars(keylist)
         vardatadict=presence_dict#may be empty dict
         k_count=len(keylist)
         c_count=len(comidlist)

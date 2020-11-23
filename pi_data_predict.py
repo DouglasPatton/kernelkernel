@@ -3,6 +3,7 @@ import csv
 #import traceback
 import numpy as np
 import pickle
+from joblib import hash
 from time import sleep,strftime,time
 import multiprocessing as mp
 #import geopandas as gpd
@@ -15,6 +16,7 @@ from pi_db_tool import DBTool
 from pisces_data_huc12 import PiscesDataTool
 
 
+
 class PiscesPredictDataTool(PiscesDataTool,myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='pisces_data_predict.log')
@@ -22,6 +24,11 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         PiscesDataTool.__init__(self,)
         self.gt=gt()
         
+    
+        
+    def buildXdbBlock(self,comid_hash_key):
+        pass
+    
     def getXdb(self,key=None,df=None):
         path='data_tool/Xpredict.h5'
         if not key is None:
@@ -41,7 +48,76 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             return pd.read_hdf(path,key)
     #self.anyNameDB('Xpredict','X',folder='data_tool')       
     
+    def generateXPredictSpeciesComids(self,):
+        name='XpredictSpeciesComids'
+        self.buildspecieshuc8list()
+        specieshuc8list=self.specieshuc8list
+        
+        self.buildspecieslist()
+        specieshuclist=self.specieshuclist #from the survey
+        specieslist=self.specieslist
+        species_idx_list=list(range(len(specieslist)))
+        #########
+        species_huc8_dict={}
+        for short_idx,long_idx in enumerate(species_idx_list): #merge the two sources of huc8s and remove duplicates
+            list1=specieshuclist[long_idx]
+            list2=specieshuc8list[long_idx]
+            species_huc8_dict[specieslist[short_idx]]=list(dict.fromkeys([*list1,*list2]))
+        
+        huc12comiddict={**self.gt.gethuc12comiddict()}
+        huc8_huc12dict={**self.gt.build_huchuc()['huc8_huc12dict']} #pull into memory
+        species_comid_dict={spec:[] for spec in species_huc8_dict.keys()}
+        species_huc12_dict={spec:[] for spec in species_huc8_dict.keys()}
+        comidlist=[]
+        missing_huc8_list=[]
+        spec_count=len(species_huc8_dict)
+        self.logger.info(f'starting build of main comidlist')
+        for s_i,species in enumerate(species_huc8_dict):
+            self.logger.info(f'getting comids for {s_i+1} of {spec_count}')
+            for huc8 in species_huc8_dict[species]:
+                if len(huc8)<8:huc8='0'+huc8
+                if huc8 in huc8_huc12dict:
+                    for huc12 in huc8_huc12dict[huc8]:
+                        comids=huc12comiddict[huc12]
+                        species_comid_dict[species].extend(comids)
+                        species_huc12_dict[species].extend([huc12 for _ in range(len(comids))])
+                        comidlist.extend(comids)
+                else:
+                    missing_huc8_list.append(huc8)
+        missing_huc8_list=list(dict.fromkeys(missing_huc8_list))#remove duplicates
+        self.logger.warning(f'NHDplus datset is missing the following {len(missing_huc8_list)} huc8s: {missing_huc8_list}')
+        
+            
+            
+        with self.anyNameDB(name,'data',folder='data_tool') as db:
+            for spec,comids in species_comid_dict.items():
+                db[spec]=comids
+            db.commit()
+        
+        
+    
+    def generateXPredictBlockDF(spec,c_hash=None,comidlist=None,keylist=None):
+        try:
+            spec_cblockDB=lambda: self.anyNameDB('XpredictComidBlocks',spec,folder='data_tool')
+        
+            if not c_hash is None:
+                assert comidlist is None,'either comidlist or c_hash must be None'
+                with spec_cblockDB() as db:
+                    comidlist=db[c_hash]
+            self.logger.info(f'sending to buildcomidsiteinfo')
+            sitedatacomid_dict=self.buildCOMIDsiteinfo(comidlist=comidlist,predict=True,rebuild=False) 
+            species_df=self.buildSpeciesDF(comidlist,sitedatacomid_dict,keylist=keylist,species_name=spec)
+            self.logger.info(f'df built for spec:{spec} , c_hash:{c_hash}, species_df.shape:{species_df.shape}')
+            return species_df
+        except:self.logger.exception('unexpected error')
+    
+    
+    
+    
+    
+    
     def generateXPredictData(self,spec_list=None,rebuild=False):
+        assert False,'no longer using this approach 11/23/2020'
         name='Xpredict'
         self.buildspecieshuc8list()
         specieshuc8list=self.specieshuc8list #from the separate list

@@ -20,7 +20,9 @@ class DBTool():
         self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
+        self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
+        
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
@@ -86,6 +88,10 @@ class DBTool():
     
     def predictDBdict(self,):
         return SqliteDict(filename=self.predictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
+    
+    def XpredictDBdict(self,):
+        return SqliteDict(filename=self.XpredictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
+    
     
     def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0):
         try:

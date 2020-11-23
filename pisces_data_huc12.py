@@ -27,7 +27,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         #slf.gt=gt() # called later
                 
     
-    def retrievespeciesdata(self,species_idx=None,species_name=None,Xpredict=False):
+    def retrievespeciesdata(self,species_idx=None,species_name=None):
         try: 
             self.specieslist
             #print(type(self.specieslist))
