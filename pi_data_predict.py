@@ -25,7 +25,9 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         self.gt=gt()
     
    
-    
+    def buildXPredictStackedResultsDB(self,):
+        pass
+        
     
     def generateXPredictBlockDF(spec,comidlist=None,keylist=None):
         try:

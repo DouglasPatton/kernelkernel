@@ -10,7 +10,7 @@ from mylogger import myLogger
 import joblib
 
 class XdataGenerator(PiscesPredictDataTool,myLogger):
-    def __init__(self,datagen_dict)
+    def __init__(self,datagen_dict):
         myLogger.__init__(self,name='Xdatagen.log')
         self.logger.info('starting new Xdatagen log')
         PiscesPredictDataTool.__init__(self)

@@ -175,7 +175,7 @@ class PiSetup(myLogger):
                 test=20
             else:
                 test=self.test
-            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.XpredictDBdict())
+            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
             runlist=[]
             self.logger.info(f'building list of Xpredict runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
