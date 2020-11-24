@@ -3,7 +3,7 @@ import csv
 #import traceback
 import numpy as np
 import pickle
-from joblib import hash
+import joblib
 from time import sleep,strftime,time
 import multiprocessing as mp
 #import geopandas as gpd
@@ -23,33 +23,24 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         self.logger.info('starting pisces_data_predict logger')
         PiscesDataTool.__init__(self,)
         self.gt=gt()
+    
+   
+    
+    
+    def generateXPredictBlockDF(spec,comidlist=None,keylist=None):
+        try:
+            
+            self.logger.info(f'sending to buildcomidsiteinfo')
+            sitedatacomid_dict=self.buildCOMIDsiteinfo(comidlist=comidlist,predict=True,rebuild=False) 
+            species_df=self.buildSpeciesDF(comidlist,sitedatacomid_dict,keylist=keylist,species_name=spec)
+            self.logger.info(f'df built for spec:{spec} , c_hash:{c_hash}, species_df.shape:{species_df.shape}')
+            return species_df
+        except:self.logger.exception('unexpected error')    
+     
+    
+    
+    def generateXPredictSpeciesComidBlockDicts(self,):
         
-    
-        
-    def buildXdbBlock(self,comid_hash_key):
-        pass
-    
-    def getXdb(self,key=None,df=None):
-        path='data_tool/Xpredict.h5'
-        if not key is None:
-            key=key.replace(' ','_')
-        if not df is None:
-            df.to_hdf(path,key,complevel=1)
-            return
-        elif not os.path.exists(path):
-            return []
-        elif key is None:
-            with pd.HDFStore(path) as XDB:
-                specs=list(XDB.keys())
-                specs=[w[1:] for w in specs]
-                specs=[w.replace('_',' ') for w in specs]
-            return specs
-        else:
-            return pd.read_hdf(path,key)
-    #self.anyNameDB('Xpredict','X',folder='data_tool')       
-    
-    def generateXPredictSpeciesComids(self,):
-        name='XpredictSpeciesComids'
         self.buildspecieshuc8list()
         specieshuc8list=self.specieshuc8list
         
@@ -87,29 +78,50 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         missing_huc8_list=list(dict.fromkeys(missing_huc8_list))#remove duplicates
         self.logger.warning(f'NHDplus datset is missing the following {len(missing_huc8_list)} huc8s: {missing_huc8_list}')
         
-            
-            
-        with self.anyNameDB(name,'data',folder='data_tool') as db:
-            for spec,comids in species_comid_dict.items():
-                db[spec]=comids
-            db.commit()
+        
+        proc_count=10
+        spec_per_chunk=int(-(-spec_count//proc_count))
+        spec_chunks=(specieslist[spec_per_chunk*i:spec_per_chunk*(i+1)] for i in range(proc_count))
+        args_list=[[{spec:species_comid_dict[spec] for spec in specs}] for specs in spec_chunks]
+        outlist=self.runAsMultiProc(
+            ComidBlockBuilder,args_list,kwargs={},
+            no_mp=False,add_to_db=self.getXpredictSpeciesComidBlockDict)
+        self.logger.info(f'back from MP. outlist:{outlist}')
+        
+    def getXpredictSpeciesComidBlockDict(self,):
+        name='XpredictSpeciesComidBlockDicts'
+        return lambda:self.anyNameDB(name,'data',folder='data_tool')    
+        
+class ComidBlockBuilder(mp.Process,myLogger):
+    def __init__(self,q,i,species_comid_dict):
+        myLogger.__init__(self,name='ComidBlockBuilder.log')
+        self.logger.info('starting ComidBlockBuilder logger')
+        super().__init__()
+        self.species_comid_dict=species_comid_dict
+        self.q=q
+        self.i=i
         
         
-    
-    def generateXPredictBlockDF(spec,c_hash=None,comidlist=None,keylist=None):
-        try:
-            spec_cblockDB=lambda: self.anyNameDB('XpredictComidBlocks',spec,folder='data_tool')
+    def run(self):
+
+        spec_count=len(self.species_comid_dict)
+        for s,(spec,comids) in enumerate(self.species_comid_dict.items()):
+            self.logger.info(f'building comidblocks for {spec} #{s+1} of {spec_count}')
+            b_size=int(1e5)
+            c_count=len(comids)
+            b_count=int(-(-c_count//b_size))
+            self.logger.info(f'building {spec} comidblocks')
+            comidblocks=(comids[b_size*b:b_size*(b+1)] for b in range(b_count))
+            self.logger.info(f'buiding spec_c_dict for {spec}')
+            spec_c_dict={joblib.hash(''.join(b_comids)):b_comids for b_comids in comidblocks}
+            self.logger.info(f'adding to queue for {spec} ')
+            self.q.put(('partial',{spec:spec_c_dict}))
+        self.q.put((self.i,'complete'))
         
-            if not c_hash is None:
-                assert comidlist is None,'either comidlist or c_hash must be None'
-                with spec_cblockDB() as db:
-                    comidlist=db[c_hash]
-            self.logger.info(f'sending to buildcomidsiteinfo')
-            sitedatacomid_dict=self.buildCOMIDsiteinfo(comidlist=comidlist,predict=True,rebuild=False) 
-            species_df=self.buildSpeciesDF(comidlist,sitedatacomid_dict,keylist=keylist,species_name=spec)
-            self.logger.info(f'df built for spec:{spec} , c_hash:{c_hash}, species_df.shape:{species_df.shape}')
-            return species_df
-        except:self.logger.exception('unexpected error')
+        
+        
+"""
+
     
     
     
@@ -214,10 +226,29 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                         
             
             
+    def buildXdbBlock(self,comid_hash_key):
+        pass
+    
+    def getXdb(self,key=None,df=None):
+        path='data_tool/Xpredict.h5'
+        if not key is None:
+            key=key.replace(' ','_')
+        if not df is None:
+            df.to_hdf(path,key,complevel=1)
+            return
+        elif not os.path.exists(path):
+            return []
+        elif key is None:
+            with pd.HDFStore(path) as XDB:
+                specs=list(XDB.keys())
+                specs=[w[1:] for w in specs]
+                specs=[w.replace('_',' ') for w in specs]
+            return specs
+        else:
+            return pd.read_hdf(path,key)
+    #self.anyNameDB('Xpredict','X',folder='data_tool')       
             
-            
-            
-        """
+       
             
             
             with self.anyNameDB(name+'_raw','raw',folder='data_tool') as db: 

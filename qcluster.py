@@ -22,7 +22,7 @@ import json
         
 
 class TheQManager(mp.Process,BaseManager,myLogger):
-    def __init__(self,address,qdict):
+    def __init__(self,abddress,qdict):
         self.netaddress=address
         self.qdict=qdict
         self.BaseManager=BaseManager
@@ -195,6 +195,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
         self.logger.info(f'starting {func_name} logger')
         self.qdict=qdict
         self.source=source
+        self.run_type=run_type
         if not local_run:
             try:
                 with open('ip.json','r') as f:

@@ -631,7 +631,7 @@ class PiResults(DBTool,myLogger):
             data_gen=result['data_gen'] # same as datagen_dict
             data_gen['make_y']=1
             rundict['data_gen']=data_gen
-            rundict[hash_id]=None #this is where the model would go
+            rundict[hash_id]=None #this is where the model from results+dict will go when jobqfiller calls build()
             runners.append(PredictRunner(rundict))
         
         dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'

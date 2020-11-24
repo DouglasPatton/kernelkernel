@@ -55,13 +55,15 @@ class mypool(myLogger):
 
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_run='yes')
-    fit_or_predict=int(input(('0 fit, 1 for predict')))
+    fit_or_predict=int(input(('0 fit, 1 for predict, 2 for Xpredict',)))
     if fit_or_predict==0:
         run_type='fit'
     elif fit_or_predict==1:
         run_type='predict'
+    elif fit_or_predict==2:
+        run_type='Xpredict'
     else: 
-        assert False, 'fit_or_predict not 0 or 1'
+        assert False, 'fit_or_predict not 0,1, or 2'
     local_run=int(input('1 for local_run or 0 for network run'))
     includemaster=int(input('1 for include master, 0 for not'))
     nodecount=int(input('node count:'))

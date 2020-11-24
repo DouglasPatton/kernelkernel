@@ -25,6 +25,8 @@ class PiSetup(myLogger):
         self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 'Xpredict'
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
+        if self.run_type=='Xpredict':
+            self.db_kwargs={'Xpredict':True}
         else:
             self.db_kwargs={}
         rs=1
@@ -50,7 +52,7 @@ class PiSetup(myLogger):
         self.datagen_dict_template=dict(
             min_sample=32,
             min_1count=8, # at least 4 ones per split since split can go down to 2
-            shuffle=False,
+            shuffle=False,#generally leave this off
             source='Pisces',
             species=species,#'all',#(0,20),#'all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
