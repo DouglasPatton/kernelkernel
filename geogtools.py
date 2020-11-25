@@ -41,7 +41,7 @@ class GeogTool(myLogger):
                         assert False, 'cannot locate local streamcat data'
         else: self.sc_data_dir=sc_data_dir
         print("streamcat data directory:",self.sc_data_dir)
-        self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
+        #self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
     
     def my_encode(self,obj):
         return sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))

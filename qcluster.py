@@ -22,7 +22,7 @@ import json
         
 
 class TheQManager(mp.Process,BaseManager,myLogger):
-    def __init__(self,abddress,qdict):
+    def __init__(self,address,qdict):
         self.netaddress=address
         self.qdict=qdict
         self.BaseManager=BaseManager
