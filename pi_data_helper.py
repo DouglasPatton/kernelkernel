@@ -145,9 +145,16 @@ class Helper():
         for key in keylist:
                 vardatadict[key]=[np.nan]*c_count
         self.logger.info(f'vardatadict initialized with {k_count} keys and {c_count} comids')
+        drop_comids=[]
         for j,comidj in enumerate(comidlist):
             #sitevars=[val for _,val in self.sitedatacomid_dict[comidj].items()]
-            comid_data=sitedatacomid_dict[comidj]
+            try:
+                comid_data=sitedatacomid_dict[comidj]
+            except KeyError:
+                comid_data={}
+                drop_comids.append(comidj)
+                self.logger.info(f'{comidj} not in sitedatacomid_dict')
+            except:assert False,'unexpected error'
             for key in keylist:
                 val=None
                 try:
@@ -170,6 +177,8 @@ class Helper():
             self.logger.info(f'data built for {species_name} with no length errors')
         species_df=pd.DataFrame(data=vardatadict,index=comidlist)
         species_df.index.name='COMID'
+        species_df.drop(list(set(drop_comids)),axis=0,inplace=True)
+        self.logger.info(f'dropped drop_comids:{drop_comids}')
         return species_df
         
 class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):       

@@ -55,7 +55,7 @@ class mypool(myLogger):
 
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_run='yes')
-    fit_or_predict=int(input(('0 fit, 1 for predict, 2 for Xpredict',)))
+    fit_or_predict=int(input('0 fit, 1 for predict, 2 for Xpredict',))
     if fit_or_predict==0:
         run_type='fit'
     elif fit_or_predict==1:

@@ -119,6 +119,7 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                             if fitfail:
                                 self.addToDBDict(save_list,db=self.fitfailDBdict)
                             else:
+                                #self.logger.info(f'saveqdumper db_kwargs:{db_kwargs}')
                                 self.addToDBDict(save_list,**self.db_kwargs)
                             break
                         except:

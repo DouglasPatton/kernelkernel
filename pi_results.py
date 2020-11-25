@@ -579,7 +579,7 @@ class PiResults(DBTool,myLogger):
             except:predictDB=self.predictDBdict()
         else:
             predictDB=XpredictDB
-        dbkeydict=dict.fromkeys(predictDB.keys()) #dict for fast search
+        predicted=dict.fromkeys(predictDB.keys()) #dict for fast search
         try:
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0)
             rundict_list=[]
@@ -589,7 +589,7 @@ class PiResults(DBTool,myLogger):
                 if test and d>test: break
                 rundict_list.append({})
                 for hash_id in (hash_id_list):
-                    if not hash_id in dbkeydict:
+                    if not hash_id in predicted:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
@@ -723,8 +723,7 @@ class PiResults(DBTool,myLogger):
             try:
                 #self.results_dict=self.resultsDBdict()
                 #self.logger.info(f'starting block {h+1} of {block_count}')
-                hash_id_chunk=hash_id_list
-                for hash_id in hash_id_chunk:
+                for hash_id in hash_id_list:
                     run_record=self.gen_dict[hash_id]
                     data_gen=run_record["data_gen"]
                     datagenhash=joblib.hash(data_gen)

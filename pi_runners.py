@@ -197,6 +197,7 @@ class XPredictRunner(PredictRunner):
         self.rundict=rundict
         self.saveq=None"""
         PredictRunner.__init__(self,rundict)
+        self.hash_id_c_hash_dict=None
         
     def build(self):
         #called on master machine by jobqfiller before sending to jobq
@@ -210,7 +211,7 @@ class XPredictRunner(PredictRunner):
                     
             data,rundict=self.build_from_rundict(self.rundict.copy())
             comidblockhashdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
-            hash_id_list=self.rundict.keys()
+            hash_id_list=rundict.keys()
             self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
             self.logger.info(f'{data.spec} predictrunner built')
                     
@@ -262,15 +263,20 @@ class XPredictRunner(PredictRunner):
                     
         self.ske=sk_estimator()
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
-        keylist=hash_id_model_dict[hash_id_model_dict[0]]['model'].x_vars
+        for hash_id,model in hash_id_model_dict.items():
+            for skt in model['estimator']:
+                if 'HUC12' in skt.x_vars:
+                    self.logger.error(f'HUC12 found in hash_id:{hash_id}')
+                    assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'
+        keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
-        comidblockdict=data.getXpredictSpeciesComidBlockDict[data.spec]
+        comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
         for c_hash,hash_id_list in c_hash_hash_id_dict.items():
             
             comidlist=comidblockdict[c_hash]
             
             datadf=data.generateXPredictBlockDF(
-                comidlist=comidlist,keylist=keylist)
+                data.spec,comidlist=comidlist,keylist=keylist)
             self.logger.info(f'')
             
             
@@ -279,7 +285,7 @@ class XPredictRunner(PredictRunner):
                 model=hash_id_model_dict[hash_id]
                 try:
                     success=0
-                    predictresult={hash_id:{c_hash:self.Xpredict(datadf,data,model)}}
+                    predictresult={hash_id:{c_hash:self.Xpredict(datadf,data,model,hash_id)}}
                     success=1
                 except:
                     self.logger.exception('error for model_dict:{model_dict}')
@@ -302,32 +308,37 @@ class XPredictRunner(PredictRunner):
                                 sleep(1)
 
     
-    def Xpredict(datadf,data,model):
+    def Xpredict(self,datadf,data,model,hash_id):
         n=datadf.shape[0]
         est_name=model['estimator'][0].name  
         species=data.spec
         huc12s=datadf.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
         Xdf=datadf.drop('HUC12',axis=1)
-        predict_vars=Xdf.columns
-        train_vars=model['estimator'][0].x_vars
+        predict_vars=list(Xdf.columns)
+        train_vars=list(model['estimator'][0].x_vars)
         self.logger.info(f'starting an Xpredict for {species} - {est_name} ')
+        if len(predict_vars)!=len(train_vars):
+            self.logger.error(f'{species} predict_vars:{predict_vars}')
+            self.logger.error(f'{species} train_vars:{train_vars}')
         assert all([predict_vars[i]==train_vars[i] for i in range(len(train_vars))]),f'predict and train vars should match, but predict_vars:{predict_vars} and train_vars:{train_vars}'
             
         
         yhat_list=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
          
         
-        self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+        
         cv_dict=data.datagen_dict['data_split']['cv']
         n_repeats=cv_dict['n_repeats']
         n_splits=cv_dict['n_splits']
+        cv_count=n_repeats*n_splits
         self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
         m=0;col_tup_list=[]
         for rep in range(n_repeats):
             for s in range(n_splits):
                 model_m=model['estimator'][m]                
                 try:
+                    self.logger.info(f'about to predict {m+1} of {cv_count}')
                     yhat=model_m.predict(Xdf)
                     yhat_list.append(yhat)
                     col_tup_list.append(('y',rep,s))
@@ -350,18 +361,8 @@ class XPredictRunner(PredictRunner):
         self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
         self.logger.info(f'index:{index}')
         yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
-        self.logger.info(f'yhat_df:{yhat_df}')
-        
-        ########create y_df
-        y=data.y_train
-        y_stack_arr=y.to_numpy()
-        columns=['y']
-        names=['species','HUC12','COMID']
-        index=pd.MultiIndex.from_tuples([(species,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
-        y_df=pd.DataFrame(y_stack_arr,columns=columns,index=index)
-        self.logger.info(f'y_df:{y_df}')
-        #### create coef_scor_df
-        full_coef_scor_df=pd.concat(coef_scor_df_list,axis=1)
+        self.logger.info(f'yhat_df.shape:{yhat_df.shape}')
+        return yhat_df
         
         
         

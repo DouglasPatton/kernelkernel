@@ -68,7 +68,15 @@ class DBTool():
     def XPredictHashIDComidHashResultsDB(self,hash_id=None):
         name='XPredictHashIDComidHashResults'
         if hash_id is None:
-            return SqliteDict.get_tablenames(name+'.sqlite')
+            path=name+'.sqlite'
+            if not os.path.exists(path):
+                return []
+            try:
+                return SqliteDict.get_tablenames(path)
+            except OSError:
+                return []
+            except:
+                assert False,f'unexpected error, hash_id:{hash_id}'
         return self.anyNameDB(name,hash_id,folder='data_tool')
     
     
@@ -105,7 +113,7 @@ class DBTool():
         try:
             if type(save_list) is dict:
                 save_list=[save_list]
-            if db:
+            if not db is None:
                 pass        
             elif gen:
                 db=self.genDBdict

@@ -7,7 +7,7 @@ from copy import copy
 import joblib
 from random import randint
 from pi_db_tool import DBTool
-from pi_runners import FitRunner,PredictRunner
+from pi_runners import FitRunner,PredictRunner, XPredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
@@ -25,7 +25,7 @@ class PiSetup(myLogger):
         self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 'Xpredict'
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
-        if self.run_type=='Xpredict':
+        elif self.run_type=='Xpredict':
             self.db_kwargs={'Xpredict':True}
         else:
             self.db_kwargs={}

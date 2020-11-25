@@ -29,13 +29,15 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         pass
         
     
-    def generateXPredictBlockDF(spec,comidlist=None,keylist=None):
+    def generateXPredictBlockDF(self,spec,comidlist=None,keylist=None):
         try:
             
             self.logger.info(f'sending to buildcomidsiteinfo')
             sitedatacomid_dict=self.buildCOMIDsiteinfo(comidlist=comidlist,predict=True,rebuild=False) 
-            species_df=self.buildSpeciesDF(comidlist,sitedatacomid_dict,keylist=keylist,species_name=spec)
-            self.logger.info(f'df built for spec:{spec} , c_hash:{c_hash}, species_df.shape:{species_df.shape}')
+            with sitedatacomid_dict() as db:
+                species_df=self.buildSpeciesDF(
+                    comidlist,db,keylist=keylist,species_name=spec)
+            self.logger.info(f'df built for spec:{spec}, species_df.shape:{species_df.shape}')
             return species_df
         except:self.logger.exception('unexpected error')    
      
@@ -92,7 +94,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         
     def getXpredictSpeciesComidBlockDict(self,):
         name='XpredictSpeciesComidBlockDicts'
-        return lambda:self.anyNameDB(name,'data',folder='data_tool')    
+        return self.anyNameDB(name,'data',folder='data_tool')    
         
 class ComidBlockBuilder(mp.Process,myLogger):
     def __init__(self,q,i,species_comid_dict):
