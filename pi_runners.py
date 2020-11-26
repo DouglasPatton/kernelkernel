@@ -327,38 +327,45 @@ class XPredictRunner(PredictRunner):
         yhat_list=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
          
         
-        
-        cv_dict=data.datagen_dict['data_split']['cv']
-        n_repeats=cv_dict['n_repeats']
-        n_splits=cv_dict['n_splits']
-        cv_count=n_repeats*n_splits
-        self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
-        m=0;col_tup_list=[]
-        for rep in range(n_repeats):
-            for s in range(n_splits):
-                model_m=model['estimator'][m]                
-                try:
-                    self.logger.info(f'about to predict {m+1} of {cv_count}')
-                    yhat=model_m.predict(Xdf)
-                    yhat_list.append(yhat)
-                    col_tup_list.append(('y',rep,s))
-                except:
-                    self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
-                
-                m+=1
-        yhat_list=[y[:,None] for y in yhat_list] # make columns for concatenation
-        yhat_stack_arr=np.concatenate(yhat_list,axis=1)
-        
-        #col_tups=[('yhat',r,s) for r in range(n_repeats)]
-        
-        columns=pd.MultiIndex.from_tuples(col_tup_list,names=['var','rep_idx','split_idx'])
-        
+        if 'data_split' in data.datagen_dict:
+            cv_dict=data.datagen_dict['data_split']['cv']
+
+            n_repeats=cv_dict['n_repeats']
+            n_splits=cv_dict['n_splits']
+            cv_count=n_repeats*n_splits
+            self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+            m=0;col_tup_list=[]
+            for rep in range(n_repeats):
+                for s in range(n_splits):
+                    model_m=model['estimator'][m]                
+                    try:
+                        self.logger.info(f'about to predict {m+1} of {cv_count}')
+                        yhat=model_m.predict(Xdf)
+                        yhat_list.append(yhat)
+                        col_tup_list.append(('y',rep,s))
+                    except:
+                        self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
+
+                    m+=1
+            yhat_list=[y[:,None] for y in yhat_list] # make columns for concatenation
+            yhat_stack_arr=np.concatenate(yhat_list,axis=1)
+
+            #col_tups=[('yhat',r,s) for r in range(n_repeats)]
+
+            columns=pd.MultiIndex.from_tuples(
+                col_tup_list,names=['var','rep_idx','split_idx'])
+        else:
+            yhat=model.predict(Xdf)
+            self.logger.info(f'no data_split, no cv for {species}, {est_name}')
+            yhat_stack_arr=yhat[:,None]#make a column
+            columns=['y']
+            
         comids=datadf.index
         
         names=['species','estimator','HUC12','COMID']
         index=pd.MultiIndex.from_tuples([(species,est_name,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
         self.logger.info(f'yhat_stack_arr.shape:{yhat_stack_arr.shape}, yhat_stack_arr:{yhat_stack_arr}')
-        self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
+        #self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
         self.logger.info(f'index:{index}')
         yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
         self.logger.info(f'yhat_df.shape:{yhat_df.shape}')

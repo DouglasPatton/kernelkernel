@@ -29,7 +29,7 @@ class SKToolInitializer(myLogger):
     def get_scorer_dict(self):
         return {
             'f1_micro':get_scorer('f1_micro'),
-            #x'roc_auc_score_macro':make_scorer(roc_auc_score,average='macro'),
+            #'roc_auc_score_macro':make_scorer(roc_auc_score,average='macro'),
             'roc_auc_score_micro':make_scorer(roc_auc_score,average='micro'),
             'precision_micro':get_scorer('precision_micro'),
             'recall_micro':get_scorer('recall_micro')}
