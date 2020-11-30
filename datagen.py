@@ -110,7 +110,7 @@ class dataGenerator(PiscesDataTool,myLogger):
             self.X_train_mean=self.X_train.mean(axis=0)
             self.y_train_mean=np.mean(self.y_train)
             
-            if data_split_dict['cv']:
+            if 'cv' in data_split_dict:
                 if count1<data_split_dict['cv']['n_splits']:
                     old_n_splits=data_split_dict['cv']['n_splits']
                     new_n_splits=count1//4

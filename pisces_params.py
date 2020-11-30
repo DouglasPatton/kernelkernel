@@ -11,8 +11,9 @@ from pi_runners import FitRunner,PredictRunner, XPredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
-    def __init__(self,test=False,run_type='fit',linear_run=False,scorer='f1_micro'):
+    def __init__(self,test=False,run_type='fit',linear_run=False,scorer='f1_micro',cv_run=False):
         self.scorer=scorer
+        self.cv_run=cv_run
         self.test=test#True # reduces repeats to speed things up
         self.linear_run=linear_run
         splits=5
@@ -49,19 +50,24 @@ class PiSetup(myLogger):
             species=(0,20)
         else:
             species='all'
+        if self.cv_run:
+            cv_gen_dict=dict(n_splits=splits,
+                        n_repeats=repeats,
+                        strategy=None, # e.g., 'balanced-HUC8'
+                        random_state=rs),
+            data_split_dict=dict(
+                test_share=0,
+                cv=cv_gen_dict
+            ),
+        else:data_split_dict=dict(test_share=0)
+            
         self.datagen_dict_template=dict(
             min_sample=32,
             min_1count=8, # at least 4 ones per split since split can go down to 2
             shuffle=False,#generally leave this off
             source='Pisces',
             species=species,#'all',#(0,20),#'all', # or a range, i.e., (0,100) # set in data_setup
-            data_split=dict(
-                test_share=0,
-                cv=dict(n_splits=splits,
-                        n_repeats=repeats,
-                        strategy=None, # e.g., 'balanced-HUC8'
-                        random_state=rs),
-            ),
+            data_split=data_split_dict,
             drop_vars=[],
             loc_vars=['HUC12','COMID'],
             )
