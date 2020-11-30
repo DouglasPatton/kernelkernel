@@ -119,6 +119,7 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                             if fitfail:
                                 self.addToDBDict(save_list,db=self.fitfailDBdict)
                             else:
+                                #self.logger.info(f'saveqdumper db_kwargs:{db_kwargs}')
                                 self.addToDBDict(save_list,**self.db_kwargs)
                             break
                         except:
@@ -195,6 +196,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
         self.logger.info(f'starting {func_name} logger')
         self.qdict=qdict
         self.source=source
+        self.run_type=run_type
         if not local_run:
             try:
                 with open('ip.json','r') as f:

@@ -26,7 +26,7 @@ class GeogTool(myLogger):
         self.huc12comiddict_path=os.path.join(self.geogdatadir,'huc12comiddict')
         self.NHDdbf_path=os.path.join(self.geogdatadir,'HUC12_PU_COMIDs_CONUS.dbf')
         self.NHDhuchuc_path=os.path.join(self.geogdatadir,'NHDhuchuc')
-        self.failed_SC_comid_path=os.path.join('data_tool','failedSCcomidlist.dbf')
+        self.failed_SC_comid_path=os.path.join('data_tool','failedSCcomidlist')
         if sc_data_dir is None:
             try: self.sc_data_dir
             except: 
@@ -41,7 +41,7 @@ class GeogTool(myLogger):
                         assert False, 'cannot locate local streamcat data'
         else: self.sc_data_dir=sc_data_dir
         print("streamcat data directory:",self.sc_data_dir)
-        self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
+        #self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
     
     def my_encode(self,obj):
         return sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
@@ -308,6 +308,14 @@ class GeogTool(myLogger):
         
         
     def gethuc12comiddict(self):
+        try: 
+            huc12comiddict=self.huc12comiddict
+            return huc12comiddict
+        except AttributeError:
+            self.logger.info('huc12comiddict not in memory, building...')
+        except:
+            self.logger.exception(f'unexpected error getting huc12comiddict')
+            assert False, 'unexpected error!'
         try: 
             huc12comiddict_path=self.huc12comiddict_path
             self.huc12comiddict=self.anyNameDB(huc12comiddict_path)

@@ -7,7 +7,7 @@ from copy import copy
 import joblib
 from random import randint
 from pi_db_tool import DBTool
-from pi_runners import FitRunner,PredictRunner
+from pi_runners import FitRunner,PredictRunner, XPredictRunner
 from pi_results import PiResults
 
 class PiSetup(myLogger):
@@ -25,6 +25,8 @@ class PiSetup(myLogger):
         self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 'Xpredict'
         if self.run_type=='predict':
             self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
+        elif self.run_type=='Xpredict':
+            self.db_kwargs={'Xpredict':True}
         else:
             self.db_kwargs={}
         rs=1
@@ -50,7 +52,7 @@ class PiSetup(myLogger):
         self.datagen_dict_template=dict(
             min_sample=32,
             min_1count=8, # at least 4 ones per split since split can go down to 2
-            shuffle=False,
+            shuffle=False,#generally leave this off
             source='Pisces',
             species=species,#'all',#(0,20),#'all', # or a range, i.e., (0,100) # set in data_setup
             data_split=dict(
@@ -120,8 +122,7 @@ class PiSetup(myLogger):
         #model_gen_dict of models per instance of data_gen
         #each of those model-data combos has a hash_id built from
         #the model_dict and data_gen
-        if self.run_type=='Xpredict':
-            pass
+        
         if self.run_type=='fit_fill':
             no_results_run_record_dict=self.dbt.get_no_results_run_record_dict()
             datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(no_results_run_record_dict)
@@ -142,7 +143,7 @@ class PiSetup(myLogger):
             runlist=[]    
             for rundict in rundict_list:
                 runlist.append(FitRunner(rundict))
-        if self.run_type=='fit':
+        elif self.run_type=='fit':
             rundict_list=[]
             run_record_dict={}
             data_gen_list=self.data_setup()
@@ -169,7 +170,18 @@ class PiSetup(myLogger):
             #rundict_list=self.checkComplete(rundict_list=rundict_list) # remove any that are already in resultsDB
             for rundict in rundict_list:
                 runlist.append(FitRunner(rundict))
-
+        elif self.run_type=='Xpredict':
+            if self.test:
+                test=20
+            else:
+                test=self.test
+            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
+            runlist=[]
+            self.logger.info(f'building list of Xpredict runners. len(rundict_list):{len(rundict_list)}')
+            for rundict in rundict_list:
+                runlist.append(XPredictRunner(rundict))
+            self.logger.info(f'list of runners built. len(runlist):{len(runlist)}')
+            self.logger.info(f'runlist:{runlist}')
         elif self.run_type=='predict':
             if self.test:
                 test=20

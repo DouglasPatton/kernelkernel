@@ -567,13 +567,19 @@ class PiResults(DBTool,myLogger):
                            'coef_scor_df':new_coef_scor_df}
         return new_predictresult
     
-    def build_prediction_rundicts(self,rebuild=1,test=False): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
             self.results_dict
         except:
             self.results_dict=self.resultsDBdict()
-        try: self.predictDB
-        except:self.predictDB=self.predictDBdict()
+        
+        
+        if  XpredictDB is None:
+            try: predictDB=self.predictDB
+            except:predictDB=self.predictDBdict()
+        else:
+            predictDB=XpredictDB
+        predicted=dict.fromkeys(predictDB.keys()) #dict for fast search
         try:
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0)
             rundict_list=[]
@@ -583,7 +589,7 @@ class PiResults(DBTool,myLogger):
                 if test and d>test: break
                 rundict_list.append({})
                 for hash_id in (hash_id_list):
-                    if not hash_id in self.predictDB:
+                    if not hash_id in predicted:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
@@ -625,7 +631,7 @@ class PiResults(DBTool,myLogger):
             data_gen=result['data_gen'] # same as datagen_dict
             data_gen['make_y']=1
             rundict['data_gen']=data_gen
-            rundict[hash_id]=None #this is where the model would go
+            rundict[hash_id]=None #this is where the model from results+dict will go when jobqfiller calls build()
             runners.append(PredictRunner(rundict))
         
         dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'
@@ -717,8 +723,7 @@ class PiResults(DBTool,myLogger):
             try:
                 #self.results_dict=self.resultsDBdict()
                 #self.logger.info(f'starting block {h+1} of {block_count}')
-                hash_id_chunk=hash_id_list
-                for hash_id in hash_id_chunk:
+                for hash_id in hash_id_list:
                     run_record=self.gen_dict[hash_id]
                     data_gen=run_record["data_gen"]
                     datagenhash=joblib.hash(data_gen)

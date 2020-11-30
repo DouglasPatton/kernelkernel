@@ -20,7 +20,9 @@ class DBTool():
         self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
+        self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
+        
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
@@ -63,6 +65,22 @@ class DBTool():
         return pickle.loads(zlib.decompress(bytes(obj)))
     #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
     
+    def XPredictHashIDComidHashResultsDB(self,hash_id=None):
+        name='XPredictHashIDComidHashResults'
+        if hash_id is None:
+            path=name+'.sqlite'
+            if not os.path.exists(path):
+                return []
+            try:
+                return SqliteDict.get_tablenames(path)
+            except OSError:
+                return []
+            except:
+                assert False,f'unexpected error, hash_id:{hash_id}'
+        return self.anyNameDB(name,hash_id,folder='data_tool')
+    
+    
+    
     def postFitDBdict(self,name):
         return SqliteDict(filename=self.postfitDBdictpath,tablename=name, encode=self.my_encode, decode=self.my_decode)
     
@@ -87,11 +105,15 @@ class DBTool():
     def predictDBdict(self,):
         return SqliteDict(filename=self.predictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
     
-    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0):
+    def XpredictDBdict(self,):
+        return SqliteDict(filename=self.XpredictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
+    
+    
+    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0,Xpredict=False):
         try:
             if type(save_list) is dict:
                 save_list=[save_list]
-            if db:
+            if not db is None:
                 pass        
             elif gen:
                 db=self.genDBdict
@@ -103,25 +125,38 @@ class DBTool():
                 else:
                     kwargs={}
                 db=lambda: self.pidataDBdict(**kwargs)
+            elif Xpredict:
+                db=lambda X:self.XPredictHashIDComidHashResultsDB(hash_id=X)
             else:
                 db=self.resultsDBdict
             saved=False;tries=0
             while not saved:
                 try:
-                    with db() as dbdict:
-                        
+                    if Xpredict:
                         for dict_i in save_list:
-                            for key,val in dict_i.items():
-                                if key in dbdict:
-                                    if not gen:
-                                        self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
-                                        dbdict[key]=val
-                                    else:
-                                        self.logger.debug(f'key:{key} already exists in gen table in db dict')
-                                else:
-                                    dbdict[key]=val
+                            for hash_id,c_hash_dict in dict_i.items():
+                                with db(hash_id) as dbdict:
+                                    for c_hash,result in c_hash_dict.items():
+                                        if c_hash in dbdict:
+                                            self.logger.critical(f'c_hash:{c_hash} already in resultdict for hash_id:{hash_id}. old result: {dbdict[c_hash]}')
+                                        dbdict[c_hash]=result
                         dbdict.commit()
                         saved=True
+                    else:    
+                        with db() as dbdict:
+
+                            for dict_i in save_list:
+                                for key,val in dict_i.items():
+                                    if key in dbdict:
+                                        if not gen:
+                                            self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
+                                            dbdict[key]=val
+                                        else:
+                                            self.logger.debug(f'key:{key} already exists in gen table in db dict')
+                                    else:
+                                        dbdict[key]=val
+                            dbdict.commit()
+                            saved=True
                 except:
                     tries+=1
                     self.logger.exception(f'dbtool addtoDBDict error! tries:{tries}')

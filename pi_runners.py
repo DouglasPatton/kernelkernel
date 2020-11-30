@@ -1,28 +1,20 @@
 import pandas as pd
 import numpy as np
+from sqlitedict import SqliteDict
 from mylogger import myLogger
 from  sk_tool import SKToolInitializer
 from sk_estimators import sk_estimator
-from datagen import dataGenerator
+from datagen import dataGenerator,XdataGenerator
 from pi_db_tool import DBTool
+
 
 ## Runners are oriented around the data_gen in 
 ###the rundict they recieve. the data is not pulled 
 ###until the node starts it up to reduce q load 
 ###but requires data be sent around.
 
-class XPredictRunner(myLogger):
-    def __init__(self,rundict):
-        myLogger.__init__(self,name='XPredictRunner.log')
-        self.logger.info('starting XPredictRunner logger')
-        self.rundict=rundict
-        self.saveq=None
+
         
-    def passQ(self,saveq):
-        self.saveq=saveq
-        
-    def build(self):
-        pass
     
 class PredictRunner(myLogger):
     # runners are initialized by qmulticluster_master and built by pisces_params.py
@@ -38,7 +30,7 @@ class PredictRunner(myLogger):
         #called on master machine by jobqfiller before sending to jobq
         try:
             none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
-            if len(none_hash_id_list)>0:
+            if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
                 resultsDBdict=DBTool().resultsDBdict()
                 for hash_id in none_hash_id_list:
                     self.rundict[hash_id]=resultsDBdict[hash_id]['model']
@@ -90,7 +82,7 @@ class PredictRunner(myLogger):
                 coefs=[]
                 x_vars=[]
             scor_names,scors=zip(*[(f'scorer:{key[5:]}',model[key][m]) for key in model.keys() if key[:5]=='test_'])
-            coefs=[coef[0] for coef in coefs]
+            coefs=list(coefs)
             arr_list=[*scors,*coefs]
             #arr_list=[arr[:,None] for arr in arr_list]
             #data=np.concatenate(arr_list,axis=1)
@@ -110,15 +102,10 @@ class PredictRunner(myLogger):
         #FitRunner doesnt have equivalent to this
         #  becuase SKToolInitializer and sktool make this stuff happen
             
-        '''if 'make_y' in data.datagen_dict:
-            make_y=1
-        else:
-            make_y=0'''
-        
         n=data.y_train.shape[0]
         species=data.datagen_dict['species']
         
-        yhat_stack=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
+        #yhat_stack=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
         est_name=model['estimator'][0].name    
         _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
         cv_count=len(cv_test_idx)
@@ -200,7 +187,196 @@ class PredictRunner(myLogger):
         data_gen=rundict.pop('data_gen') #how to generate the data
         data=dataGenerator(data_gen)
         return data,rundict 
+
+    
+    
+class XPredictRunner(PredictRunner):
+    def __init__(self,rundict):
+        """myLogger.__init__(self,name='XPredictRunner.log')
+        self.logger.info('starting XPredictRunner logger')
+        self.rundict=rundict
+        self.saveq=None"""
+        PredictRunner.__init__(self,rundict)
+        self.hash_id_c_hash_dict=None
         
+    def build(self):
+        #called on master machine by jobqfiller before sending to jobq
+        try:
+            none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
+            if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
+                resultsDBdict=DBTool().resultsDBdict()
+                for hash_id in none_hash_id_list:
+                    self.rundict[hash_id]=resultsDBdict[hash_id]['model']
+                    self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
+                    
+            data,rundict=self.build_from_rundict(self.rundict.copy())
+            comidblockhashdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
+            hash_id_list=rundict.keys()
+            self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
+            self.logger.info(f'{data.spec} predictrunner built')
+                    
+            
+        except: 
+            self.logger.exception(f'build error with rundict:{rundict}')
+    
+    
+    
+    
+    
+    def checkXPredictHashIDComidHashResults(self,hash_ids,comidblockdict):
+        
+        hash_id_c_hash_dict={}
+        hash_ids_in_results=DBTool().XPredictHashIDComidHashResultsDB()#tablenames
+        for hash_id in hash_ids:
+            if hash_id in hash_ids_in_results:
+                with DBTool().XPredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
+                    hash_c_hash_with_results=dict.fromkeys(hash_resultsdb.keys())
+                hash_id_c_hash_dict[hash_id]=[]
+
+                for c_hash in comidblockdict.keys():
+                    if not c_hash in hash_c_hash_with_results:
+                        hash_id_c_hash_dict[hash_id].append(c_hash)
+                    else:
+                        self.logger.info(f'hash_id:{hash_id},c_hash:{c_hash} already complete')
+            else:
+                hash_id_c_hash_dict[hash_id]=list(comidblockdict.keys())
+        return hash_id_c_hash_dict
+                    
+        
+    def build_from_rundict(self,rundict):
+        data_gen=rundict.pop('data_gen') #how to generate the data
+        data=XdataGenerator(data_gen)
+        return data,rundict   
+    
+    
+        
+    
+    def run(self,):
+        #self.hash_id_c_hash_dict
+        c_hash_hash_id_dict={}#just reversing the dict
+        for hash_id,c_hash_list in self.hash_id_c_hash_dict.items():
+            for c_hash in c_hash_list:
+                if not c_hash in c_hash_hash_id_dict:
+                    c_hash_hash_id_dict[c_hash]=[hash_id]
+                else:
+                    c_hash_hash_id_dict[c_hash].append(hash_id)
+                    
+        self.ske=sk_estimator()
+        data,hash_id_model_dict=self.build_from_rundict(self.rundict)
+        for hash_id,model in hash_id_model_dict.items():
+            for skt in model['estimator']:
+                if 'HUC12' in skt.x_vars:
+                    self.logger.error(f'HUC12 found in hash_id:{hash_id}')
+                    assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'
+        keylist=data.datagen_dict['x_vars']
+        keylist.append('HUC12')
+        comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
+        for c_hash,hash_id_list in c_hash_hash_id_dict.items():
+            
+            comidlist=comidblockdict[c_hash]
+            
+            datadf=data.generateXPredictBlockDF(
+                data.spec,comidlist=comidlist,keylist=keylist)
+            self.logger.info(f'')
+            
+            
+        
+            for hash_id in hash_id_list:
+                model=hash_id_model_dict[hash_id]
+                try:
+                    success=0
+                    predictresult={hash_id:{c_hash:self.Xpredict(datadf,data,model,hash_id)}}
+                    success=1
+                except:
+                    self.logger.exception('error for model_dict:{model_dict}')
+                if self.saveq is None and success:
+                        self.logger.info(f'no saveq, returning predictresult')
+                        return predictresult
+                else:
+                    qtry=0
+                    while success:
+                        self.logger.debug(f'adding savedict to saveq')
+                        try:
+                            qtry+=1
+                            self.saveq.put(predictresult)
+                            self.logger.debug(f'savedict successfully added to saveq')
+                            break
+                        except:
+                            if not self.saveq.full() and qtry>3:
+                                self.logger.exception('error adding to saveq')
+                            else:
+                                sleep(1)
+
+    
+    def Xpredict(self,datadf,data,model,hash_id):
+        n=datadf.shape[0]
+        est_name=model['estimator'][0].name  
+        species=data.spec
+        huc12s=datadf.loc[:,'HUC12']
+        huc12strs=huc12s.apply(self.huc12float_to_str)
+        Xdf=datadf.drop('HUC12',axis=1)
+        predict_vars=list(Xdf.columns)
+        train_vars=list(model['estimator'][0].x_vars)
+        self.logger.info(f'starting an Xpredict for {species} - {est_name} ')
+        if len(predict_vars)!=len(train_vars):
+            self.logger.error(f'{species} predict_vars:{predict_vars}')
+            self.logger.error(f'{species} train_vars:{train_vars}')
+        assert all([predict_vars[i]==train_vars[i] for i in range(len(train_vars))]),f'predict and train vars should match, but predict_vars:{predict_vars} and train_vars:{train_vars}'
+            
+        
+        yhat_list=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
+         
+        
+        if 'data_split' in data.datagen_dict:
+            cv_dict=data.datagen_dict['data_split']['cv']
+
+            n_repeats=cv_dict['n_repeats']
+            n_splits=cv_dict['n_splits']
+            cv_count=n_repeats*n_splits
+            self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+            m=0;col_tup_list=[]
+            for rep in range(n_repeats):
+                for s in range(n_splits):
+                    model_m=model['estimator'][m]                
+                    try:
+                        self.logger.info(f'about to predict {m+1} of {cv_count}')
+                        yhat=model_m.predict(Xdf)
+                        yhat_list.append(yhat)
+                        col_tup_list.append(('y',rep,s))
+                    except:
+                        self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
+
+                    m+=1
+            yhat_list=[y[:,None] for y in yhat_list] # make columns for concatenation
+            yhat_stack_arr=np.concatenate(yhat_list,axis=1)
+
+            #col_tups=[('yhat',r,s) for r in range(n_repeats)]
+
+            columns=pd.MultiIndex.from_tuples(
+                col_tup_list,names=['var','rep_idx','split_idx'])
+        else:
+            yhat=model.predict(Xdf)
+            self.logger.info(f'no data_split, no cv for {species}, {est_name}')
+            yhat_stack_arr=yhat[:,None]#make a column
+            columns=['y']
+            
+        comids=datadf.index
+        
+        names=['species','estimator','HUC12','COMID']
+        index=pd.MultiIndex.from_tuples([(species,est_name,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
+        self.logger.info(f'yhat_stack_arr.shape:{yhat_stack_arr.shape}, yhat_stack_arr:{yhat_stack_arr}')
+        #self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
+        self.logger.info(f'index:{index}')
+        yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
+        self.logger.info(f'yhat_df.shape:{yhat_df.shape}')
+        return yhat_df
+        
+        
+        
+        
+        
+        
+    
 
 class FitRunner(myLogger):
     def __init__(self,rundict):
