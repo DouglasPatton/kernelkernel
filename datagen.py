@@ -121,17 +121,24 @@ class dataGenerator(PiscesDataTool,myLogger):
                     data_split_dict['cv']['n_repeats']=n_n_reps
                     self.logger.critical(f'split change for species:{species} new_n_splits:{new_n_splits}, new_n_reps:{new_n_reps},old_n_splits:{old_n_splits},old_n_reps:{old_n_reps}')
                 cv_kwargs={key:val for key,val in data_split_dict['cv'].items() if not val is None}
-                self.cv=RepeatedKFold(**cv_kwargs)  
+                self.setCV(RepeatedKFold,cv_kwargs)  
                 self.logger.info(f'cv set for species:{species}')
             else:
-                self.cv=None
+                self.cv=False
                 self.logger.info(f'NO CV for species:{species}. datagen_dict:{datagen_dict}, data_split_dict:{data_split_dict}')
         except:
             self.logger.exception(f'datagen outer catch')
-            
+    def setCV(func,kwargs):
+        self.cvfunc=func
+        self.cvkwargs=kwargs
+        self.cv=True
+        
+    def getCV():
+        return self.cvfunc(**self.cvkwargs)
+    
     def get_split_iterator(self,):
         if self.cv:
-            return self.cv.split(self.X_train,self.y_train)
+            return self.getCV().split(self.X_train,self.y_train)
         else:
             return[(X_train,y_train)]
         

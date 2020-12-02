@@ -9,16 +9,17 @@ from pi_db_tool import DBTool
 
 
 ## Runners are oriented around the data_gen in 
-###the rundict they recieve. the data is not pulled 
-###until the node starts it up to reduce q load 
-###but requires data be sent around.
+###the rundict they recieve. For predictrunners, the data is not pulled 
+###until the node starts it up to reduce time/memory for creating runlist 
+
 
 
         
     
 class PredictRunner(myLogger):
     # runners are initialized by qmulticluster_master and built by pisces_params.py
-    # qmulticluster_node runs passQ and then run(), which adds to teh saveq itself.
+    # qmulticluster_node runs passQ, build, and then run(), which adds to the saveq itself.
+    #     the build step adds to the runner any needed data found only on the master, such as the result for prediction.
     def __init__(self,rundict):
         myLogger.__init__(self,name='PredictRunner.log')
         self.logger.info('starting PredictRunner logger')
@@ -106,13 +107,24 @@ class PredictRunner(myLogger):
         species=data.datagen_dict['species']
         
         #yhat_stack=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
-        est_name=model['estimator'][0].name    
-        _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
-        cv_count=len(cv_test_idx)
-        cv_dict=data.datagen_dict['data_split']['cv']
-        n_repeats=cv_dict['n_repeats']
-        n_splits=cv_dict['n_splits']
-        self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+        
+        if type(model) is dict:
+            cv_run=True
+            self.logger.info(f'predicting for cv result')
+            est_name=model['estimator'][0].name    
+            _,cv_test_idx=zip(*list(data.get_split_iterator())) # not using cv_train_idx # can maybe remove  *list?
+            cv_count=len(cv_test_idx)
+            cv_dict=data.datagen_dict['data_split']['cv']
+            n_repeats=cv_dict['n_repeats']
+            n_splits=cv_dict['n_splits']
+            self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+        else:
+            cv_run=False
+            self.logger.info(f'predicting for non-CV result')
+            n_repeats=1
+            n_splits=1
+            cv_test_idx=[np.arange(n)]
+            est_name=model.name
         yhat=np.empty([n,])
         yhat[:]=np.nan
         m=0
@@ -123,7 +135,10 @@ class PredictRunner(myLogger):
             
             for s in range(n_splits):
                 #self.logger.info(f'for {species} & {est_name}, {m}/{cv_count}')
-                model_m=model['estimator'][m]
+                if cv_run:
+                    model_m=model['estimator'][m]
+                else:
+                    model_m=model
                 coef_scor_df_m=self.make_coef_scor_df(model,rep,s,m,species)
                 coef_scor_df_list.append(coef_scor_df_m)
                 
@@ -332,33 +347,39 @@ class XPredictRunner(PredictRunner):
 
             n_repeats=cv_dict['n_repeats']
             n_splits=cv_dict['n_splits']
-            cv_count=n_repeats*n_splits
-            self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
-            m=0;col_tup_list=[]
-            for rep in range(n_repeats):
-                for s in range(n_splits):
-                    model_m=model['estimator'][m]                
-                    try:
-                        self.logger.info(f'about to predict {m+1} of {cv_count}')
-                        yhat=model_m.predict(Xdf)
-                        yhat_list.append(yhat)
-                        col_tup_list.append(('y',rep,s))
-                    except:
-                        self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
-
-                    m+=1
-            yhat_list=[y[:,None] for y in yhat_list] # make columns for concatenation
-            yhat_stack_arr=np.concatenate(yhat_list,axis=1)
-
-            #col_tups=[('yhat',r,s) for r in range(n_repeats)]
-
-            columns=pd.MultiIndex.from_tuples(
-                col_tup_list,names=['var','rep_idx','split_idx'])
         else:
+            n_repeats=1;n_splits=1
+            
+        cv_count=n_repeats*n_splits
+        self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+        m=0;col_tup_list=[]
+        for rep in range(n_repeats):
+            for s in range(n_splits):
+                if type(model_m) is dict:
+                    model_m=model['estimator'][m]  
+                else:
+                    model_m=model
+                try:
+                    self.logger.info(f'about to predict {m+1} of {cv_count}')
+                    yhat=model_m.predict(Xdf)
+                    yhat_list.append(yhat)
+                    col_tup_list.append(('y',rep,s))
+                except:
+                    self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
+
+                m+=1
+        yhat_list=[y[:,None] for y in yhat_list] # make columns for concatenation
+        yhat_stack_arr=np.concatenate(yhat_list,axis=1)
+
+        #col_tups=[('yhat',r,s) for r in range(n_repeats)]
+
+        columns=pd.MultiIndex.from_tuples(
+            col_tup_list,names=['var','rep_idx','split_idx'])
+        """else:
             yhat=model.predict(Xdf)
             self.logger.info(f'no data_split, no cv for {species}, {est_name}')
             yhat_stack_arr=yhat[:,None]#make a column
-            columns=['y']
+            columns=['y']"""
             
         comids=datadf.index
         
