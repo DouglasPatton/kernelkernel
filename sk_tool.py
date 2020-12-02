@@ -38,19 +38,14 @@ class SKToolInitializer(myLogger):
         model_gen=self.model_gen.copy()
         model_gen_scorer=model_gen.pop('scorer')
         sktool=SkTool(model_gen,scorer=self.scorer_dict[model_gen_scorer])
-        try:
-            datagen_obj.cv
-            self.logger.info(f'starting cv for sktool.model_gen["name"]{sktool.model_gen["name"]}')
+        if not datagen_obj.cv is None:
+            self.logger.info(f'starting cv for sktool.model_gen["name"]:{sktool.model_gen["name"]}')
             cv_dict=cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_dict,n_jobs=1)
             return cv_dict
-        except AttributeError:
+        else:
             self.logger.info(f'starting simple fit (not cv) for sktool.model_gen["name"]{sktool.model_gen["name"]}')
             sktool.fit(datagen_obj.X_train,datagen_obj.y_train)
             return sktool
-        except:
-            self.logger.exception('unexpected error')
-            assert False, 'halt'
-
 
 
         
