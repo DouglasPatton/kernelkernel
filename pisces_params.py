@@ -9,6 +9,7 @@ from random import randint
 from pi_db_tool import DBTool
 from pi_runners import FitRunner,PredictRunner, XPredictRunner
 from pi_results import PiResults
+#from pi_xresults import PiXResults #no longer using
 
 class PiSetup(myLogger):
     def __init__(self,test=False,run_type='fit',linear_run=False,scorer='f1_micro',cv_run=False):
@@ -181,6 +182,7 @@ class PiSetup(myLogger):
                 test=20
             else:
                 test=self.test
+            #PiXResults.consolidateXpredict()
             rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
             runlist=[]
             self.logger.info(f'building list of Xpredict runners. len(rundict_list):{len(rundict_list)}')

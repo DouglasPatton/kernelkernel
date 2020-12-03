@@ -205,15 +205,17 @@ class PredictRunner(myLogger):
 
     
     
-class XPredictRunner(PredictRunner):
+class XPredictRunner:#(PredictRunner):
     def __init__(self,rundict):
-        """myLogger.__init__(self,name='XPredictRunner.log')
+        myLogger.__init__(self,name='XPredictRunner.log')
         self.logger.info('starting XPredictRunner logger')
         self.rundict=rundict
-        self.saveq=None"""
-        PredictRunner.__init__(self,rundict)
+        self.saveq=None
+        #PredictRunner.__init__(self,rundict)
         self.hash_id_c_hash_dict=None
         
+    def passQ(self,saveq):
+        self.saveq=saveq    
     def build(self):
         #called on master machine by jobqfiller before sending to jobq
         try:
@@ -235,16 +237,20 @@ class XPredictRunner(PredictRunner):
             self.logger.exception(f'build error with rundict:{rundict}')
     
     
-    
+    def huc12float_to_str(self,huc12):
+        huc12str=str(int(huc12))
+        if len(huc12str)==11:huc12str='0'+huc12str
+        assert len(huc12str)==12,'expecting len 12 from huc12str:{huc12str}'
+        return huc12str
     
     
     def checkXPredictHashIDComidHashResults(self,hash_ids,comidblockdict):
-        
+        dbt=DBTool()
         hash_id_c_hash_dict={}
-        hash_ids_in_results=DBTool().XPredictHashIDComidHashResultsDB()#tablenames
+        hash_ids_in_results=dbt.XPredictHashIDComidHashResultsDB()#tablenames
         for hash_id in hash_ids:
             if hash_id in hash_ids_in_results:
-                with DBTool().XPredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
+                with dbt.XPredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
                     hash_c_hash_with_results=dict.fromkeys(hash_resultsdb.keys())
                 hash_id_c_hash_dict[hash_id]=[]
 
@@ -253,6 +259,11 @@ class XPredictRunner(PredictRunner):
                         hash_id_c_hash_dict[hash_id].append(c_hash)
                     else:
                         self.logger.info(f'hash_id:{hash_id},c_hash:{c_hash} already complete')
+                if len(hash_id_c_hash_dict[hash_id])==0:
+                    with dbt.XpredictDBdict() as done_db:
+                        done_db[hash_id]='complete'
+                        done_db.commit()
+                    self.logger.info(f'hash_id:{hash_id} is complete and added to XpredictDBdict as "complete"')
             else:
                 hash_id_c_hash_dict[hash_id]=list(comidblockdict.keys())
         return hash_id_c_hash_dict
@@ -278,11 +289,11 @@ class XPredictRunner(PredictRunner):
                     
         self.ske=sk_estimator()
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
-        for hash_id,model in hash_id_model_dict.items():
+        """for hash_id,model in hash_id_model_dict.items():
             for skt in model['estimator']:
                 if 'HUC12' in skt.x_vars:
                     self.logger.error(f'HUC12 found in hash_id:{hash_id}')
-                    assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'
+                    assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'"""
         keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]

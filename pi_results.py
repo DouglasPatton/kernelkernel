@@ -660,7 +660,10 @@ class PiResults(DBTool,myLogger):
         if not rebuild:
             try:
                 species_hash_id_dict=self.getsave_postfit_db_dict(name)
-                return species_hash_id_dict
+                if len(species_hash_id_dict)>0:
+                    return species_hash_id_dict
+                else:
+                    self.logger.info(f'rebuilding b/c species_hash_id_dict has non-pos length')
             except:
                 self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
         species_hash_id_dict={}
