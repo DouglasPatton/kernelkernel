@@ -335,14 +335,25 @@ class XPredictRunner:#(PredictRunner):
 
     
     def Xpredict(self,datadf,data,model,hash_id):
+        if type(model_m) is dict:
+            is_cv_model=True
+            est_name=model['estimator'][0].name  
+            train_vars=list(model['estimator'][0].x_vars)
+            cv_dict=data.datagen_dict['data_split']['cv']
+            n_repeats=cv_dict['n_repeats']
+            n_splits=cv_dict['n_splits']
+        else:
+            is_cv_model=False
+            n_repeats=1;n_splits=1
+            
         n=datadf.shape[0]
-        est_name=model['estimator'][0].name  
         species=data.spec
         huc12s=datadf.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
         Xdf=datadf.drop('HUC12',axis=1)
         predict_vars=list(Xdf.columns)
-        train_vars=list(model['estimator'][0].x_vars)
+        
+        #check to make sure data matches model
         self.logger.info(f'starting an Xpredict for {species} - {est_name} ')
         if len(predict_vars)!=len(train_vars):
             self.logger.error(f'{species} predict_vars:{predict_vars}')
@@ -352,21 +363,12 @@ class XPredictRunner:#(PredictRunner):
         
         yhat_list=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
          
-        
-        if 'data_split' in data.datagen_dict:
-            cv_dict=data.datagen_dict['data_split']['cv']
-
-            n_repeats=cv_dict['n_repeats']
-            n_splits=cv_dict['n_splits']
-        else:
-            n_repeats=1;n_splits=1
-            
         cv_count=n_repeats*n_splits
         self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
         m=0;col_tup_list=[]
         for rep in range(n_repeats):
             for s in range(n_splits):
-                if type(model_m) is dict:
+                if is_cv_model:
                     model_m=model['estimator'][m]  
                 else:
                     model_m=model
@@ -379,10 +381,9 @@ class XPredictRunner:#(PredictRunner):
                     self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
 
                 m+=1
-        yhat_list=[y[:,None] for y in yhat_list] # make columns for concatenation
+        yhat_list=[y[:,None] for y in yhat_list] # make into 2d as columns for concatenation
         yhat_stack_arr=np.concatenate(yhat_list,axis=1)
 
-        #col_tups=[('yhat',r,s) for r in range(n_repeats)]
 
         columns=pd.MultiIndex.from_tuples(
             col_tup_list,names=['var','rep_idx','split_idx'])
