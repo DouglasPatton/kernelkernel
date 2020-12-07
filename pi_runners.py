@@ -335,7 +335,7 @@ class XPredictRunner:#(PredictRunner):
 
     
     def Xpredict(self,datadf,data,model,hash_id):
-        if type(model_m) is dict:
+        if type(model) is dict:
             is_cv_model=True
             est_name=model['estimator'][0].name  
             train_vars=list(model['estimator'][0].x_vars)
