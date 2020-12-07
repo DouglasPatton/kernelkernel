@@ -344,7 +344,10 @@ class XPredictRunner:#(PredictRunner):
             n_splits=cv_dict['n_splits']
         else:
             is_cv_model=False
-            n_repeats=1;n_splits=1
+            est_name=model.name
+            train_vars=list(model.x_vars)
+            n_repeats=1
+            n_splits=1
             
         n=datadf.shape[0]
         species=data.spec
