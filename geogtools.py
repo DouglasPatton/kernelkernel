@@ -38,6 +38,7 @@ class GeogTool(myLogger):
                     if os.path.exists(networkpath):
                         self.sc_data_dir=networkpath
                     else:
+                        self.sc_data_dir=None
                         self.logger.error('cannot locate streamcat data. proceeding')
                         #assert False, 'cannot locate local streamcat data'
         else: self.sc_data_dir=sc_data_dir
