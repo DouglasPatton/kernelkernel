@@ -38,7 +38,8 @@ class GeogTool(myLogger):
                     if os.path.exists(networkpath):
                         self.sc_data_dir=networkpath
                     else:
-                        assert False, 'cannot locate local streamcat data'
+                        self.logger.error('cannot locate streamcat data. proceeding')
+                        #assert False, 'cannot locate local streamcat data'
         else: self.sc_data_dir=sc_data_dir
         print("streamcat data directory:",self.sc_data_dir)
         #self.reverse_huc12comid() # this will build most/all of the NHDplus related files if they don't exist
