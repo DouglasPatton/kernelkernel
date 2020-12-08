@@ -133,7 +133,7 @@ class dataGenerator(PiscesDataTool,myLogger):
         self.cvkwargs=kwargs
         self.cv=True
         
-    def getCV():
+    def getCV(self):
         return self.cvfunc(**self.cvkwargs)
     
     def get_split_iterator(self,):
