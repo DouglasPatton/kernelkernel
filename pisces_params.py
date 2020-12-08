@@ -12,7 +12,7 @@ from pi_results import PiResults
 #from pi_xresults import PiXResults #no longer using
 
 class PiSetup(myLogger):
-    def __init__(self,test=False,run_type='fit',linear_run=False,scorer='f1_micro',cv_run=False):
+    def __init__(self,test=False,run_type='fit',linear_run=False,scorer='f1_micro',cv_run=True):
         self.scorer=scorer
         self.cv_run=cv_run
         self.test=test#True # reduces repeats to speed things up
