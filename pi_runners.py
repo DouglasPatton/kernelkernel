@@ -309,19 +309,23 @@ class XPredictRunner:#(PredictRunner):
         
             for hash_id in hash_id_list:
                 model=hash_id_model_dict[hash_id]
+                predictresult=None
                 try:
                     success=0
                     predictresult={hash_id:{c_hash:self.Xpredict(datadf,data,model,hash_id)}}
+                    self.logger.info(f'predictresult:{predictresult}')
                     success=1
                 except:
                     self.logger.exception('error for model_dict:{model_dict}')
                 if self.saveq is None and success:
                         self.logger.info(f'no saveq, returning predictresult')
                         return predictresult
+                elif not success:
+                    self.logger.error(f'failure for c_hash:{c_hash}, hash_id:{hash_id}, predictresult:{predictresult}')
                 else:
                     qtry=0
-                    while success:
-                        self.logger.debug(f'adding savedict to saveq')
+                    while True:
+                        self.logger.debug(f'adding predictresult to saveq')
                         try:
                             qtry+=1
                             self.saveq.put(predictresult)
