@@ -128,7 +128,7 @@ class dataGenerator(PiscesDataTool,myLogger):
                 self.logger.info(f'NO CV for species:{species}. datagen_dict:{datagen_dict}, data_split_dict:{data_split_dict}')
         except:
             self.logger.exception(f'datagen outer catch')
-    def setCV(func,kwargs):
+    def setCV(self,func,kwargs):
         self.cvfunc=func
         self.cvkwargs=kwargs
         self.cv=True
