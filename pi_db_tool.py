@@ -141,6 +141,7 @@ class DBTool():
                                             self.logger.critical(f'c_hash:{c_hash} already in resultdict for hash_id:{hash_id}. old result: {dbdict[c_hash]}')
                                         dbdict[c_hash]=result
                         dbdict.commit()
+                        self.logger.info(f'add to dbdict success')
                         saved=True
                     else:    
                         with db() as dbdict:
