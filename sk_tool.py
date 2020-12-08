@@ -40,7 +40,7 @@ class SKToolInitializer(myLogger):
         sktool=SkTool(model_gen,scorer=self.scorer_dict[model_gen_scorer])
         if datagen_obj.cv:
             self.logger.info(f'starting cv for sktool.model_gen["name"]:{sktool.model_gen["name"]}')
-            cv_dict=cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.cv,return_estimator=True,scoring=self.scorer_dict,n_jobs=1)
+            cv_dict=cross_validate(sktool,datagen_obj.X_train,datagen_obj.y_train,cv=datagen_obj.getCV(),return_estimator=True,scoring=self.scorer_dict,n_jobs=1)
             return cv_dict
         else:
             self.logger.info(f'starting simple fit (not cv) for sktool.model_gen["name"]{sktool.model_gen["name"]}')
