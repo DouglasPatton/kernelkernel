@@ -55,11 +55,11 @@ class PiSetup(myLogger):
             cv_gen_dict=dict(n_splits=splits,
                         n_repeats=repeats,
                         strategy=None, # e.g., 'balanced-HUC8'
-                        random_state=rs),
+                        random_state=rs)
             data_split_dict=dict(
                 test_share=0,
                 cv=cv_gen_dict
-            ),
+            )
         else:data_split_dict=dict(test_share=0)
             
         self.datagen_dict_template=dict(
