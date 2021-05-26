@@ -68,7 +68,7 @@ class DBTool():
     def XPredictHashIDComidHashResultsDB(self,hash_id=None):
         name='XPredictHashIDComidHashResults'
         if hash_id is None:
-            path=name+'.sqlite'
+            path=os.path.join('data_tool',name+'.sqlite')
             if not os.path.exists(path):
                 return []
             try:
@@ -140,7 +140,7 @@ class DBTool():
                                         if c_hash in dbdict:
                                             self.logger.critical(f'c_hash:{c_hash} already in resultdict for hash_id:{hash_id}. old result: {dbdict[c_hash]}')
                                         dbdict[c_hash]=result
-                        dbdict.commit()
+                                    dbdict.commit()
                         self.logger.info(f'add to dbdict success')
                         saved=True
                     else:    

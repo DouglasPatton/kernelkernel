@@ -358,6 +358,7 @@ class XPredictRunner:#(PredictRunner):
         huc12s=datadf.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
         Xdf=datadf.drop('HUC12',axis=1)
+        Xdf=Xdf.loc[:,train_vars] # make sure order matches and all variables present
         predict_vars=list(Xdf.columns)
         
         #check to make sure data matches model
