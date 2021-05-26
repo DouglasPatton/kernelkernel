@@ -41,13 +41,7 @@ class missingValHandler(BaseEstimator,TransformerMixin):
                     self.logger.exception(f'error summing nulls for y, type(y):{type(y)}')
                 else:
                     pass
-        #self.logger.info(f'x_nan_count:{x_nan_count}, y_nan_count:{y_nan_count}')
-        return self
-        
-    def transform(self,X,y=None):
-        if type(X)!=pd.DataFrame:
-            X=pd.DataFrame(X)
-        
+                
         cat_encoder=OneHotEncoder(categories=self.cat_list,sparse=False,) # drop='first'
         xvars=list(X.columns)
         if type(self.strategy) is str:
@@ -75,9 +69,20 @@ class missingValHandler(BaseEstimator,TransformerMixin):
                 numeric_T=('num_imputer', KNNImputer(n_neighbors=k),self.float_idx_)
                 cat_imputer=make_pipeline(SimpleImputer(strategy='most_frequent'),cat_encoder)
                 categorical_T=('cat_imputer',cat_imputer,self.obj_idx_)
-        self.T=ColumnTransformer(transformers=[numeric_T,categorical_T])
-        self.T.fit(X,y)
-        X=self.T.transform(X)
+        self.T_=ColumnTransformer(transformers=[numeric_T,categorical_T])
+        self.T_.fit(X,y)        
+            
+                
+            
+        #self.logger.info(f'x_nan_count:{x_nan_count}, y_nan_count:{y_nan_count}')
+        return self
+        
+    def transform(self,X,y=None):
+        if type(X)!=pd.DataFrame:
+            X=pd.DataFrame(X)
+        
+        
+        X=self.T_.transform(X)
         x_nan_count=np.isnan(X).sum() # sums by column and then across columns
         """try:
             y_nan_count=y.isnull().sum().sum()
