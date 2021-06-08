@@ -160,7 +160,8 @@ class JobQFiller(mp.Process,myLogger):
                 tries=0
                 for i in range(max_q_size): #fill queue back up to 2*max_q_size
                     if len(self.joblist):
-                        job=self.joblist.pop()
+                        n_sel=np.random.randint(0,len(self.joblist))
+                        job=self.joblist.pop(n_sel)
                     else: 
                         self.logger.critical("jobqfiller's joblist is empty, returning")
                         return

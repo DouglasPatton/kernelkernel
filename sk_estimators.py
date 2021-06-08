@@ -98,7 +98,7 @@ class sk_estimator(myLogger):
         
     
     
-    def linSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
+    def linSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=1,random_state=0):
         try:
             param_grid={
                 'regressor__clf__C':np.logspace(-2,2,gridpoints),
@@ -122,7 +122,7 @@ class sk_estimator(myLogger):
     
     
     
-    def rbfSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
+    def rbfSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=1,random_state=0):
         try:
             steps=[
                 ('scaler',StandardScaler()),
@@ -143,7 +143,7 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
     
-    def histGradientBoostingClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
+    def histGradientBoostingClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=1,random_state=0):
         try:
             steps=[('clf',HistGradientBoostingClassifier(random_state=random_state))]
             inner_pipeline=Pipeline(steps=steps)
@@ -151,7 +151,7 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
         
-    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
+    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=1,random_state=0):
         try:
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
@@ -163,7 +163,7 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
         
-    def logisticClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
+    def logisticClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=1,random_state=0):
         try:
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
@@ -176,7 +176,7 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
         
-    def lpmClf(self,gridpoints=5,random_state=0,inner_cv_splits=5,inner_cv_reps=2,):
+    def lpmClf(self,gridpoints=5,random_state=0,inner_cv_splits=5,inner_cv_reps=1,):
         try:
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
