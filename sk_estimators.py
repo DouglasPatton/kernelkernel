@@ -101,7 +101,7 @@ class sk_estimator(myLogger):
     def linSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=1,random_state=0):
         try:
             param_grid={
-                'regressor__clf__C':np.logspace(-2,2,gridpoints),
+                'clf__C':np.logspace(-2,2,gridpoints),
             }
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
@@ -112,9 +112,9 @@ class sk_estimator(myLogger):
                 #('drop_constant',dropConst()),
                 ('clf',LinearSVC(random_state=random_state,tol=1e-2,max_iter=1000))]
             inner_pipeline=Pipeline(steps=steps)
-            t_former=None#binaryYTransformer()
-            outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
-            static_pipeline=GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            #t_former=None#binaryYTransformer()
+            #outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
+            static_pipeline=GridSearchCV(inner_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
             return Pipeline(steps=[('prep',missingValHandler(strategy='impute_knn_10')),('static_pipeline',static_pipeline)])
         except:
             self.logger.exception('')
