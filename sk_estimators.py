@@ -1,5 +1,5 @@
 from sklearn.pipeline import make_pipeline,Pipeline
-from sklearn.linear_model import LassoCV,LogisticRegressionCV
+from sklearn.linear_model import Lasso,LogisticRegressionCV
 from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler,PolynomialFeatures
 from sklearn.model_selection import cross_validate, train_test_split, RepeatedStratifiedKFold, GridSearchCV
@@ -176,30 +176,35 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
         
-    def lpmClf(self,gridpoints=5,random_state=0,inner_cv_splits=5,inner_cv_reps=1,):
+    def lpmClf(self,gridpoints=5,random_state=0,inner_cv_splits=5,inner_cv_reps=1):
         try:
+            param_grid={'regressor__clf__alpha':np.logspace(np.log10(.01),np.log10(1000),2*gridpoints)}
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
-                ('prep',missingValHandler(strategy='impute_knn_10')),
+                #('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                ('clf',LassoCV(normalize=False,max_iter=1000,n_alphas=gridpoints*20,cv=inner_cv,random_state=random_state))]
+                ('clf',Lasso(normalize=False,max_iter=1000,warm_start=True,random_state=random_state))]
 
             inner_pipeline=Pipeline(steps=steps)
             t_former=binaryYTransformer(threshold=0.5)
-            return TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
+            t_pipe= TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
+            static_pipeline= GridSearchCV(t_pipe,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            return Pipeline(steps=[('prep',missingValHandler(strategy='impute_knn_10')),('static_pipeline',static_pipeline)])
             
         except:
             self.logger.exception('')
     
 if __name__=="__main__":
-    X, y= make_regression(n_samples=3000,n_features=160,n_informative=100,noise=3)
+    X, y= make_regression(n_samples=300,n_features=16,n_informative=10,noise=3)
     y=(y-np.mean(y))
     y01=binaryYTransformer(threshold=0.5).fit(y).transform(y)
     X_train, X_test, y_train, y_test = train_test_split(X, y01, test_size=0.2, random_state=0)
     
     sk_est=sk_estimator()
     est_dict=sk_est.get_est_dict()
+    print(est_dict)
     for est_name,est_setup_dict in est_dict.items():
+        print(est_name)
         est=est_setup_dict['estimator']()
         est.fit(X_train,y_train)
         
