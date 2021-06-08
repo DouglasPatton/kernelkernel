@@ -1,5 +1,5 @@
 from sklearn.pipeline import make_pipeline,Pipeline
-from sklearn.linear_model import Lasso,LogisticRegressionCV
+from sklearn.linear_model import LassoCV,LogisticRegressionCV
 from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler,PolynomialFeatures
 from sklearn.model_selection import cross_validate, train_test_split, RepeatedStratifiedKFold, GridSearchCV
@@ -98,11 +98,14 @@ class sk_estimator(myLogger):
         
     
     
-    def linSvcClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
+    def linSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
         try:
+            param_grid={
+                'regressor__clf__C':np.logspace(-2,2,gridpoints),
+            }
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
             steps=[
-                ('prep',missingValHandler(strategy='impute_knn_10')),
+                #
                 ('scaler',StandardScaler()),
                 #('shrink_k1',shrinkBigKTransformer(selector=LassorLarsCV(max_iter=128,cv=inner_cv))), # retain a subset of the best original variables
                 #('polyfeat',PolynomialFeatures(interaction_only=0)), # create interactions among them
@@ -111,25 +114,17 @@ class sk_estimator(myLogger):
             inner_pipeline=Pipeline(steps=steps)
             t_former=None#binaryYTransformer()
             outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
-
-
-            param_grid={
-                'regressor__clf__C':np.logspace(-2,2,gridpoints),
-                #'regressor__shrink_k1__k_share':[1,1/2,1/8],
-                'regressor__prep__strategy':['impute_knn_10']
-            }
-
-            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            static_pipeline=GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            return Pipeline(steps=[('prep',missingValHandler(strategy='impute_knn_10')),('static_pipeline',static_pipeline)])
         except:
             self.logger.exception('')
     
     
     
     
-    def rbfSvcClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
+    def rbfSvcClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
         try:
             steps=[
-                ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
                 ('clf',SVC(kernel='rbf',random_state=random_state,tol=1e-3,max_iter=2000, cache_size=2*10**4))]
 
@@ -141,14 +136,14 @@ class sk_estimator(myLogger):
             param_grid={
                 'clf__C':np.logspace(-2,2,gridpoints), 
                 'clf__gamma':np.logspace(-2,0.5,gridpoints),
-                'prep__strategy':['impute_knn_10']
             }
             inner_cv=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
-            return GridSearchCV(inner_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            static_pipeline= GridSearchCV(inner_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            return Pipeline(steps=[('prep',missingValHandler(strategy='impute_knn_10')),('static_pipeline',static_pipeline)])
         except:
             self.logger.exception('')
     
-    def histGradientBoostingClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
+    def histGradientBoostingClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
         try:
             steps=[('clf',HistGradientBoostingClassifier(random_state=random_state))]
             inner_pipeline=Pipeline(steps=steps)
@@ -156,7 +151,7 @@ class sk_estimator(myLogger):
         except:
             self.logger.exception('')
         
-    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=10,inner_cv_reps=2,random_state=0):
+    def gradientBoostingClf(self,gridpoints=3,inner_cv_splits=5,inner_cv_reps=2,random_state=0):
         try:
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
@@ -187,13 +182,11 @@ class sk_estimator(myLogger):
             steps=[
                 ('prep',missingValHandler(strategy='impute_knn_10')),
                 ('scaler',StandardScaler()),
-                ('clf',Lasso(normalize=False,max_iter=1000,warm_start=True,random_state=random_state))]
+                ('clf',LassoCV(normalize=False,max_iter=1000,n_alphas=gridpoints*20,cv=inner_cv,random_state=random_state))]
 
-            param_grid={'regressor__clf__alpha':np.logspace(np.log10(.01),np.log10(1000),2*gridpoints)}
             inner_pipeline=Pipeline(steps=steps)
             t_former=binaryYTransformer(threshold=0.5)
-            outer_pipeline=TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
-            return GridSearchCV(outer_pipeline,param_grid=param_grid,cv=inner_cv,scoring=self.scorer)
+            return TransformedTargetRegressor(transformer=t_former,regressor=inner_pipeline,check_inverse=False)
             
         except:
             self.logger.exception('')
