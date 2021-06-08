@@ -70,13 +70,14 @@ class sk_estimator(myLogger):
     
         
     def get_est_dict(self,):
-        fit_kwarg_dict={'clf__sample_weight':'balanced'}# all are the same now # move to pisces_params?
+        fit_kwarg_dict={'clf__sample_weight':'balanced'}#  
+        fit_kwarg_dict2={'static_pipeline__clf__sample_weight':'balanced'}# 
         estimator_dict={
             #add logistic with e-net
-            'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict},#{'regressor__clf__sample_weight':'balanced'}},
+            'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict2},#{'regressor__clf__sample_weight':'balanced'}},
             'logistic-reg':{'estimator':self.logisticClf,'fit_kwarg_dict':fit_kwarg_dict},
-            'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
-            'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict2,},
+            'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict2,},
             'gradient-boosting-classifier':{'estimator':self.gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
             'hist-gradient-boosting-classifier':{'estimator':self.histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
         }
