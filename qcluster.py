@@ -15,6 +15,7 @@ from sqlitedict import SqliteDict
 #from  sk_tool import SKToolInitializer
 from datagen import dataGenerator 
 from pisces_params import PiSetup,MonteSetup
+from pi_runners import FitRunner
 from pi_db_tool import DBTool
 from mylogger import myLogger
 #class QueueManager(BaseManager): pass
@@ -191,13 +192,14 @@ class JobQFiller(mp.Process,myLogger):
                 
 
 class RunNode(mp.Process,BaseManager,myLogger):
-    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit'):
+    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit',cv_n_jobs=None):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         self.qdict=qdict
         self.source=source
         self.run_type=run_type
+        self.cv_n_jobs=cv_n_jobs
         if not local_run:
             try:
                 with open('ip.json','r') as f:
@@ -253,7 +255,10 @@ class RunNode(mp.Process,BaseManager,myLogger):
                             return
                      # each estimator contains rundict
                     runner.passQ(saveq)
-                    runner.run()
+                    if type(runner) is FitRunner:
+                        runner.run(cv_n_jobs=self.cv_n_jobs)
+                    else:
+                        runner.run()
             except:
                 self.logger.exception('runnode outer catch!')           
     
@@ -262,7 +267,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
     '''
     '''
     
-    def __init__(self,source=None,local_run=None,nodecount=0,qdict=None,run_type='fit'):
+    def __init__(self,source=None,local_run=None,nodecount=0,qdict=None,run_type='fit',cv_run=True):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -296,7 +301,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         else:
             self.source=source
         if self.source=='pisces':
-            self.setup=PiSetup(run_type=run_type) # in pisces_params, this file/object determines how things run
+            self.setup=PiSetup(run_type=run_type,cv_run=cv_run) # in pisces_params, this file/object determines how things run
         if self.source=='monte':
             self.setup=MonteSetup()
             

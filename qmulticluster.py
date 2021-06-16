@@ -10,13 +10,15 @@ from numpy import log
 
 
 class mypool(myLogger):
-    def __init__(self,source='pisces', nodecount=1,includemaster=1,local_run='no',run_type='fit'):
+    def __init__(self,source='pisces', nodecount=1,includemaster=1,local_run='no',run_type='fit',cv_run=False,cv_n_jobs=None):
         func_name='multicluster'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         self.run_type=run_type
         self.includemaster=includemaster
         self.source=source
+        self.cv_run=cv_run
+        self.cv_n_jobs=cv_n_jobs
 
         self.sleepbetweennodes=1#8 # seconds
         self.local_run=local_run
@@ -33,12 +35,17 @@ class mypool(myLogger):
             else:
                 qdict=None
             if self.includemaster:
-                master=qcluster.RunCluster(local_run=self.local_run,qdict=qdict,source=self.source,nodecount=0,run_type=self.run_type)
+                master=qcluster.RunCluster(local_run=self.local_run,qdict=qdict,source=self.source,nodecount=0,run_type=self.run_type,cv_run=self.cv_run)
                 proclist=[master]
             else:proclist=[]
                 #master.join()
             self.logger.debug('creating nodes')
-            proclist.extend([qcluster.RunNode(local_run=self.local_run,qdict=qdict,source=self.source,run_type=self.run_type) for _ in range(self.nodecount)])
+            proclist.extend([
+                qcluster.RunNode(
+                    local_run=self.local_run,qdict=qdict,source=self.source,
+                    run_type=self.run_type,cv_n_jobs=self.cv_n_jobs
+                    ) for _ in range(self.nodecount)
+                ])
             self.logger.debug('starting nodes')
             for proc in proclist:
                 proc.start()
@@ -55,22 +62,34 @@ class mypool(myLogger):
 
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_run='yes')
-    fit_or_predict=int(input('0 fit, 1 for predict, 2 for Xpredict',))
+    fit_or_predict=int(input('0 cv-fit, 1 for single-fit, 2 for fullfit predict, 3 for out of sample Xpredict: '))
     if fit_or_predict==0:
         run_type='fit'
+        cv_run=True
     elif fit_or_predict==1:
-        run_type='predict'
+        run_type='fit'
+        cv_run=False
+
     elif fit_or_predict==2:
+        run_type='predict'
+        
+    elif fit_or_predict==3:
         run_type='Xpredict'
     else: 
-        assert False, 'fit_or_predict not 0,1, or 2'
-    local_run=int(input('1 for local_run or 0 for network run'))
-    includemaster=int(input('1 for include master, 0 for not'))
-    nodecount=int(input('node count:'))
+        assert False, 'fit_or_predict not 0, 1, 2 or 3'
+    local_run=int(input('1 for local_run or 0 for network run: '))
+    includemaster=int(input('1 for include master, 0 for not: '))
+    nodecount=int(input('node count: '))
+    if nodecount>0 and cv_run:
+        cv_n_jobs=int(input('n_jobs per node: '))
+    else: 
+        cv_n_jobs=None
     
 
     test=mypool(nodecount=nodecount,
                 run_type=run_type,
                 includemaster=includemaster,
-                local_run=local_run
+                local_run=local_run,
+                cv_run=cv_run,
+                cv_n_jobs=cv_n_jobs
                )
