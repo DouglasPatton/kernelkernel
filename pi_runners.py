@@ -428,7 +428,7 @@ class FitRunner(myLogger):
         self.saveq=saveq
     def build(self):
         pass
-    def run(self,):
+    def run(self,cv_n_jobs=None):
         
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
         hash_id_list=list(hash_id_model_dict.keys())
@@ -438,7 +438,10 @@ class FitRunner(myLogger):
                 success=0
                 data.X_train 
                 self.logger.info(f'fitrunner running hash_id:{hash_id}')
-                model_dict['model']=model_dict['model'].run(data)
+                if cv_n_jobs is None:
+                    model_dict['model']=model_dict['model'].run(data)
+                else:
+                    model_dict['model']=model_dict['model'].run(data,cv_n_jobs=cv_n_jobs)
                 success=1
             except:
                 self.logger.exception(f'error for model_dict:{model_dict}')
