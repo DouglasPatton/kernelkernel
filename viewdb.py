@@ -2,16 +2,20 @@ import os
 from pi_db_tool import DBTool
 if __name__ == "__main__":
     dbt=DBTool()
-    results_dict=dbt.resultsDBdict()
-    gen_dict=dbt.genDBdict()
-    fitfail_dict=dbt.fitfailDBdict()
-    print('len(resultsDBdict): ',len(results_dict))
-    print('len(genDBdict): ',len(gen_dict))
-    print('len(fitfailDBdict): ',len(fitfail_dict))
+    db_dict={
+        'resultsDBdict':dbt.resultsDBdict(),
+        'gen_dict':dbt.genDBdict(),
+        'fitfail_dict':dbt.fitfailDBdict()}
     if os.path.exists(dbt.predictDBdictpath):
-        print('len(predictDBdict)',len(dbt.predictDBdict()))
-    success=0
-    fail=0
+        db_dict['predictDBdict']=dbt.predictDBdict()
+    
+    for db_name,db_callable in db_dict.items():
+        with db_callable as db:
+            print(f'len({db_name}): {len(db)}')
+        
+        
+    #        success=0
+    #        fail=0
     '''
     for key in results_dict.keys():
         try:

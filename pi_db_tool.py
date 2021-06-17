@@ -161,8 +161,8 @@ class DBTool():
                 except:
                     tries+=1
                     self.logger.exception(f'dbtool addtoDBDict error! tries:{tries}')
-                    sleep(2)
-                    if tries>100:
+                    sleep(20)
+                    if tries>20:
                         self.logger.warning(f'abandoning save_list:{save_list}')
                         break
                 
