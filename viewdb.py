@@ -3,14 +3,14 @@ from pi_db_tool import DBTool
 if __name__ == "__main__":
     dbt=DBTool()
     db_dict={
-        'resultsDBdict':dbt.resultsDBdict(),
-        'gen_dict':dbt.genDBdict(),
-        'fitfail_dict':dbt.fitfailDBdict()}
+        'resultsDBdict':dbt.resultsDBdict,
+        'gen_dict':dbt.genDBdict,
+        'fitfail_dict':dbt.fitfailDBdict}
     if os.path.exists(dbt.predictDBdictpath):
         db_dict['predictDBdict']=dbt.predictDBdict()
     
     for db_name,db_callable in db_dict.items():
-        with db_callable as db:
+        with db_callable() as db:
             print(f'len({db_name}): {len(db)}')
         
         
