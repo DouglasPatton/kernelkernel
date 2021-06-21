@@ -147,7 +147,7 @@ class DBTool():
                                         if c_hash in dbdict:
                                             self.logger.critical(f'c_hash:{c_hash} already in resultdict for hash_id:{hash_id}. old result: {dbdict[c_hash]}')
                                         dbdict[c_hash]=result
-                                    dbdict.commit()
+                                        dbdict.commit()
                         self.logger.info(f'add to dbdict success')
                         saved=True
                     else:    
@@ -159,11 +159,12 @@ class DBTool():
                                         if not gen:
                                             self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
                                             dbdict[key]=val
+                                            dbdict.commit()
                                         else:
                                             self.logger.debug(f'key:{key} already exists in gen table in db dict')
                                     else:
                                         dbdict[key]=val
-                            dbdict.commit()
+                                        dbdict.commit()
                             saved=True
                 except:
                     tries+=1
