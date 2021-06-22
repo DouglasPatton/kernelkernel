@@ -16,6 +16,9 @@ class DBTool():
         self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
+        self.errordir=os.path.join(resultsdir,'error')
+        if not os.path.exists(self.errordir):
+            os.mkdir(self.errordir)
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
         self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
@@ -137,40 +140,52 @@ class DBTool():
             else:
                 db=self.resultsDBdict
             saved=False;tries=0
-            while not saved:
+            while len(save_list)>0:
                 try:
+                    dict_i=save_list.pop()
                     if Xpredict:
-                        for dict_i in save_list:
-                            for hash_id,c_hash_dict in dict_i.items():
-                                with db(hash_id) as dbdict:
-                                    for c_hash,result in c_hash_dict.items():
-                                        if c_hash in dbdict:
-                                            self.logger.critical(f'c_hash:{c_hash} already in resultdict for hash_id:{hash_id}. old result: {dbdict[c_hash]}')
-                                        dbdict[c_hash]=result
-                                        dbdict.commit()
+                        for hash_id,c_hash_dict in dict_i.items():
+                            with db(hash_id) as dbdict:
+                                for c_hash,result in c_hash_dict.items():
+                                    if c_hash in dbdict:
+                                        self.logger.critical(f'c_hash:{c_hash} already in resultdict for hash_id:{hash_id}. old result: {dbdict[c_hash]}')
+                                    dbdict[c_hash]=result
+                                    dbdict.commit()
                         self.logger.info(f'add to dbdict success')
-                        saved=True
                     else:    
                         with db() as dbdict:
-
-                            for dict_i in save_list:
-                                for key,val in dict_i.items():
-                                    if key in dbdict:
-                                        if not gen:
-                                            self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
-                                            dbdict[key]=val
-                                            dbdict.commit()
-                                        else:
-                                            self.logger.debug(f'key:{key} already exists in gen table in db dict')
-                                    else:
+                            for key,val in dict_i.items():
+                                if key in dbdict:
+                                    if not gen:
+                                        self.logger.warning(f'overwriting val:{dbdict[key]} for key:{key}')
                                         dbdict[key]=val
                                         dbdict.commit()
-                            saved=True
+                                    else:
+                                        self.logger.debug(f'key:{key} already exists in gen table in db dict')
+                                else:
+                                    tries2=0
+                                    while True:
+                                        try:
+                                            dbdict[key]=val
+                                            dbdict.commit()
+                                            break
+                                        except:
+                                            self.logger.exception(f'error adding to key:{key}, tries2:{tries2}')
+                                            if tries2>3:
+                                                path=os.path.join(self.errordir,key+'.pkl')
+                                                if not os.path.exists(path):
+                                                    with open(path,'wb') as f:
+                                                        pickle.dump(val,f)
+                                                    self.logger.info(f'dumped to {path}')    
+                                                else:
+                                                    self.logger.info(f'{path} exists, so ignoring')
+                                                break
+                                            
                 except:
                     tries+=1
                     self.logger.exception(f'dbtool addtoDBDict error! tries:{tries}')
                     sleep(20)
-                    if tries>20:
+                    if tries>4:
                         self.logger.warning(f'abandoning save_list:{save_list}')
                         break
                 
