@@ -34,10 +34,27 @@ class PredictRunner(myLogger):
             if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
                 resultsDBdict=DBTool().resultsDBdict()
                 for hash_id in none_hash_id_list:
-                    self.rundict[hash_id]=resultsDBdict[hash_id]['model']
+                    result=resultsDBdict[hash_id]
+                    if type(result) is str:
+                        result=self.getResult(result)
+                    self.rundict[hash_id]=result['model']
                     self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
         except: 
             self.logger.exception(f'build error with rundict:{rundict}')
+            
+    def getResult(self,result):
+        if type(result) is str:
+            if os.path.exists(result):
+                try:
+                    with open(result,'rb') as f:
+                        return pickle.load(f)
+                except:
+                    self.logger.exception(f'error loading file from {result}')
+            else:
+                self.logger.info(f'no file at result:{result}')
+        else:
+            self.logger.info(f'getResult has result that is not a str: {result})
+        return None
     def run(self,):
         self.ske=sk_estimator()
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
@@ -215,7 +232,22 @@ class XPredictRunner:#(PredictRunner):
         self.hash_id_c_hash_dict=None
         
     def passQ(self,saveq):
-        self.saveq=saveq    
+        self.saveq=saveq
+                             
+    def getResult(self,result):
+        if type(result) is str:
+            if os.path.exists(result):
+                try:
+                    with open(result,'rb') as f:
+                        return pickle.load(f)
+                except:
+                    self.logger.exception(f'error loading file from {result}')
+            else:
+                self.logger.info(f'no file at result:{result}')
+        else:
+            self.logger.info(f'getResult has result that is not a str: {result})
+        return None
+                             
     def build(self):
         #called on master machine by jobqfiller before sending to jobq
         try:
@@ -223,7 +255,10 @@ class XPredictRunner:#(PredictRunner):
             if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
                 resultsDBdict=DBTool().resultsDBdict()
                 for hash_id in none_hash_id_list:
-                    self.rundict[hash_id]=resultsDBdict[hash_id]['model']
+                    result=resultsDBdict[hash_id]
+                    if type(result) is str:
+                        result=self.getResult(result)
+                    self.rundict[hash_id]=result['model']
                     self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
                     
             data,rundict=self.build_from_rundict(self.rundict.copy())
