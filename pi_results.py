@@ -418,7 +418,7 @@ class PiResults(DBTool,myLogger):
         self,rebuild=0,drop_zzz=True,
         return_y_yhat=False,drop_nocoef_scors=True,row_norm=False
         ):
-        """"""
+        
         pdict=self.stack_predictions(rebuild=rebuild)
         if drop_zzz:
             pdict=self.drop_zzz(pdict)
@@ -578,7 +578,7 @@ class PiResults(DBTool,myLogger):
             else:
                 self.logger.info(f'no file at result:{result}')
         else:
-            self.logger.info(f'getResult has result that is not a str: {result})
+            self.logger.info(f'getResult has result that is not a str: {result}')
         return None
                 
     

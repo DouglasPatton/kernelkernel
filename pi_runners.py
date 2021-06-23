@@ -53,7 +53,7 @@ class PredictRunner(myLogger):
             else:
                 self.logger.info(f'no file at result:{result}')
         else:
-            self.logger.info(f'getResult has result that is not a str: {result})
+            self.logger.info(f'getResult has result that is not a str: {result}')
         return None
     def run(self,):
         self.ske=sk_estimator()
@@ -245,7 +245,7 @@ class XPredictRunner:#(PredictRunner):
             else:
                 self.logger.info(f'no file at result:{result}')
         else:
-            self.logger.info(f'getResult has result that is not a str: {result})
+            self.logger.info(f'getResult has result that is not a str: {result}')
         return None
                              
     def build(self):
