@@ -170,6 +170,7 @@ class DBTool():
                                             dbdict.commit()
                                             break
                                         except:
+                                            tries2+=1
                                             self.logger.exception(f'error adding to key:{key}, tries2:{tries2}')
                                             if tries2>3:
                                                 path=os.path.join(self.errordir,key+'.pkl')
