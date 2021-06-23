@@ -567,6 +567,21 @@ class PiResults(DBTool,myLogger):
                            'coef_scor_df':new_coef_scor_df}
         return new_predictresult
     
+    def getResult(self,result):
+        if type(result) is str:
+            if os.path.exists(result):
+                try:
+                    with open(result,'rb') as f:
+                        return pickle.load(f)
+                except:
+                    self.logger.exception(f'error loading file from {result}')
+            else:
+                self.logger.info(f'no file at result:{result}')
+        else:
+            self.logger.info(f'getResult has result that is not a str: {result})
+        return None
+                
+    
     def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
         try:
             self.results_dict
@@ -592,7 +607,11 @@ class PiResults(DBTool,myLogger):
                     if not hash_id in predicted:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
-                            rundict_list[d]['data_gen']=self.results_dict[hash_id]['data_gen']
+                            result=self.results_dict[hash_id]
+                            if type(result) is str:
+                                result=self.getResult(result)
+                            if not result is None:
+                                rundict_list[d]['data_gen']=result['data_gen']
                         keep_hash_id_list.append(hash_id)
             drop_idx_list=[]
             for r,rundict in enumerate(rundict_list):
@@ -624,15 +643,18 @@ class PiResults(DBTool,myLogger):
             species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
         hash_id_list1=[hash_id_list[0] for species,hash_id_list in species_hash_id_dict.items()] # just get 1 hash_id per species
         runners=[]
-        
-        for hash_id in hash_id_list1:
-            rundict={}
-            result=self.results_dict[hash_id]
-            data_gen=result['data_gen'] # same as datagen_dict
-            data_gen['make_y']=1
-            rundict['data_gen']=data_gen
-            rundict[hash_id]=None #this is where the model from results+dict will go when jobqfiller calls build()
-            runners.append(PredictRunner(rundict))
+        for species,hash_id_list in species_hash_id_dict.items():
+            for hash_id in hash_id_list1:
+                rundict={}
+                result=self.results_dict[hash_id]
+                if type(result) is str:
+                    result=self.getResult(result)
+                if result is None: continue
+                data_gen=result['data_gen'] # same as datagen_dict
+                data_gen['make_y']=1
+                rundict['data_gen']=data_gen
+                rundict[hash_id]=None #this is where the model from results+dict will go when jobqfiller calls build()
+                runners.append(PredictRunner(rundict))
         
         dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'
         all_y_df=pd.concat(dflist,axis=0)
@@ -685,6 +707,9 @@ class PiResults(DBTool,myLogger):
         for hash_id in results_hash_id_list:
             if not hash_id in hash_id_list:
                 result=self.results_dict[hash_id]
+                if type(result) is str:
+                    result=self.getResult(result)
+                    if result is None: continue
                 data_gen=result['data_gen']
                 dghash=joblib.hash(data_gen)
                 try:
@@ -818,6 +843,9 @@ class PiResults(DBTool,myLogger):
             except:self.results_dict=self.resultsDBdict()
             scor_est_spec_dict={scorer:{est:{} for est in self.sk_est_dict.keys()} for scorer in self.scorer_list}
             for hash_id,result_dict in self.results_dict.items():
+                if type(result_dict) is str:
+                    result_dict=self.getResult(result_dict)
+                    if result_dict is None:continue
                 data_gen=result_dict['data_gen']
                 species=data_gen['species']
                 model_gen=result_dict['model_gen']

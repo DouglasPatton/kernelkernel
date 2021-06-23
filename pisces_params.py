@@ -211,7 +211,7 @@ class PiSetup(myLogger):
             db=self.dbt.resultsDBdict()
         if callable(db):
             db=db()
-        complete_hash_id_list=list(db.keys())
+        complete_hash_id_list=dict.fromkeys(db.keys())
         rundrop_idx=[]
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):

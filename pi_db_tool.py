@@ -173,11 +173,18 @@ class DBTool():
                                             tries2+=1
                                             self.logger.exception(f'error adding to key:{key}, tries2:{tries2}')
                                             if tries2>3:
-                                                path=os.path.join(self.errordir,key+'.pkl')
+                                                path=os.path.join(self.errordir,'results-'+key+'.pkl')
                                                 if not os.path.exists(path):
                                                     with open(path,'wb') as f:
                                                         pickle.dump(val,f)
-                                                    self.logger.info(f'dumped to {path}')    
+                                                    self.logger.info(f'dumped to {path}')
+                                                    try:
+                                                        dbdict[key]=path
+                                                        dbdict.commit()
+                                                        self.logger.info(f'saved path to dbdict for key:{key}')
+                                                    except:
+                                                        self.logger.exception(f'could not save path to key:{key}, abandoning')
+                                                        
                                                 else:
                                                     self.logger.info(f'{path} exists, so ignoring')
                                                 break
@@ -197,7 +204,7 @@ class DBTool():
     def get_no_results_run_record_dict(self,ignore_failed=True):
         no_results_run_record_dict={}
         gen_dict=self.genDBdict()
-        results_keys=list(self.resultsDBdict().keys())
+        results_keys=dict.fromkeys(self.resultsDBdict().keys())
         if ignore_failed:
             fail_dict=self.fitfailDBdict()
         else:
