@@ -67,7 +67,7 @@ if __name__=='__main__':
         run_type='fit'
         cv_run=True
     elif fit_or_predict==1:
-        run_type='fit'
+        run_type='single_fit'
         cv_run=False
 
     elif fit_or_predict==2:

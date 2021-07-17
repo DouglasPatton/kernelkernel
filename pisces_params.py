@@ -150,7 +150,7 @@ class PiSetup(myLogger):
             runlist=[]    
             for rundict in rundict_list:
                 runlist.append(FitRunner(rundict))
-        elif self.run_type=='fit':
+        elif self.run_type in ['fit','single_fit']:
             rundict_list=[]
             run_record_dict={}
             data_gen_list=self.data_setup()
