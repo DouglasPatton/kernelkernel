@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 from sqlitedict import SqliteDict
@@ -48,6 +49,7 @@ class PredictRunner(myLogger):
                 try:
                     with open(result,'rb') as f:
                         return pickle.load(f)
+                    self.logger.info(f'result loaded from file at path:{result}')
                 except:
                     self.logger.exception(f'error loading file from {result}')
             else:
