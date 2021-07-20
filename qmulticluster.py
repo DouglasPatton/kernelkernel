@@ -63,12 +63,12 @@ class mypool(myLogger):
 if __name__=='__main__':
     #test = mypool(nodecount=1, includemaster=1,local_run='yes')
     fit_or_predict=int(input('0 cv-fit, 1 for single-fit, 2 for fullfit predict, 3 for out of sample Xpredict: '))
+    cv_run=False
     if fit_or_predict==0:
         run_type='fit'
         cv_run=True
     elif fit_or_predict==1:
         run_type='single_fit'
-        cv_run=False
 
     elif fit_or_predict==2:
         run_type='predict'
