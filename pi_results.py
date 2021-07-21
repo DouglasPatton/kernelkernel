@@ -614,7 +614,7 @@ class PiResults(DBTool,myLogger):
                                 result=self.getResult(result)
                             if not result is None:
                                 rundict_list[d]['data_gen']=result['data_gen']"""
-                            rundict_list[d]['data_gen']=self.gen_dict[dg_hash]['data_gen'] #try getting from here to avoid loading big results
+                            rundict_list[d]['data_gen']=self.gen_dict[hash_id]['data_gen'] #try getting from here to avoid loading big results
                         keep_hash_id_list.append(hash_id)
             drop_idx_list=[]
             for r,rundict in enumerate(rundict_list):
