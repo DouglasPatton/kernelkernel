@@ -7,7 +7,7 @@ if __name__ == "__main__":
         'gen_dict':dbt.genDBdict,
         'fitfail_dict':dbt.fitfailDBdict}
     if os.path.exists(dbt.predictDBdictpath):
-        db_dict['predictDBdict']=dbt.predictDBdict()
+        db_dict['predictDBdict']=dbt.predictDBdict
     
     for db_name,db_callable in db_dict.items():
         with db_callable() as db:
