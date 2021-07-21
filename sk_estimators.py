@@ -39,9 +39,9 @@ class sk_estimator(myLogger):
         if std_rescale:
             global_std=self.get_spec_std(species)
         if est_name == 'linear-svc':
-            coef=est.best_estimator_.regressor_['clf'].coef_.T
+            coef=est['static_pipeline'].best_estimator_.regressor_['clf'].coef_.T
             if std_rescale:
-                std=est.best_estimator_.regressor_['scaler'].scale_
+                std=est['static_pipeline'].best_estimator_.regressor_['scaler'].scale_
                 
         elif est_name == 'logistic-reg':
             coef=est['clf'].coef_.T
