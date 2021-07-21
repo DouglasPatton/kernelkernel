@@ -587,6 +587,8 @@ class PiResults(DBTool,myLogger):
             self.results_dict
         except:
             self.results_dict=self.resultsDBdict()
+        try: self.gen_dict
+        except: self.gen_dict=self.genDBdict()
         
         
         if  XpredictDB is None:
@@ -607,11 +609,12 @@ class PiResults(DBTool,myLogger):
                     if not hash_id in predicted:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         if not 'data_gen' in rundict_list[d]: #just add once per run_dict
-                            result=self.results_dict[hash_id]
+                            """result=self.results_dict[hash_id]
                             if type(result) is str:
                                 result=self.getResult(result)
                             if not result is None:
-                                rundict_list[d]['data_gen']=result['data_gen']
+                                rundict_list[d]['data_gen']=result['data_gen']"""
+                            rundict_list[d]['data_gen']=self.gen_dict[dg_hash]['data_gen'] #try getting from here to avoid loading big results
                         keep_hash_id_list.append(hash_id)
             drop_idx_list=[]
             for r,rundict in enumerate(rundict_list):
