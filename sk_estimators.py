@@ -51,7 +51,7 @@ class sk_estimator(myLogger):
         elif est_name=='linear-probability-model':
             coef=est['static_pipeline'].best_estimator_.regressor_['clf'].coef_.T
             if std_rescale:
-                std=est.best_estimator_.regressor_['scaler'].scale_    
+                std=est['static_pipeline'].best_estimator_.regressor_['scaler'].scale_    
         else:assert False,f'unexpected est_name:{est_name}'  
         if std_rescale:
             self.logger.info(f'before transforming: coef.shape:{coef.shape}, std.shape:{std.shape}, global_std.shape:{global_std.shape}')
