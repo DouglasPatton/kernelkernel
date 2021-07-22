@@ -134,15 +134,22 @@ class JobQFiller(mp.Process,myLogger):
     '''
     runmaster calls this and passes the full list_of_rundicts to it
     '''
-    def __init__(self,q,joblist):
+    def __init__(self,q,joblist,do_mp=True):
         self.q=q
         self.joblist=joblist
-        super().__init__()
-        func_name=f'{sys._getframe().f_code.co_name}'
+        self.do_mp=do_mp
+        if self.do_mp:
+            super().__init__()
+        #func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name='jobqfiller.log')
         self.logger.info(f'starting jobqfiller logger')
         
-    
+    def addjobs(self,morejobs):
+        assert not do_mp,f'only use addjobs if do_mp is False'
+        if not type(morejobs) is list:
+            morejobs=[morejobs]
+        self.joblist.extend(morejobs)
+        
     
     def run(self):
         #QueueManager.register('jobq')
@@ -155,7 +162,7 @@ class JobQFiller(mp.Process,myLogger):
         q_size=0;tries=0 # for startup
         while len(self.joblist):
             if q_size<max_q_size:
-                if i>1 and q_size==0: 
+                if i>2 and q_size==0 and q_size<len(self.joblist): 
                     self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
                     max_q_size*=2 # double max q since it is being consumed
                 tries=0
@@ -184,7 +191,7 @@ class JobQFiller(mp.Process,myLogger):
             else:
                 tries+=1
             q_size=queue.qsize()
-            sleep(1+tries*10) 
+            sleep(1+tries*4) 
             
         self.logger.debug('all jobs added to jobq.')
         return
@@ -321,14 +328,18 @@ class RunCluster(mp.Process,DBTool,myLogger):
             shuffle(order)
             runlist=[runlist[i] for i in order]
             hash_id_list=[hash_id_list[i] for i in order]
-            jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
-            jobqfiller.start()
-            del runlist
+            jobs_at_a_time=5
+            jobs_at_a_timejobqfiller.run()
+            jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False)
+            
+            #del runlist
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
             while not check_complete:
-                sleep(60)
+                sleep(5)
+                jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
+                jobqfiller.run()
                 saveqdumper.run()#
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
