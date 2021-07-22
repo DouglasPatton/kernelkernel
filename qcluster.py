@@ -49,7 +49,7 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         self.logger.info('TheQManager starting')
         s.serve_forever()
         
-class SaveQDumper(mp.Process,DBTool,myLogger):
+class SaveQDumper(mp.Process,myLogger): #DBTool removed
     def __init__(self,q,db_kwargs={}):
         self.q=q
         self.db_kwargs=db_kwargs
@@ -60,7 +60,7 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
         #self.BaseManager=BaseManager
         #super(SaveQDumper,self).__init__()
         super().__init__()
-        DBTool.__init__(self)
+        #DBTool.__init__(self)
     
     
     def run(self):
@@ -118,10 +118,10 @@ class SaveQDumper(mp.Process,DBTool,myLogger):
                         s+=1
                         try:
                             if fitfail:
-                                self.addToDBDict(save_list,db=self.fitfailDBdict)
+                                DBTool().addToDBDict(save_list,db=self.fitfailDBdict)
                             else:
                                 #self.logger.info(f'saveqdumper db_kwargs:{db_kwargs}')
-                                self.addToDBDict(save_list,**self.db_kwargs)
+                                DBTool().addToDBDict(save_list,**self.db_kwargs)
                             break
                         except:
                             self.logger.exception(f'error adding to DB. try:{s}')
