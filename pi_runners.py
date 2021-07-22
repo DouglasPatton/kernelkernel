@@ -34,7 +34,7 @@ class PredictRunner(myLogger):
         try:
             none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
             if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
-                with resultsDBdict=DBTool().resultsDBdict() as rdb:
+                with DBTool().resultsDBdict() as rdb:
                     for hash_id in none_hash_id_list:
                         result=rdb[hash_id]
                         if type(result) is str:
