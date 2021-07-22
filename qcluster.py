@@ -151,7 +151,7 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=20 #not really the max
+        max_q_size=5 #not really the max
         q_size=0;tries=0 # for startup
         while len(self.joblist):
             if q_size<max_q_size:
