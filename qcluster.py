@@ -329,10 +329,9 @@ class RunCluster(mp.Process,DBTool,myLogger):
             runlist=[runlist[i] for i in order]
             hash_id_list=[hash_id_list[i] for i in order]
             jobs_at_a_time=5
-            jobs_at_a_timejobqfiller.run()
+
             jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False)
-            
-            #del runlist
+            jobqfiller.run()
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
