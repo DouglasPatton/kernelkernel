@@ -145,7 +145,7 @@ class JobQFiller(mp.Process,myLogger):
         self.logger.info(f'starting jobqfiller logger')
         
     def addjobs(self,morejobs):
-        assert not do_mp,f'only use addjobs if do_mp is False'
+        assert not self.do_mp,f'only use addjobs if do_mp is False'
         if not type(morejobs) is list:
             morejobs=[morejobs]
         self.joblist.extend(morejobs)
