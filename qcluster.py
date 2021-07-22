@@ -139,8 +139,8 @@ class JobQFiller(mp.Process,myLogger):
         self.joblist=joblist
         super().__init__()
         func_name=f'{sys._getframe().f_code.co_name}'
-        myLogger.__init__(self,name=f'{func_name}.log')
-        self.logger.info(f'starting {func_name} logger')
+        myLogger.__init__(self,name='jobqfiller.log')
+        self.logger.info(f'starting jobqfiller logger')
         
     
     
@@ -319,6 +319,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             runlist,hash_id_list=self.setup.setupRunners()
             jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
             jobqfiller.start()
+            del runlist
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
