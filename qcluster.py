@@ -161,8 +161,8 @@ class JobQFiller(mp.Process,myLogger):
                 tries=0
                 for i in range(max_q_size): #fill queue back up to 2*max_q_size
                     if len(self.joblist):
-                        n_sel=np.random.randint(0,len(self.joblist))
-                        job=self.joblist.pop(n_sel)
+                        #n_sel=np.random.randint(0,len(self.joblist))
+                        job=self.joblist.pop()
                     else: 
                         self.logger.critical("jobqfiller's joblist is empty, returning")
                         return
@@ -317,6 +317,10 @@ class RunCluster(mp.Process,DBTool,myLogger):
         self.logger.debug('master starting up')
         try:
             runlist,hash_id_list=self.setup.setupRunners()
+            order=list(range(len(runlist)))
+            shuffle(order)
+            runlist=[runlist[i] for i in order]
+            hash_id_list=[hash_id_list[i] for i in order]
             jobqfiller=JobQFiller(self.qdict['jobq'],runlist)
             jobqfiller.start()
             del runlist
@@ -329,8 +333,8 @@ class RunCluster(mp.Process,DBTool,myLogger):
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
             except: self.logger.exception(f'jobqfiller join error, moving on.')
-            jobqfiller.joblist=['shutdown']
-            jobqfiller.run()
+            #jobqfiller.joblist=['shutdown']
+            #jobqfiller.run()
             
             #saveqdumper.join()
             
