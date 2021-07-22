@@ -41,7 +41,7 @@ class sk_estimator(myLogger):
         if est_name == 'linear-svc':
             coef=est['static_pipeline'].best_estimator_['clf'].coef_.T
             if std_rescale:
-                std=est['static_pipeline'].best_estimator_.['scaler'].scale_
+                std=est['static_pipeline'].best_estimator_['scaler'].scale_
                 
         elif est_name == 'logistic-reg':
             coef=est['clf'].coef_.T
