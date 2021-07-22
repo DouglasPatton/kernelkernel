@@ -338,8 +338,10 @@ class RunCluster(mp.Process,DBTool,myLogger):
             check_complete=0
             while not check_complete:
                 sleep(5)
-                jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
-                jobqfiller.run()
+                if jobs_at_a_time>len(runlist):jobs_at_a_time=len(runlist)
+                if jobs_at_a_time>0:
+                    jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
+                    jobqfiller.run()
                 saveqdumper.run()#
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
