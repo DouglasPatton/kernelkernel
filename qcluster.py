@@ -158,7 +158,7 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=5 #not really the max
+        max_q_size=20 #not really the max
         q_size=0;tries=0 # for startup
         while len(self.joblist):
             if q_size<max_q_size:
@@ -328,7 +328,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             shuffle(order)
             runlist=[runlist[i] for i in order]
             hash_id_list=[hash_id_list[i] for i in order]
-            jobs_at_a_time=5
+            jobs_at_a_time=40
 
             jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False)
             jobqfiller.run()
