@@ -208,10 +208,11 @@ class PiSetup(myLogger):
     def checkComplete(self,db=None,rundict_list=None,hash_id_list=None):
         #rundict_list is provided at startup, and if not, useful for checking if all have been saved
         if db is None:
-            db=self.dbt.resultsDBdict()
-        if callable(db):
-            db=db()
-        complete_hash_id_list=dict.fromkeys(db.keys())
+            db=self.dbt.resultsDBdict
+        if not callable(db):
+            db=lambda: db
+        with db() as check_db:
+            complete_hash_id_list=dict.fromkeys(check_db.keys())
         rundrop_idx=[]
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):

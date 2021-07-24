@@ -158,7 +158,7 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=5 #not really the max
+        max_q_size=2 #not really the max
         q_size=0;tries=0 # for startup
         while len(self.joblist):
             if q_size<max_q_size:
@@ -328,7 +328,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             shuffle(order)
             runlist=[runlist[i] for i in order]
             hash_id_list=[hash_id_list[i] for i in order]
-            jobs_at_a_time=5
+            jobs_at_a_time=20
 
             jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False)
             jobqfiller.run()
@@ -336,12 +336,12 @@ class RunCluster(mp.Process,DBTool,myLogger):
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
             while not check_complete:
-                sleep(5)
-                if jobs_at_a_time>len(runlist):jobs_at_a_time=len(runlist)
-                if jobs_at_a_time>0:
-                    jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
-                    jobqfiller.run()
-                saveqdumper.run()#
+                while len(runlist)>0:
+                    if jobs_at_a_time>len(runlist):jobs_at_a_time=len(runlist)
+                    if jobs_at_a_time>0:
+                        jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
+                        jobqfiller.run()
+                    saveqdumper.run()#
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
             except: self.logger.exception(f'jobqfiller join error, moving on.')
