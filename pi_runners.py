@@ -332,10 +332,9 @@ class XPredictRunner:#(PredictRunner):
                 if 'HUC12' in skt.x_vars:
                     self.logger.error(f'HUC12 found in hash_id:{hash_id}')
                     assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'"""
-        try:
-            keylist=data.datagen_dict['x_vars']
-        except KeyError:
-            self.logger.exception(f'"x_vars" not in data.datagen_dict:{data.datagen_dict}')
+        first_model=list(hash_id_model_dict.values())[0]
+        
+        keylist=first_model.x_vars
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
         for c_hash,hash_id_list in c_hash_hash_id_dict.items():

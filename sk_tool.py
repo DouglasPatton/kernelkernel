@@ -8,7 +8,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.compose import TransformedTargetRegressor
 from sk_transformers import none_T,shrinkBigKTransformer,logminus_T,exp_T,logminplus1_T,logp1_T,dropConst
 from sk_missing_value_handler import missingValHandler
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin,RegressorMixin
 #from sklearn.inspection import permutation_importance
 #from sk_estimators import linRegSupremeClf,linSvcClf, rbfSvcClf, gradientBoostingClf
 from sk_estimators import sk_estimator as sk_est
@@ -50,7 +50,7 @@ class SKToolInitializer(myLogger):
 
         
         
-class SkTool(BaseEstimator,TransformerMixin,myLogger,):
+class SkTool(BaseEstimator,RegressorMixin,myLogger,):
     def __init__(self,model_gen=None,scorer=None):
         myLogger.__init__(self,name='SkTool.log',)
         self.logger.info('starting SkTool logger')
