@@ -207,11 +207,20 @@ class PiSetup(myLogger):
         
     def checkComplete(self,db=None,rundict_list=None,hash_id_list=None):
         #rundict_list is provided at startup, and if not, useful for checking if all have been saved
+        if type(db) is dict:
+            if 'db' in db:
+                db=db['db']
+            elif len(db)==0:
+                db=None
+            
         if db is None:
             db=self.dbt.resultsDBdict()
         if callable(db):
             db=db()
-        complete_hash_id_list=dict.fromkeys(db.keys())
+        if type(db) is dict and 'Xpredict' in db:
+            complete_hash_id_list=dict.fromkeys(self.dbt.XPredictHashIDComidHashResultsDB())
+        else:
+            complete_hash_id_list=dict.fromkeys(db.keys())
         rundrop_idx=[]
         if rundict_list:
             for r,run_dict in enumerate(rundict_list):
