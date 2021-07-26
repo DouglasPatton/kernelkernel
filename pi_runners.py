@@ -40,9 +40,9 @@ class PredictRunner(myLogger):
                         if type(result) is str:
                             result=self.getResult(result)
                         self.rundict[hash_id]=result['model']
-                        self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
+                        self.logger.info(f'predictrunner sucessful rundict build for hash_id:{hash_id}')
         except: 
-            self.logger.exception(f'build error with rundict:{rundict}')
+            self.logger.exception(f'predictrunner build error with rundict:{rundict}')
             
     def getResult(self,result):
         if type(result) is str:
@@ -70,7 +70,7 @@ class PredictRunner(myLogger):
                 predictresult=self.predict(data,model)
                 success=1
             except:
-                self.logger.exception('error for model_dict:{model_dict}')
+                self.logger.exception(f'error for model_dict:{model_dict}')
             if self.saveq is None and success:
                     self.logger.info(f'no saveq, returning predictresult')
                     return predictresult
@@ -137,7 +137,7 @@ class PredictRunner(myLogger):
             cv_dict=data.datagen_dict['data_split']['cv']
             n_repeats=cv_dict['n_repeats']
             n_splits=cv_dict['n_splits']
-            self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
+            #self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
         else:
             cv_run=False
             self.logger.info(f'predicting for non-CV result')
@@ -192,11 +192,11 @@ class PredictRunner(myLogger):
         
         names=['species','estimator','HUC12','COMID']
         index=pd.MultiIndex.from_tuples([(species,est_name,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
-        self.logger.info(f'yhat_stack_arr.shape:{yhat_stack_arr.shape}, yhat_stack_arr:{yhat_stack_arr}')
-        self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
-        self.logger.info(f'index:{index}')
+        #self.logger.info(f'yhat_stack_arr.shape:{yhat_stack_arr.shape}, yhat_stack_arr:{yhat_stack_arr}')
+        #self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
+        #self.logger.info(f'index:{index}')
         yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
-        self.logger.info(f'yhat_df:{yhat_df}')
+        #self.logger.info(f'yhat_df:{yhat_df}')
         
         ########create y_df
         y=data.y_train
