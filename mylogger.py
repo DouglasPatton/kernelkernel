@@ -12,7 +12,7 @@ class myLogger:
         handlername=os.path.join(logdir,name)
         logging.basicConfig(
             handlers=[logging.handlers.RotatingFileHandler(handlername, maxBytes=10**7, backupCount=100)],
-            level=logging.INFO,
+            level=logging.DEBUG,
             format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             datefmt='%Y-%m-%dT%H:%M:%S')
         self.logger = logging.getLogger(handlername)
