@@ -166,6 +166,7 @@ class DBTool():
                                     tries2=0
                                     while True:
                                         try:
+                                            self.logger.info(f'trying to add key-{key} to {db}')
                                             dbdict[key]=val
                                             dbdict.commit()
                                             self.logger.info(f'key-{key} added to {db}')
