@@ -608,13 +608,14 @@ class PiResults(DBTool,myLogger):
                 for hash_id in (hash_id_list):
                     if not hash_id in predicted:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
-                        if not 'data_gen' in rundict_list[d]: #just add once per run_dict
-                            """result=self.results_dict[hash_id]
+                        ###data_gen added by runner.build()
+                        """if not 'data_gen' in rundict_list[d]: #just add once per run_dict
+                            result=self.results_dict[hash_id]
                             if type(result) is str:
                                 result=self.getResult(result)
                             if not result is None:
                                 rundict_list[d]['data_gen']=result['data_gen']"""
-                            rundict_list[d]['data_gen']=self.gen_dict[hash_id]['data_gen'] #try getting from here to avoid loading big results
+                            #rundict_list[d]['data_gen']=self.gen_dict[hash_id]['data_gen'] #try getting from here to avoid loading big results
                         keep_hash_id_list.append(hash_id)
             drop_idx_list=[]
             for r,rundict in enumerate(rundict_list):

@@ -254,6 +254,7 @@ class XPredictRunner:#(PredictRunner):
     def build(self):
         #called on master machine by jobqfiller before sending to jobq
         try:
+            regen_done=False
             none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
             if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
                 resultsDBdict=DBTool().resultsDBdict()
@@ -261,9 +262,10 @@ class XPredictRunner:#(PredictRunner):
                     result=resultsDBdict[hash_id]
                     if type(result) is str:
                         result=self.getResult(result)
-                    self.rundict[hash_id]=result['model']
+                    self.rundict[hash_id]=result['model'] #
                     self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
-                    
+                    if not regen_done:
+                        self.rundict['data_gen']=result['data_gen']
             data,rundict=self.build_from_rundict(self.rundict.copy())
             comidblockhashdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
             hash_id_list=rundict.keys()
@@ -332,9 +334,10 @@ class XPredictRunner:#(PredictRunner):
                 if 'HUC12' in skt.x_vars:
                     self.logger.error(f'HUC12 found in hash_id:{hash_id}')
                     assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'"""
-        first_model=list(hash_id_model_dict.values())[0]
+        #first_model=list(hash_id_model_dict.values())[0]
+        #keylist=first_model.x_vars
         
-        keylist=first_model.x_vars
+        keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
         for c_hash,hash_id_list in c_hash_hash_id_dict.items():
@@ -397,8 +400,13 @@ class XPredictRunner:#(PredictRunner):
         species=data.spec
         huc12s=datadf.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
-        Xdf=datadf.drop('HUC12',axis=1)
-        Xdf=Xdf.loc[:,train_vars] # make sure order matches and all variables present
+        Xdf=datadf.drop('HUC12',axis=1,inplace=False)
+        try:
+            Xdf=Xdf.loc[:,train_vars] # make sure order matches and all variables present
+        except:
+            self.logger.exception(f'error for {species} in Xpredict Xdf.loc....')
+            self.logger.info(f'train_vars:{train_vars}')
+            self.logger.info(f'Xdf.columns:{Xdf.columns}')
         predict_vars=list(Xdf.columns)
         
         #check to make sure data matches model
@@ -476,7 +484,7 @@ class FitRunner(myLogger):
             model_dict=hash_id_model_dict[hash_id]
             try:
                 success=0
-                data.X_train 
+                #data.X_train 
                 self.logger.info(f'fitrunner running hash_id:{hash_id}')
                 if cv_n_jobs is None:
                     model_dict['model']=model_dict['model'].run(data)
