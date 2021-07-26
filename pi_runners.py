@@ -205,7 +205,7 @@ class PredictRunner(myLogger):
         names=['species','HUC12','COMID']
         index=pd.MultiIndex.from_tuples([(species,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
         y_df=pd.DataFrame(y_stack_arr,columns=columns,index=index)
-        self.logger.info(f'y_df:{y_df}')
+        #self.logger.info(f'y_df:{y_df}')
         #### create coef_scor_df
         full_coef_scor_df=pd.concat(coef_scor_df_list,axis=1)
         
