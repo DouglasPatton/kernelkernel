@@ -168,6 +168,7 @@ class DBTool():
                                         try:
                                             dbdict[key]=val
                                             dbdict.commit()
+                                            self.logger.info(f'key-{key} added to {db}')
                                             break
                                         except:
                                             tries2+=1
