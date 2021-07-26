@@ -329,7 +329,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             shuffle(order)
             runlist=[runlist[i] for i in order]
             hash_id_list=[hash_id_list[i] for i in order]
-            jobs_at_a_time=40 if len(jobs_at_a_time)<len(runlist) else len(runlist)
+            jobs_at_a_time=40 if 40<len(runlist) else len(runlist)
 	
 
             if len(runlist)==0:
