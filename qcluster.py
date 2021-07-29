@@ -176,7 +176,8 @@ class JobQFiller(mp.Process,myLogger):
                         return
                     try:
                         finished=job.build()
-                    except:self.logger.exception(f'error building job')
+                    except:
+                        self.logger.exception(f'error building job')
                         finished=False
                     try:
                         if finished:
