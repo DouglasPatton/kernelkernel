@@ -174,14 +174,20 @@ class JobQFiller(mp.Process,myLogger):
                     else: 
                         self.logger.critical("jobqfiller's joblist is empty, returning")
                         return
-                    try:job.build()
-                    except:self.logger.exception(f'error building job')
                     try:
-                        jobcount=len(self.joblist)
-                        self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
-                        queue.put(job)
-                        self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
-                        i+=1
+                        finished=job.build()
+                    except:self.logger.exception(f'error building job')
+                        finished=False
+                    try:
+                        if finished:
+                            self.logger.info(f'skipping finished job ({i})')
+                            i+=1
+                        else:
+                            jobcount=len(self.joblist)
+                            self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
+                            queue.put(job)
+                            self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
+                            i+=1
                     except:
                         self.joblist.append(job)
                         if queue.full():

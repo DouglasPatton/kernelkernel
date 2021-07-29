@@ -271,7 +271,11 @@ class XPredictRunner:#(PredictRunner):
             hash_id_list=rundict.keys()
             self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
             self.logger.info(f'{data.spec} predictrunner built')
-                    
+            if len(self.hash_id_c_hash_dict)==0:
+                return True #job will be skipped
+            else:
+                return False
+            
             
         except: 
             self.logger.exception(f'build error with rundict:{rundict}')

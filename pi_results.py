@@ -26,7 +26,7 @@ from geogtools import GeogTool as GT
 from pisces_data_huc12 import PiscesDataTool as PDT
 from pi_runners import PredictRunner
 from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12
-#from sklearn.inspection import permutation_importance
+#from sklearn.inspection import permutation_importancef
  
 class PiResults(DBTool,myLogger): 
 #class PiResults(DBTool,DataPlotter,myLogger):
