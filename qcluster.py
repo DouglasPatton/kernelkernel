@@ -70,7 +70,7 @@ class SaveQDumper(mp.Process,myLogger): #DBTool removed
         #queue = m.saveq()
         queue=self.q
         keepgoing=1
-        
+        self.logger.info('saveqdumper is running') 
         while keepgoing:
             try:
                 success=0
@@ -358,9 +358,8 @@ class RunCluster(mp.Process,DBTool,myLogger):
                             jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
                             jobqfiller.run()
                         saveqdumper.run()#
-                else: 
-                    sleep(20)
-                    saveqdumper.run()
+                sleep(40)
+                saveqdumper.run()
                 check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
             except: self.logger.exception(f'jobqfiller join error, moving on.')
