@@ -360,7 +360,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
                         saveqdumper.run()#
                 sleep(40)
                 saveqdumper.run()
-                check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
+                #check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
             except: self.logger.exception(f'jobqfiller join error, moving on.')
             #jobqfiller.joblist=['shutdown']
