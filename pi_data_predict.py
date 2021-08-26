@@ -25,8 +25,59 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         self.gt=gt()
     
    
-    def buildXPredictStackedResultsDB(self,):
-        pass
+    def buildXPredict(self,comid_filter=None):
+        try: self.specieslist
+        except: self.returnspecieslist()
+        for spec in self.specieslist:
+            self.buildSpeciesXPredict(spec,comid_filter=comid_filter)
+
+    def buildSpeciesXPredict(self,spec,comid_filter=None):
+        comid_result_dict_list=[]
+        hash_list=getXpredictSpeciesComidBlockDict(self,)[spec]
+        hash_ids_in_Xresults=dict.fromkeys(self.XPredictHashIDComidHashResultsDB(hash_id=None))#dict for fast search
+        for hash_id in hash_list:
+            if hash_id in hash_ids_in_Xresults:
+                comid_result_dict_list.append(self.XPredictHashIDComidHashResultsDB(hash_id=hash_id))
+        self.addtoDBdict(comid_result_dict_list,db=self.XpredictSpeciesResults(spec=spec),fast_add=True)
+        
+        
+        
+        
+        try:self.species_full_comid_dict
+        except: self.setSpeciesFullComidDict
+        #try: self.species_found_comid_dict
+        #except: self.setSpeciesFoundComidDict
+        spec_full_comid_list=self.species_full_comid_dict[spec]
+        if not comid_filter is None:
+            spec_comid_list=comid_filter(spec_full_comid_list,spec=spec)
+        
+        
+        spec_found_comid_list
+        
+        
+    def setSpeciesFoundComidDict(self):
+        '''savepath=os.path.join(self.savedir,'species_found_comid_dict.pkl')
+        if os.path.exists(savepath):
+            try:
+                with open(savepath,'rb') as f:
+                    self.species_found_comid_dict=pickle.load(f)
+                return
+            except:
+                self.logger.exception(f'buildSpeciesFoundComidDict found {savepath} but there was an error loading variables')'''
+        self.logger.info('building Species_found_comid_dict')
+        try: self.specieslist,self.speciescomidlist
+        except: self.buildspecieslist()
+        species_found_comid_dict={}    
+        for s_idx,spec in enumerate(self.specieslist):
+            species_found_comid_dict[spec]=self.speciescomidlist[s_idx]
+        self.species_found_comid_dict=species_found_comid_dict        
+     
+    def setSpeciesFullComidDict(self,):
+        self.fullcomidlist,self.species_full_comid_dict=self.generateXPredictSpeciesComidBlockDicts(
+            return_comidlist=True)
+        
+        
+    def generateSampledAndNotComids(self,comid_filter=None):    
         
     
     def generateXPredictBlockDF(self,spec,comidlist=None,keylist=None):
@@ -40,10 +91,10 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             self.logger.info(f'df built for spec:{spec}, species_df.shape:{species_df.shape}')
             return species_df
         except:self.logger.exception('unexpected error')    
-     
     
     
-    def generateXPredictSpeciesComidBlockDicts(self,):
+    
+    def generateXPredictSpeciesComidBlockDicts(self,return_comidlist=False):
         
         self.buildspecieshuc8list()
         specieshuc8list=self.specieshuc8list
@@ -62,7 +113,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         huc12comiddict={**self.gt.gethuc12comiddict()}
         huc8_huc12dict={**self.gt.build_huchuc()['huc8_huc12dict']} #pull into memory
         species_comid_dict={spec:[] for spec in species_huc8_dict.keys()}
-        species_huc12_dict={spec:[] for spec in species_huc8_dict.keys()}
+        #species_huc12_dict={spec:[] for spec in species_huc8_dict.keys()}
         comidlist=[]
         missing_huc8_list=[]
         spec_count=len(species_huc8_dict)
@@ -75,13 +126,14 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                     for huc12 in huc8_huc12dict[huc8]:
                         comids=huc12comiddict[huc12]
                         species_comid_dict[species].extend(comids)
-                        species_huc12_dict[species].extend([huc12 for _ in range(len(comids))])
+                        #species_huc12_dict[species].extend([huc12 for _ in range(len(comids))])
                         comidlist.extend(comids)
                 else:
                     missing_huc8_list.append(huc8)
         missing_huc8_list=list(dict.fromkeys(missing_huc8_list))#remove duplicates
         self.logger.warning(f'NHDplus datset is missing the following {len(missing_huc8_list)} huc8s: {missing_huc8_list}')
-        
+        if return_comidlist:
+            return comidlist,species_comid_dict
         
         proc_count=10
         spec_per_chunk=int(-(-spec_count//proc_count))

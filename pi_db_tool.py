@@ -75,6 +75,21 @@ class DBTool():
         return pickle.loads(zlib.decompress(bytes(obj)))
     #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
     
+    def XpredictSpeciesResults(self,spec=None):
+        name='XpredictSpeciesResults'
+        if spec is None:
+            path=os.path.join('data_tool',name+'.sqlite')
+            if not os.path.exists(path):
+                return []
+            try:
+                return SqliteDict.get_tablenames(path)
+            except OSError:
+                return []
+            except:
+                assert False,f'unexpected error, hash_id:{hash_id}'
+        return self.anyNameDB(name,tablename=spec,folder='data_tool')
+    
+    
     def XPredictHashIDComidHashResultsDB(self,hash_id=None):
         name='XPredictHashIDComidHashResults'
         if hash_id is None:
@@ -87,7 +102,7 @@ class DBTool():
                 return []
             except:
                 assert False,f'unexpected error, hash_id:{hash_id}'
-        return self.anyNameDB(name,hash_id,folder='data_tool')
+        return self.anyNameDB(name,tablename=hash_id,folder='data_tool')
     
     
     
@@ -119,7 +134,7 @@ class DBTool():
         return SqliteDict(filename=self.XpredictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
     
     
-    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0,Xpredict=False):
+    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0,Xpredict=False,fast_add=False):
         try:
             if type(save_list) is dict:
                 save_list=[save_list]
@@ -163,6 +178,10 @@ class DBTool():
                                     else:
                                         self.logger.debug(f'key:{key} already exists in gen table in db dict')
                                 else:
+                                    if fast_add:
+                                        dbdict[key]=val
+                                        continue
+                                    else:
                                     tries2=0
                                     while True:
                                         try:
@@ -190,6 +209,7 @@ class DBTool():
                                                 else:
                                                     self.logger.info(f'{path} exists, so ignoring')
                                                 break
+                            if fast_add: dbdict.commit()
                                             
                 except:
                     tries+=1

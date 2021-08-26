@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
-#mport geopandas as gpd
+import geopandas as gpd
 import logging
 import pandas as pd
 from geogtools import GeogTool as gt
@@ -54,7 +54,12 @@ class PiscesDataTool(myLogger,DBTool,Helper):
                 return
             except:
                 self.logger.exception('viewNHDplus_picklefile could not open saved NHDplus.data')
-                
+    
+    def returnNHDFull(self,layer='NHDFlowlineVAA'):
+        filename=os.path.join(os.getcwd(),'NHDplusfull','NHD_H_National_GDB.gdb')
+        print(f'starting read of {filename}')
+        dbf=gpd.read_file(filename,layer=layer)#driver='FileGDB',
+        return dbf
     
     def getNHDplus(self,):
         
