@@ -75,19 +75,10 @@ class DBTool():
         return pickle.loads(zlib.decompress(bytes(obj)))
     #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
     
-    def XpredictSpeciesResults(self,spec=None):
-        name='XpredictSpeciesResults'
-        if spec is None:
-            path=os.path.join('data_tool',name+'.sqlite')
-            if not os.path.exists(path):
-                return []
-            try:
-                return SqliteDict.get_tablenames(path)
-            except OSError:
-                return []
-            except:
-                assert False,f'unexpected error, hash_id:{hash_id}'
-        return self.anyNameDB(name,tablename=spec,folder='data_tool')
+    def XpredictSpeciesResults(self,spec,hash_id):
+        name=f'XpredictSpeciesResults-{spec}'
+        
+        return self.anyNameDB(name,tablename=hash_id,folder='data_tool')
     
     
     def XPredictHashIDComidHashResultsDB(self,hash_id=None):
@@ -182,33 +173,33 @@ class DBTool():
                                         dbdict[key]=val
                                         continue
                                     else:
-                                    tries2=0
-                                    while True:
-                                        try:
-                                            self.logger.info(f'trying to add key-{key} to {db}')
-                                            dbdict[key]=val
-                                            dbdict.commit()
-                                            self.logger.info(f'key-{key} added to {db}')
-                                            break
-                                        except:
-                                            tries2+=1
-                                            self.logger.exception(f'error adding to key:{key}, tries2:{tries2}')
-                                            if tries2>3:
-                                                path=os.path.join(self.errordir,'results-'+key+'.pkl')
-                                                if not os.path.exists(path):
-                                                    with open(path,'wb') as f:
-                                                        pickle.dump(val,f)
-                                                    self.logger.info(f'dumped to {path}')
-                                                    try:
-                                                        dbdict[key]=path
-                                                        dbdict.commit()
-                                                        self.logger.info(f'saved path to dbdict for key:{key}')
-                                                    except:
-                                                        self.logger.exception(f'could not save path to key:{key}, abandoning')
-                                                        
-                                                else:
-                                                    self.logger.info(f'{path} exists, so ignoring')
+                                        tries2=0
+                                        while True:
+                                            try:
+                                                self.logger.info(f'trying to add key-{key} to {db}')
+                                                dbdict[key]=val
+                                                dbdict.commit()
+                                                self.logger.info(f'key-{key} added to {db}')
                                                 break
+                                            except:
+                                                tries2+=1
+                                                self.logger.exception(f'error adding to key:{key}, tries2:{tries2}')
+                                                if tries2>3:
+                                                    path=os.path.join(self.errordir,'results-'+key+'.pkl')
+                                                    if not os.path.exists(path):
+                                                        with open(path,'wb') as f:
+                                                            pickle.dump(val,f)
+                                                        self.logger.info(f'dumped to {path}')
+                                                        try:
+                                                            dbdict[key]=path
+                                                            dbdict.commit()
+                                                            self.logger.info(f'saved path to dbdict for key:{key}')
+                                                        except:
+                                                            self.logger.exception(f'could not save path to key:{key}, abandoning')
+
+                                                    else:
+                                                        self.logger.info(f'{path} exists, so ignoring')
+                                                    break
                             if fast_add: dbdict.commit()
                                             
                 except:

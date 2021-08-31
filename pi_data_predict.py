@@ -23,25 +23,51 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         self.logger.info('starting pisces_data_predict logger')
         PiscesDataTool.__init__(self,)
         self.gt=gt()
+    def build_species_hash_id_dict(self,):
+        #copied from pi_results.py and simplified
+        species_hash_id_dict={}
+        with DBTool().genDBdict() as db:
+            for hash_id,run_record in db.items():
+                species=run_record['data_gen']['species']
+                try: species_hash_id_dict[species].append(hash_id)
+                except KeyError: species_hash_id_dict[species]=[hash_id]
+                except: assert False, 'halt'
+        return species_hash_id_dict
     
-   
+    def buildComidXHashCHashDict():
+        # ex. 12345:[(xhash,chash),(xhash,chash),...]
+        try: self.hash_ids_in_Xresults
+        except: 
+            self.hash_ids_in_Xresults=dict.fromkeys(self.XPredictHashIDComidHashResultsDB(hash_id=None))
+        for hash_id in self.hash_ids_in_Xresults:
+            for c_hash in self.XPredictHashIDComidHashResultsDB(hash_id=None)
+        
+        
+    
     def buildXPredict(self,comid_filter=None):
-        try: self.specieslist
-        except: self.returnspecieslist()
-        for spec in self.specieslist:
-            self.buildSpeciesXPredict(spec,comid_filter=comid_filter)
+        species_hash_id_dict=self.build_species_hash_id_dict()
+        self.hash_ids_in_Xresults=dict.fromkeys(
+            self.XPredictHashIDComidHashResultsDB(hash_id=None))#dict for fast search
 
-    def buildSpeciesXPredict(self,spec,comid_filter=None):
+        for spec,spec_hash_ids in species_hash_id_dict.items():
+            self.buildSpeciesXPredict(spec,spec_hash_ids,comid_filter=comid_filter)
+
+    def buildSpeciesXPredict(self,spec,spec_hash_ids,comid_filter=None):
         comid_result_dict_list=[]
-        hash_list=getXpredictSpeciesComidBlockDict(self,)[spec]
-        hash_ids_in_Xresults=dict.fromkeys(self.XPredictHashIDComidHashResultsDB(hash_id=None))#dict for fast search
-        for hash_id in hash_list:
-            if hash_id in hash_ids_in_Xresults:
-                comid_result_dict_list.append(self.XPredictHashIDComidHashResultsDB(hash_id=hash_id))
-        self.addtoDBdict(comid_result_dict_list,db=self.XpredictSpeciesResults(spec=spec),fast_add=True)
+        hash_count=len(spec_hash_ids)
+        for i,hash_id in enumerate(spec_hash_ids):
+            logstr=f'for {spec},on {i+1} of {hash_count}'
+            self.logger.info(logstr)
+            print(logstr)
+            if hash_id in self.hash_ids_in_Xresults:
+                self.addToDBDict(
+                    [self.XPredictHashIDComidHashResultsDB(hash_id=hash_id)],
+                    db=lambda:self.XpredictSpeciesResults(spec,hash_id),fast_add=True)
+            else:
+                self.logger.warning(f'for {spec}, hash_id:{hash_id} not in results')
+        return
         
-        
-        
+        '''
         
         try:self.species_full_comid_dict
         except: self.setSpeciesFullComidDict
@@ -54,7 +80,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         
         spec_found_comid_list
         
-        
+        '''
     def setSpeciesFoundComidDict(self):
         '''savepath=os.path.join(self.savedir,'species_found_comid_dict.pkl')
         if os.path.exists(savepath):
@@ -78,7 +104,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         
         
     def generateSampledAndNotComids(self,comid_filter=None):    
-        
+        pass
     
     def generateXPredictBlockDF(self,spec,comidlist=None,keylist=None):
         try:
@@ -141,7 +167,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         args_list=[[{spec:species_comid_dict[spec] for spec in specs}] for specs in spec_chunks]
         outlist=self.runAsMultiProc(
             ComidBlockBuilder,args_list,kwargs={},
-            no_mp=False,add_to_db=self.getXpredictSpeciesComidBlockDict)
+            no_mp=False,add_to_db=self.getXpredictSpeciesComidBlockDict())
         self.logger.info(f'back from MP. outlist:{outlist}')
         
     def getXpredictSpeciesComidBlockDict(self,):
@@ -340,7 +366,8 @@ class ComidBlockBuilder(mp.Process,myLogger):
                     self.logger.info(f'xpredict writing {spec} to drive')
                     Xdb.commit()"""
 
-        
+if __name__=="__main__":
+    PiscesPredictDataTool().buildXPredict(comid_filter=None)
         
         
         
