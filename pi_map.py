@@ -18,6 +18,12 @@ from mylogger import myLogger
 from pi_mp_helper import MatchCollapseHuc12,MpHelper
 from pi_cluster import SkCluster
 
+
+class XMapper(myLogger,Mapper):
+    def __init__(self):
+        myLogger.__init__(self,name='Mapper.log')
+        super().__init__()
+
 class Mapper(myLogger):
     def __init__(self):
         myLogger.__init__(self,name='Mapper.log')
