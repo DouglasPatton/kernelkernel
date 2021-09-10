@@ -17,12 +17,17 @@ from helpers import Helper
 from mylogger import myLogger
 from pi_mp_helper import MatchCollapseHuc12,MpHelper
 from pi_cluster import SkCluster
+from pi_data_predict import PiscesPredictDataTool
 
 
-class XMapper(myLogger,Mapper):
-    def __init__(self):
+class XMapper(myLogger,Mapper,PiscesPredictDataTool):
+    def __init__(self,species,estimator=''):
         myLogger.__init__(self,name='Mapper.log')
         super().__init__()
+        
+        
+        
+    
 
 class Mapper(myLogger):
     def __init__(self):

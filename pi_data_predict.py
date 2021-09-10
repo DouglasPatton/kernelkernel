@@ -23,14 +23,20 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         self.logger.info('starting pisces_data_predict logger')
         PiscesDataTool.__init__(self,)
         self.gt=gt()
-    def build_species_hash_id_dict(self,):
+        
+    def build_species_hash_id_dict(self,output_estimator_tuple=False):
         #copied from pi_results.py and simplified
         species_hash_id_dict={}
         with DBTool().genDBdict() as db:
             for hash_id,run_record in db.items():
                 species=run_record['data_gen']['species']
-                try: species_hash_id_dict[species].append(hash_id)
-                except KeyError: species_hash_id_dict[species]=[hash_id]
+                if output_estimator_tuple:
+                    est_name=run_record['model_gen']['name']
+                    hash_id_=(est_name,hash_id)
+                else:
+                    hash_id_=hash_id
+                try: species_hash_id_dict[species].append(hash_id_)
+                except KeyError: species_hash_id_dict[species]=[hash_id_]
                 except: assert False, 'halt'
         return species_hash_id_dict
     
@@ -66,6 +72,20 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             else:
                 self.logger.warning(f'for {spec}, hash_id:{hash_id} not in results')
         return
+    
+    
+    
+    def BuildBigSpeciesXPredictDF(self,species,estimator_name=None):
+        try: self.species_hash_id_est_dict
+        except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(self,output_estimator_tuple=True)
+        tuplist=self.species_has_id_est_dict[species]
+        
+        for est_name,hash_id in tuplist:
+            if not estimator_name is None:
+                if not est_name==estimator_name:continue
+            for c_hash,df in self.XpredictSpeciesResults(species,hash_id).items():
+                
+            
         
         '''
         
@@ -112,7 +132,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             self.logger.info(f'sending to buildcomidsiteinfo')
             sitedatacomid_dict=self.buildCOMIDsiteinfo(comidlist=comidlist,predict=True,rebuild=False) 
             with sitedatacomid_dict() as db:
-                species_df=self.buildSpeciesDF(
+                species_df=self.buildSpeciesDF( #function can be found in pi_data_helper.py
                     comidlist,db,keylist=keylist,species_name=spec)
             self.logger.info(f'df built for spec:{spec}, species_df.shape:{species_df.shape}')
             return species_df
