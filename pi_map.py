@@ -20,10 +20,7 @@ from pi_cluster import SkCluster
 from pi_data_predict import PiscesPredictDataTool
 
 
-class XMapper(myLogger,Mapper,PiscesPredictDataTool):
-    def __init__(self,species,estimator=''):
-        myLogger.__init__(self,name='Mapper.log')
-        super().__init__()
+
         
         
         
@@ -31,11 +28,14 @@ class XMapper(myLogger,Mapper,PiscesPredictDataTool):
 
 class Mapper(myLogger):
     def __init__(self):
-        myLogger.__init__(self,name='Mapper.log')
+        super().__init__()
+        #myLogger.__init__(self,name='Mapper.log')
         cwd=os.getcwd()
         self.geo_data_dir=os.path.join(cwd,'geo_data')
         self.print_dir=os.path.join(cwd,'print')
         self.boundary_data_path=self.boundaryDataCheck()
+        self.NHD_data_path=self.nhdDataCheck()
+        #NHDplus URL:  https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_0101_HU4_GDB.zip   
         self.boundary_dict={}
         self.pr=PiResults()
         self.fit_scorer=self.pr.fit_scorer
@@ -45,7 +45,38 @@ class Mapper(myLogger):
             'axes.edgecolor':'k', 
             'xtick.color':'k', 'ytick.color':'k', 
             'figure.facecolor':'grey'})
-      
+    
+    def unzip(self,zippath,savedir,newname=None):
+        pass
+    
+    def nhdPlusV2DataCheck(self):
+        datalink=https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/NHDPlusV21_NationalData_Seamless_Geodatabase_Lower48_07.7z
+        datapath=os.path.join(self.geo_data_dir,'NHDPlusV2','NHDPlusV21_National_Seamless_Flattened_Lower48.gdb')
+    
+    
+    
+    def nhdPlusHRHuc4DataCheck(self,huc4):
+        #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
+        datalink=f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_{huc4}_HU4_GDB.zip"
+        datapath=os.path.join(self.geo_data_dir,'NHDPlus','NHDPLUS_H_{huc4}_HU4_GDB.gdb')
+        if not os.path.exists(boundary_data_path):
+            zippath=os.path.join(self.geo_data_dir,'NHDPlus','NHDPLUS_H_{huc4}_HU4_GDB.zip')
+            if os.path.exists(zippath):
+                self.unzip(zippath,savedir,newname=None)
+                return self.nhdPlusHRHuc4DataCheck(huc4)
+                
+            assert False, f"cannot locate boundary data. download from {datalink}"
+        return boundary_data_path
+    
+    
+    def nhdDataCheck(self):
+        #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
+        datalink="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHD/National/HighResolution/GDB/NHD_H_National_GDB.zip"
+        boundary_data_path=os.path.join(self.geo_data_dir,'NHD_H_National_GDB.gdb')
+        if not os.path.exists(boundary_data_path):
+            assert False, f"cannot locate boundary data. download from {datalink}"
+        return boundary_data_path
+    
     def boundaryDataCheck(self):
         #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
         datalink="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/WBD/National/GDB/WBD_National_GDB.zip"
@@ -576,3 +607,12 @@ class Mapper(myLogger):
         err_df=mean_err.rename('err').reset_index()#.rename(columns={'HUC12':'huc12'})# reset_index moves index to columns for merge, rename b/c no name after the mean.
         geo_err_df=self.hucBoundaryMerge(err_df,right_on='HUC12')
         return geo_err_df
+
+    
+class XMapper(Mapper,PiscesPredictDataTool):
+    def __init__(self,species,estimator=''):
+        super().__init__()
+        #myLogger.__init__(self,name='Mapper.log')
+        #Mapper.__init__(self)
+        #PiscesPredictDataTool.__init__(self)
+        #NHD data downloaded from https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHD/National/HighResolution/GDB/NHD_H_National_GDB.zip

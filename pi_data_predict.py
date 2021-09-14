@@ -16,6 +16,12 @@ from pi_db_tool import DBTool
 from pisces_data_huc12 import PiscesDataTool
 
 
+class NHDPlusDownloader(myLogger):
+    def __init__(self):
+        super().__init__()
+        
+    
+
 
 class PiscesPredictDataTool(PiscesDataTool,myLogger):
     def __init__(self,):
@@ -46,7 +52,8 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         except: 
             self.hash_ids_in_Xresults=dict.fromkeys(self.XPredictHashIDComidHashResultsDB(hash_id=None))
         for hash_id in self.hash_ids_in_Xresults:
-            for c_hash in self.XPredictHashIDComidHashResultsDB(hash_id=None)
+            for c_hash in self.XPredictHashIDComidHashResultsDB(hash_id=None):
+                pass
         
         
     
@@ -77,14 +84,48 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     
     def BuildBigSpeciesXPredictDF(self,species,estimator_name=None):
         try: self.species_hash_id_est_dict
-        except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(self,output_estimator_tuple=True)
-        tuplist=self.species_has_id_est_dict[species]
-        
+        except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(output_estimator_tuple=True)
+        tuplist=self.species_hash_id_est_dict[species]
+        dflist=[]
         for est_name,hash_id in tuplist:
             if not estimator_name is None:
                 if not est_name==estimator_name:continue
             for c_hash,df in self.XpredictSpeciesResults(species,hash_id).items():
+                #if not type(estimator_name) is str: df.index=pd.MultiIndex.from_tuples(zip(df.index.to_list(),[est_name]*len(df.index)),names=['COMID','estimator'])
+                if type(df.index) is pd.MultiIndex:
+                    df=df.mean(level=['COMID','HUC12']) #takes mean across estimators
+                dflist.append(df)
+        #df=pd.concat(dflist,axis=0)
+        #self.dflist=dflist
+        #self.df=df
+        h4_yser_dict=self.splitDFByHuc4(dflist)#yser means y in a pd.Series
+        self.h4_yser_dict=h4_yser_dict
+        return h4_yser_dict
+        
+    def splitDFByHuc4(self,dflist):
+        h4comid_dict_y_dict={} #for each huc 4, a dictionary containing comid:y
+        for df in dflist:
+            y_arr=df.to_numpy().flatten()
+            for df_i,(comid,h12) in enumerate(df.index.to_list()):
+                h4=h12[:4]
+                try:
+                    h4dict=h4comid_dict_y_dict[h4]
+                except KeyError:
+                    h4comid_dict_y_dict[h4]={}
+                h4comid_dict_y_dict[h4][comid]=y_arr[df_i]
                 
+        h4_yser_dict={}
+        for h4,comid_y_dict in h4comid_dict_y_dict.items():
+            h4ser=pd.Series(comid_y_dict,name='y')
+            h4ser.index.name='COMID'
+            h4_yser_dict[h4]=h4ser
+        return h4_yser_dict
+            
+        
+        
+            
+        
+            
             
         
         '''
