@@ -49,9 +49,15 @@ class Mapper(myLogger):
     def unzip(self,zippath,savedir,newname=None):
         pass
     
-    def nhdPlusV2DataCheck(self):
-        datalink=https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/NHDPlusV21_NationalData_Seamless_Geodatabase_Lower48_07.7z
-        datapath=os.path.join(self.geo_data_dir,'NHDPlusV2','NHDPlusV21_National_Seamless_Flattened_Lower48.gdb')
+    def nhdPlusV21DataCheck(self):
+        # data guide: https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/0Release_Notes_NationalData_Seamless_GeoDatabase.pdf
+        
+        datalink='https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/NHDPlusV21_NationalData_Seamless_Geodatabase_Lower48_07.7z'
+        datapath=os.path.join(self.geo_data_dir,'NHDPlusV21','NHDPlusNationalData','NHDPlusV21_National_Seamless_Flattened_Lower48.gdb')
+        if not os.path.exists(datapath):
+            print(f'NHDPlusV21 not detected. available at {datalink}')
+            assert False,'Halt'
+        else: return datapath
     
     
     
