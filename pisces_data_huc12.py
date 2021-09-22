@@ -4,7 +4,11 @@ import numpy as np
 import pickle
 from time import sleep,strftime,time
 import multiprocessing as mp
-import geopandas as gpd
+try:
+    import geopandas as gpd
+except:
+    from traceback import format_exc
+    print(format_exc())
 import logging
 import pandas as pd
 from geogtools import GeogTool as gt
