@@ -27,13 +27,14 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         self.netaddress=address
         self.qdict=qdict
         self.BaseManager=BaseManager
+        func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         super(TheQManager,self).__init__()
         
     def run(self):
         self.logger.info(f'qmanager pid: {os.getpid()}')
-        func_name=f'{sys._getframe().f_code.co_name}'
-        myLogger.__init__(self,name=f'{func_name}.log')
+        #func_name=f'{sys._getframe().f_code.co_name}'
+        #myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         #for qname in self.qdict:
         #    q=self.qdict[qname]
