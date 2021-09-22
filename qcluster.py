@@ -30,6 +30,7 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         super(TheQManager,self).__init__()
         
     def run(self):
+        self.logger.info(f'qmanager pid: {os.getpid()}')
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -64,6 +65,7 @@ class SaveQDumper(mp.Process,myLogger): #DBTool removed
     
     
     def run(self):
+        self.logger.info(f'saveqdumper pid: {os.getpid()}')
         #self.BaseManager.register('saveq')
         #m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
         #m.connect()
@@ -152,6 +154,7 @@ class JobQFiller(mp.Process,myLogger):
         
     
     def run(self):
+        self.logger.info(f'jobqfiller pid: {os.getpid()}')
         #QueueManager.register('jobq')
         #m = QueueManager(address=self.netaddress, authkey=b'qkey')
         #m.connect()
@@ -229,6 +232,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
     
     
     def run(self,):
+        self.logger.info(f'runnode pid: {os.getpid()}')
         self.logger.info('RunNode running')
         platform=sys.platform
         p=psutil.Process(os.getpid())
@@ -329,6 +333,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         
         
     def run(self,):
+        self.logger.info(f'runcluster pid: {os.getpid()}')
         self.logger.debug('master starting up')
         try:
             runlist,hash_id_list=self.setup.setupRunners()
