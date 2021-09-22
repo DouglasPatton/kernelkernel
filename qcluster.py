@@ -27,6 +27,7 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         self.netaddress=address
         self.qdict=qdict
         self.BaseManager=BaseManager
+        myLogger.__init__(self,name=f'{func_name}.log')
         super(TheQManager,self).__init__()
         
     def run(self):
@@ -161,14 +162,14 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=20 #not really the max
+        max_q_size=5 #not really the max
 
         q_size=0;tries=0 # for startup
         while len(self.joblist):
-            if q_size<max_q_size:
-                if i>2 and q_size==0 and q_size<len(self.joblist): 
-                    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
-                    max_q_size*=2 # double max q since it is being consumed
+            if q_size<max_q_size//2:
+                #if i>2 and q_size==0 and q_size<len(self.joblist): 
+                #    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
+                #    max_q_size*=2 # double max q since it is being consumed
                 tries=0
                 for i in range(max_q_size): #fill queue back up to 2*max_q_size
                     if len(self.joblist):
