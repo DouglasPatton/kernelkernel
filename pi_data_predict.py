@@ -28,7 +28,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         myLogger.__init__(self,name='pisces_data_predict.log')
         self.logger.info('starting pisces_data_predict logger')
         PiscesDataTool.__init__(self,)
-        self.gt=gt()
+        #self.gt=gt()
         
     def build_species_hash_id_dict(self,output_estimator_tuple=False):
         #copied from pi_results.py and simplified
@@ -82,11 +82,11 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     
     
     
-    def BuildBigSpeciesXPredictDF(self,species,estimator_name=None):
+    def BuildBigSpeciesXPredictSeries(self,species,estimator_name=None,hucdigitcount=2):
         try: self.species_hash_id_est_dict
         except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(output_estimator_tuple=True)
         tuplist=self.species_hash_id_est_dict[species]
-        dflist=[]
+        series_list=[]
         for est_name,hash_id in tuplist:
             if not estimator_name is None:
                 if not est_name==estimator_name:continue
@@ -94,32 +94,38 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                 #if not type(estimator_name) is str: df.index=pd.MultiIndex.from_tuples(zip(df.index.to_list(),[est_name]*len(df.index)),names=['COMID','estimator'])
                 if type(df.index) is pd.MultiIndex:
                     df=df.mean(level=['COMID','HUC12']) #takes mean across estimators
-                dflist.append(df)
-        #df=pd.concat(dflist,axis=0)
-        #self.dflist=dflist
+                series_list.append(df)
+        #df=pd.concat(series_list,axis=0)
+        #self.series_list=series_list
         #self.df=df
-        h4_yser_dict=self.splitDFByHuc4(dflist)#yser means y in a pd.Series
-        self.h4_yser_dict=h4_yser_dict
-        return h4_yser_dict
+        if hucdigitcount>0:
+            Huc_yser_dict=self.splitDFByHucDigits(series_list,hucdigitcount=hucdigitcount)#yser means y in a pd.Series
+        else:
+            Huc_yser_dict={'all_hucs':pd.concat(series_list,axis=0)}
+        self.Huc_yser_dict=Huc_yser_dict
+        return Huc_yser_dict
         
-    def splitDFByHuc4(self,dflist):
-        h4comid_dict_y_dict={} #for each huc 4, a dictionary containing comid:y
-        for df in dflist:
+    def splitDFByHucDigits(self,series_list,hucdigitcount=2):
+        assert hucdigitcount%2==0,f'expecting an even number for hucdigitcount: {hucdigitcount}'
+        assert hucdigitcount<=12,f'expecting a number <=12 for hucdigitcount: {hucdigitcount}'
+        
+        huc_comid_dict_y_dict={} #for each huc 4, a dictionary containing comid:y
+        for df in series_list:
             y_arr=df.to_numpy().flatten()
             for df_i,(comid,h12) in enumerate(df.index.to_list()):
-                h4=h12[:4]
+                Huc=h12[:hucdigitcount]
                 try:
-                    h4dict=h4comid_dict_y_dict[h4]
+                    Hucdict=huc_comid_dict_y_dict[Huc]
                 except KeyError:
-                    h4comid_dict_y_dict[h4]={}
-                h4comid_dict_y_dict[h4][comid]=y_arr[df_i]
+                    huc_comid_dict_y_dict[Huc]={}
+                huc_comid_dict_y_dict[Huc][comid]=y_arr[df_i]
                 
-        h4_yser_dict={}
-        for h4,comid_y_dict in h4comid_dict_y_dict.items():
-            h4ser=pd.Series(comid_y_dict,name='y')
-            h4ser.index.name='COMID'
-            h4_yser_dict[h4]=h4ser
-        return h4_yser_dict
+        Huc_yser_dict={}
+        for Huc,comid_y_dict in huc_comid_dict_y_dict.items():
+            Hucser=pd.Series(comid_y_dict,name='y')
+            Hucser.index.name='COMID'
+            Huc_yser_dict[Huc]=Hucser
+        return Huc_yser_dict
             
         
         
@@ -182,7 +188,8 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     
     
     def generateXPredictSpeciesComidBlockDicts(self,return_comidlist=False):
-        
+        try: self.gt
+        except:self.gt=gt()
         self.buildspecieshuc8list()
         specieshuc8list=self.specieshuc8list
         

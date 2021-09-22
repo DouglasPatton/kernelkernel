@@ -23,7 +23,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir): os.mkdir(self.savedir)
         self.processcount=15
-        self.pi_db=self.pidataDBdict()
+        self.pi_db=self.pidataDBdict() #all the observations
         #slf.gt=gt() # called later
                 
     
@@ -305,7 +305,13 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         with open(huc8listpath,'wb') as f:
             pickle.dump((self.specieshuc8list,self.otherhuclist,self.specieshuclist_newhucs,self.specieshuclist_survey_idx_newhucs),f)
 
-            
+    def getSpeciesHuc8List(self,species):
+        try: self.specieshuc8list
+        except: self.buildspecieshuc8list()
+        try: self.specieslist
+        except: self.buildspecieslist()
+        return self.specieshuc8list[self.specieslist.index(species)]
+        
     
     def buildCOMIDlist(self,):
         comidlistpath=os.path.join(self.savedir,'comidlist')

@@ -1,6 +1,6 @@
 import joblib
 import pickle
-import os,sys,psutil
+import os,sys#,psutil
 import re
 import gc
 from time import strftime,sleep
@@ -23,7 +23,7 @@ from pi_data_viz import DataPlotter
 from helpers import Helper
 import pickle
 from geogtools import GeogTool as GT
-from pisces_data_huc12 import PiscesDataTool as PDT
+#from pisces_data_huc12 import PiscesDataTool as PDT
 from pi_runners import PredictRunner
 from pi_mp_helper import MpHelper,MulXB,MatchCollapseHuc12
 #from sklearn.inspection import permutation_importancef
@@ -582,7 +582,7 @@ class PiResults(DBTool,myLogger):
         return None
                 
     
-    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None): # used by pisce_params PiSetup to build runners for in-sample prediction on cv test sets
+    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None): # used by pisce_params PiSetup to build runners for in-sample or out-of-sample prediction on cv test sets
         try:
             self.results_dict
         except:

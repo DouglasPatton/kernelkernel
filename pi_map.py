@@ -1,6 +1,7 @@
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 import shapely
+from shapely.geometry import Point, Polygon
 
 import joblib
 from multiprocessing import Process,Queue
@@ -12,12 +13,14 @@ import pandas as pd
 import numpy as np
 from pi_results import PiResults
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from helpers import Helper
 from mylogger import myLogger
 from pi_mp_helper import MatchCollapseHuc12,MpHelper
 from pi_cluster import SkCluster
 from pi_data_predict import PiscesPredictDataTool
+from traceback import format_exc
 
 
 
@@ -27,14 +30,17 @@ from pi_data_predict import PiscesPredictDataTool
     
 
 class Mapper(myLogger):
-    def __init__(self):
+    def __init__(self,mp=False):
         super().__init__()
         #myLogger.__init__(self,name='Mapper.log')
         cwd=os.getcwd()
         self.geo_data_dir=os.path.join(cwd,'geo_data')
         self.print_dir=os.path.join(cwd,'print')
+        self.states_path=os.path.join(self.geo_data_dir,'states','cb_2017_us_state_500k.dbf')
         self.boundary_data_path=self.boundaryDataCheck()
-        self.NHD_data_path=self.nhdDataCheck()
+        #self.NHD_data_path=self.nhdDataCheck()
+        self.NHDPlusV21_data_path=self.NHDPlusV21DataCheck()
+        self.NHDPlusV21_CatchmentSP_data_path=os.path.join(self.geo_data_dir,'NHDPlusV21_CatchmentSP.feather')
         #NHDplus URL:  https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_0101_HU4_GDB.zip   
         self.boundary_dict={}
         self.pr=PiResults()
@@ -45,11 +51,11 @@ class Mapper(myLogger):
             'axes.edgecolor':'k', 
             'xtick.color':'k', 'ytick.color':'k', 
             'figure.facecolor':'grey'})
+        if mp:
+            self.states=gpd.read_file(self.states_path)
+            self.setNHDPlusV21CatchmentSP()
     
-    def unzip(self,zippath,savedir,newname=None):
-        pass
-    
-    def nhdPlusV21DataCheck(self):
+    def NHDPlusV21DataCheck(self):
         # data guide: https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/0Release_Notes_NationalData_Seamless_GeoDatabase.pdf
         
         datalink='https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/NHDPlusV21_NationalData_Seamless_Geodatabase_Lower48_07.7z'
@@ -59,30 +65,18 @@ class Mapper(myLogger):
             assert False,'Halt'
         else: return datapath
     
-    
-    
-    def nhdPlusHRHuc4DataCheck(self,huc4):
-        #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
-        datalink=f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_{huc4}_HU4_GDB.zip"
-        datapath=os.path.join(self.geo_data_dir,'NHDPlus','NHDPLUS_H_{huc4}_HU4_GDB.gdb')
-        if not os.path.exists(boundary_data_path):
-            zippath=os.path.join(self.geo_data_dir,'NHDPlus','NHDPLUS_H_{huc4}_HU4_GDB.zip')
-            if os.path.exists(zippath):
-                self.unzip(zippath,savedir,newname=None)
-                return self.nhdPlusHRHuc4DataCheck(huc4)
-                
-            assert False, f"cannot locate boundary data. download from {datalink}"
-        return boundary_data_path
-    
-    
-    def nhdDataCheck(self):
-        #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
-        datalink="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHD/National/HighResolution/GDB/NHD_H_National_GDB.zip"
-        boundary_data_path=os.path.join(self.geo_data_dir,'NHD_H_National_GDB.gdb')
-        if not os.path.exists(boundary_data_path):
-            assert False, f"cannot locate boundary data. download from {datalink}"
-        return boundary_data_path
-    
+    def add_states(self,ax,clip_to=None,bbox=None,zorder=9):
+        try: self.states
+        except: self.states=gpd.read_file(self.states_path)
+        if not clip_to is None:
+            bounds=clip_to.total_bounds
+            states=self.states.cx[bounds[0]:bounds[2],bounds[1]:bounds[3]]
+        elif not bbox is None:
+            states=self.states.cx[bbox[0]:bbox[2],bbox[1]:bbox[3]]
+        else:
+            states=self.states
+        states.boundary.plot(linewidth=0.2,ax=ax,color=None,edgecolor='k',zorder=zorder)  
+        
     def boundaryDataCheck(self):
         #https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/atoms/files/WBD%20v2.3%20Model%20Poster%2006012020.pdf
         datalink="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/WBD/National/GDB/WBD_National_GDB.zip"
@@ -90,6 +84,148 @@ class Mapper(myLogger):
         if not os.path.exists(boundary_data_path):
             assert False, f"cannot locate boundary data. download from {datalink}"
         return boundary_data_path
+    
+    def getNHDPlusV21Layer(self,layer_name):
+        return gpd.read_file(self.NHDPlusV21_data_path,layer=layer_name)
+    
+    def setNHDPlusV21CatchmentSP(self):#SP for simplified polygons
+        if not os.path.exists(self.NHDPlusV21_CatchmentSP_data_path):
+            print('resaving the catchmentsp layer',end='')
+            NHDPlusV21CatchmentSP=self.getNHDPlusV21Layer('CatchmentSP')
+            NHDPlusV21CatchmentSP.to_feather(self.NHDPlusV21_CatchmentSP_data_path)
+            print('...is complete')
+            self.NHDPlusV21CatchmentSP=NHDPlusV21CatchmentSP
+        else:
+            print('reading feather',end='')
+            self.NHDPlusV21CatchmentSP=gpd.read_feather(self.NHDPlusV21_CatchmentSP_data_path)
+            print('...is complete')
+    
+    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=True,save_check=False):
+        '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
+        name=f'Xpredict_{species}.png'
+        if  not estimator_name is None:
+            name+=f'_{estimator_name}'
+        savepath=os.path.join(self.print_dir,name)
+        if save_check and os.path.exists(savepath):
+            print(f'{species} already saved, skipping')
+            return
+        
+        try:self.NHDPlusV21CatchmentSP
+        except:self.setNHDPlusV21CatchmentSP()
+        try: self.states
+        except: self.states=gpd.read_file(self.states_path)    
+        try:self.ppdt
+        except:self.ppdt=PiscesPredictDataTool()
+        print('building data')
+        huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictSeries(
+            species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
+        self.huc_species_series_dict=huc_species_series_dict
+        fig, ax = plt.subplots(figsize=[12,6],dpi=1200)
+        ax.set_aspect('equal')
+        print('plotting...',end='')
+        gdf_bounds=[]
+        for huc,ser in huc_species_series_dict.items():
+            ser_dict={}
+            print(f'{huc}',end=', ')
+            ser[ser==1]='present'
+            ser[ser==0]='absent'
+            pser=ser[ser=='present']
+            if len(pser)>0:
+                ser_dict['present']=pser
+            else:
+                if not include_absent:
+                    continue
+            if include_absent:
+                aser=ser[ser=='absent']
+                ser_dict['absent']=aser
+            for ser_name,ser in ser_dict.items():
+                if type(ser.index) is pd.MultiIndex:
+                    ser.index=ser.index.get_level_values('COMID')
+                if type(ser) is pd.DataFrame:
+                    if type(ser.columns) is pd.MultiIndex:
+                        ser.columns=ser.columns.get_level_values('var').tolist()
+                    ser=ser.loc['y']
+                ser.index=ser.index.astype('int64')
+            
+                gdf=self.NHDPlusV21CatchmentSP.merge(
+                    ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
+                if ser_name=='absent':
+                    c='b'
+                else:c='r'
+                #clipped_gdf=gpd.clip(gdf,self.states)
+                gdf.plot(column='y',ax=ax,zorder=2,color=c)
+                gdf_bounds.append(gdf.total_bounds)
+        #big_gdf=gpd.sjoin([ser_i.boundary for ser_i in huc_species_series_dict.values()],join='outer')
+        total_bounds_list=list(zip(*gdf_bounds))
+        outer_bounds=(min(total_bounds_list[0]),min(total_bounds_list[1]),max(total_bounds_list[2]),max(total_bounds_list[3]))
+        self.add_states(ax,bbox=outer_bounds,zorder=3)
+        h8list=self.ppdt.getSpeciesHuc8List(species)
+        self.getHucDigitsGDF(h8list,huc='08').plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
+        format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
+        ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
+        self.addInverseConus(ax,outer_bounds,gdf.crs,zorder=9)
+        
+        self.fig=fig
+        self.ax=ax
+        self.name=name
+        
+        leg_patches=[
+            mpatches.Patch(color='red', label='Present'),
+            ]
+        if include_absent:
+            leg_patches.append(mpatches.Patch(color='b', label='Absent'))
+        leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
+        plt.legend(handles=leg_patches)
+        fig.tight_layout()
+        fig.savefig(savepath)
+        fig.show() 
+        
+    def addInverseConus(self,ax,outer_bounds,crs,zorder=9):
+        bbox=outer_bounds
+        p1 = Point(bbox[0], bbox[3])
+        p2 = Point(bbox[2], bbox[3])
+        p3 = Point(bbox[2], bbox[1])
+        p4 = Point(bbox[0], bbox[1])
+
+        np1 = (p1.coords.xy[0][0], p1.coords.xy[1][0])
+        np2 = (p2.coords.xy[0][0], p2.coords.xy[1][0])
+        np3 = (p3.coords.xy[0][0], p3.coords.xy[1][0])
+        np4 = (p4.coords.xy[0][0], p4.coords.xy[1][0])
+
+        bb_polygon = Polygon([np1, np2, np3, np4])
+
+        df2 = gpd.GeoDataFrame(geometry=gpd.GeoSeries(bb_polygon), columns=['geometry'],crs=crs)
+        gpd_clipped=gpd.overlay(df2,self.states,how='difference')
+        gpd_clipped.plot(ax=ax,color='w',zorder=zorder)
+            
+        
+                        
+                        
+    def stringifyHuc(self,huc):
+        if type(huc) is int:
+            huc=str(huc)
+        if not len(huc)%2==0: huc='0'+huc
+        #assert len(huc)==2,f'expecting 2 digit string, but huc: {huc}'
+        return huc
+        
+    def getHucDigitsGDF(self,hlist,huc='02'):
+        huc=self.stringifyHuc(huc)
+        hlist=list(dict.fromkeys([self.stringifyHuc(h)[:int(huc)] for h in hlist]))#fromkeys removes duplicates
+            
+        try: huc_gdf=self.boundary_dict[f'huc{huc}']
+        except: huc_gdf=self.getHucBoundary(f'huc{huc}')
+        huc_column_name=f'huc{huc}'
+        if huc_column_name[-2]=='0': #b/c column name might be huc2 not huc02
+            huc_column_name=huc_column_name[:-2]+huc_column_name[-1]
+        return huc_gdf.loc[huc_gdf[huc_column_name].isin(hlist)]
+        
+    
+    
+        
+            
+    
+    
+    
     
     def getHucBoundary(self,huc_level):
         print(huc_level)
@@ -614,7 +750,7 @@ class Mapper(myLogger):
         geo_err_df=self.hucBoundaryMerge(err_df,right_on='HUC12')
         return geo_err_df
 
-    
+"""   
 class XMapper(Mapper,PiscesPredictDataTool):
     def __init__(self,species,estimator=''):
         super().__init__()
@@ -622,3 +758,29 @@ class XMapper(Mapper,PiscesPredictDataTool):
         #Mapper.__init__(self)
         #PiscesPredictDataTool.__init__(self)
         #NHD data downloaded from https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHD/National/HighResolution/GDB/NHD_H_National_GDB.zip
+"""
+
+if __name__=="__main__":
+    try:
+        specs=PiscesPredictDataTool().returnspecieslist()
+        mpr=Mapper(mp=True)
+        for spec in specs:
+            print(spec)
+            try:
+                mpr.plotSpeciesPredict(spec,huc_level=4,include_absent=False,save_check=True)
+            except:
+                print(f'error for species:{spec}',format_exc())
+        
+        '''
+        proc_count=6
+        procs=[]
+        start=0
+        step=-(-len(specs))//proc_count #ceiling divide
+        for p in range(proc_count):
+            Process(
+                target=mpr.plotSpeciesPredict,
+                args=tuple(specs[start:start+step]),
+                kwargs={'huc_level':4,'include_absent':False})'''
+    except:
+        print(format_exc())
+
