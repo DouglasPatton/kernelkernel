@@ -35,7 +35,7 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         self.logger.info(f'qmanager pid: {os.getpid()}')
         #func_name=f'{sys._getframe().f_code.co_name}'
         #myLogger.__init__(self,name=f'{func_name}.log')
-        self.logger.info(f'starting {func_name} logger')
+        #self.logger.info(f'starting {func_name} logger')
         #for qname in self.qdict:
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
