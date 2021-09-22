@@ -260,7 +260,9 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 tries=0
                 try:
                     #self.logger.debug('RunNode about to check jobq')
-                    runner=jobq.get(True,20)
+                    pipe=jobq.get(True,20)
+                    pipe.send('ready')
+                    runner=pipe.recv()
                     self.logger.debug(f'RunNode has job') #:runner.rundict:{runner.rundict}')
                     havejob=1
                     tries=0
@@ -275,7 +277,7 @@ class RunNode(mp.Process,BaseManager,myLogger):
                             jobq.put(runner)
                             return
                      # each estimator contains rundict
-                    runner.passQ(saveq)
+                    runner.passPipe(saveq)
                     if type(runner) is FitRunner:
                         runner.run(cv_n_jobs=self.cv_n_jobs)
                     else:
