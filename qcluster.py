@@ -129,8 +129,10 @@ class SaveQDumper(mp.Process,myLogger): #DBTool removed
                             break
                         except:
                             self.logger.exception(f'error adding to DB. try:{s}')
+                            sleep(5)
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
+                sleep()
             
             
             
