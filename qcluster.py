@@ -163,7 +163,7 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=5 #not really the max
+        max_q_size=1 #not really the max
 
         q_size=0;tries=0 # for startup
         while len(self.joblist):
@@ -204,7 +204,7 @@ class JobQFiller(mp.Process,myLogger):
             else:
                 tries+=1
             q_size=queue.qsize()
-            sleep(1+tries*4) 
+            sleep(2) 
             
         self.logger.debug('all jobs added to jobq.')
         return
