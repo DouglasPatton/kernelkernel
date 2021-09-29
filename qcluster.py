@@ -179,7 +179,10 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=1 #not really the max
+        max_q_size=2 #not really the max
+        
+
+        self.logger.debug('about to send job to pipe')    
         pipe_suffix_list=list(range(self.pipe_count))
         for p_i in pipe_suffix_list:
             QM.register(f'p_snd_{p_i}')
