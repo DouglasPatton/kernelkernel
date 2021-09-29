@@ -40,7 +40,7 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
         if self.qdict is None:
-            qdict={'jobq':mp.SimpleQueue(),'saveq':mp.SimpleQueue()}
+            qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
         else:
             qdict=self.qdict
         jobq = qdict['jobq']

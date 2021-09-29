@@ -30,7 +30,7 @@ class mypool(myLogger):
     def runpool(self,):
         try:
             if self.local_run:
-                qdict={'jobq':mp.SimpleQueue(),'saveq':mp.SimpleQueue()}
+                qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
                 sleep(2)
             else:
                 qdict=None
