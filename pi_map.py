@@ -4,7 +4,7 @@ import shapely
 from shapely.geometry import Point, Polygon
 
 import joblib
-from multiprocessing import Process,Queue
+from multiprocessing import Process
 from time import time,sleep
 import re
 import os

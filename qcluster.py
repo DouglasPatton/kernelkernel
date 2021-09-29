@@ -9,7 +9,7 @@ from random import randint,seed,shuffle
 from helpers import Helper
 import multiprocessing as mp
 from multiprocessing.managers import BaseManager
-from queue import Queue
+from queue import Queue 
 import numpy as np
 from sqlitedict import SqliteDict
 #from  sk_tool import SKToolInitializer
@@ -40,11 +40,12 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
         if self.qdict is None:
-            qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
+            qdict={'jobq':mp.SimpleQueue(),'saveq':mp.SimpleQueue()}
         else:
             qdict=self.qdict
         jobq = qdict['jobq']
         saveq = qdict['saveq']
+        #pipeq=qdict['pipeq']
         self.BaseManager.register('jobq', callable=lambda:jobq)
         self.BaseManager.register('saveq', callable=lambda:saveq)
         m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
@@ -261,10 +262,11 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 jobsuccess=0
                 tries=0
                 try:
+                    runner=jobq.get(True,20)
                     #self.logger.debug('RunNode about to check jobq')
-                    pipe=jobq.get(True,20)
-                    pipe.send('ready')
-                    runner=pipe.recv()
+                    #pipe=jobq.get(True,20)
+                    #pipe.send('ready')
+                    #runner=pipe.recv()
                     self.logger.debug(f'RunNode has job') #:runner.rundict:{runner.rundict}')
                     havejob=1
                     tries=0
@@ -278,8 +280,9 @@ class RunNode(mp.Process,BaseManager,myLogger):
                         if runner=='shutdown':
                             jobq.put(runner)
                             return
-                     # each estimator contains rundict
-                    runner.passPipe(saveq)
+                    # each estimator contains rundict
+                    #runner.passPipe(saveq)
+                    runner.passQ(saveq)
                     if type(runner) is FitRunner:
                         runner.run(cv_n_jobs=self.cv_n_jobs)
                     else:
