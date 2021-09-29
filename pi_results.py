@@ -604,7 +604,7 @@ class PiResults(DBTool,myLogger):
             self.logger.info(f'building rundict_list')
             for d,(dg_hash,hash_id_list) in enumerate(datagenhash_hash_id_dict.items()):
                 if test and d>test: break
-                rundict_list.append({})
+                rundict_list.append({'data_gen':self.gen_dict[hash_id_list[0]]['data_gen']})
                 for hash_id in (hash_id_list):
                     if not hash_id in predicted:
                         rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
