@@ -255,30 +255,41 @@ class XPredictRunner:#(PredictRunner):
         #called on master machine by jobqfiller before sending to jobq
         try:
             regen_done=False
+            spec=self.rundict['data_gen']['species']
+            comidblockhashdict=data.getXpredictSpeciesComidBlockDict()[spec]
+            hash_id_list=[key for key in self.rundict.keys() if key!='data_gen']
+            self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
+            if len(self.hash_id_c_hash_dict)==0:
+                return True #job will be skipped
+            
             none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
             if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
                 resultsDBdict=DBTool().resultsDBdict()
-                for hash_id in none_hash_id_list:
-                    result=resultsDBdict[hash_id]
-                    if type(result) is str:
-                        result=self.getResult(result)
-                    self.rundict[hash_id]=result['model'] #
-                    self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
-                    if not regen_done:
+                for hash_id in hash_id_list:
+                    if hash_id in self.hash_id_c_hash_dict:
+                        if self.rundict['hash_id'] is None: #then need to load the result
+                            result=resultsDBdict[hash_id]
+                            if type(result) is str:
+                                result=self.getResult(result)
+                            self.rundict[hash_id]=result['model'] #
+                            self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
+                            if not regen_done:
+                                self.rundict['data_gen']=result['data_gen'] #load updated data_gen from result once
+                                regen_done=True 
+                    else:
+                        self.logger.warning(f'removing hash_id:{hash_id} from xpredict rundict because already complete')
+                        self.rundict.pop(hash_id)
+            if not regen_done:
+                self.logger.critical(f'regen_done is False, so retrieving data_gen from a result')
+                for hash_id,result in self.rundict.items():
+                    if 'data_gen' in result:
                         self.rundict['data_gen']=result['data_gen']
-            data,rundict=self.build_from_rundict(self.rundict.copy())
-            comidblockhashdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
-            hash_id_list=rundict.keys()
-            self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
-            self.logger.info(f'{data.spec} predictrunner built')
-            if len(self.hash_id_c_hash_dict)==0:
-                return True #job will be skipped
-            else:
-                return False
-            
-            
+                        regen_done=True
+                        continue
+            assert regen_done,f'for some reason regen_done is False. self.rundict:{self.rundict}'
+            self.logger.info(f'{spec} predictrunner built')
         except: 
-            self.logger.exception(f'build error with rundict:{rundict}')
+            self.logger.exception(f'build error with rundict:{self.rundict}')
     
     
     def huc12float_to_str(self,huc12):
