@@ -21,16 +21,21 @@ from pi_db_tool import DBTool
 from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
-        
 
-class TheQManager(mp.Process,BaseManager,myLogger):
-    def __init__(self,address,qdict):
+pipe_count=5
+
+
+class QM(BaseManager):pass 
+
+class TheQManager(mp.Process,myLogger):
+    def __init__(self,address,qdict,pipe_count=pipe_count):
         self.netaddress=address
         self.qdict=qdict
-        self.BaseManager=BaseManager
+        self.pipe_count=pipe_count
+        #self.BaseManager=BaseManager
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
-        super(TheQManager,self).__init__()
+        super().__init__()
         
     def run(self):
         self.logger.info(f'qmanager pid: {os.getpid()}')
@@ -47,9 +52,14 @@ class TheQManager(mp.Process,BaseManager,myLogger):
         jobq = qdict['jobq']
         saveq = qdict['saveq']
         #pipeq=qdict['pipeq']
-        self.BaseManager.register('jobq', callable=lambda:jobq)
-        self.BaseManager.register('saveq', callable=lambda:saveq)
-        m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
+        QM.register('jobq', callable=lambda:jobq)
+        QM.register('saveq', callable=lambda:saveq)
+        pipes=[]
+        for p_i in range(self.pipe_count):
+            pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
+            QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
+            QM.register(f'p_snd_{p_i}',callable=lambda: pipes[-1][1])
+        m = QM(address=self.netaddress, authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
         s.serve_forever()
@@ -136,14 +146,15 @@ class SaveQDumper(mp.Process,myLogger): #DBTool removed
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
                 sleep()
             
-            
+           
             
 class JobQFiller(mp.Process,myLogger):
     '''
     runmaster calls this and passes the full list_of_rundicts to it
     '''
-    def __init__(self,q,joblist,do_mp=True,address=None):
+    def __init__(self,q,joblist,do_mp=True,address=None,pipe_count=pipe_count):
         self.q=q
+        self.pipe_count=pipe_count
         self.netaddress=address
         self.joblist=joblist
         self.do_mp=do_mp
@@ -169,12 +180,19 @@ class JobQFiller(mp.Process,myLogger):
         queue=self.q
         i=1
         max_q_size=1 #not really the max
-        if not self.netaddress is None:
-            self.BM=BaseManager(address=self.netaddress,authkey=b'qkey')
-            self.M=self.BM.connect()
-        tries=0;p_i=0#for naming pipes
+        
+
+        self.logger.debug('about to send job to pipe')    
+        pipe_suffix_list=list(range(self.pipe_count))
+        for p_i in pipe_suffix_list:
+            QM.register(f'p_snd_{p_i}')
+        m=QM(address=self.netaddress,authkey=b'qkey')
+        m.connect()
+        tries=0#for naming pipes
         while len(self.joblist):
-            if queue.empty():
+            q_size=queue.qsize()
+            self.logger.info(f'q_size:{q_size}')
+            if q_size<max_q_size:
                 #if i>2 and q_size==0 and q_size<len(self.joblist): 
                 #    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
                 #    max_q_size*=2 # double max q since it is being consumed
@@ -186,6 +204,7 @@ class JobQFiller(mp.Process,myLogger):
                     else: 
                         self.logger.critical("jobqfiller's joblist is empty, returning")
                         return
+                    finished=False
                     try:
                         finished=job.build()
                     except:
@@ -193,22 +212,30 @@ class JobQFiller(mp.Process,myLogger):
                         finished=False
                     try:
                         if finished:
-                            self.logger.info(f'skipping finished job ({i})')
+                            self.logger.info(f'skipping finished job ({i+1})')
                             i+=1
                         else:
                             jobcount=len(self.joblist)
-                            self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
-                            p_rcv,p_snd=mp.Pipe(False)#False for one way, rcv-recieve,snd-send
-                            #self.M.register(f'p_snd_{p_i}', callable=lambda:p_snd)
-                            self.M.register(f'p_rcv_{p_i}', callable=lambda:p_rcv)
-                            p_i+=1
-                            p_snd.send(job)
+                            self.logger.debug(f'adding job:{i+1}/{jobcount} to job queue')
+                            
+                            while True:
+                                p_i=pipe_suffix_list.pop(0)
+                                sendpipe=getattr(m,f'p_snd_{p_i}')() 
+                                pipe_suffix_list.append(p_i)
+                                if not sendpipe.poll():break
+                                else:self.logger.debug(f'pipe {p_i} not empty')
+                            
+                            sendpipe.send(job)
+                            
+                            self.logger.debug('job sent, about to put rcv_pipe string in jobq')
                             queue.put(f'p_rcv_{p_i}')
-                            self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
+                            #p_i+=1
+                            
+                            self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
                             i+=1
                     except:
                         self.joblist.append(job)
-                        self.logger.exception(f'jobq error for i:{i}, adding back to joblist, which has len: {len(self.joblist)}')
+                        self.logger.exception(f'jobq error for i:{i+1}, adding back to joblist, which has len: {len(self.joblist)}')
             else:
                 tries+=1
                 sleep(2)
@@ -219,7 +246,7 @@ class JobQFiller(mp.Process,myLogger):
 
                 
 
-class RunNode(mp.Process,BaseManager,myLogger):
+class RunNode(mp.Process,myLogger):
     def __init__(self,local_run=None,source=None,qdict=None,run_type='fit',cv_n_jobs=None):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
@@ -237,7 +264,6 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 self.logger.exception(f'ip address error')
                 assert False, 'Halt'
                 self.netaddress=('10.0.0.3',50002)
-            self.BaseManager=BaseManager
         super().__init__()
     
     
@@ -245,7 +271,8 @@ class RunNode(mp.Process,BaseManager,myLogger):
         self.logger.info(f'runnode pid: {os.getpid()}')
         self.logger.info('RunNode running')
         platform=sys.platform
-        p=psutil.Process(os.getpid())
+        pid=os.getpid()
+        p=psutil.Process(pid)
         if platform=='win32':
             p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
         else:
@@ -254,12 +281,13 @@ class RunNode(mp.Process,BaseManager,myLogger):
             jobq=self.qdict['jobq']
             saveq=self.qdict['saveq']
         else:
-            self.BaseManager.register('jobq')
-            self.BaseManager.register('saveq')
-            m = self.BaseManager(address=self.netaddress, authkey=b'qkey')
+            QM.register('jobq')
+            QM.register('saveq')
+            m = QM(address=self.netaddress, authkey=b'qkey')
             m.connect()
             jobq = m.jobq()
             saveq = m.saveq()
+            self.logger.info(f'runnode has queues')
         #kc=kernelcompare.KernelCompare(source=self.source) # a new one every run
         while True:
             try:
@@ -268,9 +296,14 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 tries=0
                 try:
                     pipe_str=jobq.get(True,20)
-                    rcv_pipe=getattr(m,pipe_str)
+                    QM.register(pipe_str)
+                    m = QM(address=self.netaddress, authkey=b'qkey')
+                    m.connect()
+                    self.logger.debug(f'runnode{pid} has pipe_str:{pipe_str}')
+                    rcv_pipe=getattr(m,pipe_str)()
+                    self.logger.debug(f'pid:{pid} is about to check rcv_pipe:{rcv_pipe}')
                     runner=rcv_pipe.recv()
-                    rcv_pipe.close()
+                    self.logger.debug(f'pid:{pid} has the runner')
                     #runner=jobq.get(True,20)
                     #self.logger.debug('RunNode about to check jobq')
                     #pipe=jobq.get(True,20)
@@ -322,7 +355,6 @@ class RunCluster(mp.Process,DBTool,myLogger):
                 self.logger.exception(f'ip address error')
                 assert False, 'Halt'
                 self.netaddress=('10.0.0.3',50002)
-            self.BaseManager=BaseManager
             qm=TheQManager(self.netaddress,None)
             qm.start()
             sleep(1)
@@ -422,9 +454,9 @@ class RunCluster(mp.Process,DBTool,myLogger):
                     
             
     def getqdict(self):
-        BaseManager.register('jobq')
-        BaseManager.register('saveq')
-        m = BaseManager(address=self.netaddress, authkey=b'qkey')
+        QM.register('jobq')
+        QM.register('saveq')
+        m = QM(address=self.netaddress, authkey=b'qkey')
         m.connect()
         jobq = m.jobq()
         saveq = m.saveq()
