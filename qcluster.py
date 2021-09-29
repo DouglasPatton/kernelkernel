@@ -1,3 +1,4 @@
+
 import pickle
 import os,sys,psutil
 import re
@@ -141,8 +142,9 @@ class JobQFiller(mp.Process,myLogger):
     '''
     runmaster calls this and passes the full list_of_rundicts to it
     '''
-    def __init__(self,q,joblist,do_mp=True):
+    def __init__(self,q,joblist,do_mp=True,address=None):
         self.q=q
+        self.netaddress=address
         self.joblist=joblist
         self.do_mp=do_mp
         if self.do_mp:
@@ -167,8 +169,10 @@ class JobQFiller(mp.Process,myLogger):
         queue=self.q
         i=1
         max_q_size=1 #not really the max
-
-        tries=0 # for startup
+        if not self.netaddress is None:
+            self.BM=BaseManager(address=self.netaddress,authkey=b'qkey')
+            self.M=self.BM.connect()
+        tries=0;p_i=0#for naming pipes
         while len(self.joblist):
             if queue.empty():
                 #if i>2 and q_size==0 and q_size<len(self.joblist): 
@@ -194,7 +198,12 @@ class JobQFiller(mp.Process,myLogger):
                         else:
                             jobcount=len(self.joblist)
                             self.logger.debug(f'adding job:{i}/{jobcount} to job queue')
-                            queue.put(job)
+                            p_rcv,p_snd=mp.Pipe(False)#False for one way, rcv-recieve,snd-send
+                            #self.M.register(f'p_snd_{p_i}', callable=lambda:p_snd)
+                            self.M.register(f'p_rcv_{p_i}', callable=lambda:p_rcv)
+                            p_i+=1
+                            p_snd.send(job)
+                            queue.put(f'p_rcv_{p_i}')
                             self.logger.debug(f'job:{i}/{jobcount} succesfully added to queue')
                             i+=1
                     except:
@@ -258,7 +267,11 @@ class RunNode(mp.Process,BaseManager,myLogger):
                 jobsuccess=0
                 tries=0
                 try:
-                    runner=jobq.get(True,20)
+                    pipe_str=jobq.get(True,20)
+                    rcv_pipe=getattr(m,pipe_str)
+                    runner=rcv_pipe.recv()
+                    rcv_pipe.close()
+                    #runner=jobq.get(True,20)
                     #self.logger.debug('RunNode about to check jobq')
                     #pipe=jobq.get(True,20)
                     #pipe.send('ready')
@@ -299,6 +312,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
+            self.netaddress=None
         else:
             try:
                 with open('ip.json','r') as f:
@@ -351,11 +365,11 @@ class RunCluster(mp.Process,DBTool,myLogger):
             hash_id_list=[hash_id_list[i] for i in order]
             run_jobfiller_as_proc=True
             if run_jobfiller_as_proc:
-                jobqfiller=JobQFiller(self.qdict['jobq'],runlist,do_mp=True)
+                jobqfiller=JobQFiller(self.qdict['jobq'],runlist,do_mp=True,address=self.netaddress)
                 jobqfiller.start()
             else:
                 jobs_at_a_time=40 if 40<len(runlist) else len(runlist)
-                jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False)
+                jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False,address=self.netaddress)
                 jobqfiller.run()
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
