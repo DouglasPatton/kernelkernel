@@ -269,7 +269,7 @@ class XPredictRunner:#(PredictRunner):
                 resultsDBdict=DBTool().resultsDBdict()
                 for hash_id in hash_id_list:
                     if hash_id in self.hash_id_c_hash_dict:
-                        if self.rundict['hash_id'] is None: #then need to load the result
+                        if self.rundict[hash_id] is None: #then need to load the result
                             result=resultsDBdict[hash_id]
                             if type(result) is str:
                                 result=self.getResult(result)
