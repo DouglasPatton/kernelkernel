@@ -179,7 +179,7 @@ class JobQFiller(mp.Process,myLogger):
         #queue = m.jobq()
         queue=self.q
         i=1
-        max_q_size=1 #not really the max
+        max_q_size=2 #not really the max
         
 
         self.logger.debug('about to send job to pipe')    
