@@ -180,9 +180,6 @@ class JobQFiller(mp.Process,myLogger):
         queue=self.q
         i=1
         max_q_size=1 #not really the max
-        
-
-        self.logger.debug('about to send job to pipe')    
         pipe_suffix_list=list(range(self.pipe_count))
         for p_i in pipe_suffix_list:
             QM.register(f'p_snd_{p_i}')
@@ -224,10 +221,10 @@ class JobQFiller(mp.Process,myLogger):
                                 pipe_suffix_list.append(p_i)
                                 if not sendpipe.poll():break
                                 else:self.logger.debug(f'pipe {p_i} not empty')
-                            
+                            self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
                             sendpipe.send(job)
                             
-                            self.logger.debug('job sent, about to put rcv_pipe string in jobq')
+                            self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
                             queue.put(f'p_rcv_{p_i}')
                             #p_i+=1
                             
