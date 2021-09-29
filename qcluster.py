@@ -144,7 +144,7 @@ class SaveQDumper(mp.Process,myLogger): #DBTool removed
                             sleep(5)
             except:
                 self.logger.exception('unexpected error in SaveQDumper while outer try')
-                sleep()
+                sleep(2)
             
            
             
