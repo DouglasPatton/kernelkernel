@@ -172,77 +172,81 @@ class JobQFiller(mp.Process,myLogger):
         
     
     def run(self):
-        self.logger.info(f'jobqfiller pid: {os.getpid()}')
-        #QueueManager.register('jobq')
-        #m = QueueManager(address=self.netaddress, authkey=b'qkey')
-        #m.connect()
-        #queue = m.jobq()
-        queue=self.q
-        i=1
-        max_q_size=2 #not really the max
-        
+        try:
+            self.logger.info(f'jobqfiller pid: {os.getpid()}')
+            #QueueManager.register('jobq')
+            #m = QueueManager(address=self.netaddress, authkey=b'qkey')
+            #m.connect()
+            #queue = m.jobq()
+            queue=self.q
+            i=1
+            max_q_size=2 #not really the max
 
-        self.logger.debug('about to send job to pipe')    
-        pipe_suffix_list=list(range(self.pipe_count))
-        for p_i in pipe_suffix_list:
-            QM.register(f'p_snd_{p_i}')
-        m=QM(address=self.netaddress,authkey=b'qkey')
-        m.connect()
-        tries=0#for naming pipes
-        while len(self.joblist):
-            q_size=queue.qsize()
-            self.logger.info(f'q_size:{q_size}')
-            if q_size<max_q_size:
-                #if i>2 and q_size==0 and q_size<len(self.joblist): 
-                #    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
-                #    max_q_size*=2 # double max q since it is being consumed
-                tries=0
-                for i in range(max_q_size): #fill queue back up to 2*max_q_size
-                    if len(self.joblist):
-                        #n_sel=np.random.randint(0,len(self.joblist))
-                        job=self.joblist.pop()
-                    else: 
-                        self.logger.critical("jobqfiller's joblist is empty, returning")
-                        return
-                    finished=False
-                    try:
-                        finished=job.build()
-                    except:
-                        self.logger.exception(f'error building job')
+
+            #self.logger.debug('about to send job to pipe')    
+            pipe_suffix_list=list(range(self.pipe_count))
+            for p_i in pipe_suffix_list:
+                QM.register(f'p_snd_{p_i}')
+            m=QM(address=self.netaddress,authkey=b'qkey')
+            m.connect()
+            tries=0#for naming pipes
+            while len(self.joblist):
+                q_size=queue.qsize()
+                self.logger.info(f'q_size:{q_size}')
+                if q_size<max_q_size:
+                    #if i>2 and q_size==0 and q_size<len(self.joblist): 
+                    #    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
+                    #    max_q_size*=2 # double max q since it is being consumed
+                    tries=0
+                    for i in range(max_q_size): #fill queue back up to 2*max_q_size
+                        if len(self.joblist):
+                            #n_sel=np.random.randint(0,len(self.joblist))
+                            job=self.joblist.pop()
+                        else: 
+                            self.logger.critical("jobqfiller's joblist is empty, returning")
+                            return
                         finished=False
-                    try:
-                        if finished:
-                            self.logger.info(f'skipping finished job ({i+1})')
-                            i+=1
-                        else:
-                            jobcount=len(self.joblist)
-                            self.logger.debug(f'adding job:{i+1}/{jobcount} to job queue')
-                            
-                            while True:
-                                p_i=pipe_suffix_list.pop(0)
-                                sendpipe=getattr(m,f'p_snd_{p_i}')() 
-                                pipe_suffix_list.append(p_i)
-                                if not sendpipe.poll():break
-                                else:self.logger.debug(f'pipe {p_i} not empty')
-                            self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
-                            sendpipe.send(job)
-                            
-                            self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
-                            queue.put(f'p_rcv_{p_i}')
-                            #p_i+=1
-                            
-                            self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
-                            i+=1
-                    except:
-                        self.joblist.append(job)
-                        self.logger.exception(f'jobq error for i:{i+1}, adding back to joblist, which has len: {len(self.joblist)}')
-            else:
-                tries+=1
-                sleep(2)
-                if tries>10: sleep(5)
-            
-        self.logger.debug('all jobs added to jobq.')
-        return
+                        try:
+                            finished=job.build()
+                        except:
+                            self.logger.exception(f'error building job')
+                            finished=False
+                        try:
+                            if finished:
+                                self.logger.info(f'skipping finished job ({i+1})')
+                                i+=1
+                            else:
+                                jobcount=len(self.joblist)
+                                self.logger.debug(f'adding job:{i+1}/{jobcount} to job queue')
+
+                                while True:
+                                    p_i=pipe_suffix_list.pop(0)
+                                    sendpipe=getattr(m,f'p_snd_{p_i}')() 
+                                    pipe_suffix_list.append(p_i)
+                                    if not sendpipe.poll():break
+                                    else:self.logger.debug(f'pipe {p_i} not empty')
+                                self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
+                                sendpipe.send(job)
+
+                                self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
+                                queue.put(f'p_rcv_{p_i}')
+                                #p_i+=1
+
+                                self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
+                                i+=1
+                        except:
+                            self.joblist.append(job)
+                            self.logger.exception(f'jobq error for i:{i+1}, adding back to joblist, which has len: {len(self.joblist)}')
+                else:
+                    tries+=1
+                    sleep(2)
+                    if tries>10: sleep(5)
+
+            self.logger.debug('all jobs added to jobq.')
+            return
+        except:
+            self.logger.exception(f'jobqfiller outer catch')
+            assert False,'halt'
 
                 
 
