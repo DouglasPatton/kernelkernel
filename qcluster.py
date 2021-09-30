@@ -56,8 +56,8 @@ class TheQManager(mp.Process,myLogger):
         QM.register('saveq', callable=lambda:saveq)
         pipes=[]
         for p_i in range(self.pipe_count):
-            pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
-            QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
+            #pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
+            #QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
             QM.register(f'p_snd_{p_i}',callable=lambda: pipes[-1][1])
         m = QM(address=self.netaddress, authkey=b'qkey')
         s = m.get_server()
@@ -226,7 +226,7 @@ class JobQFiller(mp.Process,myLogger):
                                     if not sendpipe.poll():break
                                     else:self.logger.debug(f'pipe {p_i} not empty')
                                 self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
-                                sendpipe.send(job)
+                                sendpipe.send(DBTool.my_encode(job))
 
                                 self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
                                 queue.put(f'p_rcv_{p_i}')
@@ -306,7 +306,7 @@ class RunNode(mp.Process,myLogger):
                     self.logger.debug(f'runnode{pid} has pipe_str:{pipe_str}')
                     rcv_pipe=getattr(m,pipe_str)()
                     self.logger.debug(f'pid:{pid} is about to check rcv_pipe:{rcv_pipe}')
-                    runner=rcv_pipe.recv()
+                    runner=DBTool.my_decode(rcv_pipe.recv())
                     self.logger.debug(f'pid:{pid} has the runner')
                     #runner=jobq.get(True,20)
                     #self.logger.debug('RunNode about to check jobq')

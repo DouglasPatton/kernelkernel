@@ -61,8 +61,8 @@ class DBTool():
         return SqliteDict(
             filename=path,tablename=tablename,
             encode=self.my_encode,decode=self.my_decode)
-    
-    def my_encode(self,obj):
+    @staticmethod
+    def my_encode(obj):
         try:
             compressed=sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
             return compressed
@@ -70,8 +70,8 @@ class DBTool():
             self.logger.exception(f'encode error')
             assert False, 'encode error'
         
-        
-    def my_decode(self,obj):
+    @staticmethod    
+    def my_decode(obj):
         return pickle.loads(zlib.decompress(bytes(obj)))
     #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
     
