@@ -22,7 +22,7 @@ from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
 
-pipe_count=5
+pipe_count=2
 
 
 class QM(BaseManager):pass 
@@ -56,8 +56,8 @@ class TheQManager(mp.Process,myLogger):
         QM.register('saveq', callable=lambda:saveq)
         pipes=[]
         for p_i in range(self.pipe_count):
-            #pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
-            #QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
+            pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
+            QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
             QM.register(f'p_snd_{p_i}',callable=lambda: pipes[-1][1])
         m = QM(address=self.netaddress, authkey=b'qkey')
         s = m.get_server()
