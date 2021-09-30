@@ -22,7 +22,7 @@ from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
 
-pipe_count=2
+pipe_count=None
 
 
 class QM(BaseManager):pass 
@@ -54,11 +54,12 @@ class TheQManager(mp.Process,myLogger):
         #pipeq=qdict['pipeq']
         QM.register('jobq', callable=lambda:jobq)
         QM.register('saveq', callable=lambda:saveq)
-        pipes=[]
-        for p_i in range(self.pipe_count):
-            pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
-            QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
-            QM.register(f'p_snd_{p_i}',callable=lambda: pipes[-1][1])
+        if not pipe_count is None:
+            pipes=[]
+            for p_i in range(self.pipe_count):
+                pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
+                QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
+                QM.register(f'p_snd_{p_i}',callable=lambda: pipes[-1][1])
         m = QM(address=self.netaddress, authkey=b'qkey')
         s = m.get_server()
         self.logger.info('TheQManager starting')
@@ -184,12 +185,13 @@ class JobQFiller(mp.Process,myLogger):
 
 
             #self.logger.debug('about to send job to pipe')    
-            pipe_suffix_list=list(range(self.pipe_count))
-            for p_i in pipe_suffix_list:
-                QM.register(f'p_snd_{p_i}')
-            m=QM(address=self.netaddress,authkey=b'qkey')
-            m.connect()
-            tries=0#for naming pipes
+            if not self.pipe_count is None:
+                pipe_suffix_list=list(range(self.pipe_count))
+                for p_i in pipe_suffix_list:
+                    QM.register(f'p_snd_{p_i}')
+                m=QM(address=self.netaddress,authkey=b'qkey')
+                m.connect()
+            tries=0#
             while len(self.joblist):
                 q_size=queue.qsize()
                 self.logger.info(f'q_size:{q_size}')
@@ -218,20 +220,20 @@ class JobQFiller(mp.Process,myLogger):
                             else:
                                 jobcount=len(self.joblist)
                                 self.logger.debug(f'adding job:{i+1}/{jobcount} to job queue')
+                                if not self.pipe_count is None:
 
-                                while True:
-                                    p_i=pipe_suffix_list.pop(0)
-                                    sendpipe=getattr(m,f'p_snd_{p_i}')() 
-                                    pipe_suffix_list.append(p_i)
-                                    if not sendpipe.poll():break
-                                    else:self.logger.debug(f'pipe {p_i} not empty')
-                                self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
-                                sendpipe.send(DBTool.my_encode(job))
+                                    while True:
+                                        p_i=pipe_suffix_list.pop(0)
+                                        sendpipe=getattr(m,f'p_snd_{p_i}')() 
+                                        pipe_suffix_list.append(p_i)
+                                        if not sendpipe.poll():break
+                                        else:self.logger.debug(f'pipe {p_i} not empty')
+                                    self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
+                                    sendpipe.send(job)
 
-                                self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
-                                queue.put(f'p_rcv_{p_i}')
-                                #p_i+=1
-
+                                    self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
+                                    queue.put(f'p_rcv_{p_i}')
+                                else: queue.put(job)
                                 self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
                                 i+=1
                         except:
@@ -299,14 +301,18 @@ class RunNode(mp.Process,myLogger):
                 jobsuccess=0
                 tries=0
                 try:
-                    pipe_str=jobq.get(True,20)
-                    QM.register(pipe_str)
-                    m = QM(address=self.netaddress, authkey=b'qkey')
-                    m.connect()
-                    self.logger.debug(f'runnode{pid} has pipe_str:{pipe_str}')
-                    rcv_pipe=getattr(m,pipe_str)()
-                    self.logger.debug(f'pid:{pid} is about to check rcv_pipe:{rcv_pipe}')
-                    runner=DBTool.my_decode(rcv_pipe.recv())
+                    job=jobq.get(True,20)
+                    if type(job) is str:
+                        pipe_str=job
+                        QM.register(pipe_str)
+                        m = QM(address=self.netaddress, authkey=b'qkey')
+                        m.connect()
+                        self.logger.debug(f'runnode{pid} has pipe_str:{pipe_str}')
+                        rcv_pipe=getattr(m,pipe_str)()
+                        self.logger.debug(f'pid:{pid} is about to check rcv_pipe:{rcv_pipe}')
+                        runner=rcv_pipe.recv()
+                    else:
+                        runner=job
                     self.logger.debug(f'pid:{pid} has the runner')
                     #runner=jobq.get(True,20)
                     #self.logger.debug('RunNode about to check jobq')
