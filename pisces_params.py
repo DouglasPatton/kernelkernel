@@ -162,7 +162,7 @@ class PiSetup(myLogger):
                     run_record={'model_gen':model_gen,'data_gen':data_gen}
                     hash_id=joblib.hash(run_record)
                     if not (hash_id in self.results_dict or hash_id in self.fitfail_dict):
-                        self.logger.info(f'adding to rundict hash_id:{hash_id}')
+                        #self.logger.info(f'adding to rundict hash_id:{hash_id}')
                         hash_id_list.append(hash_id)
                         run_record_dict[hash_id]=run_record # store the _gen dicts for reference
                         model_gen_dict[hash_id]=model_gen # 

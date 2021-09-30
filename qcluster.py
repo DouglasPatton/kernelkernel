@@ -1,4 +1,4 @@
-
+from itertools import cycle
 import pickle
 import os,sys,psutil
 import re
@@ -22,7 +22,7 @@ from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
 
-pipe_count=None
+pipe_count=50
 
 
 class QM(BaseManager):pass 
@@ -180,27 +180,41 @@ class JobQFiller(mp.Process,myLogger):
             #m.connect()
             #queue = m.jobq()
             queue=self.q
-            i=1
+            i=0
             max_q_size=2 #not really the max
-
 
             #self.logger.debug('about to send job to pipe')    
             if not self.pipe_count is None:
                 pipe_suffix_list=list(range(self.pipe_count))
-                for p_i in pipe_suffix_list:
+                """for p_i in pipe_suffix_list:
                     QM.register(f'p_snd_{p_i}')
                 m=QM(address=self.netaddress,authkey=b'qkey')
-                m.connect()
+                m.connect()"""
+            #alt from manager below    
+            """if not self.pipe_count is None:
+                
+                pipes=[]
+                pipe_suffix_list=list(range(self.pipe_count))
+                for p_i in range(self.pipe_count):
+                    pipes.append(mp.Pipe(True))#False for one way, rcv-recieve,snd-send
+                    
+                    QM.register(f'p_rcv_{p_i}',callable=lambda: pipes[-1][0])
+                    QM.register(f'p_snd_{p_i}',callable=lambda: pipes[-1][1])
+                    
+                m=QM(address=self.netaddress,authkey=b'qkey')
+                m.connect()"""
+                    
+            pcycle=cycle(pipe_suffix_list)
             tries=0#
             while len(self.joblist):
                 q_size=queue.qsize()
                 self.logger.info(f'q_size:{q_size}')
-                if q_size<max_q_size:
+                if q_size==0:
                     #if i>2 and q_size==0 and q_size<len(self.joblist): 
                     #    self.logger.info(f'jobq is empty, so max_q_size doubling from {max_q_size}')
                     #    max_q_size*=2 # double max q since it is being consumed
                     tries=0
-                    for i in range(max_q_size): #fill queue back up to 2*max_q_size
+                    for _ in range(max_q_size): #fill queue back up to 2*max_q_size
                         if len(self.joblist):
                             #n_sel=np.random.randint(0,len(self.joblist))
                             job=self.joblist.pop()
@@ -223,16 +237,35 @@ class JobQFiller(mp.Process,myLogger):
                                 if not self.pipe_count is None:
 
                                     while True:
-                                        p_i=pipe_suffix_list.pop(0)
-                                        sendpipe=getattr(m,f'p_snd_{p_i}')() 
-                                        pipe_suffix_list.append(p_i)
-                                        if not sendpipe.poll():break
-                                        else:self.logger.debug(f'pipe {p_i} not empty')
-                                    self.logger.debug(f"sending job to pipe:{f'p_snd_{p_i}'}")
-                                    sendpipe.send(job)
-
-                                    self.logger.debug(f"job sent to {f'p_snd_{p_i}'}, about to put rcv_pipe string in jobq")
+                                        p_i=next(pcycle)
+                                        QM.register(f'p_snd_{p_i}')
+                                        m=QM(address=self.netaddress,authkey=b'qkey')
+                                        m.connect()
+                                        pipe_filler_end=getattr(m,f'p_snd_{p_i}')() 
+                                        status=pipe_filler_end.poll(.2)
+                                        if not status:
+                                            self.logger.debug(f'empty pipe found: {p_i}')
+                                            break
+                                        else:
+                                            self.logger.debug(f'pipe {p_i} not empty, status:{status}')
+                                            self.logger.critical(f'just a test: {pipe_filler_end.recv()}')
+                                            if p_i+1==len(pipe_suffix_list):sleep(2)
+                                    self.logger.debug(f'sending node end of pipe string to queue')
                                     queue.put(f'p_rcv_{p_i}')
+                                    self.logger.debug(f'asking if node is ready')
+                                    pipe_filler_end.send('ready to send')
+                                    pipe_tries=0
+                                    while False:
+                                        sleep(0.25)
+                                        response=pipe_filler_end.recv()
+                                        if response=='ready to receive':break
+                                        elif pipe_tries>20:assert False,'no response from node that it is ready to recieve'
+                                        else: pipe_tries+=1
+                                    self.logger.debug(f"node is ready,sending job to pipe:{f'p_snd_{p_i}'}")
+                                    pipe_filler_end.send(job)
+
+                                    self.logger.debug(f"job sent to {f'p_snd_{p_i}'}.")
+                                    
                                 else: queue.put(job)
                                 self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
                                 i+=1
@@ -305,15 +338,21 @@ class RunNode(mp.Process,myLogger):
                     if type(job) is str:
                         pipe_str=job
                         QM.register(pipe_str)
-                        m = QM(address=self.netaddress, authkey=b'qkey')
-                        m.connect()
+                        pipe_m = QM(address=self.netaddress, authkey=b'qkey')
+                        pipe_m.connect()
                         self.logger.debug(f'runnode{pid} has pipe_str:{pipe_str}')
-                        rcv_pipe=getattr(m,pipe_str)()
-                        self.logger.debug(f'pid:{pid} is about to check rcv_pipe:{rcv_pipe}')
-                        runner=rcv_pipe.recv()
+                        pipe_node_end=getattr(pipe_m,pipe_str)()
+                        self.logger.debug(f'pid:{pid} is about to check pipe_node_end:{pipe_node_end}')
+                        msg=pipe_node_end.recv()
+                        if type(msg) is str and msg=='ready to send':
+                            pipe_node_end.send('ready to receive')
+                        else: assert False,f'expecting a ready to send message, but got:{msg}'
+                        self.logger.debug(f'node {pid} recieving runner')
+                        runner=pipe_node_end.recv()
+                        #pipe_m.close()
                     else:
                         runner=job
-                    self.logger.debug(f'pid:{pid} has the runner')
+                    self.logger.debug(f'pid:{pid} has the runner:{runner}')
                     #runner=jobq.get(True,20)
                     #self.logger.debug('RunNode about to check jobq')
                     #pipe=jobq.get(True,20)

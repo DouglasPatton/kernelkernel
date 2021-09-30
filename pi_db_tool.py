@@ -167,7 +167,8 @@ class DBTool():
                                         dbdict[key]=val
                                         dbdict.commit()
                                     else:
-                                        self.logger.debug(f'key:{key} already exists in gen table in db dict')
+                                        pass
+                                        #self.logger.debug(f'key:{key} already exists in gen table in db dict')
                                 else:
                                     if fast_add:
                                         dbdict[key]=val
