@@ -22,7 +22,7 @@ from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
 
-pipe_count=50
+pipe_count=2
 
 
 class QM(BaseManager):pass 
