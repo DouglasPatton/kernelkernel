@@ -255,7 +255,7 @@ class JobQFiller(mp.Process,myLogger):
                                     self.logger.debug(f'asking if node is ready')
                                     pipe_filler_end.send('ready to send')
                                     pipe_tries=0
-                                    while False:
+                                    while True:
                                         sleep(0.25)
                                         response=pipe_filler_end.recv()
                                         if response=='ready to receive':break
