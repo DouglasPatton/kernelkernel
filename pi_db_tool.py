@@ -4,6 +4,7 @@ import sys,os,logging
 from mylogger import myLogger
 import zlib, pickle, sqlite3
 from time import sleep
+from traceback import format_exc
 
 class DBTool():
     def __init__(self):
@@ -78,17 +79,21 @@ class DBTool():
                     
         
         except:
-            self.logger.exception(f'encode error')
-            assert False, 'encode error'
+            print(format_exc())
+            assert False,'encode error'
             
         return compressed
         
     @staticmethod    
     def my_decode(obj):
-        if type(obj) is list:
-            return pickle.loads(''.join([zlib.decompress(bytes(ch)) for ch in obj]))
-                              
-        return pickle.loads(zlib.decompress(bytes(obj)))
+        try:
+            if type(obj) is list:
+                return pickle.loads(''.join([zlib.decompress(bytes(ch)) for ch in obj]))
+
+            return pickle.loads(zlib.decompress(bytes(obj)))
+        except:
+            print(format_exc())
+            assert False,'encode error'
     #mydict = SqliteDict('./my_db.sqlite', encode=self.my_encode, decode=self.my_decode)
     
     def XpredictSpeciesResults(self,spec,hash_id):
