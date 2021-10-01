@@ -363,7 +363,7 @@ class RunNode(mp.Process,myLogger):
                         self.logger.debug(f'node {pid} recieving runner')
                         
                         chunk_count=pipe_node_end.recv()
-                        chunklist=[]
+                        chunk_list=[]
                         self.logger.debug(f'node about to recieve {chunk_count} chunks')
                         for ch in range(chunk_count):
                             chunk_list.append(pipe_node_end.recv())
