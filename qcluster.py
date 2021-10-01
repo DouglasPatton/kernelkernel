@@ -23,6 +23,7 @@ from mylogger import myLogger
 import json
 
 pipe_count=2
+max_queue_size=10
 
 
 class QM(BaseManager):pass 
@@ -46,7 +47,7 @@ class TheQManager(mp.Process,myLogger):
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
         if self.qdict is None:
-            qdict={'jobq':mp.Queue(),'saveq':mp.Queue()}
+            qdict={'jobq':mp.Queue(maxsize=max_queue_size),'saveq':mp.Queue(maxsize=max_queue_size)}
         else:
             qdict=self.qdict
         jobq = qdict['jobq']
@@ -186,6 +187,7 @@ class JobQFiller(mp.Process,myLogger):
             #self.logger.debug('about to send job to pipe')    
             if not self.pipe_count is None:
                 pipe_suffix_list=list(range(self.pipe_count))
+                pcycle=cycle(pipe_suffix_list)
                 """for p_i in pipe_suffix_list:
                     QM.register(f'p_snd_{p_i}')
                 m=QM(address=self.netaddress,authkey=b'qkey')
@@ -204,7 +206,7 @@ class JobQFiller(mp.Process,myLogger):
                 m=QM(address=self.netaddress,authkey=b'qkey')
                 m.connect()"""
                     
-            pcycle=cycle(pipe_suffix_list)
+            
             tries=0#
             while len(self.joblist):
                 q_size=queue.qsize()
