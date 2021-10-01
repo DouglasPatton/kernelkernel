@@ -88,7 +88,7 @@ class DBTool():
     def my_decode(obj):
         try:
             if type(obj) is list:
-                return pickle.loads(''.join([zlib.decompress(ch).decode("utf-8") for ch in obj]))
+                return pickle.loads(''.join([zlib.decompress(bytes(ch)) for ch in obj]))
 
             return pickle.loads(zlib.decompress(bytes(obj)))
         except:
