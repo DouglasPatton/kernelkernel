@@ -268,12 +268,14 @@ class JobQFiller(mp.Process,myLogger):
                                         elif pipe_tries>20:assert False,'no response from node that it is ready to recieve'
                                         else: pipe_tries+=1
                                     self.logger.debug(f"node is ready,sending job to pipe:{f'p_snd_{p_i}'}")
-                                    chunk_list=DBTool.my_encode(job,chunk_size=3e3) #to keep under 32 MB
-                                    pipe_filler_end.send(len(chunk_list))
+                                    chunk_list=DBTool.my_encode(job,chunk_size=3e5) #to keep under 32 MB
+                                    chunk_count=len(chunk_list)
+                                    pipe_filler_end.send(chunk_count)
+                                    self.logger.debug(f'about to send {chunk_count} chunks')
                                     for chunk in chunk_list:
                                         pipe_filler_end.send(chunk)
 
-                                    self.logger.debug(f"job sent to {f'p_snd_{p_i}'}.")
+                                    self.logger.debug(f"all chunks sent to {f'p_snd_{p_i}'}.")
                                     
                                 else: queue.put(job)
                                 self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
@@ -361,7 +363,12 @@ class RunNode(mp.Process,myLogger):
                         self.logger.debug(f'node {pid} recieving runner')
                         
                         chunk_count=pipe_node_end.recv()
-                        runner=DBTool.my_decode([pipe_node_end.recv() for _ in range(chunk_count)])
+                        chunklist=[]
+                        self.logger.debug(f'node about to recieve {chunk_count} chunks')
+                        for ch in range(chunk_count):
+                            chunk_list.append(pipe_node_end.recv())
+                        #runner=DBTool.my_decode([pipe_node_end.recv() for _ in range(chunk_count)])
+                        runner=DBTool.my_decode(chunk_list)
                         #pipe_m.close()
                     else:
                         runner=job
