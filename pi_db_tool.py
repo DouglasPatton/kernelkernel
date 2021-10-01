@@ -74,7 +74,7 @@ class DBTool():
                 pickle_len=len(big_pickle)
                 chunk_count=int(-(-chunk_size//pickle_len))
                 for i in range(chunk_count):
-                    chunk_list.append(sqlite3.Binary(zlib.compress(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))],level=9)))
+                    chunk_list.append(zlib.compress(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))],level=9))
                 return chunk_list
                     
                     
@@ -88,7 +88,7 @@ class DBTool():
     def my_decode(obj):
         try:
             if type(obj) is list:
-                return pickle.loads(''.join([zlib.decompress(bytes(ch)) for ch in obj]))
+                return pickle.loads(''.join([zlib.decompress(ch for ch in obj]))
 
             return pickle.loads(zlib.decompress(bytes(obj)))
         except:
