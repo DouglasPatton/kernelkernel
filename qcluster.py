@@ -367,7 +367,7 @@ class RunNode(mp.Process,myLogger):
                         msg=pipe_node_end.recv()
                         if type(msg) is str and msg=='ready to send':
                             
-                            pipe_node_end.send(('ready to receive',local_msg)
+                            pipe_node_end.send(('ready to receive',local_msg))
                         else: assert False,f'expecting a ready to send message, but got:{msg}'
                         self.logger.debug(f'node {pid} recieving runner')
                         
