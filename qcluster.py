@@ -22,7 +22,7 @@ from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
 
-pipe_count=None
+pipe_count=2
 max_queue_size=None
 
 
@@ -48,7 +48,10 @@ class TheQManager(mp.Process,myLogger):
         #    q=self.qdict[qname]
         #    self.BaseManager.register(qname, callable=lambda:q)
         if self.qdict is None:
-            qdict={'jobq':mp.Queue(maxsize=max_queue_size),'saveq':mp.Queue(maxsize=max_queue_size)}
+            if not self.max_q_size is None:
+                kwargs={'maxsize':self.max_q_size}
+            else:kwargs={}
+            qdict={'jobq':mp.Queue(**kwargs),'saveq':mp.Queue(**kwargs)}
         else:
             qdict=self.qdict
         jobq = qdict['jobq']
