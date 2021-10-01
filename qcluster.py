@@ -274,8 +274,8 @@ class JobQFiller(mp.Process,myLogger):
                                     self.logger.debug(f'about to send {chunk_count} chunks')
                                     for chunk in chunk_list:
                                         pipe_filler_end.send(chunk)
-                                    msg=pipe_filler_end.recv()
-                                    assert 'done'==msg,f'jobqfiller did not recieve done message, but: {msg}'
+                                    #msg=pipe_filler_end.recv()
+                                    #assert 'done'==msg,f'jobqfiller did not recieve done message, but: {msg}'
 
                                     self.logger.debug(f"all chunks sent to {f'p_snd_{p_i}'}.")
                                     
@@ -369,7 +369,7 @@ class RunNode(mp.Process,myLogger):
                         self.logger.debug(f'node about to recieve {chunk_count} chunks')
                         for ch in range(chunk_count):
                             chunk_list.append(pipe_node_end.recv())
-                        pipe_node_end.send('done')    
+                        #pipe_node_end.send('done')    
                         #runner=DBTool.my_decode([pipe_node_end.recv() for _ in range(chunk_count)])
                         runner=DBTool.my_decode(chunk_list)
                         #pipe_m.close()

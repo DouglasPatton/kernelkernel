@@ -74,8 +74,8 @@ class DBTool():
                 pickle_len=len(big_pickle)
                 chunk_count=int(-(-pickle_len//chunk_size))
                 for i in range(chunk_count):
-                    #chunk_list.append(zlib.compress(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))],level=5))
-                    chunk_list.append(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))])
+                    chunk_list.append(zlib.compress(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))],level=5))
+                    #chunk_list.append(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))])
 
                 return chunk_list
                     
@@ -92,8 +92,8 @@ class DBTool():
             if type(obj) is list:
                 chunk_list=[]
                 for ch in obj:
-                    #full_ch=zlib.decompress(bytes(ch))
-                    full_ch=bytes(ch)
+                    full_ch=zlib.decompress(bytes(ch))
+                    #full_ch=bytes(ch)
                     #print('type(full_ch): ',type(full_ch))
                     chunk_list.append(full_ch)
                 pickled_string=b''.join(chunk_list)
