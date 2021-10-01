@@ -268,7 +268,7 @@ class JobQFiller(mp.Process,myLogger):
                                         elif pipe_tries>20:assert False,'no response from node that it is ready to recieve'
                                         else: pipe_tries+=1
                                     self.logger.debug(f"node is ready,sending job to pipe:{f'p_snd_{p_i}'}")
-                                    chunk_list=DBTool.my_encode(job,chunk_size=3e5) #to keep under 32 MB
+                                    chunk_list=DBTool.my_encode(job,chunk_size=3e3) #to keep under 32 MB
                                     chunk_count=len(chunk_list)
                                     pipe_filler_end.send(chunk_count)
                                     self.logger.debug(f'about to send {chunk_count} chunks')
