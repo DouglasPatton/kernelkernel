@@ -265,7 +265,10 @@ class JobQFiller(mp.Process,myLogger):
                                         elif pipe_tries>20:assert False,'no response from node that it is ready to recieve'
                                         else: pipe_tries+=1
                                     self.logger.debug(f"node is ready,sending job to pipe:{f'p_snd_{p_i}'}")
-                                    pipe_filler_end.send(job)
+                                    chunk_list=DBTool.my_encode(job,chunk_size=3e3) #to keep under 32 MB
+                                    pipe_filler_end.send(len(chunk_list))
+                                    for chunk in chunk_list:
+                                        pipe_filler_end.send(chunk)
 
                                     self.logger.debug(f"job sent to {f'p_snd_{p_i}'}.")
                                     
@@ -285,6 +288,8 @@ class JobQFiller(mp.Process,myLogger):
         except:
             self.logger.exception(f'jobqfiller outer catch')
             assert False,'halt'
+    
+    
 
                 
 
@@ -351,7 +356,9 @@ class RunNode(mp.Process,myLogger):
                             pipe_node_end.send('ready to receive')
                         else: assert False,f'expecting a ready to send message, but got:{msg}'
                         self.logger.debug(f'node {pid} recieving runner')
-                        runner=pipe_node_end.recv()
+                        
+                        chunk_count=pipe_node_end.recv()
+                        runner=DBTool.my_decode([pipe_node_end.recv() for _ in range(chunk_count)])
                         #pipe_m.close()
                     else:
                         runner=job
