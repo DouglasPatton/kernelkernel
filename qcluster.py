@@ -22,14 +22,15 @@ from mylogger import myLogger
 #class QueueManager(BaseManager): pass
 import json
 
-pipe_count=2
-max_queue_size=10
+pipe_count=None
+max_queue_size=1
 
 
 class QM(BaseManager):pass 
 
 class TheQManager(mp.Process,myLogger):
-    def __init__(self,address,qdict,pipe_count=pipe_count):
+    def __init__(self,address,qdict,pipe_count=pipe_count,max_q_size=max_queue_size):
+        self.max_q_size=max_q_size
         self.netaddress=address
         self.qdict=qdict
         self.pipe_count=pipe_count
