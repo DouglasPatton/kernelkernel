@@ -72,7 +72,7 @@ class DBTool():
                 chunk_list=[]
                 big_pickle=pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
                 pickle_len=len(big_pickle)
-                chunk_count=-(-chunk_size//pickle_len)
+                chunk_count=int(-(-chunk_size//pickle_len))
                 for i in range(chunk_count):
                     chunk_list.append(zlib.compress(big_pickle[chunk_size*i:chunk_size*(i+1)],level=9))
                 return chunk_list
