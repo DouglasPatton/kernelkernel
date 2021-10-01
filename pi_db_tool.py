@@ -94,7 +94,7 @@ class DBTool():
                 for ch in obj:
                     #full_ch=zlib.decompress(bytes(ch))
                     full_ch=bytes(ch)
-                    print('type(full_ch): ',type(full_ch))
+                    #print('type(full_ch): ',type(full_ch))
                     chunk_list.append(full_ch)
                 pickled_string=b''.join(chunk_list)
                 return pickle.loads(pickled_string)
