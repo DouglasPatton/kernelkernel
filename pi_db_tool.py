@@ -74,7 +74,7 @@ class DBTool():
                 pickle_len=len(big_pickle)
                 chunk_count=int(-(-chunk_size//pickle_len))
                 for i in range(chunk_count):
-                    chunk_list.append(zlib.compress(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))],level=9)))
+                    chunk_list.append(zlib.compress(big_pickle[int(chunk_size*i):int(chunk_size*(i+1))],level=9))
                 return chunk_list
                     
                     
