@@ -258,26 +258,30 @@ class JobQFiller(mp.Process,myLogger):
                                             if p_i+1==len(pipe_suffix_list):sleep(2)
                                     self.logger.debug(f'sending node end of pipe string to queue')
                                     queue.put(f'p_rcv_{p_i}')
-                                    self.logger.debug(f'asking if node is ready')
+                                    self.logger.debug(f'letting node know job is ready to send')
                                     pipe_filler_end.send('ready to send')
                                     pipe_tries=0
                                     while True:
                                         sleep(0.25)
                                         response=pipe_filler_end.recv()
-                                        if response=='ready to receive':break
+                                        if response[0]=='ready to receive':break
                                         elif pipe_tries>20:assert False,'no response from node that it is ready to recieve'
                                         else: pipe_tries+=1
                                     self.logger.debug(f"node is ready,sending job to pipe:{f'p_snd_{p_i}'}")
-                                    chunk_list=DBTool.my_encode(job,chunk_size=3e5) #to keep under 32 MB
-                                    chunk_count=len(chunk_list)
-                                    pipe_filler_end.send(chunk_count)
-                                    self.logger.debug(f'about to send {chunk_count} chunks')
-                                    for chunk in chunk_list:
-                                        pipe_filler_end.send(chunk)
-                                    #msg=pipe_filler_end.recv()
-                                    #assert 'done'==msg,f'jobqfiller did not recieve done message, but: {msg}'
+                                    if response[1]=='local':
+                                        pipe_filler_end.send(job)
+                                    else:
+                                        
+                                        chunk_list=DBTool.my_encode(job,chunk_size=30e6) #to keep under 32 MiB
+                                        chunk_count=len(chunk_list)
+                                        pipe_filler_end.send(chunk_count)
+                                        self.logger.debug(f'about to send {chunk_count} chunks')
+                                        for chunk in chunk_list:
+                                            pipe_filler_end.send(chunk)
+                                        #msg=pipe_filler_end.recv()
+                                        #assert 'done'==msg,f'jobqfiller did not recieve done message, but: {msg}'
 
-                                    self.logger.debug(f"all chunks sent to {f'p_snd_{p_i}'}.")
+                                        self.logger.debug(f"all chunks sent to {f'p_snd_{p_i}'}.")
                                     
                                 else: queue.put(job)
                                 self.logger.debug(f'job:{i+1}/{jobcount} succesfully added to queue of size:{queue.qsize()}')
@@ -301,7 +305,7 @@ class JobQFiller(mp.Process,myLogger):
                 
 
 class RunNode(mp.Process,myLogger):
-    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit',cv_n_jobs=None):
+    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit',cv_n_jobs=None,local_node=False):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -309,6 +313,7 @@ class RunNode(mp.Process,myLogger):
         self.source=source
         self.run_type=run_type
         self.cv_n_jobs=cv_n_jobs
+        self.local_node=local_node
         if not local_run:
             try:
                 with open('ip.json','r') as f:
@@ -342,6 +347,7 @@ class RunNode(mp.Process,myLogger):
             jobq = m.jobq()
             saveq = m.saveq()
             self.logger.info(f'runnode has queues')
+            local_msg='local' if self.local_node else 'remote'
         #kc=kernelcompare.KernelCompare(source=self.source) # a new one every run
         while True:
             try:
@@ -360,18 +366,24 @@ class RunNode(mp.Process,myLogger):
                         self.logger.debug(f'pid:{pid} is about to check pipe_node_end:{pipe_node_end}')
                         msg=pipe_node_end.recv()
                         if type(msg) is str and msg=='ready to send':
-                            pipe_node_end.send('ready to receive')
+                            
+                            pipe_node_end.send(('ready to receive',local_msg)
                         else: assert False,f'expecting a ready to send message, but got:{msg}'
                         self.logger.debug(f'node {pid} recieving runner')
                         
-                        chunk_count=pipe_node_end.recv()
-                        chunk_list=[]
-                        self.logger.debug(f'node about to recieve {chunk_count} chunks')
-                        for ch in range(chunk_count):
-                            chunk_list.append(pipe_node_end.recv())
-                        #pipe_node_end.send('done')    
-                        #runner=DBTool.my_decode([pipe_node_end.recv() for _ in range(chunk_count)])
-                        runner=DBTool.my_decode(chunk_list)
+                        response=pipe_node_end.recv()
+                        if type(response) in [int,float]:
+                            chunk_count=response
+                            
+                            chunk_list=[]
+                            self.logger.debug(f'node about to recieve {chunk_count} chunks')
+                            for ch in range(chunk_count):
+                                chunk_list.append(pipe_node_end.recv())
+                            #pipe_node_end.send('done')    
+                            #runner=DBTool.my_decode([pipe_node_end.recv() for _ in range(chunk_count)])
+                            runner=DBTool.my_decode(chunk_list)
+                        else:
+                            runner=response
                         #pipe_m.close()
                     else:
                         runner=job
@@ -435,7 +447,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             self.qdict=self.getqdict()
         if nodecount:
             #self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
-            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict) for _ in range(nodecount)]
+            self.nodelist=[RunNode(source=source,local_run=local_run,qdict=self.qdict,local_node=True) for _ in range(nodecount)]
             [node.start() for node in self.nodelist]
         else:self.nodelist=[]
         if source is None:

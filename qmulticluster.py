@@ -10,7 +10,7 @@ from numpy import log
 
 
 class mypool(myLogger):
-    def __init__(self,source='pisces', nodecount=1,includemaster=1,local_run='no',run_type='fit',cv_run=False,cv_n_jobs=None):
+    def __init__(self,source='pisces', nodecount=1,includemaster=1,local_run='no',run_type='fit',cv_run=False,cv_n_jobs=None,local_nodes=False):
         func_name='multicluster'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -19,6 +19,7 @@ class mypool(myLogger):
         self.source=source
         self.cv_run=cv_run
         self.cv_n_jobs=cv_n_jobs
+        self.local_nodes=local_nodes
 
         self.sleepbetweennodes=1#8 # seconds
         self.local_run=local_run
@@ -43,7 +44,8 @@ class mypool(myLogger):
             proclist.extend([
                 qcluster.RunNode(
                     local_run=self.local_run,qdict=qdict,source=self.source,
-                    run_type=self.run_type,cv_n_jobs=self.cv_n_jobs
+                    run_type=self.run_type,cv_n_jobs=self.cv_n_jobs,
+                    local_node=self.local_nodes
                     ) for _ in range(self.nodecount)
                 ])
             self.logger.debug('starting nodes')
@@ -84,6 +86,8 @@ if __name__=='__main__':
         cv_n_jobs=int(input('n_jobs per node: '))
     else: 
         cv_n_jobs=None
+    if nodecount>0 and includemaster==0:
+        local_nodes=True if int(input('1 for local_nodes and 0 for remote'))==1 else False
     
 
     test=mypool(nodecount=nodecount,
@@ -91,5 +95,6 @@ if __name__=='__main__':
                 includemaster=includemaster,
                 local_run=local_run,
                 cv_run=cv_run,
-                cv_n_jobs=cv_n_jobs
+                cv_n_jobs=cv_n_jobs,
+                local_nodes=local_nodes
                )
