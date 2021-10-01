@@ -88,6 +88,8 @@ if __name__=='__main__':
         cv_n_jobs=None
     if nodecount>0 and includemaster==0:
         local_nodes=True if int(input('1 for local_nodes and 0 for remote'))==1 else False
+    else:
+        local_nodes=False
     
 
     test=mypool(nodecount=nodecount,
