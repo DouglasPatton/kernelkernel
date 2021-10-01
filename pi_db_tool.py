@@ -66,23 +66,23 @@ class DBTool():
     def my_encode(obj,chunk_size=None):
         try:
             if chunk_size is None:
-                compressed=sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
+                return sqlite3.Binary(zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL),level=9))
             else:
                 assert type(chunk_size) in [int, float], f'expecting int or float for chunk_size, but got: {type(chunk_size)}'
                 chunk_list=[]
                 big_pickle=pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
                 pickle_len=len(big_pickle)
                 chunk_count=-(-chunk_size//pickle_len)
-                for i in chunk_count:
+                for i in range(chunk_count):
                     chunk_list.append(zlib.compress(big_pickle[chunk_size*i:chunk_size*(i+1)],level=9))
+                return chunk_list
                     
                     
         
         except:
             print(format_exc())
             assert False,'encode error'
-            
-        return compressed
+        
         
     @staticmethod    
     def my_decode(obj):
