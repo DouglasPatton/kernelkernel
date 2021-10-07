@@ -23,7 +23,7 @@ from mylogger import myLogger
 import json
 
 pipe_count=3
-max_queue_size=1
+max_queue_size=3
 
 
 class QM(BaseManager):pass 
