@@ -398,8 +398,9 @@ class RunNode(mp.Process,myLogger):
                     tries=0
                 except:
                     tries+=1
-                    if tries>10:
-                        self.logger.exception('tried 10 times')
+                    self.logger.exception(f'try: {tries} failed')
+                    if tries>5:
+                        self.logger.exception('tried 5 times')
                         tries=0
                 if havejob:
                     if type(runner) is str:
