@@ -337,17 +337,17 @@ class XPredictRunner:#(PredictRunner):
     def run(self,):
         self.pid=os.getpid()
         #self.hash_id_c_hash_dict
-        """c_hash_hash_id_dict={}#just reversing the dict
+        c_hash_hash_id_dict={}#just reversing the dict
         for hash_id,c_hash_list in self.hash_id_c_hash_dict.items():
             for c_hash in c_hash_list:
                 if not c_hash in c_hash_hash_id_dict:
                     c_hash_hash_id_dict[c_hash]=[hash_id]
                 else:
-                    c_hash_hash_id_dict[c_hash].append(hash_id)"""
-        c_hash_list=[]
+                    c_hash_hash_id_dict[c_hash].append(hash_id)
+        """c_hash_list=[]
         for c_hashes in self.hash_id_c_hash_dict.values():
             c_hash_list.extend(c_hashes)
-        c_hash_list=list(dict.fromkeys(c_hash_list)) #removes duplicates
+        c_hash_list=list(dict.fromkeys(c_hash_list)) #removes duplicates"""
                     
         self.ske=sk_estimator()
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
@@ -362,7 +362,7 @@ class XPredictRunner:#(PredictRunner):
         keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
-        for c_hash in c_hash_list:#c_hash_hash_id_dict.items():
+        for c_hash,hash_id_list in c_hash_hash_id_dict.items():
             
             comidlist=comidblockdict[c_hash]
             
@@ -370,9 +370,9 @@ class XPredictRunner:#(PredictRunner):
                 data.spec,comidlist=comidlist,keylist=keylist)
             self.logger.info(f'')
             
-            
+            this_hash_id_model_dict={hash_id:hash_id_model_dict[hash_id] for hash_id in hash_id_list} #b/c some hash_id's may be done for some c_hash's
             predictresult=self.Xpredict(
-                datadf,hash_id_model_dict=hash_id_model_dict,data=data) #will run hash_id's round-robin to avoid re-imputing
+                datadf,hash_id_model_dict=this_hash_id_model_dict,data=data) #will run hash_id's round-robin to avoid re-imputing
             for hash_id,p_df in predictresult.items():
                 qtry=0
                 while True:
@@ -494,10 +494,10 @@ class XPredictRunner:#(PredictRunner):
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m)
                             result=imputed_data
-                                for step_idx,step in enumerate(model_m.steps):
-                                    if step_idx==0:continue #skipping imputation step
-                                    result=step.predict(result)
-                                yhat=result
+                            for step_idx,step in enumerate(model_m.steps):
+                                if step_idx==0:continue #skipping imputation step
+                                result=step.predict(result).astype(bool)
+                            yhat=result
                         
                             
 

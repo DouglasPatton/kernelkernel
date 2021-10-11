@@ -14,9 +14,9 @@ from geogtools import GeogTool as gt # turned off after data bult
 from mylogger import myLogger
 from pi_db_tool import DBTool
 from pisces_data_huc12 import PiscesDataTool
-from sklearn.model_selection import HalvingRandomSearchCV
-from sklearn.linear_model import SGDOneClassSVM
-from sklearn.kernel_approximation import Nystroem
+#from sklearn.model_selection import HalvingRandomSearchCV
+#from sklearn.linear_model import SGDOneClassSVM
+#from sklearn.kernel_approximation import Nystroem
 from sklearn.pipeline import make_pipeline
 
 
@@ -60,7 +60,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                 pass
     
     def buildNoveltyFilter(self,species,method=None,try_load=True):
-        n_hash=joblib.hash([f'{species},{method}''])
+        n_hash=joblib.hash([f'{species},{method}'])
         path=os.path.join(os.getcwd(),'data_tool',f'novelty_filter_{species}_{n_hash}.pkl')
         if try_load and os.path.exists(path):
             try:
