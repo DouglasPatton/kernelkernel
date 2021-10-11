@@ -424,6 +424,7 @@ class XPredictRunner:#(PredictRunner):
 
     """
     def Xpredict(self,datadf,data=None,model=None,hash_id=None,hash_id_model_dict=None):
+        datadf=datadf.iloc[:10]
         if hash_id_model_dict is None:
             hash_id_model_dict={hash_id:model}
         
@@ -446,7 +447,7 @@ class XPredictRunner:#(PredictRunner):
         species=data.spec
         huc12s=datadf.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
-        Xdf=datadf.drop('HUC12',axis=1,inplace=False).iloc[:10] #for testing
+        Xdf=datadf.drop('HUC12',axis=1,inplace=False) #for testing
         try:
             Xdf=Xdf.loc[:,train_vars] # make sure order matches and all variables present
         except:
