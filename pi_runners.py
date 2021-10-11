@@ -424,7 +424,7 @@ class XPredictRunner:#(PredictRunner):
 
     """
     def Xpredict(self,datadf,data=None,model=None,hash_id=None,hash_id_model_dict=None):
-        datadf=datadf.iloc[:10]
+        #datadf=datadf.iloc[:10]
         if hash_id_model_dict is None:
             hash_id_model_dict={hash_id:model}
         
