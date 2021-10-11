@@ -427,7 +427,7 @@ class XPredictRunner:#(PredictRunner):
         if hash_id_model_dict is None:
             hash_id_model_dict={hash_id:model}
         
-        model=(hash_id_model_dict.values())[0] 
+        model=list((hash_id_model_dict.values()))[0] 
         if type(model) is dict:
             is_cv_model=True
             #est_name=model['estimator'][0].name  
