@@ -492,7 +492,7 @@ class XPredictRunner:#(PredictRunner):
                             yhat=model_m.predict(Xdf)
                         else:
                             if imputed_data is None:
-                                imputed_data=self.doImputation(Xdf,model_m)
+                                imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
                             result=imputed_data
                             for step_idx,step in enumerate(model_m.steps):
                                 if step_idx==0:continue #skipping imputation step
