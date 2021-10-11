@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sqlitedict import SqliteDict
 from mylogger import myLogger
-from  sk_tool import SKToolInitializer
+from sk_tool import SKToolInitializer
 from sk_estimators import sk_estimator
 from datagen import dataGenerator,XdataGenerator
 from pi_data_predict import PiscesPredictDataTool
@@ -335,14 +335,19 @@ class XPredictRunner:#(PredictRunner):
         
     
     def run(self,):
+        self.pid=os.getpid()
         #self.hash_id_c_hash_dict
-        c_hash_hash_id_dict={}#just reversing the dict
+        """c_hash_hash_id_dict={}#just reversing the dict
         for hash_id,c_hash_list in self.hash_id_c_hash_dict.items():
             for c_hash in c_hash_list:
                 if not c_hash in c_hash_hash_id_dict:
                     c_hash_hash_id_dict[c_hash]=[hash_id]
                 else:
-                    c_hash_hash_id_dict[c_hash].append(hash_id)
+                    c_hash_hash_id_dict[c_hash].append(hash_id)"""
+        c_hash_list=[]
+        for c_hashes in self.hash_id_c_hash_dict.values():
+            c_hash_list.extend(c_hashes)
+        c_hash_list=list(dict.fromkeys(c_hash_list)) #removes duplicates
                     
         self.ske=sk_estimator()
         data,hash_id_model_dict=self.build_from_rundict(self.rundict)
@@ -357,7 +362,7 @@ class XPredictRunner:#(PredictRunner):
         keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
-        for c_hash,hash_id_list in c_hash_hash_id_dict.items():
+        for c_hash in c_hash_list:#c_hash_hash_id_dict.items():
             
             comidlist=comidblockdict[c_hash]
             
@@ -366,13 +371,33 @@ class XPredictRunner:#(PredictRunner):
             self.logger.info(f'')
             
             
-        
+            predictresult=self.Xpredict(
+                datadf,hash_id_model_dict=hash_id_model_dict,data=data) #will run hash_id's round-robin to avoid re-imputing
+            for hash_id,p_df in predictresult.items():
+                qtry=0
+                while True:
+                    self.logger.debug(f'adding predictresult to saveq')
+                    try:
+                        qtry+=1
+                        self.saveq.put({hash_id:{c_hash:p_df}})
+                        self.logger.debug(f'savedict successfully added to saveq')
+                        break
+                    except:
+                        if not self.saveq.full() and qtry>3:
+                            self.logger.exception(f'error adding to saveq, qtry:{qtry}')
+                        else:
+                            sleep(3)
+            
+            predictresult={hash_id:{c_hash,p_df} for hash_id,p_df in predictresult_.items()}#insert c_hash identifier
+                
+                
+            """
             for hash_id in hash_id_list:
                 model=hash_id_model_dict[hash_id]
                 predictresult=None
                 try:
                     success=0
-                    predictresult={hash_id:{c_hash:self.Xpredict(datadf,data,model,hash_id)}}
+                    predictresult={hash_id:{c_hash:self.Xpredict(datadf,data=data,model=model,hash_id=hash_id)}}
                     self.logger.info(f'predictresult:{predictresult}')
                     success=1
                 except:
@@ -397,22 +422,26 @@ class XPredictRunner:#(PredictRunner):
                             else:
                                 sleep(1)
 
-    
-    def Xpredict(self,datadf,data,model,hash_id):
+    """
+    def Xpredict(self,datadf,data=None,model=None,hash_id=None,hash_id_model_dict=None):
+        if hash_id_model_dict is None:
+            hash_id_model_dict={hash_id:model}
+        
+        model=(hash_id_model_dict.values())[0] 
         if type(model) is dict:
             is_cv_model=True
-            est_name=model['estimator'][0].name  
+            #est_name=model['estimator'][0].name  
             train_vars=list(model['estimator'][0].x_vars)
             cv_dict=data.datagen_dict['data_split']['cv']
             n_repeats=cv_dict['n_repeats']
             n_splits=cv_dict['n_splits']
         else:
             is_cv_model=False
-            est_name=model.name
+            #est_name=model.name
             train_vars=list(model.x_vars)
             n_repeats=1
             n_splits=1
-            
+        cv_count=n_repeats*n_splits    
         n=datadf.shape[0]
         species=data.spec
         huc12s=datadf.loc[:,'HUC12']
@@ -427,58 +456,107 @@ class XPredictRunner:#(PredictRunner):
         predict_vars=list(Xdf.columns)
         
         #check to make sure data matches model
-        self.logger.info(f'starting an Xpredict for {species} - {est_name} ')
+        self.logger.info(f'starting an Xpredict for {species}')
         if len(predict_vars)!=len(train_vars):
             self.logger.error(f'{species} predict_vars:{predict_vars}')
             self.logger.error(f'{species} train_vars:{train_vars}')
         assert all([predict_vars[i]==train_vars[i] for i in range(len(train_vars))]),f'predict and train vars should match, but predict_vars:{predict_vars} and train_vars:{train_vars}'
-            
         
-        yhat_list=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
-         
-        cv_count=n_repeats*n_splits
+        yhat_list_dict={hash_id:[] for hash_id in hash_id_model_dict.keys()}
+        col_tup_list_dict={hash_id:[] for hash_id in hash_id_model_dict.keys()}
+        
+        
+        
+            
+            
+        #yhat_list=[]#[None for _ in range(n_splits)] for __ in range(n_repeats)]
+        #col_tup_list=[] 
+        hash_id_est_name_dict={}
         self.logger.info(f'n_repeats:{n_repeats}, n_splits:{n_splits}')
-        m=0;col_tup_list=[]
+        m=0;
         for rep in range(n_repeats):
             for s in range(n_splits):
-                if is_cv_model:
-                    model_m=model['estimator'][m]  
-                else:
-                    model_m=model
-                try:
-                    self.logger.info(f'about to predict {m+1} of {cv_count}')
-                    yhat=model_m.predict(Xdf)
-                    yhat_list.append(yhat)
-                    col_tup_list.append(('y',rep,s))
-                except:
-                    self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
+                imputed_data=None
+                for hash_id,model in hash_id_model_dict.items():
+                    
+                    if is_cv_model:
+                        model_m=model['estimator'][m]  
+                    else:
+                        model_m=model
+                    est_name=model_m.name
+                    if not hash_id in hash_id_est_name_dict:
+                        hash_id_est_name_dict[hash_id]=est_name
+                    try:
+                        self.logger.info(f'about to predict {m+1} of {cv_count} for {est_name}')
+                        if est_name is 'hist-gradient-boosting-classifier':
+                            yhat=model_m.predict(Xdf)
+                        else:
+                            if imputed_data is None:
+                                imputed_data=self.doImputation(Xdf,model_m)
+                            result=imputed_data
+                                for step_idx,step in enumerate(model_m.steps):
+                                    if step_idx==0:continue #skipping imputation step
+                                    result=step.predict(result)
+                                yhat=result
+                        
+                            
 
-                m+=1
-        yhat_list=[y[:,None] for y in yhat_list] # make into 2d as columns for concatenation
-        yhat_stack_arr=np.concatenate(yhat_list,axis=1)
+                        yhat_list_dict[hash_id].append(yhat)
+                        col_tup_list_dict[hash_id].append(('y',rep,s))
+                    except:
+                        self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
 
-
-        columns=pd.MultiIndex.from_tuples(
-            col_tup_list,names=['var','rep_idx','split_idx'])
-        """else:
-            yhat=model.predict(Xdf)
-            self.logger.info(f'no data_split, no cv for {species}, {est_name}')
-            yhat_stack_arr=yhat[:,None]#make a column
-            columns=['y']"""
-            
+                    m+=1
+                    
         comids=datadf.index
         
-        names=['species','estimator','HUC12','COMID']
-        index=pd.MultiIndex.from_tuples([(species,est_name,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
-        self.logger.info(f'yhat_stack_arr.shape:{yhat_stack_arr.shape}, yhat_stack_arr:{yhat_stack_arr}')
-        #self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
-        self.logger.info(f'index:{index}')
-        yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
-        self.logger.info(f'yhat_df.shape:{yhat_df.shape}')
-        return yhat_df
+        for hash_id in hash_id_model_dict.keys():
+            
+            yhat_list=[y[:,None] for y in yhat_list_dict[hash_id]] # make into 2d as columns for concatenation
+            yhat_stack_arr=np.concatenate(yhat_list,axis=1)
+
+
+            columns=pd.MultiIndex.from_tuples(
+                col_tup_list_dict[hash_id],
+                names=['var','rep_idx','split_idx'])
+            """else:
+                yhat=model.predict(Xdf)
+                self.logger.info(f'no data_split, no cv for {species}, {est_name}')
+                yhat_stack_arr=yhat[:,None]#make a column
+                columns=['y']"""
+
+            
+
+            names=['species','estimator','HUC12','COMID']
+            est_name=hash_id_est_name_dict[hash_id]
+            index=pd.MultiIndex.from_tuples([(species,est_name,huc12strs[i],comids[i])  for i in range(n)],names=names) # reps stacked across columns
+            #self.logger.info(f'yhat_stack_arr.shape:{yhat_stack_arr.shape}, yhat_stack_arr:{yhat_stack_arr}')
+            #self.logger.info(f'columns.shape:{columns.shape}, columns:{columns}')
+            #self.logger.info(f'index:{index}')
+            yhat_df=pd.DataFrame(yhat_stack_arr,columns=columns,index=index)
+            self.logger.info(f'yhat_df.shape:{yhat_df.shape}')
+            yhat_df_dict[hash_id]=yhat_df
+        return yhat_df_dict
+ 
+    def doImputation(self,df,pipe):
+        imputation_step=pipe[0]
+        self.logger.info(f'{self.pid} starting imputation')
+        i_df= imputation_step.predict(df)
+        self.logger.info(f'{self.pid} has completed imputation')
+        return i_df
+    
+
+            
         
         
+    
         
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
+################################################################################################
         
         
         
