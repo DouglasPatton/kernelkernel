@@ -446,7 +446,7 @@ class XPredictRunner:#(PredictRunner):
         species=data.spec
         huc12s=datadf.loc[:,'HUC12']
         huc12strs=huc12s.apply(self.huc12float_to_str)
-        Xdf=datadf.drop('HUC12',axis=1,inplace=False)
+        Xdf=datadf.drop('HUC12',axis=1,inplace=False).iloc[:10] #for testing
         try:
             Xdf=Xdf.loc[:,train_vars] # make sure order matches and all variables present
         except:
@@ -489,7 +489,7 @@ class XPredictRunner:#(PredictRunner):
                     try:
                         self.logger.info(f'about to predict {m+1} of {cv_count} for {est_name}')
                         if est_name == 'hist-gradient-boosting-classifier':
-                            yhat=model_m.predict(Xdf.iloc[:10])
+                            yhat=model_m.predict(Xdf)
                         else:
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
