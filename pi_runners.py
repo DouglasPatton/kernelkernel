@@ -489,7 +489,7 @@ class XPredictRunner:#(PredictRunner):
                     try:
                         self.logger.info(f'about to predict {m+1} of {cv_count} for {est_name}')
                         if est_name == 'hist-gradient-boosting-classifier':
-                            yhat=model_m.predict(Xdf)
+                            yhat=model_m.predict(Xdf.iloc[:100])
                         else:
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
