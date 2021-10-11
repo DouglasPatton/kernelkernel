@@ -494,8 +494,8 @@ class XPredictRunner:#(PredictRunner):
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
                             result=imputed_data
-                            step_count=len(model_m.steps)
-                            for step_idx,step in enumerate(model_m.steps):
+                            step_count=len(model_m)
+                            for step_idx,step in enumerate(model_m):
                                 if step_idx==0:continue #skipping imputation step
                                 elif 1+step_idx==step_count:
                                     yhat=step.predict(result)
@@ -508,7 +508,7 @@ class XPredictRunner:#(PredictRunner):
                     except:
                         self.logger.exception(f'error with species:{species}, est_name:{est_name},m:{m}')
 
-                    m+=1
+                m+=1
                     
         comids=datadf.index
         
