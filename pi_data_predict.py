@@ -14,6 +14,10 @@ from geogtools import GeogTool as gt # turned off after data bult
 from mylogger import myLogger
 from pi_db_tool import DBTool
 from pisces_data_huc12 import PiscesDataTool
+from sklearn.model_selection import HalvingRandomSearchCV
+from sklearn.linear_model import SGDOneClassSVM
+from sklearn.kernel_approximation import Nystroem
+from sklearn.pipeline import make_pipeline
 
 
 class NHDPlusDownloader(myLogger):
@@ -54,18 +58,30 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         for hash_id in self.hash_ids_in_Xresults:
             for c_hash in self.XPredictHashIDComidHashResultsDB(hash_id=None):
                 pass
-        
+    
+    def buildNoveltyFilter(self,species,method=None,try_load=True):
+        n_hash=joblib.hash([f'{species},{method}''])
+        path=os.path.join(os.getcwd(),'data_tool',f'novelty_filter_{species}_{n_hash}.pkl')
+        if try_load and os.path.exists(path):
+            try:
+                with open(path,'rb') as f:
+                    return pickle.load(f)
+            except:
+                self.logger.excpetion(f'load error, rebuilding novelty filter')
+            
         
     
-    def buildXPredict(self,comid_filter=None):
+        
+    
+    def buildXPredict(self,):
         species_hash_id_dict=self.build_species_hash_id_dict()
         self.hash_ids_in_Xresults=dict.fromkeys(
             self.XPredictHashIDComidHashResultsDB(hash_id=None))#dict for fast search
 
         for spec,spec_hash_ids in species_hash_id_dict.items():
-            self.buildSpeciesXPredict(spec,spec_hash_ids,comid_filter=comid_filter)
+            self.buildSpeciesXPredict(spec,spec_hash_ids,)
 
-    def buildSpeciesXPredict(self,spec,spec_hash_ids,comid_filter=None):
+    def buildSpeciesXPredict(self,spec,spec_hash_ids,):
         comid_result_dict_list=[]
         hash_count=len(spec_hash_ids)
         for i,hash_id in enumerate(spec_hash_ids):
@@ -133,21 +149,6 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         
             
             
-        
-        '''
-        
-        try:self.species_full_comid_dict
-        except: self.setSpeciesFullComidDict
-        #try: self.species_found_comid_dict
-        #except: self.setSpeciesFoundComidDict
-        spec_full_comid_list=self.species_full_comid_dict[spec]
-        if not comid_filter is None:
-            spec_comid_list=comid_filter(spec_full_comid_list,spec=spec)
-        
-        
-        spec_found_comid_list
-        
-        '''
     def setSpeciesFoundComidDict(self):
         '''savepath=os.path.join(self.savedir,'species_found_comid_dict.pkl')
         if os.path.exists(savepath):
@@ -168,10 +169,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     def setSpeciesFullComidDict(self,):
         self.fullcomidlist,self.species_full_comid_dict=self.generateXPredictSpeciesComidBlockDicts(
             return_comidlist=True)
-        
-        
-    def generateSampledAndNotComids(self,comid_filter=None):    
-        pass
+     
     
     def generateXPredictBlockDF(self,spec,comidlist=None,keylist=None):
         try:
@@ -435,7 +433,7 @@ class ComidBlockBuilder(mp.Process,myLogger):
                     Xdb.commit()"""
 
 if __name__=="__main__":
-    PiscesPredictDataTool().buildXPredict(comid_filter=None)
+    PiscesPredictDataTool().buildXPredict()
         
         
         
