@@ -494,10 +494,12 @@ class XPredictRunner:#(PredictRunner):
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
                             result=imputed_data
+                            step_count=len(model_m.steps)
                             for step_idx,step in enumerate(model_m.steps):
                                 if step_idx==0:continue #skipping imputation step
-                                result=step.predict(result)
-                            yhat=result
+                                elif 1+step_idx==step_count:
+                                    yhat=step.predict(result)
+                                else:result=step.transform(result)
                         
                             
 
@@ -541,7 +543,7 @@ class XPredictRunner:#(PredictRunner):
     def doImputation(self,df,pipe):
         imputation_step=pipe[0]
         self.logger.info(f'{self.pid} starting imputation')
-        i_df= imputation_step.predict(df)
+        i_df= imputation_step.transform(df)
         self.logger.info(f'{self.pid} has completed imputation')
         return i_df
     
