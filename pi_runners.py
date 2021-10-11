@@ -488,7 +488,7 @@ class XPredictRunner:#(PredictRunner):
                         hash_id_est_name_dict[hash_id]=est_name
                     try:
                         self.logger.info(f'about to predict {m+1} of {cv_count} for {est_name}')
-                        if est_name is 'hist-gradient-boosting-classifier':
+                        if est_name == 'hist-gradient-boosting-classifier':
                             yhat=model_m.predict(Xdf)
                         else:
                             if imputed_data is None:
@@ -496,7 +496,7 @@ class XPredictRunner:#(PredictRunner):
                             result=imputed_data
                             for step_idx,step in enumerate(model_m.steps):
                                 if step_idx==0:continue #skipping imputation step
-                                result=step.predict(result).astype(bool)
+                                result=step.predict(result)
                             yhat=result
                         
                             
