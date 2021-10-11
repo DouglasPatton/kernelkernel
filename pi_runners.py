@@ -489,7 +489,7 @@ class XPredictRunner:#(PredictRunner):
                     try:
                         self.logger.info(f'about to predict {m+1} of {cv_count} for {est_name}')
                         if est_name == 'hist-gradient-boosting-classifier':
-                            yhat=model_m.predict(Xdf.iloc[:100])
+                            yhat=model_m.predict(Xdf.iloc[:10])
                         else:
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
@@ -511,7 +511,7 @@ class XPredictRunner:#(PredictRunner):
                 m+=1
                     
         comids=datadf.index
-        
+        yhat_df_dict={}
         for hash_id in hash_id_model_dict.keys():
             
             yhat_list=[y[:,None] for y in yhat_list_dict[hash_id]] # make into 2d as columns for concatenation
