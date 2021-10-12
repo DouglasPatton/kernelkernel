@@ -362,13 +362,14 @@ class XPredictRunner:#(PredictRunner):
         keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
-        for c_hash,hash_id_list in c_hash_hash_id_dict.items():
-            
+        c_count=len(c_hash_hash_id_dict)
+        for c_idx,(c_hash,hash_id_list) in enumerate(c_hash_hash_id_dict.items()):
+            self.logger.info(f'{self.pid} is starting c_hash #{1+c_idx} of {c_count}')
             comidlist=comidblockdict[c_hash]
             
             datadf=data.generateXPredictBlockDF(
                 data.spec,comidlist=comidlist,keylist=keylist)
-            self.logger.info(f'')
+            
             
             this_hash_id_model_dict={hash_id:hash_id_model_dict[hash_id] for hash_id in hash_id_list} #b/c some hash_id's may be done for some c_hash's
             predictresult=self.Xpredict(
