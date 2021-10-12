@@ -388,7 +388,7 @@ class XPredictRunner:#(PredictRunner):
                         else:
                             sleep(3)
             
-            predictresult={hash_id:{c_hash,p_df} for hash_id,p_df in predictresult_.items()}#insert c_hash identifier
+            #predictresult={hash_id:{c_hash,p_df} for hash_id,p_df in predictresult_.items()}#insert c_hash identifier
                 
                 
             """
