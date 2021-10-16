@@ -10,7 +10,7 @@ from numpy import log
 
 
 class mypool(myLogger):
-    def __init__(self,source='pisces', nodecount=1,includemaster=1,local_run='no',run_type='fit',cv_run=False,node_n_jobs=None,local_nodes=False):
+    def __init__(self,source='pisces', nodecount=1,includemaster=1,local_run='no',run_type='fit',cv_run=False,cv_n_jobs=None,local_nodes=False):
         func_name='multicluster'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -18,7 +18,7 @@ class mypool(myLogger):
         self.includemaster=includemaster
         self.source=source
         self.cv_run=cv_run
-        self.node_n_jobs=node_n_jobs
+        self.cv_n_jobs=cv_n_jobs
         self.local_nodes=local_nodes
 
         self.sleepbetweennodes=1#8 # seconds
@@ -44,7 +44,7 @@ class mypool(myLogger):
             proclist.extend([
                 qcluster.RunNode(
                     local_run=self.local_run,qdict=qdict,source=self.source,
-                    run_type=self.run_type,node_n_jobs=self.node_n_jobs,
+                    run_type=self.run_type,cv_n_jobs=self.cv_n_jobs,
                     local_node=self.local_nodes
                     ) for _ in range(self.nodecount)
                 ])
@@ -82,10 +82,10 @@ if __name__=='__main__':
     local_run=int(input('1 for local_run or 0 for network run: '))
     includemaster=int(input('1 for include master, 0 for not: '))
     nodecount=int(input('node count: '))
-    if nodecount>0 and (cv_run or run_type=='Xpredict'):
-        node_n_jobs=int(input('n_jobs per node: '))
+    if nodecount>0 and cv_run:
+        cv_n_jobs=int(input('n_jobs per node: '))
     else: 
-        node_n_jobs=None
+        cv_n_jobs=None
     if nodecount>0 and includemaster==0:
         local_nodes=True if int(input('1 for local_nodes and 0 for remote'))==1 else False
     else:
@@ -97,6 +97,6 @@ if __name__=='__main__':
                 includemaster=includemaster,
                 local_run=local_run,
                 cv_run=cv_run,
-                node_n_jobs=node_n_jobs,
+                cv_n_jobs=cv_n_jobs,
                 local_nodes=local_nodes
                )
