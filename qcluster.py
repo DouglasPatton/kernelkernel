@@ -16,7 +16,7 @@ from sqlitedict import SqliteDict
 #from  sk_tool import SKToolInitializer
 from datagen import dataGenerator 
 from pisces_params import PiSetup,MonteSetup
-from pi_runners import FitRunner
+from pi_runners import FitRunner,XPredictRunner
 from pi_db_tool import DBTool
 from mylogger import myLogger
 #class QueueManager(BaseManager): pass
@@ -305,14 +305,14 @@ class JobQFiller(mp.Process,myLogger):
                 
 
 class RunNode(mp.Process,myLogger):
-    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit',cv_n_jobs=None,local_node=False):
+    def __init__(self,local_run=None,source=None,qdict=None,run_type='fit',node_n_jobs=None,local_node=False):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
         self.qdict=qdict
         self.source=source
         self.run_type=run_type
-        self.cv_n_jobs=cv_n_jobs
+        self.node_n_jobs=node_n_jobs
         self.local_node=local_node
         if not local_run:
             try:
@@ -410,8 +410,8 @@ class RunNode(mp.Process,myLogger):
                     # each estimator contains rundict
                     #runner.passPipe(saveq)
                     runner.passQ(saveq)
-                    if type(runner) is FitRunner:
-                        runner.run(cv_n_jobs=self.cv_n_jobs)
+                    if type(runner) in [FitRunner,XPredictRunner]:
+                        runner.run(node_n_jobs=self.node_n_jobs)
                     else:
                         runner.run()
             except:
