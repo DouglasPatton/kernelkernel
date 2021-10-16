@@ -333,12 +333,28 @@ class XPredictRunner:#(PredictRunner):
     
     
         
-    
+    def simplifyModelDict(self,hash_id_model_dict):
+        #drops (in-place) imputation for all but the first (non-hist-gbm) pipeline/set of cv-pipelines
+        key0=list(hash_id_model_dict.keys())[0]
+        if type(hash_id_model_dict[key0]) is dict:
+            is_cv_run=True
+        else:
+            is_cv_run=False
+        prep_saved=False
+        for hash_id,model in hash_id_model_dict.items():
+            if model.name=='hist-gradient-boosting-classifier':
+                continue
+            if not prep_saved:
+                prep_saved=True
+                continue
+            if is_cv_run:
+                for model_idx in range(len(model['estimator'])):
+                    model['estimator'][model_idx].model_=[step for s_idx,step in enumerate(model['estimator'][model_idx].model_) if s_idx>0]
+            else:
+                model.model_=[step for s_idx,step in enumerate(model['estimator'][model_idx].model_) if s_idx>0]
+                
     def run(self,):
-<<<<<<< HEAD
         self.pid=os.getpid()
-=======
->>>>>>> parent of 73cd03a... wrong branch
         #self.hash_id_c_hash_dict
         c_hash_hash_id_dict={}#just reversing the dict
         for hash_id,c_hash_list in self.hash_id_c_hash_dict.items():
@@ -361,7 +377,7 @@ class XPredictRunner:#(PredictRunner):
                     assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'"""
         #first_model=list(hash_id_model_dict.values())[0]
         #keylist=first_model.x_vars
-        
+        self.simplifyModelDict(hash_id_model_dict)
         keylist=data.datagen_dict['x_vars']
         keylist.append('HUC12')
         comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
@@ -375,6 +391,7 @@ class XPredictRunner:#(PredictRunner):
             
             
             this_hash_id_model_dict={hash_id:hash_id_model_dict[hash_id] for hash_id in hash_id_list} #b/c some hash_id's may be done for some c_hash's
+
             predictresult=self.Xpredict(
                 datadf,hash_id_model_dict=this_hash_id_model_dict,data=data) #will run hash_id's round-robin to avoid re-imputing
             for hash_id,p_df in predictresult.items():
@@ -498,11 +515,16 @@ class XPredictRunner:#(PredictRunner):
                         else:
                             if imputed_data is None:
                                 imputed_data=self.doImputation(Xdf,model_m.model_) #model_m is an sktool instance and the pipeline is saved to the model_ attribute
+                                skip_step_0=True
+                            else:
+                                skip_step_0=False
+                                
                             result=imputed_data
                             step_count=len(model_m.model_)
                             for step_idx,step in enumerate(model_m.model_):
-                                if step_idx==0:continue #skipping imputation step
-                                elif 1+step_idx==step_count:
+                                if step_idx==0 and skip_step_0:continue #skipping imputation 
+                                    #    step only for the pipeline with the imputation step retained
+                                elif 1+step_idx==step_count:#on the last step
                                     yhat=step.predict(result)
                                 else:result=step.transform(result)
                         
