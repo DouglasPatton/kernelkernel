@@ -9,6 +9,7 @@ from sk_estimators import sk_estimator
 from datagen import dataGenerator,XdataGenerator
 from pi_data_predict import PiscesPredictDataTool
 from pi_db_tool import DBTool
+from pi_mp_helper import MpHelper
 
 
 ## Runners are oriented around the data_gen in 
@@ -334,7 +335,8 @@ class XPredictRunner:#(PredictRunner):
     
         
     
-    def run(self,):
+
+    def run(self,node_n_jobs=1):
         self.pid=os.getpid()
         #self.hash_id_c_hash_dict
         c_hash_hash_id_dict={}#just reversing the dict
