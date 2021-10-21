@@ -335,10 +335,10 @@ class XPredictRunner:#(PredictRunner):
         
     
     def run(self,):
-<<<<<<< HEAD
+
         self.pid=os.getpid()
-=======
->>>>>>> parent of 73cd03a... wrong branch
+
+
         #self.hash_id_c_hash_dict
         c_hash_hash_id_dict={}#just reversing the dict
         for hash_id,c_hash_list in self.hash_id_c_hash_dict.items():
