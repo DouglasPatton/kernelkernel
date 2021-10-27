@@ -320,6 +320,7 @@ class XPredictRunner:#(PredictRunner):
                     with dbt.XpredictDBdict() as done_db:
                         done_db[hash_id]='complete'
                         done_db.commit()
+                    del hash_id_c_hash_dict[hash_id]
                     self.logger.info(f'hash_id:{hash_id} is complete and added to XpredictDBdict as "complete"')
             else:
                 hash_id_c_hash_dict[hash_id]=list(comidblockdict.keys())
