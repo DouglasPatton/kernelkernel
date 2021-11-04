@@ -100,7 +100,7 @@ class Mapper(myLogger):
             self.NHDPlusV21CatchmentSP=gpd.read_feather(self.NHDPlusV21_CatchmentSP_data_path)
             print('...is complete')
     
-    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=True,save_check=False):
+    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=True,save_check=False,plot_train=False):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         name=f'Xpredict_{species}.png'
         if  not estimator_name is None:
@@ -160,7 +160,8 @@ class Mapper(myLogger):
         outer_bounds=(min(total_bounds_list[0]),min(total_bounds_list[1]),max(total_bounds_list[2]),max(total_bounds_list[3]))
         self.add_states(ax,bbox=outer_bounds,zorder=3)
         h8list=self.ppdt.getSpeciesHuc8List(species)
-        self.getHucDigitsGDF(h8list,huc='08').plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
+        huc_range=self.getHucDigitsGDF(h8list,huc='08').clip(self.gdfBoxFromOuterBounds(outer_bounds,gdf.crs))#clip so edges don't extend beyond addInverseConus mask.
+        huc_range.plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
         format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
         ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
         self.addInverseConus(ax,outer_bounds,gdf.crs,zorder=9)
@@ -180,7 +181,7 @@ class Mapper(myLogger):
         fig.savefig(savepath)
         fig.show() 
         
-    def addInverseConus(self,ax,outer_bounds,crs,zorder=9):
+    def gdfBoxFromOuterBounds(self,outer_bounds,crs):
         bbox=outer_bounds
         p1 = Point(bbox[0], bbox[3])
         p2 = Point(bbox[2], bbox[3])
@@ -194,7 +195,11 @@ class Mapper(myLogger):
 
         bb_polygon = Polygon([np1, np2, np3, np4])
 
-        df2 = gpd.GeoDataFrame(geometry=gpd.GeoSeries(bb_polygon), columns=['geometry'],crs=crs)
+        boxdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(bb_polygon), columns=['geometry'],crs=crs)
+        return boxdf
+        
+    def addInverseConus(self,ax,outer_bounds,crs,zorder=9):
+        df2=self.gdfBoxFromOuterBounds(outer_bounds,crs)
         gpd_clipped=gpd.overlay(df2,self.states,how='difference')
         gpd_clipped.plot(ax=ax,color='w',zorder=zorder)
             
@@ -767,7 +772,7 @@ if __name__=="__main__":
         for spec in specs:
             print(spec)
             try:
-                mpr.plotSpeciesPredict(spec,huc_level=4,include_absent=False,save_check=True)
+                mpr.plotSpeciesPredict(spec,huc_level=4,include_absent=False,save_check=True,plot_train=True)
             except:
                 print(f'error for species:{spec}',format_exc())
         
