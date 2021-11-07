@@ -85,11 +85,11 @@ class Mapper(myLogger):
             bounds=clip_to.total_bounds
             states=self.states.cx[bounds[0]:bounds[2],bounds[1]:bounds[3]]
         elif not bbox is None:
-            states=self.states.cx[bbox[0]:bbox[2],bbox[1]:bbox[3]]
-            states=gpd.overlay(states,self.gdfBoxFromOuterBounds(bbox,crs),how='intersection')
+            #states=self.states.cx[bbox[0]:bbox[2],bbox[1]:bbox[3]]
+            states=gpd.overlay(self.states,self.gdfBoxFromOuterBounds(bbox,crs),how='intersection')
         else:
             states=self.states
-        states.boundary.plot(linewidth=0.2,ax=ax,color=None,edgecolor='k',zorder=zorder)  
+        states.plot(linewidth=0.3,ax=ax,color='wheat',edgecolor='k',zorder=zorder)  
         
     def expandBBox(self,bbox,ratio):
         width=abs(bbox[2]-bbox[0])
@@ -170,13 +170,13 @@ class Mapper(myLogger):
             h=huc_outer_bounds[3]-huc_outer_bounds[1]
             crs=self.NHDPlusV21CatchmentSP.crs
             huc_range_box=self.gdfBoxFromOuterBounds(huc_outer_bounds,crs)
-            buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,1.2)
+            buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,1.05)
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
-            fig, ax = plt.subplots(figsize=[8,8*h/w],dpi=1200)
-            #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)
+            #fig, ax = plt.subplots(figsize=[8,4*h/w+4],dpi=1200)#height adjust, but less than proportionally.
+            fig, ax = plt.subplots(figsize=[8,8],dpi=1200)
             ax.set_aspect('equal')
-            buffered_huc_range_box.plot(ax=ax,zorder=0,c='w')
-            gpd.overlay(huc_range,self.states,how='intersection').plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
+            buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
+            gpd.overlay(huc_range,self.states,how='intersection').plot(ax=ax,zorder=3,color='lightgrey',edgecolor=None)
             print('plotting...',end='')
             gdf_bounds=[]#huc8bounds instead now
             #states_outline=self.states.dissolve()
@@ -213,15 +213,15 @@ class Mapper(myLogger):
                     #clipped_gdf=gpd.overlay(gdf,states_outline,how='intersection') #remove any points in antarctica, for real...
                     clipped_gdf=gdf #nhdpluscatchments already clipped to states.
 
-                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}')
-                    clipped_gdf.plot(column='y',ax=ax,zorder=2,color=c)
+                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {clipped_gdf.total_bounds}')
+                    clipped_gdf.plot(column='y',ax=ax,zorder=4,color=c)
                     gdf_bounds.append(gdf.total_bounds) #not using anymore, bc getting bounds from huc8 range
             #big_gdf=gpd.sjoin([ser_i.boundary for ser_i in huc_species_series_dict.values()],join='outer')
 
             #below approach replaced by huc8 bounds
             #total_bounds_list=list(zip(*gdf_bounds))
             #outer_bounds=(min(total_bounds_list[0]),min(total_bounds_list[1]),max(total_bounds_list[2]),max(total_bounds_list[3]))
-            self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=3,crs=gdf.crs)
+            self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=gdf.crs)
 
 
             #gpd.overlay(huc_range,self.gdfBoxFromOuterBounds(outer_bounds,gdf.crs),how='intersection')#clip so edges don't extend beyond addInverseConus mask.
@@ -240,7 +240,7 @@ class Mapper(myLogger):
             if include_absent:
                 leg_patches.append(mpatches.Patch(color='b', label='Absent'))
             leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
-            plt.legend(handles=leg_patches,fontsize=8,ncol=2,bbox_to_anchor=(0.1,1.1))
+            plt.legend(handles=leg_patches,fontsize=8,ncol=2)#,bbox_to_anchor=(0.1,1.1))
             fig.tight_layout
             #try:fig.tight_layout()
             #except:self.logger.exception('tight_layout error')
