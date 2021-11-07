@@ -40,7 +40,7 @@ class Mapper(myLogger):
         self.boundary_data_path=self.boundaryDataCheck()
         #self.NHD_data_path=self.nhdDataCheck()
         self.NHDPlusV21_data_path=self.NHDPlusV21DataCheck()
-        self.NHDPlusV21_CatchmentSP_data_path=os.path.join(self.geo_data_dir,'NHDPlusV21_CatchmentSP.feather_b')
+        self.NHDPlusV21_CatchmentSP_data_path=os.path.join(self.geo_data_dir,'NHDPlusV21_CatchmentSP.feather')
         #NHDplus URL:  https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_0101_HU4_GDB.zip   
         self.boundary_dict={}
         self.pr=PiResults()
@@ -175,7 +175,7 @@ class Mapper(myLogger):
             fig, ax = plt.subplots(figsize=[8,8*h/w],dpi=1200)
             #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)
             ax.set_aspect('equal')
-            buffered_huc_range_box.plot(ax=ax,zorder=0)
+            buffered_huc_range_box.plot(ax=ax,zorder=0,c='w')
             gpd.overlay(huc_range,self.states,how='intersection').plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
             print('plotting...',end='')
             gdf_bounds=[]#huc8bounds instead now
