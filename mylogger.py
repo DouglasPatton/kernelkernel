@@ -3,7 +3,7 @@ import os
 class myLogger:
     def __init__(self,name=None):
         if name is None:
-            name='vbflow.log'
+            name='fish_modeling.log'
         else:
             if name[-4:]!='.log':
                 name+='.log'

@@ -57,7 +57,32 @@ class StackY01Select(Process,myLogger):
         except:
             self.logger.exception(f'stackmul outer catch')
             '''
+
+class BatchOverlay(Process,myLogger):
+    
+    def __init__(self,q,i,gdf,mask,proc_count=8):
+        super().__init__()
+        self.q=q
+        self.i=i
+        self.gdf=gdf
+        self.mask=mask
         
+    def run(self):
+        myLogger.__init__(self)
+        import geopandas as gpd
+        try:
+            ch_list=[]
+            n=self.gdf.shape[0]
+            ch_size=n
+            ch_count=-(-n//ch_size)
+            for i in range(ch_count):
+                start=ch_size*i
+                stop=start+ch_size
+                if stop>n:stop=n
+                ch_list.append(gpd.overlay(self.gdf.iloc[start:stop],self.mask,how='intersection'))
+            self.q.put((self.i,ch_list))
+        except:
+            self.logger.exception(f'error in BatchClipper i:{self.i}')
 
 
 class MulXB(Process,myLogger):

@@ -17,7 +17,7 @@ import matplotlib.patches as mpatches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from helpers import Helper
 from mylogger import myLogger
-from pi_mp_helper import MatchCollapseHuc12,MpHelper
+from pi_mp_helper import MatchCollapseHuc12,MpHelper,BatchOverlay
 from pi_cluster import SkCluster
 from pi_data_predict import PiscesPredictDataTool
 from traceback import format_exc
@@ -40,7 +40,7 @@ class Mapper(myLogger):
         self.boundary_data_path=self.boundaryDataCheck()
         #self.NHD_data_path=self.nhdDataCheck()
         self.NHDPlusV21_data_path=self.NHDPlusV21DataCheck()
-        self.NHDPlusV21_CatchmentSP_data_path=os.path.join(self.geo_data_dir,'NHDPlusV21_CatchmentSP.feather')
+        self.NHDPlusV21_CatchmentSP_data_path=os.path.join(self.geo_data_dir,'NHDPlusV21_CatchmentSP.feather_b')
         #NHDplus URL:  https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_0101_HU4_GDB.zip   
         self.boundary_dict={}
         self.pr=PiResults()
@@ -109,9 +109,23 @@ class Mapper(myLogger):
         return gpd.read_file(self.NHDPlusV21_data_path,layer=layer_name)
     
     def setNHDPlusV21CatchmentSP(self):#SP for simplified polygons
+        try: self.states
+        except:self.set_states()
         if not os.path.exists(self.NHDPlusV21_CatchmentSP_data_path):
-            print('resaving the catchmentsp layer',end='')
+            print('resaving the catchmentsp layer',end='....')
             NHDPlusV21CatchmentSP=self.getNHDPlusV21Layer('CatchmentSP')
+            print('starting nhdplusv21catchment clip')
+            n=NHDPlusV21CatchmentSP.shape[0]
+            procs=12
+            ch=-(-n//procs)
+            states_outline=self.states.dissolve()
+            outlist=MpHelper().runAsMultiProc(BatchOverlay,[[NHDPlusV21CatchmentSP.iloc[ch*i:ch*(i+1)],states_outline] for i in range(procs)])
+            self.logger.info('clipping done, starting concatenation')
+            NHDPlusV21CatchmentSP=pd.concat([list_i for list_ii in outlist for list_i in list_ii #flatten list of lists of gdfs to list of gdfs
+            self.logger.info(f'after concat, crs:{NHDPlusV21CatchmentSP.crs}, shape: {NHDPlusV21CatchmentSP.shape} and from before, n: {n}')
+            
+            #NHDPlusV21CatchmentSP=gpd.overlay(NHDPlusV21CatchmentSP,self.states.dissolve(),how='intersection')
+            print('catchment clip completed')
             NHDPlusV21CatchmentSP.to_feather(self.NHDPlusV21_CatchmentSP_data_path)
             print('...is complete')
             self.NHDPlusV21CatchmentSP=NHDPlusV21CatchmentSP
@@ -126,107 +140,114 @@ class Mapper(myLogger):
     
     def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=True,save_check=False,plot_train=False):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
-        name=f'Xpredict_{species}.png'
-        if  not estimator_name is None:
-            name+=f'_{estimator_name}'
-        savepath=os.path.join(self.print_dir,name)
-        if save_check and os.path.exists(savepath):
-            print(f'{species} already saved, skipping')
-            return
-        
-        try:self.NHDPlusV21CatchmentSP
-        except:self.setNHDPlusV21CatchmentSP()
-        try: self.states
-        except: self.set_states()
-        try:self.ppdt
-        except:self.ppdt=PiscesPredictDataTool()
-        print('building data')
-        self.logger.info('building data')
-        huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictSeries(
-            species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
-        self.huc_species_series_dict=huc_species_series_dict
-        
-        
-        h8list=self.ppdt.getSpeciesHuc8List(species)
-        huc_range=self.getHucDigitsGDF(h8list,huc='08')
-        huc_outer_bounds=huc_range.dissolve().total_bounds
-        w=huc_outer_bounds[2]-huc_outer_bounds[0]
-        h=huc_outer_bounds[3]-huc_outer_bounds[1]
-        crs=self.NHDPlusV21CatchmentSP.crs
-        huc_range_box=self.gdfBoxFromOuterBounds(huc_outer_bounds,crs)
-        buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,1.2)
-        buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
-        fig, ax = plt.subplots(figsize=[8,8*h/w],dpi=1200)
-        #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)
-        ax.set_aspect('equal')
-        gpd.overlay(huc_range,self.states,how='intersection').plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
-        print('plotting...',end='')
-        gdf_bounds=[]#huc8bounds instead now
-        for huc,ser in huc_species_series_dict.items():
-            ser_dict={}
-            print(f'{huc}',end=', ')
-            ser[ser==1]='present'
-            ser[ser==0]='absent'
-            pser=ser[ser=='present']
-            if len(pser)>0:
-                ser_dict['present']=pser
-            else:
-                if not include_absent:
-                    continue
-            if include_absent:
-                aser=ser[ser=='absent']
-                ser_dict['absent']=aser
-            for ser_name,ser in ser_dict.items():
-                if type(ser.index) is pd.MultiIndex:
-                    ser.index=ser.index.get_level_values('COMID')
-                if type(ser) is pd.DataFrame:
-                    if type(ser.columns) is pd.MultiIndex:
-                        ser.columns=ser.columns.get_level_values('var').tolist()
-                    ser=ser.loc['y']
-                ser.index=ser.index.astype('int64')
-            
-                gdf=self.NHDPlusV21CatchmentSP.merge(
-                    ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
-                if len(gdf)==0:continue
-                if ser_name=='absent':
-                    c='b'
-                else:c='r'
-                #clipped_gdf=gdf.clip(huc_range_box)
-                clipped_gdf=gpd.overlay(gdf,huc_range_box,how='intersection') #remove any points in antarctica, for real...
-                
-                self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}')
-                clipped_gdf.plot(column='y',ax=ax,zorder=2,color=c)
-                gdf_bounds.append(gdf.total_bounds) #not using anymore, bc getting bounds from huc8 range
-        #big_gdf=gpd.sjoin([ser_i.boundary for ser_i in huc_species_series_dict.values()],join='outer')
-        
-        #below approach replaced by huc8 bounds
-        #total_bounds_list=list(zip(*gdf_bounds))
-        #outer_bounds=(min(total_bounds_list[0]),min(total_bounds_list[1]),max(total_bounds_list[2]),max(total_bounds_list[3]))
-        self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=3,crs=gdf.crs)
-        
-        
-        #gpd.overlay(huc_range,self.gdfBoxFromOuterBounds(outer_bounds,gdf.crs),how='intersection')#clip so edges don't extend beyond addInverseConus mask.
-        
-        format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
-        ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
+        try:
+            name=f'Xpredict_{species}.png'
+            if  not estimator_name is None:
+                name+=f'_{estimator_name}'
+            savepath=os.path.join(self.print_dir,name)
+            if save_check and os.path.exists(savepath):
+                print(f'{species} already saved, skipping')
+                return
 
-        #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
-        self.fig=fig
-        self.ax=ax
-        self.name=name
-        ax.margins(0)
-        leg_patches=[
-            mpatches.Patch(color='red', label='Present'),
-            ]
-        if include_absent:
-            leg_patches.append(mpatches.Patch(color='b', label='Absent'))
-        leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
-        plt.legend(handles=leg_patches)
-        fig.tight_layout
-        #try:fig.tight_layout()
-        #except:self.logger.exception('tight_layout error')
-        fig.show() 
-        fig.savefig(savepath)
+            try:self.NHDPlusV21CatchmentSP
+            except:self.setNHDPlusV21CatchmentSP()
+            try: self.states
+            except: self.set_states()
+            try:self.ppdt
+            except:self.ppdt=PiscesPredictDataTool()
+            print('building data')
+            self.logger.info('building data')
+            huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictSeries(
+                species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
+            self.huc_species_series_dict=huc_species_series_dict
+
+
+            h8list=self.ppdt.getSpeciesHuc8List(species)
+            huc_range=self.getHucDigitsGDF(h8list,huc='08')
+            huc_outer_bounds=huc_range.total_bounds
+            self.logger.info(f'huc_outer_bounds:{huc_outer_bounds}')
+            w=huc_outer_bounds[2]-huc_outer_bounds[0]
+            h=huc_outer_bounds[3]-huc_outer_bounds[1]
+            crs=self.NHDPlusV21CatchmentSP.crs
+            huc_range_box=self.gdfBoxFromOuterBounds(huc_outer_bounds,crs)
+            buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,1.2)
+            buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
+            fig, ax = plt.subplots(figsize=[8,8*h/w],dpi=1200)
+            #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)
+            ax.set_aspect('equal')
+            buffered_huc_range_box.plot(ax=ax,zorder=0)
+            gpd.overlay(huc_range,self.states,how='intersection').plot(ax=ax,zorder=1,color='lightgrey',edgecolor=None)
+            print('plotting...',end='')
+            gdf_bounds=[]#huc8bounds instead now
+            #states_outline=self.states.dissolve()
+            for huc,ser in huc_species_series_dict.items():
+                ser_dict={}
+                print(f'{huc}',end=', ')
+                ser[ser==1]='present'
+                ser[ser==0]='absent'
+                pser=ser[ser=='present']
+                if len(pser)>0:
+                    ser_dict['present']=pser
+                else:
+                    if not include_absent:
+                        continue
+                if include_absent:
+                    aser=ser[ser=='absent']
+                    ser_dict['absent']=aser
+                for ser_name,ser in ser_dict.items():
+                    if type(ser.index) is pd.MultiIndex:
+                        ser.index=ser.index.get_level_values('COMID')
+                    if type(ser) is pd.DataFrame:
+                        if type(ser.columns) is pd.MultiIndex:
+                            ser.columns=ser.columns.get_level_values('var').tolist()
+                        ser=ser.loc['y']
+                    ser.index=ser.index.astype('int64')
+
+                    gdf=self.NHDPlusV21CatchmentSP.merge(
+                        ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
+                    if len(gdf)==0:continue
+                    if ser_name=='absent':
+                        c='b'
+                    else:c='r'
+                    #clipped_gdf=gdf.clip(huc_range_box)
+                    #clipped_gdf=gpd.overlay(gdf,states_outline,how='intersection') #remove any points in antarctica, for real...
+                    clipped_gdf=gdf #nhdpluscatchments already clipped to states.
+
+                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}')
+                    clipped_gdf.plot(column='y',ax=ax,zorder=2,color=c)
+                    gdf_bounds.append(gdf.total_bounds) #not using anymore, bc getting bounds from huc8 range
+            #big_gdf=gpd.sjoin([ser_i.boundary for ser_i in huc_species_series_dict.values()],join='outer')
+
+            #below approach replaced by huc8 bounds
+            #total_bounds_list=list(zip(*gdf_bounds))
+            #outer_bounds=(min(total_bounds_list[0]),min(total_bounds_list[1]),max(total_bounds_list[2]),max(total_bounds_list[3]))
+            self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=3,crs=gdf.crs)
+
+
+            #gpd.overlay(huc_range,self.gdfBoxFromOuterBounds(outer_bounds,gdf.crs),how='intersection')#clip so edges don't extend beyond addInverseConus mask.
+
+            format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
+            #ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
+            fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
+            #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
+            self.fig=fig
+            self.ax=ax
+            self.name=name
+            ax.margins(0)
+            leg_patches=[
+                mpatches.Patch(color='red', label='Present'),
+                ]
+            if include_absent:
+                leg_patches.append(mpatches.Patch(color='b', label='Absent'))
+            leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
+            plt.legend(handles=leg_patches,fontsize=8,ncol=2,bbox_to_anchor=(0.1,1.1))
+            fig.tight_layout
+            #try:fig.tight_layout()
+            #except:self.logger.exception('tight_layout error')
+            fig.show() 
+            fig.savefig(savepath)
+        except:
+            self.logger.exception('outer catch')
         
         
     def gdfBoxFromOuterBounds(self,outer_bounds,crs):
@@ -242,7 +263,6 @@ class Mapper(myLogger):
         np4 = (p4.coords.xy[0][0], p4.coords.xy[1][0])
 
         bb_polygon = Polygon([np1, np2, np3, np4])
-
         boxdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(bb_polygon), columns=['geometry'],crs=crs)
         return boxdf
         
@@ -835,10 +855,11 @@ if __name__=="__main__":
         procs=[]
         start=0
         step=-(-len(specs))//proc_count #ceiling divide
-        for p in range(proc_count):
+        for p in range(0,len(specs),step):
             procs.append(Process(
+                
                 target=mpr.plotSpeciesPredictList,
-                args=[specs[start:start+step],species_plot_kwarg_dict]))
+                args=[specs[p:p+step],species_plot_kwarg_dict]))
             procs[-1].start()
         [proc.join() for proc in procs]
             
