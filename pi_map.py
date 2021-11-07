@@ -121,7 +121,7 @@ class Mapper(myLogger):
             states_outline=self.states.dissolve()
             outlist=MpHelper().runAsMultiProc(BatchOverlay,[[NHDPlusV21CatchmentSP.iloc[ch*i:ch*(i+1)],states_outline] for i in range(procs)])
             self.logger.info('clipping done, starting concatenation')
-            NHDPlusV21CatchmentSP=pd.concat([list_i for list_ii in outlist for list_i in list_ii #flatten list of lists of gdfs to list of gdfs
+            NHDPlusV21CatchmentSP=pd.concat([list_i for list_ii in outlist for list_i in list_ii]) #flatten list of lists of gdfs to list of gdfs
             self.logger.info(f'after concat, crs:{NHDPlusV21CatchmentSP.crs}, shape: {NHDPlusV21CatchmentSP.shape} and from before, n: {n}')
             
             #NHDPlusV21CatchmentSP=gpd.overlay(NHDPlusV21CatchmentSP,self.states.dissolve(),how='intersection')
