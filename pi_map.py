@@ -89,11 +89,26 @@ class Mapper(myLogger):
             states=gpd.overlay(self.states,self.gdfBoxFromOuterBounds(bbox,crs),how='intersection')
         else:
             states=self.states
-        states.plot(linewidth=0.3,ax=ax,color='wheat',edgecolor='k',zorder=zorder)  
+        self.logger.info(f'states.total_bounds: {states.total_bounds}')
+        states.plot(ax=ax,color='wheat',zorder=zorder)  
+        states.boundary.plot(linewidth=0.2,ax=ax,edgecolor='k',zorder=8)  
         
+    def withinBoundsCheck(self,i_b,o_b):
+        #i_b for inner bounds to check and o_b for outer bounds
+        is_within=[True]*4
+        if i_b[0]<o_b[0]:is_within[0]=False
+        if i_b[1]<o_b[1]:is_within[1]=False
+        if i_b[2]>o_b[2]:is_within[2]=False
+        if i_b[3]>o_b[3]:is_within[3]=False
+        if all(is_within):
+            return True
+        else:
+            self.logger.info(f'clipping required. is_within:{is_within} for inner_bounds: {i_b} and outer_bounds: {o_b}')
+            return False
     def expandBBox(self,bbox,ratio):
-        width=abs(bbox[2]-bbox[0])
-        height=abs(bbox[3]-bbox[1])
+        
+        width=abs(bbox[2]-bbox[0])*(ratio-1)
+        height=abs(bbox[3]-bbox[1])*(ratio-1)
         bigger_bbox=(bbox[0]-width/2,bbox[1]-height/2,bbox[2]+width/2,bbox[3]+height/2)
         return bigger_bbox
         
@@ -170,16 +185,29 @@ class Mapper(myLogger):
             h=huc_outer_bounds[3]-huc_outer_bounds[1]
             crs=self.NHDPlusV21CatchmentSP.crs
             huc_range_box=self.gdfBoxFromOuterBounds(huc_outer_bounds,crs)
+            if max(w,h)<5:expansion_factor=1.15
+            elif max(w,h)<10:expansion_factor=1.1
+            else:expansion_factor=1.05
             buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,1.05)
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
-            #fig, ax = plt.subplots(figsize=[8,4*h/w+4],dpi=1200)#height adjust, but less than proportionally.
-            fig, ax = plt.subplots(figsize=[8,8],dpi=1200)
-            ax.set_aspect('equal')
+            #if h>=w:
+            #    fig, ax = plt.subplots(figsize=[4*w/h+4,8],dpi=1200)#width adjust, but less than proportionally.
+            #else:
+            #    fig, ax = plt.subplots(figsize=[8,8*h/w],dpi=1200)#height adjust, but less than proportionally.
+            fig, ax = plt.subplots(figsize=[8,8],dpi=1200)#height adjust, but less than proportionally.
+            #plt.axis('scaled')
+            #fig.set_aspect('equal')
+            
             buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
-            gpd.overlay(huc_range,self.states,how='intersection').plot(ax=ax,zorder=3,color='lightgrey',edgecolor=None)
+            self.logger.info(
+                f'buffered_huc_range_box.total_bounds: {buffered_huc_range_box.total_bounds}')
+            huc_range_intersect=gpd.overlay(huc_range,self.states,how='intersection')
+            self.logger.info(
+                f'huc_range_intersect.total_bounds: {huc_range_intersect.total_bounds}')
+
+            huc_range_intersect.plot(ax=ax,zorder=3,color='lightgrey',edgecolor=None)
             print('plotting...',end='')
             gdf_bounds=[]#huc8bounds instead now
-            #states_outline=self.states.dissolve()
             for huc,ser in huc_species_series_dict.items():
                 ser_dict={}
                 print(f'{huc}',end=', ')
@@ -209,26 +237,20 @@ class Mapper(myLogger):
                     if ser_name=='absent':
                         c='b'
                     else:c='r'
-                    #clipped_gdf=gdf.clip(huc_range_box)
-                    #clipped_gdf=gpd.overlay(gdf,states_outline,how='intersection') #remove any points in antarctica, for real...
-                    clipped_gdf=gdf #nhdpluscatchments already clipped to states.
-
-                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {clipped_gdf.total_bounds}')
-                    clipped_gdf.plot(column='y',ax=ax,zorder=4,color=c)
-                    gdf_bounds.append(gdf.total_bounds) #not using anymore, bc getting bounds from huc8 range
-            #big_gdf=gpd.sjoin([ser_i.boundary for ser_i in huc_species_series_dict.values()],join='outer')
-
-            #below approach replaced by huc8 bounds
-            #total_bounds_list=list(zip(*gdf_bounds))
-            #outer_bounds=(min(total_bounds_list[0]),min(total_bounds_list[1]),max(total_bounds_list[2]),max(total_bounds_list[3]))
+                    if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
+                        gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
+                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
+                    gdf.plot(column='y',ax=ax,zorder=4,color=c)
             self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=gdf.crs)
-
-
-            #gpd.overlay(huc_range,self.gdfBoxFromOuterBounds(outer_bounds,gdf.crs),how='intersection')#clip so edges don't extend beyond addInverseConus mask.
-
+            ax.set_aspect('equal')
+            #if self.plot_train:
+                
+            
+            
+            
             format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
-            #ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
-            fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
+            ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{" ".join(format_name_parts[1:])}}}$')
+            #fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
             #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
             self.fig=fig
             self.ax=ax
@@ -237,13 +259,14 @@ class Mapper(myLogger):
             leg_patches=[
                 mpatches.Patch(color='red', label='Present'),
                 ]
+            ncols=2
             if include_absent:
                 leg_patches.append(mpatches.Patch(color='b', label='Absent'))
+                ncols+=1
             leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
-            plt.legend(handles=leg_patches,fontsize=8,ncol=2)#,bbox_to_anchor=(0.1,1.1))
+            
+            plt.legend(handles=leg_patches,fontsize=8,ncol=ncols)#,bbox_to_anchor=(0.1,1.1))
             fig.tight_layout
-            #try:fig.tight_layout()
-            #except:self.logger.exception('tight_layout error')
             fig.show() 
             fig.savefig(savepath)
         except:
@@ -263,16 +286,14 @@ class Mapper(myLogger):
         np4 = (p4.coords.xy[0][0], p4.coords.xy[1][0])
 
         bb_polygon = Polygon([np1, np2, np3, np4])
-        boxdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(bb_polygon), columns=['geometry'],crs=crs)
-        return boxdf
+        boxgdf = gpd.GeoDataFrame(geometry=gpd.GeoSeries(bb_polygon), columns=['geometry'],crs=crs)
+        return boxgdf
         
     def addInverseConus(self,ax,outer_bounds,crs,zorder=9):
         self.logger.info('adding inverse conus')
         df2=self.gdfBoxFromOuterBounds(outer_bounds,crs)
         gpd_clipped=gpd.overlay(df2,self.states,how='difference')
         gpd_clipped.plot(ax=ax,color='w',zorder=zorder)
-            
-        
                         
                         
     def stringifyHuc(self,huc):
@@ -293,13 +314,6 @@ class Mapper(myLogger):
             huc_column_name=huc_column_name[:-2]+huc_column_name[-1]
         return huc_gdf.loc[huc_gdf[huc_column_name].isin(hlist)]
         
-    
-    
-        
-            
-    
-    
-    
     
     def getHucBoundary(self,huc_level):
         print(huc_level)
@@ -332,6 +346,7 @@ class Mapper(myLogger):
         merged=boundary_clip.merge(data_df,left_on=huc_level,right_on=right_on)
         self.logger.info(f'boundary merge completed')
         return merged
+    
     
     def plot_y01(self,zzzno_fish=False,rebuild=0,huc_level=None):
         coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
@@ -851,7 +866,7 @@ if __name__=="__main__":
                 print(f'error for species:{spec}',format_exc())"""
         species_plot_kwarg_dict=dict(huc_level=4,include_absent=False,save_check=True,plot_train=False)
         
-        proc_count=8
+        proc_count=10
         procs=[]
         start=0
         step=-(-len(specs))//proc_count #ceiling divide
