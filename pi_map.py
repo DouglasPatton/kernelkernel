@@ -169,9 +169,14 @@ class Mapper(myLogger):
     def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=False,save_check=False,plot_train=False):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         try:
-            name=f'Xpredict_{species}.png'
+            
+            
+            format_name=species[0].upper()+species[1:].lower()
+            
+            name=f'Xpredict_{format_name}.png'
             if  not estimator_name is None:
                 name+=f'_{estimator_name}'
+            
             savepath=os.path.join(self.print_dir,name)
             if save_check and os.path.exists(savepath):
                 print(f'{species} already saved, skipping')
@@ -203,7 +208,7 @@ class Mapper(myLogger):
             elif max(w,h)<10:expansion_factor=1.1
             else:
                 expansion_factor=1.05
-            if max(w,h)>12 and min(w,h)>7:
+            if max(w,h)>18 and min(w,h)>15:
                 do_inset=False
             else: do_inset=True
                 
@@ -276,18 +281,16 @@ class Mapper(myLogger):
                 #self.gdfBoxFromOuterBounds(
                 #    expanded_states_bounds,crs).plot(ax=inset_ax,color='c',zorder=0,alpha=0.5)
                 self.states.plot(ax=inset_ax,facecolor='tan',edgecolor='none',zorder=1,alpha=0.6)
-                self.states.plot(ax=inset_ax,zorder=2,edgecolor='grey',facecolor='none')
+                self.states.plot(ax=inset_ax,zorder=2,linewidth=0.5,edgecolor='grey',facecolor='none')
                 lw=(-np.log(r)*1.7)**.1
                 buffered_huc_range_box.boundary.plot(ax=inset_ax,color='k',zorder=3,linewidth=lw,alpha=1)
                 plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
 
-                
-            
-            
-            
-            format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
-            ax.set_title(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{" ".join(format_name_parts[1:])}}}$')
+            #format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
+            format_name_parts=re.split(' ',format_name)
+            title=f'Predicted Distribution for '+" ".join([f'$\it{{{part}}}$' for part in format_name_parts])
+            ax.set_title(title)  #\it destroys spaces!!
             #fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
             #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
             self.fig=fig
