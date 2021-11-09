@@ -183,8 +183,8 @@ class Mapper(myLogger):
             except: self.set_states()
             try:self.ppdt
             except:self.ppdt=PiscesPredictDataTool()
-            print('building data')
-            self.logger.info('building data')
+            print(f'building data for {species}')
+            self.logger.info(f'building data for {species}')
             huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictSeries(
                 species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
             self.huc_species_series_dict=huc_species_series_dict
@@ -226,7 +226,7 @@ class Mapper(myLogger):
                 f'huc_range_intersect.total_bounds: {huc_range_intersect.total_bounds}')
 
             huc_range_intersect.plot(ax=ax,zorder=3,color='lightgrey',edgecolor=None)
-            print('plotting...',end='')
+            print(f'plotting {species}...',end='')
             gdf_bounds=[]#huc8bounds instead now
             for huc,ser in huc_species_series_dict.items():
                 ser_dict={}
@@ -266,21 +266,19 @@ class Mapper(myLogger):
             #if self.plot_train:
             if do_inset:
                 #help from https://jeremysze.github.io/GIS_exploration/build/html/zoomed_inset_axes.html
-                expanded_states_bounds=self.expandBBox(self.states.total_bounds,1.05)
+                expanded_states_bounds=self.expandBBox(self.states.total_bounds,1.15)
                 r=self.findBoxRatio(buffered_huc_outer_bounds,expanded_states_bounds,geo=geo)
-                print('r',r)
                 mag=np.log((-np.log(r)))/40
                 mag=r*0.2
-                print('mag',mag)
                 inset_ax = zoomed_inset_axes(ax, mag, loc=2)
                 inset_ax.set_xlim(expanded_states_bounds[0], expanded_states_bounds[2])
                 inset_ax.set_ylim(expanded_states_bounds[1], expanded_states_bounds[3])
-                self.gdfBoxFromOuterBounds(
-                    expanded_states_bounds,crs).plot(ax=inset_ax,color='c',zorder=0)
-                self.states.plot(ax=inset_ax,color='tan',zorder=1,edgecolor='lightgrey')
-                lw=(-np.log(r)*1.7)**.2
-                print('lw',lw)
-                buffered_huc_range_box.boundary.plot(ax=inset_ax,color='k',zorder=2,linewidth=lw)
+                #self.gdfBoxFromOuterBounds(
+                #    expanded_states_bounds,crs).plot(ax=inset_ax,color='c',zorder=0,alpha=0.5)
+                self.states.plot(ax=inset_ax,facecolor='tan',edgecolor='none',zorder=1,alpha=0.6)
+                self.states.plot(ax=inset_ax,zorder=2,edgecolor='grey',facecolor='none')
+                lw=(-np.log(r)*1.7)**.1
+                buffered_huc_range_box.boundary.plot(ax=inset_ax,color='k',zorder=3,linewidth=lw,alpha=1)
                 plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
 
