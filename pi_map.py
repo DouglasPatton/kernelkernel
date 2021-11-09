@@ -1,5 +1,7 @@
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+#from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 import shapely
 from shapely.geometry import Point, Polygon
 
@@ -149,11 +151,22 @@ class Mapper(myLogger):
             self.NHDPlusV21CatchmentSP=gpd.read_feather(self.NHDPlusV21_CatchmentSP_data_path)
             print('...is complete')
     
+    def findBoxRatio(self,box1,box2,geo='area'):
+        w1=box1[2]-box1[0]
+        w2=box2[2]-box2[0]
+        h1=box1[3]-box1[1]
+        h2=box2[3]-box2[1]
+        if geo=='area':return w1*h1/(w2*h2)
+        elif geo=='x':return w1**1/w2**1
+        elif geo=='y': return h1**1/h2**1
+        else: 
+            assert False, f"findBoxRatio doesn't recognize geo:{geo}"
+    
     def plotSpeciesPredictList(self,species_list,species_plot_kwarg_dict):
         for species in species_list:
             self.plotSpeciesPredict(species,**species_plot_kwarg_dict)
     
-    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=True,save_check=False,plot_train=False):
+    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=False,save_check=False,plot_train=False):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         try:
             name=f'Xpredict_{species}.png'
@@ -183,12 +196,19 @@ class Mapper(myLogger):
             self.logger.info(f'huc_outer_bounds:{huc_outer_bounds}')
             w=huc_outer_bounds[2]-huc_outer_bounds[0]
             h=huc_outer_bounds[3]-huc_outer_bounds[1]
+            geo='x'# if w<h else 'y' #for scaling inset us states map according to shorter axis
             crs=self.NHDPlusV21CatchmentSP.crs
             huc_range_box=self.gdfBoxFromOuterBounds(huc_outer_bounds,crs)
-            if max(w,h)<5:expansion_factor=1.15
+            if max(w,h)<5:expansion_factor=1.2 #show more context in small maps
             elif max(w,h)<10:expansion_factor=1.1
-            else:expansion_factor=1.05
-            buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,1.05)
+            else:
+                expansion_factor=1.05
+            if max(w,h)>12 and min(w,h)>7:
+                do_inset=False
+            else: do_inset=True
+                
+                
+            buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,expansion_factor)
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
             #if h>=w:
             #    fig, ax = plt.subplots(figsize=[4*w/h+4,8],dpi=1200)#width adjust, but less than proportionally.
@@ -241,9 +261,29 @@ class Mapper(myLogger):
                         gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
                     self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
                     gdf.plot(column='y',ax=ax,zorder=4,color=c)
-            self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=gdf.crs)
+            self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
             ax.set_aspect('equal')
             #if self.plot_train:
+            if do_inset:
+                #help from https://jeremysze.github.io/GIS_exploration/build/html/zoomed_inset_axes.html
+                expanded_states_bounds=self.expandBBox(self.states.total_bounds,1.05)
+                r=self.findBoxRatio(buffered_huc_outer_bounds,expanded_states_bounds,geo=geo)
+                print('r',r)
+                mag=np.log((-np.log(r)))/40
+                mag=r*0.2
+                print('mag',mag)
+                inset_ax = zoomed_inset_axes(ax, mag, loc=2)
+                inset_ax.set_xlim(expanded_states_bounds[0], expanded_states_bounds[2])
+                inset_ax.set_ylim(expanded_states_bounds[1], expanded_states_bounds[3])
+                self.gdfBoxFromOuterBounds(
+                    expanded_states_bounds,crs).plot(ax=inset_ax,color='c',zorder=0)
+                self.states.plot(ax=inset_ax,color='tan',zorder=1,edgecolor='lightgrey')
+                lw=(-np.log(r)*1.7)**.2
+                print('lw',lw)
+                buffered_huc_range_box.boundary.plot(ax=inset_ax,color='k',zorder=2,linewidth=lw)
+                plt.tick_params(axis='both',which='both',bottom=False,left=False,
+                                top=False,labelbottom=False,labelleft=False)
+
                 
             
             
@@ -265,7 +305,7 @@ class Mapper(myLogger):
                 ncols+=1
             leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
             
-            plt.legend(handles=leg_patches,fontsize=8,ncol=ncols)#,bbox_to_anchor=(0.1,1.1))
+            ax.legend(handles=leg_patches,fontsize=6,ncol=ncols)#,bbox_to_anchor=(0.1,1.1))
             fig.tight_layout
             fig.show() 
             fig.savefig(savepath)
