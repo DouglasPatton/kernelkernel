@@ -161,12 +161,39 @@ class Mapper(myLogger):
         elif geo=='y': return h1**1/h2**1
         else: 
             assert False, f"findBoxRatio doesn't recognize geo:{geo}"
-    
+
+            
+    def getExtendedHuc8s(self,spec,huc8list):
+        try:self.ppdt.specieshuc8list
+        except:self.ppdt.buildspecieshuc8list()
+        specieshuc8list=self.ppdt.specieshuc8list
+        try: self.ppdt.specieshuclist
+        except:self.ppdt.buildspecieslist()
+        specieshuclist=self.ppdt.specieshuclist #from the survey
+        specieslist=self.ppdt.specieslist
+        idx=specieslist.index(spec)
+        #########
+        species_huc8_dict={}
+        list1=specieshuclist[idx]
+        list2=specieshuc8list[idx]
+        biglist=list(dict.fromkeys([*list1,*list2]))
+        novel_huc8_list=list(set(biglist)-set(huc8list))
+        if len(novel_huc8_list)>0:
+            return novel_huc8_list#self.getHucDigitsGDF(novel_huc8_list,huc='08').plot(ax=ax,zorder=4)
+        else:
+            return None
+            
+
+            
+            
+            
+            
     def plotSpeciesPredictList(self,species_list,species_plot_kwarg_dict):
         for species in species_list:
             self.plotSpeciesPredict(species,**species_plot_kwarg_dict)
-    
-    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=False,save_check=False,plot_train=False):
+            
+          
+    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=False,save_check=False,plot_train=False,include_extended_hucs=False):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         try:
             
@@ -195,9 +222,22 @@ class Mapper(myLogger):
             self.huc_species_series_dict=huc_species_series_dict
 
 
-            h8list=self.ppdt.getSpeciesHuc8List(species)
-            huc_range=self.getHucDigitsGDF(h8list,huc='08')
-            huc_outer_bounds=huc_range.total_bounds
+            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #new hucs are in included
+            not_sampled_NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=True) #just the new hucs
+            #huc_range=self.getHucDigitsGDF(NS_huc8_list,huc='08')
+            if len(not_sampled_NS_huc8_list)>0:
+                not_sampled_huc_range=self.getHucDigitsGDF(not_sampled_NS_huc8_list,huc='08')
+            else: 
+                not_sampled_huc_range=None
+            if include_extended_hucs:    
+                extended_huc8_list=self.getExtendedHuc8s(species,NS_huc8_list)
+                extended_huc8_gdf=self.getHucDigitsGDF(extended_huc8_list,huc='08')
+                combined_huc8_list=list(dict.fromkeys(*extended_huc8_list,NS_huc8_list))
+            else:
+                extended_huc8_gdf=None
+                combined_huc8_list=NS_huc8_list
+            combined_huc8_range=self.getHucDigitsGDF(combined_huc8_list,huc='08')
+            huc_outer_bounds=combined_huc8_range.total_bounds
             self.logger.info(f'huc_outer_bounds:{huc_outer_bounds}')
             w=huc_outer_bounds[2]-huc_outer_bounds[0]
             h=huc_outer_bounds[3]-huc_outer_bounds[1]
@@ -212,7 +252,7 @@ class Mapper(myLogger):
                 do_inset=False
             else: do_inset=True
                 
-                
+            conus_outline=self.states.dissolve()    
             buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,expansion_factor)
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
             #if h>=w:
@@ -220,19 +260,23 @@ class Mapper(myLogger):
             #else:
             #    fig, ax = plt.subplots(figsize=[8,8*h/w],dpi=1200)#height adjust, but less than proportionally.
             fig, ax = plt.subplots(figsize=[8,8],dpi=1200)#height adjust, but less than proportionally.
-            #plt.axis('scaled')
-            #fig.set_aspect('equal')
             
             buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
             self.logger.info(
                 f'buffered_huc_range_box.total_bounds: {buffered_huc_range_box.total_bounds}')
-            huc_range_intersect=gpd.overlay(huc_range,self.states,how='intersection')
-            self.logger.info(
-                f'huc_range_intersect.total_bounds: {huc_range_intersect.total_bounds}')
-
+            huc_range_intersect=gpd.overlay(combined_huc8_range,conus_outline,how='intersection') #clip hucs to same coastal boundary as states
             huc_range_intersect.plot(ax=ax,zorder=3,color='lightgrey',edgecolor=None)
+            if not not_sampled_huc_range is None:
+                not_sampled_huc_range_intersect=gpd.overlay(not_sampled_huc_range,conus_outline,how='intersection')
+                not_sampled_huc_range_intersect.plot(ax=ax,zorder=4,color='darkgrey',edgecolor='lightgrey',hatch=3*'+',linewidth=0.25)
+            else:
+                not_sampled_huc_range_intersect=None
+                
+            if not extended_huc8_gdf is None:
+                extended_huc8_gdf_intersect=gpd.overlay(extended_huc8_gdf,conus_outline,how='intersection')
+                extended_huc8_gdf_intersect.plot(ax=ax,zorder=5,color='darkgrey',hatch='#'*3,edgecolor='darkgrey',linewidth=0.25)    
+
             print(f'plotting {species}...',end='')
-            gdf_bounds=[]#huc8bounds instead now
             for huc,ser in huc_species_series_dict.items():
                 ser_dict={}
                 print(f'{huc}',end=', ')
@@ -265,7 +309,7 @@ class Mapper(myLogger):
                     if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
                         gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
                     self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
-                    gdf.plot(column='y',ax=ax,zorder=4,color=c)
+                    gdf.plot(column='y',ax=ax,zorder=6,color=c)
             self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
             ax.set_aspect('equal')
             #if self.plot_train:
@@ -302,9 +346,15 @@ class Mapper(myLogger):
                 ]
             ncols=2
             if include_absent:
-                leg_patches.append(mpatches.Patch(color='b', label='Absent'))
+                leg_patches.append(mpatches.Patch(facecolor='b', label='Absent'))
                 ncols+=1
-            leg_patches.append(mpatches.Patch(color='lightgrey', label='HUC8 Range'))
+            leg_patches.append(mpatches.Patch(facecolor='lightgrey',label='HUC8 Range'))
+            if not not_sampled_huc_range_intersect is None:
+                leg_patches.append(mpatches.Patch(facecolor='darkgrey',edgecolor='lightgrey',hatch=3*'+',label='out of sample'))
+                ncols+=1
+            if not extended_huc8_gdf is None:
+                leg_patches.append(mpatches.Patch(facecolor='darkgrey',hatch=1*'#',edgecolor='black', label='extended range'))
+                ncols+=1
             
             ax.legend(handles=leg_patches,fontsize=6,ncol=ncols)#,bbox_to_anchor=(0.1,1.1))
             fig.tight_layout

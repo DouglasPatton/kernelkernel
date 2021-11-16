@@ -197,7 +197,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         species_idx_list=list(range(len(specieslist)))
         #########
         species_huc8_dict={}
-        for short_idx,long_idx in enumerate(species_idx_list): #merge the two sources of huc8s and remove duplicates
+        for short_idx,long_idx in enumerate(species_idx_list): #merge the two sources of huc8s and remove duplicates #short_idx and long_idx are identical
             list1=specieshuclist[long_idx]
             list2=specieshuc8list[long_idx]
             species_huc8_dict[specieslist[short_idx]]=list(dict.fromkeys([*list1,*list2]))

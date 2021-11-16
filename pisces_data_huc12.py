@@ -299,7 +299,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
                     try: self.specieshuclist[specieslist_idx].index(huc8_i)
                     except ValueError: 
                         self.logger.info(f'{spec_i} has new huc:{huc8_i}')
-                        self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)
+                        self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)#in nature serve but not in survey
                         self.specieshuclist_survey_idx_newhucs[specieslist_idx].append(huclist_survey_idx)
                 except ValueError: 
                     self.otherhuclist.append(huc8_i)
@@ -309,11 +309,14 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         with open(huc8listpath,'wb') as f:
             pickle.dump((self.specieshuc8list,self.otherhuclist,self.specieshuclist_newhucs,self.specieshuclist_survey_idx_newhucs),f)
 
-    def getSpeciesHuc8List(self,species):
+    def getSpeciesHuc8List(self,species,only_new_hucs=False):
         try: self.specieshuc8list
         except: self.buildspecieshuc8list()
         try: self.specieslist
         except: self.buildspecieslist()
+        if only_new_hucs:
+            return self.specieshuclist_newhucs[self.specieslist.index(species)]
+        
         return self.specieshuc8list[self.specieslist.index(species)]
         
     
