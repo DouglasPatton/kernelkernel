@@ -472,36 +472,25 @@ class RunCluster(mp.Process,DBTool,myLogger):
         self.logger.info(f'runcluster pid: {os.getpid()}')
         self.logger.debug('master starting up')
         try:
-            runlist,hash_id_list=self.setup.setupRunners()
+            #runlist,hash_id_list=self.setup.setupRunners()
+            runlist=self.setup.setupRunners()
             order=list(range(len(runlist)))
             shuffle(order)
+            self.logger.info(f'qcluster gettin runners. len(runlist):{len(runlist)}')
             runlist=[runlist[i] for i in order]
             if len(runlist)==0:
                 self.logger.critical(f'runlist is empty from the start')
                 return
-            hash_id_list=[hash_id_list[i] for i in order]
+            #hash_id_list=[hash_id_list[i] for i in order]
             run_jobfiller_as_proc=True
-            if run_jobfiller_as_proc:
-                jobqfiller=JobQFiller(self.qdict['jobq'],runlist,do_mp=True,address=self.netaddress)
-                jobqfiller.start()
-            else:
-                jobs_at_a_time=40 if 40<len(runlist) else len(runlist)
-                jobqfiller=JobQFiller(self.qdict['jobq'],[runlist.pop() for _ in range(jobs_at_a_time)],do_mp=False,address=self.netaddress)
-                jobqfiller.run()
+            jobqfiller=JobQFiller(self.qdict['jobq'],runlist,do_mp=True,address=self.netaddress)
+            jobqfiller.start()
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
             saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
             check_complete=0
-            while not check_complete:
-                if not run_jobfiller_as_proc:
-                    while len(runlist)>0:
-                        if jobs_at_a_time>len(runlist):jobs_at_a_time=len(runlist)
-                        if jobs_at_a_time>0:
-                            jobqfiller.addjobs([runlist.pop() for _ in range(jobs_at_a_time)])
-                            jobqfiller.run()
-                        saveqdumper.run()#
+            while True:#not check_complete: #let run forever
                 sleep(40)
                 saveqdumper.run()
-                #check_complete=self.setup.checkComplete(db=self.setup.db_kwargs,hash_id_list=hash_id_list)
             try:jobqfiller.join()
             except: self.logger.exception(f'jobqfiller join error, moving on.')
             #jobqfiller.joblist=['shutdown']
@@ -516,26 +505,6 @@ class RunCluster(mp.Process,DBTool,myLogger):
             self.logger.exception('')
             assert False,'unexpected error'
         
-        """hash_id_list=list(self.genDBdict().keys())
-        
-        '''
-        if not run_dict_list:
-            hash_id_iter=self.genDBdict().keys()
-        else:
-            hash_id_iter={hash_id:r for r,rundict in enumerate(run_dict_list) for hash_id in rundict['model_gen_dict'].keys()}
-        for hash_id in hash_id_iter:
-            if hash_id in resultsDBdict:
-                if run_dict_list: # only retu
-                    r=hash_id_iter[hash_id]
-                    run_dict_list[r].pop(hash_id)
-        '''            
-        if return_list:
-            return run_dict_list
-        else:
-            if run_dict_list:
-                return True
-            else:
-                return False"""
                     
             
     def getqdict(self):

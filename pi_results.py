@@ -600,14 +600,19 @@ class PiResults(DBTool,myLogger):
         try:
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0)
             rundict_list=[]
-            keep_hash_id_list=[]
+            #keep_hash_id_list=[]
             self.logger.info(f'building rundict_list')
+            job_idx=0
             for d,(dg_hash,hash_id_list) in enumerate(datagenhash_hash_id_dict.items()):
                 if test and d>test: break
-                rundict_list.append({'data_gen':self.gen_dict[hash_id_list[0]]['data_gen']})
+                dg_hash_id_complete=True    
+                
                 for hash_id in (hash_id_list):
                     if not hash_id in predicted:
-                        rundict_list[d][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
+                        dg_hash_id_complete=False # at least one hash_id not complete for this datagen
+                        if len(rundict_list)<job_idx+1:
+                            rundict_list.append({'data_gen':self.gen_dict[hash_id_list[0]]['data_gen']})
+                        rundict_list[job_idx][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                         ###data_gen added by runner.build()
                         """if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             result=self.results_dict[hash_id]
@@ -616,15 +621,21 @@ class PiResults(DBTool,myLogger):
                             if not result is None:
                                 rundict_list[d]['data_gen']=result['data_gen']"""
                             #rundict_list[d]['data_gen']=self.gen_dict[hash_id]['data_gen'] #try getting from here to avoid loading big results
-                        keep_hash_id_list.append(hash_id)
+                        #keep_hash_id_list.append(hash_id)
+                if not dg_hash_id_complete:
+                    job_idx+=1
+                        
+            '''#logic above reworked to obviate below
             drop_idx_list=[]
             for r,rundict in enumerate(rundict_list):
                 if len(rundict)==0:
                     drop_idx_list.append(r)
             for r in drop_idx_list[::-1]:
                 del rundict_list[r] # delete from rhs to avoid change of order on remaining idx's to delete
+            '''
             self.logger.info('building rundict_list is complete')
-            return rundict_list,keep_hash_id_list
+            #return rundict_list,keep_hash_id_list
+            return rundict_list
         except:
             self.logger.exception('outer catch, halting')
             assert False,'halt'

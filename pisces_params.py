@@ -134,11 +134,11 @@ class PiSetup(myLogger):
             no_results_run_record_dict=self.dbt.get_no_results_run_record_dict()
             datagenhash_hash_id_run_records=self.build_dghash_hash_id_dict_from_run_records(no_results_run_record_dict)
             self.logger.info(f'datagenhash_hash_id_run_records:{datagenhash_hash_id_run_records}')
-            rundict_list=[];hash_id_list=[] #latter is for tracking completion
+            rundict_list=[]#;hash_id_list=[] #latter is for tracking completion (but no longer used)
             for _,hash_id_run_record_dict in datagenhash_hash_id_run_records.items():
                 first=True
                 for hash_id,run_record in hash_id_run_record_dict.items():
-                    hash_id_list.append(hash_id)
+                    #hash_id_list.append(hash_id)
                     if first: 
                         self.logger.info(f'hash_id:{hash_id}')
                         rundict={'data_gen':run_record['data_gen'],
@@ -154,7 +154,7 @@ class PiSetup(myLogger):
             rundict_list=[]
             run_record_dict={}
             data_gen_list=self.data_setup()
-            hash_id_list=[]
+            #hash_id_list=[]
             for data_gen in data_gen_list:
                 model_gen_dict={}
                 model_gen_list=self.model_setup()
@@ -163,7 +163,7 @@ class PiSetup(myLogger):
                     hash_id=joblib.hash(run_record)
                     if not (hash_id in self.results_dict or hash_id in self.fitfail_dict):
                         #self.logger.info(f'adding to rundict hash_id:{hash_id}')
-                        hash_id_list.append(hash_id)
+                        #hash_id_list.append(hash_id)
                         run_record_dict[hash_id]=run_record # store the _gen dicts for reference
                         model_gen_dict[hash_id]=model_gen # 
                     else: self.logger.info(f'setupRunners skipping hash_id:{hash_id}')
@@ -183,7 +183,8 @@ class PiSetup(myLogger):
             else:
                 test=self.test
             #PiXResults.consolidateXpredict()
-            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
+            #rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
+            rundict_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
             runlist=[]
             self.logger.info(f'building list of Xpredict runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
@@ -195,14 +196,15 @@ class PiSetup(myLogger):
                 test=20
             else:
                 test=self.test
-            rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test)
+            #rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test)
+            rundict_list=PiResults().build_prediction_rundicts(test=test)
             runlist=[]
             self.logger.info(f'building list of runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
                 runlist.append(PredictRunner(rundict))
             self.logger.info(f'list of runners built. len(runlist):{len(runlist)}')
             self.logger.info(f'runlist:{runlist}')
-        return runlist,hash_id_list
+        return runlist#,hash_id_list
     
         
     def checkComplete(self,db=None,rundict_list=None,hash_id_list=None):
