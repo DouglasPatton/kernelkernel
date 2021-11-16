@@ -291,7 +291,7 @@ class MpBuildSpeciesData01(mp.Process,myLogger,DBTool,Helper):
             foundincomidlist=self.speciescomidlist[idx]
             hucidxlist=self.specieshuclist_survey_idx[idx]
             try:
-                hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx])
+                hucidxlist.extend(self.specieshuclist_survey_idx_newhucs[idx]) #
             except:
                 self.logger.exception('error appending new hucs.')
             species_huc_count=len(hucidxlist)

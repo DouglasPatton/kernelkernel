@@ -299,7 +299,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
                     try: self.specieshuclist[specieslist_idx].index(huc8_i)
                     except ValueError: 
                         self.logger.info(f'{spec_i} has new huc:{huc8_i}')
-                        self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)#in nature serve but not in survey
+                        self.specieshuclist_newhucs[specieslist_idx].append(huc8_i)#in nature serve and surveyed, but fish not found there in surveys
                         self.specieshuclist_survey_idx_newhucs[specieslist_idx].append(huclist_survey_idx)
                 except ValueError: 
                     self.otherhuclist.append(huc8_i)
