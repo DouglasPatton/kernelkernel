@@ -324,7 +324,7 @@ class Mapper(myLogger):
                     ax=fig.add_subplot(gs[0:ps2-1,:])
                     inset_ax=fig.add_subplot(gs[ps2-1,0])
                 else:
-                    ax=fig.add_subplot(
+                    ax=fig.add_subplot()
             #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)#height adjust, but less than proportionally.
             
             buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
