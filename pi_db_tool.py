@@ -14,26 +14,29 @@ class DBTool():
        
         self.logger=logging.getLogger()
         #
-        results_dir_name='results'
-        if cv_run:
-            results_dir_nam+='_cv'
-        resultsdir=os.path.join(os.getcwd(),results_dir_name)
+        if not cv_run is None:
+            results_dir_name='results'
+            if not cv_run:
+                results_dir_nam+='_cv'
+            resultsdir=os.path.join(os.getcwd(),results_dir_name)
+
+            self.resultsdir=resultsdir
+            if not os.path.exists(resultsdir):
+                os.mkdir(resultsdir)
+            self.errordir=os.path.join(resultsdir,'error')
+            if not os.path.exists(self.errordir):
+                os.mkdir(self.errordir)
+            self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
+            self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
+            self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
+            self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
+            self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
+            self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
+            self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         
-        self.resultsdir=resultsdir
-        if not os.path.exists(resultsdir):
-            os.mkdir(resultsdir)
-        self.errordir=os.path.join(resultsdir,'error')
-        if not os.path.exists(self.errordir):
-            os.mkdir(self.errordir)
-        self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
-        self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
-        self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
-        self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
-        self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
         
-        self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
-        self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
+        
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)

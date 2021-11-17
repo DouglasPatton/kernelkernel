@@ -22,7 +22,7 @@ class PiscesDataTool(myLogger,DBTool,Helper):
     def __init__(self,):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
-        DBTool.__init__(self)
+        DBTool.__init__(self,cv_run=None)#results not accessed anyways, so doesn't matter
         Helper.__init__(self)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir): os.mkdir(self.savedir)
