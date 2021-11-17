@@ -7,13 +7,18 @@ from time import sleep
 from traceback import format_exc
 
 class DBTool():
-    def __init__(self):
+    def __init__(self,cv_run=None):
+        assert not cv_run is None,f'expecting True or False for cv_run:{cv_run}'
         func_name='DBTool'
         #super.__init__(name=f'{func_name}.log')
        
         self.logger=logging.getLogger()
         #
-        resultsdir=os.path.join(os.getcwd(),'results')
+        results_dir_name='results'
+        if cv_run:
+            results_dir_nam+='_cv'
+        resultsdir=os.path.join(os.getcwd(),results_dir_name)
+        
         self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
@@ -53,9 +58,9 @@ class DBTool():
                         newdict.commit()
             
     
-    def anyNameDB(self,dbname,tablename='data',folder='results'):
+    def anyNameDB(self,dbname,tablename='data',folder=results_dir_name):
         name=dbname+'.sqlite'
-        if folder=='results':
+        if folder==results_dir_name:
             path=os.path.join(self.resultsdir,name)
         else:
             path=os.path.join(folder,name)

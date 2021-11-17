@@ -245,9 +245,11 @@ class Mapper(myLogger):
             try: self.states
             except: self.set_states()
             try:self.ppdt
-            except:self.ppdt=PiscesPredictDataTool()
+            except:self.ppdt=PiscesPredictDataTool(cv_run=False)
             try: self.ppdt.huclist_survey
             except: self.ppdt.buildspecieslist()
+            try: self.ppdt_cv
+            except:self.ppdt_cv=PiscesPredictDataTool(cv_run=True)
                 
             print(f'building data for {species}')
             self.logger.info(f'building data for {species}')
@@ -289,11 +291,23 @@ class Mapper(myLogger):
             geo='x'# if w<h else 'y' #for scaling inset us states map according to shorter axis
             
             huc_range_box=self.gdfBoxFromOuterBounds(huc_outer_bounds,crs)
-            if max(w,h)<5:expansion_factor=1.3 #show more context in small maps
-            elif max(w,h)<7.5: expansion_factor=1.2
-            elif max(w,h)<10:expansion_factor=1.1
-            else:
+            if max(w,h)<5:
+                expansion_factor=1.3 #show more context in small maps
+                max_fig_len=6
+            elif max(w,h)<7.5: 
+                expansion_factor=1.2
+                max_fig_len=7
+            
+            elif max(w,h)<10:
+                expansion_factor=1.1
+                max_fig_len=8
+            elif max(w,h)<15:
                 expansion_factor=1.05
+                max_fig_len=9
+            else:
+                expansion_factor=1.02
+                max_fig_len=11
+                
             if max(w,h)>18 and min(w,h)>15:
                 do_inset=False
             else: do_inset=True
@@ -304,7 +318,7 @@ class Mapper(myLogger):
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
             
             if 1.4*h>=w:
-                fig= plt.figure(figsize=[3+6*w/h,8],dpi=1200,)#width adjust, but less than proportionally.
+                fig= plt.figure(figsize=[0.3*max_fig_len+.7*max_fig_len*w/h,max_fig_len],dpi=1200,)#width adjust, but less than proportionally.
                 if do_inset:
                     plot_split=5
                     ps2=int(plot_split*w/h)+1
@@ -315,7 +329,7 @@ class Mapper(myLogger):
                 else:
                     ax=fig.add_subplot()
             else:
-                fig = plt.figure(figsize=[8,2+6*h/w],dpi=1200)#height adjust, but less than proportionally.
+                fig = plt.figure(figsize=[max_fig_len,.25*max_fig_len+0.75*max_fig_len*h/w],dpi=1200)#height adjust, but less than proportionally.
                 if do_inset:
                     plot_split=7
                     ps2=int(plot_split*h/w)+1
@@ -1032,7 +1046,7 @@ if __name__=="__main__":
             species='cyprinus carpio'#'etheostoma nigripinne'#'lampetra richardsoni'#
             mpr.plotSpeciesPredict(species,huc_level=4,include_absent=False,save_check=True,plot_train=False)
             assert False, 'done'
-        specs=PiscesPredictDataTool().returnspecieslist()
+        specs=PiscesPredictDataTool(cv_run=False).returnspecieslist()
         """for spec in specs:
             print(spec)
             try:

@@ -28,16 +28,18 @@ class NHDPlusDownloader(myLogger):
 
 
 class PiscesPredictDataTool(PiscesDataTool,myLogger):
-    def __init__(self,):
+    def __init__(self,cv_run=None):
         myLogger.__init__(self,name='pisces_data_predict.log')
         self.logger.info('starting pisces_data_predict logger')
         PiscesDataTool.__init__(self,)
+        self.cv_run=cv_run
+        assert not cv_run is None,'cv_run must be set to True or False!'
         #self.gt=gt()
         
     def build_species_hash_id_dict(self,output_estimator_tuple=False):
         #copied from pi_results.py and simplified
         species_hash_id_dict={}
-        with DBTool().genDBdict() as db:
+        with DBTool(self.cv_run).genDBdict() as db:
             for hash_id,run_record in db.items():
                 species=run_record['data_gen']['species']
                 if output_estimator_tuple:
