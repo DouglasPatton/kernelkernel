@@ -17,8 +17,8 @@ class DBTool():
         if not cv_run is None:
             results_dir_name='results'
             if not cv_run:
-                results_dir_nam+='_cv'
-            resultsdir=os.path.join(os.getcwd(),results_dir_name)
+                self.results_dir_name+='_cv'
+            resultsdir=os.path.join(os.getcwd(),self.results_dir_name)
 
             self.resultsdir=resultsdir
             if not os.path.exists(resultsdir):
@@ -31,6 +31,9 @@ class DBTool():
             self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
             self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
             self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
+            self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
+            if not os.path.exists(self.Xpredictspecies_dir): 
+                os.mkdir(self.Xpredictspecies_dir)
             self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
             self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         
@@ -61,9 +64,10 @@ class DBTool():
                         newdict.commit()
             
     
-    def anyNameDB(self,dbname,tablename='data',folder=results_dir_name):
+    def anyNameDB(self,dbname,tablename='data',folder=None):
+        
         name=dbname+'.sqlite'
-        if folder==results_dir_name:
+        if folder is None:
             path=os.path.join(self.resultsdir,name)
         else:
             path=os.path.join(folder,name)
@@ -117,13 +121,13 @@ class DBTool():
     def XpredictSpeciesResults(self,spec,hash_id):
         name=f'XpredictSpeciesResults-{spec}'
         
-        return self.anyNameDB(name,tablename=hash_id,folder='data_tool')
+        return self.anyNameDB(name,tablename=hash_id,folder=self.Xpredictspecies_dir)
     
     
     def XPredictHashIDComidHashResultsDB(self,hash_id=None):
         name='XPredictHashIDComidHashResults'
         if hash_id is None:
-            path=os.path.join('data_tool',name+'.sqlite')
+            path=os.path.join(self.resultsdir,name+'.sqlite')
             if not os.path.exists(path):
                 return []
             try:
@@ -132,7 +136,7 @@ class DBTool():
                 return []
             except:
                 assert False,f'unexpected error, hash_id:{hash_id}'
-        return self.anyNameDB(name,tablename=hash_id,folder='data_tool')
+        return self.anyNameDB(name,tablename=hash_id,folder=self.resultsdir)
     
     
     
