@@ -207,12 +207,15 @@ class Mapper(myLogger):
 
             
     def truncateExtendedHucs(self,extended_huc8_list,NS_huc8_list):
-        bbox=self.getHucDigitsGDF(NS_huc8_list,huc='08').total_bounds
-        selected=self.getHucDigitsGDF(extended_huc8_list,huc='08').cx[bbox[0]:bbox[2],bbox[1]:bbox[3]].loc[:,'huc8'].tolist()
-        if len(selected) is None:
+        try:
+            bbox=self.getHucDigitsGDF(NS_huc8_list,huc='08').total_bounds
+            selected=self.getHucDigitsGDF(extended_huc8_list,huc='08').cx[bbox[0]:bbox[2],bbox[1]:bbox[3]].loc[:,'huc8'].tolist()
+            if len(selected) is None:
+                return []
+            else:
+                return selected
+        except:
             return []
-        else:
-            return selected
             
             
     def plotSpeciesPredictList(self,species_list,species_plot_kwarg_dict):
@@ -263,17 +266,17 @@ class Mapper(myLogger):
                 not_sampled_huc_range=None
             if include_extended_hucs:    
                 extended_huc8_list=self.getExtendedHuc8s(species,NS_huc8_list)
-                
-                if type(include_extended_hucs) is str:
-                    if include_extended_hucs.lower()=='truncated':
-                        extended_huc8_list=self.truncateExtendedHucs(extended_huc8_list,NS_huc8_list)
-                    else: assert False, 'not developed'
-                combined_huc8_list=list(dict.fromkeys([*extended_huc8_list,*NS_huc8_list]))
+                if extended_huc8_list:
+                    if type(include_extended_hucs) is str:
+                        if include_extended_hucs.lower()=='truncated':
+                            extended_huc8_list=self.truncateExtendedHucs(extended_huc8_list,NS_huc8_list)
+                        else: assert False, 'not developed'
+                    combined_huc8_list=list(dict.fromkeys([*extended_huc8_list,*NS_huc8_list]))
                 if extended_huc8_list:
                     extended_huc8_gdf=self.getHucDigitsGDF(extended_huc8_list,huc='08')
                 else:
                     extended_huc8_gdf=None
-            else:
+            if not include_extended_hucs or not extended_huc8_list:
                 extended_huc8_gdf=None
                 extended_huc8_list=None
                 combined_huc8_list=NS_huc8_list
@@ -299,21 +302,29 @@ class Mapper(myLogger):
             buffered_huc_outer_bounds=self.expandBBox(huc_outer_bounds,expansion_factor,)#extra_on_top=(expansion_factor-1)/2)
             
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
-            plot_split=5
+            
             if 1.4*h>=w:
                 fig= plt.figure(figsize=[3+6*w/h,8],dpi=1200,)#width adjust, but less than proportionally.
-                ps2=int(plot_split*w/h)+1
-                gs=fig.add_gridspec(plot_split,ps2)
-                gs.update(wspace=0.025, hspace=0.05)
-                ax=fig.add_subplot(gs[:,0:ps2-1])
-                inset_ax=fig.add_subplot(gs[0,ps2-1])
+                if do_inset:
+                    plot_split=5
+                    ps2=int(plot_split*w/h)+1
+                    gs=fig.add_gridspec(plot_split,ps2)
+                    gs.update(wspace=0.025, hspace=0.05)
+                    ax=fig.add_subplot(gs[:,0:ps2-1])
+                    inset_ax=fig.add_subplot(gs[0,ps2-1])
+                else:
+                    ax=fig.add_subplot()
             else:
                 fig = plt.figure(figsize=[8,2+6*h/w],dpi=1200)#height adjust, but less than proportionally.
-                ps2=int(plot_split*h/w)+1
-                gs=fig.add_gridspec(ps2,plot_split,)
-                gs.update(wspace=0.025, hspace=0.05)
-                ax=fig.add_subplot(gs[0:ps2-1,:])
-                inset_ax=fig.add_subplot(gs[ps2-1,0])
+                if do_inset:
+                    plot_split=7
+                    ps2=int(plot_split*h/w)+1
+                    gs=fig.add_gridspec(ps2,plot_split,)
+                    gs.update(wspace=0.025, hspace=0.05)
+                    ax=fig.add_subplot(gs[0:ps2-1,:])
+                    inset_ax=fig.add_subplot(gs[ps2-1,0])
+                else:
+                    ax=fig.add_subplot(
             #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)#height adjust, but less than proportionally.
             
             buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
@@ -391,6 +402,7 @@ class Mapper(myLogger):
                 self.states.plot(ax=inset_ax,zorder=2,linewidth=0.5,edgecolor='grey',facecolor='none')
                 lw=(-np.log(r)*1.7)**.1
                 buffered_huc_range_box.boundary.plot(ax=inset_ax,color='k',zorder=3,linewidth=lw,alpha=1)
+                inset_ax.margins(0)
                 plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
 
@@ -400,9 +412,6 @@ class Mapper(myLogger):
             fig.suptitle(title)  #\it destroys spaces!!
             #fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
             #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
-            self.fig=fig
-            self.ax=ax
-            self.name=name
             ax.margins(0)
             leg_patches=[
                 mpatches.Patch(color='red', label='Present'),
