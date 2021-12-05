@@ -304,10 +304,10 @@ class XPredictRunner:#(PredictRunner):
     def checkXPredictHashIDComidHashResults(self,hash_ids,comidblockdict):
         dbt=DBTool()
         hash_id_c_hash_dict={}
-        hash_ids_in_results=dbt.XPredictHashIDComidHashResultsDB(hash_id=None)#tablenames
+        hash_ids_in_results=dbt.XpredictHashIDComidHashResultsDB(hash_id=None)#tablenames
         for hash_id in hash_ids:
             if hash_id in hash_ids_in_results:
-                with dbt.XPredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
+                with dbt.XpredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
                     hash_c_hash_with_results=dict.fromkeys(hash_resultsdb.keys())
                 hash_id_c_hash_dict[hash_id]=[]
 

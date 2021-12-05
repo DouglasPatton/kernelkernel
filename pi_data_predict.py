@@ -56,9 +56,9 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         # ex. 12345:[(xhash,chash),(xhash,chash),...]
         try: self.hash_ids_in_Xresults
         except: 
-            self.hash_ids_in_Xresults=dict.fromkeys(self.XPredictHashIDComidHashResultsDB(hash_id=None))
+            self.hash_ids_in_Xresults=dict.fromkeys(self.XpredictHashIDComidHashResultsDB(hash_id=None))
         for hash_id in self.hash_ids_in_Xresults:
-            for c_hash in self.XPredictHashIDComidHashResultsDB(hash_id=None):
+            for c_hash in self.XpredictHashIDComidHashResultsDB(hash_id=None):
                 pass
     
     def buildNoveltyFilter(self,species,method=None,try_load=True):
@@ -78,7 +78,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     def buildXPredict(self,):
         species_hash_id_dict=self.build_species_hash_id_dict()
         self.hash_ids_in_Xresults=dict.fromkeys(
-            self.XPredictHashIDComidHashResultsDB(hash_id=None))#dict for fast search
+            self.XpredictHashIDComidHashResultsDB(hash_id=None))#dict for fast search
 
         for spec,spec_hash_ids in species_hash_id_dict.items():
             self.buildSpeciesXPredict(spec,spec_hash_ids,)
@@ -92,7 +92,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             print(logstr)
             if hash_id in self.hash_ids_in_Xresults:
                 self.addToDBDict(
-                    [self.XPredictHashIDComidHashResultsDB(hash_id=hash_id)],
+                    [self.XpredictHashIDComidHashResultsDB(hash_id=hash_id)],
                     db=lambda:self.XpredictSpeciesResults(spec,hash_id),fast_add=True)
             else:
                 self.logger.warning(f'for {spec}, hash_id:{hash_id} not in results')

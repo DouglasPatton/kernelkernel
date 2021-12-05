@@ -14,28 +14,28 @@ class DBTool():
        
         self.logger=logging.getLogger()
         #
-        if not cv_run is None:
-            results_dir_name='results'
-            if not cv_run:
-                self.results_dir_name+='_cv'
-            resultsdir=os.path.join(os.getcwd(),self.results_dir_name)
+        results_dir_name='results'
+            
+        if cv_run:
+            self.results_dir_name+='_cv'
+        resultsdir=os.path.join(os.getcwd(),self.results_dir_name)
 
-            self.resultsdir=resultsdir
-            if not os.path.exists(resultsdir):
-                os.mkdir(resultsdir)
-            self.errordir=os.path.join(resultsdir,'error')
-            if not os.path.exists(self.errordir):
-                os.mkdir(self.errordir)
-            self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
-            self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
-            self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
-            self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
-            self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
-            self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
-            if not os.path.exists(self.Xpredictspecies_dir): 
-                os.mkdir(self.Xpredictspecies_dir)
-            self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
-            self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
+        self.resultsdir=resultsdir
+        if not os.path.exists(resultsdir):
+            os.mkdir(resultsdir)
+        self.errordir=os.path.join(resultsdir,'error')
+        if not os.path.exists(self.errordir):
+            os.mkdir(self.errordir)
+        self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
+        self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
+        self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
+        self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
+        self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
+        self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
+        if not os.path.exists(self.Xpredictspecies_dir): 
+            os.mkdir(self.Xpredictspecies_dir)
+        self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
+        self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         
         self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
         
@@ -120,12 +120,12 @@ class DBTool():
     
     def XpredictSpeciesResults(self,spec,hash_id):
         name=f'XpredictSpeciesResults-{spec}'
-        
+
         return self.anyNameDB(name,tablename=hash_id,folder=self.Xpredictspecies_dir)
     
     
-    def XPredictHashIDComidHashResultsDB(self,hash_id=None):
-        name='XPredictHashIDComidHashResults'
+    def XpredictHashIDComidHashResultsDB(self,hash_id=None):
+        name='XpredictHashIDComidHashResults' #note lowercase p!
         if hash_id is None:
             path=os.path.join(self.resultsdir,name+'.sqlite')
             if not os.path.exists(path):
@@ -185,7 +185,7 @@ class DBTool():
                     kwargs={}
                 db=lambda: self.pidataDBdict(**kwargs)
             elif Xpredict:
-                db=lambda X:self.XPredictHashIDComidHashResultsDB(hash_id=X)
+                db=lambda X:self.XpredictHashIDComidHashResultsDB(hash_id=X)
             else:
                 db=self.resultsDBdict
             saved=False;tries=0

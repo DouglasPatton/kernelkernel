@@ -220,7 +220,7 @@ class PiSetup(myLogger):
         if callable(db):
             db=db()
         if type(db) is dict and 'Xpredict' in db:
-            complete_hash_id_list=dict.fromkeys(self.dbt.XPredictHashIDComidHashResultsDB()) #tablenames
+            complete_hash_id_list=dict.fromkeys(self.dbt.XpredictHashIDComidHashResultsDB()) #tablenames
         else:
             complete_hash_id_list=dict.fromkeys(db.keys())
         rundrop_idx=[]
