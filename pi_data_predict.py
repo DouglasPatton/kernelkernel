@@ -31,7 +31,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     def __init__(self,cv_run=None):
         myLogger.__init__(self,name='pisces_data_predict.log')
         self.logger.info('starting pisces_data_predict logger')
-        PiscesDataTool.__init__(self,)
+        PiscesDataTool.__init__(self,cv_run=cv_run)
         self.cv_run=cv_run
         assert not cv_run is None,'cv_run must be set to True or False!'
         #self.gt=gt()
@@ -62,6 +62,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
                 pass
     
     def buildNoveltyFilter(self,species,method=None,try_load=True):
+        assert False, 'not developed'
         n_hash=joblib.hash([f'{species},{method}'])
         path=os.path.join(os.getcwd(),'data_tool',f'novelty_filter_{species}_{n_hash}.pkl')
         if try_load and os.path.exists(path):
@@ -100,50 +101,64 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
     
     
     
-    def BuildBigSpeciesXPredictSeries(self,species,estimator_name=None,hucdigitcount=2):
+    def BuildBigSpeciesXPredictDF(self,species,estimator_name=None,hucdigitcount=2,cv_agg_kwargs={}):
+        #pulls together all of the data required to map a species, broken up into a dictionary: {huc:y_series,...}
         try: self.species_hash_id_est_dict
         except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(output_estimator_tuple=True)
         tuplist=self.species_hash_id_est_dict[species]
-        series_list=[]
+        df_list=[]
         for est_name,hash_id in tuplist:
             if not estimator_name is None:
                 if not est_name==estimator_name:continue
             for c_hash,df in self.XpredictSpeciesResults(species,hash_id).items():
                 #if not type(estimator_name) is str: df.index=pd.MultiIndex.from_tuples(zip(df.index.to_list(),[est_name]*len(df.index)),names=['COMID','estimator'])
                 if type(df.index) is pd.MultiIndex:
-                    df=df.mean(level=['COMID','HUC12']) #takes mean across estimators
-                series_list.append(df)
-        #df=pd.concat(series_list,axis=0)
-        #self.series_list=series_list
+                    df=df.mean(axis=0,level=['COMID','HUC12']) #takes mean across estimators
+                df_list.append(df)
+                if self.cv_run:
+                    assert type(df.columns) is pd.MultiIndex,f'expecting type(df.columns) is multiindex, but it is: {type:(df.columns)}'
+                    
+        #df=pd.concat(df_list,axis=0)
+        #self.df_list=df_list
         #self.df=df
         if hucdigitcount>0:
-            Huc_yser_dict=self.splitDFByHucDigits(series_list,hucdigitcount=hucdigitcount)#yser means y in a pd.Series
+            huc_ydf_dict=self.splitDFByHucDigits(df_list,hucdigitcount=hucdigitcount)#ydf means y in a pd.Series
         else:
-            Huc_yser_dict={'all_hucs':pd.concat(series_list,axis=0)}
-        self.Huc_yser_dict=Huc_yser_dict
-        return Huc_yser_dict
+            huc_ydf_dict={'all_hucs':pd.concat(df_list,axis=0)}
         
-    def splitDFByHucDigits(self,series_list,hucdigitcount=2):
+        if self.cv_run:
+            huc_ydf_dict=self.cvAggregate(huc_ydf_dict,**cv_agg_kwargs)
+        
+        self.huc_ydf_dict=huc_ydf_dict
+        return huc_ydf_dict
+    
+    def cvAggregate(self,huc_ydf_dict,agg_type='single_probability'):# 'PI_CV_Plus'
+        if agg_type=='single_probability':
+            out_huc_ydf_dict={huc:ydf.mean(axis=1,level='y').to_frame() for huc,ydf in huc_ydf_dict.items()}
+            
+            
+        else: assert False, f'agg_type:{agg_type} not developed'
+        
+        return out_huc_ydf_dict
+        
+    def splitDFByHucDigits(self,df_list,hucdigitcount=2):
         assert hucdigitcount%2==0,f'expecting an even number for hucdigitcount: {hucdigitcount}'
         assert hucdigitcount<=12,f'expecting a number <=12 for hucdigitcount: {hucdigitcount}'
-        
-        huc_comid_dict_y_dict={} #for each huc 4, a dictionary containing comid:y
-        for df in series_list:
-            y_arr=df.to_numpy().flatten()
+        cols=df_list[0].columns
+        added_hucs=[]
+        huc_ylist_dict={} #for each huc 4, a dictionary containing comid:y
+        for list_idx,df in enumerate(df_list): #np.flatten will make it 1d either way
+            #y_arr=df.to_numpy().flatten()
             for df_i,(comid,h12) in enumerate(df.index.to_list()):
                 Huc=h12[:hucdigitcount]
-                try:
-                    Hucdict=huc_comid_dict_y_dict[Huc]
-                except KeyError:
-                    huc_comid_dict_y_dict[Huc]={}
-                huc_comid_dict_y_dict[Huc][comid]=y_arr[df_i]
+                if not Huc in added_hucs:
+                    added_hucs.append(Huc)
+                    huc_ylist_dict[Huc]=[]
+                huc_ylist_dict[Huc].append(df.iloc[df_i])
                 
-        Huc_yser_dict={}
-        for Huc,comid_y_dict in huc_comid_dict_y_dict.items():
-            Hucser=pd.Series(comid_y_dict,name='y')
-            Hucser.index.name='COMID'
-            Huc_yser_dict[Huc]=Hucser
-        return Huc_yser_dict
+        huc_df_dict={Huc:pd.concat(df_list) for Huc,df_list in huc_ylist_dict.items()}
+        
+        return huc_df_dict
             
         
         
@@ -435,7 +450,8 @@ class ComidBlockBuilder(mp.Process,myLogger):
                     Xdb.commit()"""
 
 if __name__=="__main__":
-    PiscesPredictDataTool().buildXPredict()
+    PiscesPredictDataTool(cv_run=True).buildXPredict()
+    #PiscesPredictDataTool(cv_run=False).buildXPredict()
         
         
         

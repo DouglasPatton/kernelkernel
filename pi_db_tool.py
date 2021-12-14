@@ -17,8 +17,8 @@ class DBTool():
         results_dir_name='results'
             
         if cv_run:
-            self.results_dir_name+='_cv'
-        resultsdir=os.path.join(os.getcwd(),self.results_dir_name)
+            results_dir_name+='_cv'
+        resultsdir=os.path.join(os.getcwd(), results_dir_name)
 
         self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):

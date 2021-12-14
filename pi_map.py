@@ -223,7 +223,13 @@ class Mapper(myLogger):
             self.plotSpeciesPredict(species,**species_plot_kwarg_dict)
             
           
-    def plotSpeciesPredict(self,species,estimator_name=None,huc_level=2,include_absent=False,save_check=False,plot_train=False,include_extended_hucs='truncated'):
+    def plotSpeciesPredict(
+        self,species,
+        estimator_name=None,huc_level=2,include_absent=False,save_check=False,
+        plot_train=False,include_extended_hucs='truncated',
+        main_plot='cv_probability',#'classify'
+        secondary_plots={'binary_classify':'middle'} # 'cv_PI-lower-5%', '
+    ):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         try:
             
@@ -238,7 +244,11 @@ class Mapper(myLogger):
             if save_check and os.path.exists(savepath):
                 print(f'{species} already saved, skipping')
                 return
-
+            
+            plot_names=[main_plot, *secondary_plots.keys()]
+            assert all([type(name) is str for name in plot_names])
+            incl_cv_plot=any([name[:3].lower()=='cv_' for name in plot_names]) #relies on cv plots having cv_ prefix
+            incl_single_fit_plot=any([name[:3].lower()!='cv_' for name in plot_names])
             try:self.NHDPlusV21CatchmentSP
             except:self.setNHDPlusV21CatchmentSP()
             crs=self.NHDPlusV21CatchmentSP.crs
@@ -248,16 +258,11 @@ class Mapper(myLogger):
             except:self.ppdt=PiscesPredictDataTool(cv_run=False)
             try: self.ppdt.huclist_survey
             except: self.ppdt.buildspecieslist()
-            try: self.ppdt_cv
-            except:self.ppdt_cv=PiscesPredictDataTool(cv_run=True)
+            if incl_cv_plot:
+                try: self.cv_ppdt
+                except:self.cv_ppdt=PiscesPredictDataTool(cv_run=True)
                 
-            print(f'building data for {species}')
-            self.logger.info(f'building data for {species}')
-            huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictSeries(
-                species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
-            self.huc_species_series_dict=huc_species_series_dict
-
-
+            
             NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve huc8's
             not_sampled_NS_huc8_list=self.getNotSampledNSHuc8s(NS_huc8_list)
             #huc_range=self.getHucDigitsGDF(NS_huc8_list,huc='08')
@@ -354,42 +359,29 @@ class Mapper(myLogger):
             else:
                 not_sampled_huc_range_intersect=None
             
-            
-
+            print(f'building data for {species}')
+            self.logger.info(f'building data for {species}')
+            cv_data_exists=False
+            if incl_cv_plot:
+                try:
+                    cv_huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictDF(
+                        species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
+                    self.cv_huc_species_series_dict=cv_huc_species_series_dict
+                    cv_data_exists=True
+                except:
+                    self.logger.exception('error trying to BuildBigSpeciesXPredictDF for cv_run, skipping')
+                    #cv_data_exists=False
+            if incl_single_fit_plot or not cv_data_exists:
+                huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictDF(
+                    species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
+                self.huc_species_series_dict=huc_species_series_dict
+                
             print(f'plotting {species}...',end='')
-            for huc,ser in huc_species_series_dict.items():
-                ser_dict={}
-                print(f'{huc}',end=', ')
-                ser[ser==1]='present'
-                ser[ser==0]='absent'
-                pser=ser[ser=='present']
-                if len(pser)>0:
-                    ser_dict['present']=pser
-                else:
-                    if not include_absent:
-                        continue
-                if include_absent:
-                    aser=ser[ser=='absent']
-                    ser_dict['absent']=aser
-                for ser_name,ser in ser_dict.items():
-                    if type(ser.index) is pd.MultiIndex:
-                        ser.index=ser.index.get_level_values('COMID')
-                    if type(ser) is pd.DataFrame:
-                        if type(ser.columns) is pd.MultiIndex:
-                            ser.columns=ser.columns.get_level_values('var').tolist()
-                        ser=ser.loc['y']
-                    ser.index=ser.index.astype('int64')
-
-                    gdf=self.NHDPlusV21CatchmentSP.merge(
-                        ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
-                    if len(gdf)==0:continue
-                    if ser_name=='absent':
-                        c='b'
-                    else:c='r'
-                    if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
-                        gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
-                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
-                    gdf.plot(column='y',ax=ax,zorder=6,color=c)
+            if main_plot=='classify':
+                self.plotByHucDict(huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_kwargs=dict(column='y',zorder=6,color='r'))
+            elif main_plot=='cv_predict'
+            
+            
             self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
             gpd.overlay(combined_huc8_range,conus_outline, how='intersection').boundary.plot(ax=ax, zorder=10,linewidth=0.25, edgecolor='black')
                 
@@ -460,6 +452,42 @@ class Mapper(myLogger):
             fig.savefig(savepath)
         except:
             self.logger.exception('outer catch')
+            
+            
+    def plotByHucDict(self,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_kwargs=dict(column='y',zorder=6,color='r')):
+        for huc,ser in huc_species_series_dict.items():
+                ser_dict={}
+                print(f'{huc}',end=', ')
+                ser[ser==1]='present'
+                ser[ser==0]='absent'
+                pser=ser[ser=='present']
+                if len(pser)>0:
+                    ser_dict['present']=pser
+                else:
+                    if not include_absent:
+                        continue
+                if include_absent:
+                    aser=ser[ser=='absent']
+                    ser_dict['absent']=aser
+                for ser_name,ser in ser_dict.items():
+                    if type(ser.index) is pd.MultiIndex:
+                        ser.index=ser.index.get_level_values('COMID')
+                    if type(ser) is pd.DataFrame:
+                        if type(ser.columns) is pd.MultiIndex:
+                            ser.columns=ser.columns.get_level_values('var').tolist()
+                        ser=ser.loc['y']
+                    ser.index=ser.index.astype('int64')
+
+                    gdf=self.NHDPlusV21CatchmentSP.merge(
+                        ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
+                    if len(gdf)==0:continue
+                    if ser_name=='absent':
+                        c='b'
+                    else:c='r'
+                    if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
+                        gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
+                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
+                    gdf.plot(ax=ax,**plot_kwargs)
         
         
     def gdfBoxFromOuterBounds(self,outer_bounds,crs):

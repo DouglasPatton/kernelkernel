@@ -19,10 +19,10 @@ from pi_db_tool import DBTool
 
 
 class PiscesDataTool(myLogger,DBTool,Helper):
-    def __init__(self,):
+    def __init__(self,cv_run=None):
         myLogger.__init__(self,name='pisces_data_huc12.log')
         self.logger.info('starting pisces_data_huc12 logger')
-        DBTool.__init__(self,cv_run=None)#results not accessed anyways, so doesn't matter
+        DBTool.__init__(self,cv_run=cv_run)
         Helper.__init__(self)
         self.savedir=os.path.join(os.getcwd(),'data_tool')
         if not os.path.exists(self.savedir): os.mkdir(self.savedir)
