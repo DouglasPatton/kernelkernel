@@ -1,12 +1,15 @@
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+#from mpl_toolkits.axes_grid1.colorbar import colorbar
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+import matplotlib as mpl
 #from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 import shapely
 from shapely.geometry import Point, Polygon
 
 import joblib
-from multiprocessing import Process
+from multiprocessing import Process,Queue
 from time import time,sleep
 import re
 import os
@@ -16,7 +19,6 @@ import numpy as np
 from pi_results import PiResults
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from helpers import Helper
 from mylogger import myLogger
 from pi_mp_helper import MatchCollapseHuc12,MpHelper,BatchOverlay
@@ -45,8 +47,8 @@ class Mapper(myLogger):
         self.NHDPlusV21_CatchmentSP_data_path=os.path.join(self.geo_data_dir,'NHDPlusV21_CatchmentSP.feather')
         #NHDplus URL:  https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_0101_HU4_GDB.zip   
         self.boundary_dict={}
-        self.pr=PiResults()
-        self.fit_scorer=self.pr.fit_scorer
+        self.cv_pr=PiResults(cv_run=True)
+        self.fit_scorer=self.cv_pr.fit_scorer
         plt.rc_context({
             
             'figure.autolayout': True,
@@ -56,6 +58,7 @@ class Mapper(myLogger):
         if mp:
             self.set_states()
             self.setNHDPlusV21CatchmentSP()
+        self.asers=[];self.psers=[] # for debugging
     
     def NHDPlusV21DataCheck(self):
         # data guide: https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/Data/NationalData/0Release_Notes_NationalData_Seamless_GeoDatabase.pdf
@@ -227,8 +230,8 @@ class Mapper(myLogger):
         self,species,
         estimator_name=None,huc_level=2,include_absent=False,save_check=False,
         plot_train=False,include_extended_hucs='truncated',
-        main_plot='cv_probability',#'classify'
-        secondary_plots={'binary_classify':'middle'} # 'cv_PI-lower-5%', '
+        main_plot='classify',#'cv_probability',#'classify'
+        secondary_plots={}#{'binary_classify':'middle'} # 'cv_PI-lower-5%', '
     ):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         try:
@@ -236,9 +239,11 @@ class Mapper(myLogger):
             
             format_name=species[0].upper()+species[1:].lower()
             
-            name=f'Xpredict_{format_name}.png'
+            name=f'{main_plot}_{format_name}.png'
             if  not estimator_name is None:
                 name+=f'_{estimator_name}'
+            
+            
             
             savepath=os.path.join(self.print_dir,name)
             if save_check and os.path.exists(savepath):
@@ -263,11 +268,10 @@ class Mapper(myLogger):
                 except:self.cv_ppdt=PiscesPredictDataTool(cv_run=True)
                 
             
-            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve huc8's
+            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve(NS) huc8's
             not_sampled_NS_huc8_list=self.getNotSampledNSHuc8s(NS_huc8_list)
             #huc_range=self.getHucDigitsGDF(NS_huc8_list,huc='08')
             if len(not_sampled_NS_huc8_list)>0:
-                
                 not_sampled_huc_range=self.getHucDigitsGDF(not_sampled_NS_huc8_list,huc='08')
             else: 
                 not_sampled_huc_range=None
@@ -323,39 +327,47 @@ class Mapper(myLogger):
             buffered_huc_range_box=self.gdfBoxFromOuterBounds(buffered_huc_outer_bounds,crs)
             
             if 1.4*h>=w:
+                orientation='tall'
                 fig= plt.figure(figsize=[0.3*max_fig_len+.7*max_fig_len*w/h,max_fig_len],dpi=1200,)#width adjust, but less than proportionally.
-                if do_inset:
-                    plot_split=5
-                    ps2=int(plot_split*w/h)+1
-                    gs=fig.add_gridspec(plot_split,ps2)
-                    gs.update(wspace=0.025, hspace=0.05)
-                    ax=fig.add_subplot(gs[:,0:ps2-1])
-                    inset_ax=fig.add_subplot(gs[0,ps2-1])
-                else:
-                    ax=fig.add_subplot()
+                plot_split=5
+                ps2=int(plot_split*w/h)+1
+                gs=fig.add_gridspec(plot_split,ps2)
+                #gs.update(wspace=0.025, hspace=0.05)
+                ax=fig.add_subplot(gs[:,0:ps2-1])
+                if do_inset:inset_ax=fig.add_subplot(gs[0,ps2-1])
+                #cbar_ax=fig.add_subplot(gs[1,ps2-1])
+                cbar_ax=make_axes_locatable(ax).append_axes('top',size='5%',pad='2%')
+                sample_ax=fig.add_subplot(gs[1:3,ps2-1])
+                #legend_ax=fig.add_subplot(gs[3,ps2-1])
             else:
+                orientation='wide'
                 fig = plt.figure(figsize=[max_fig_len,.25*max_fig_len+0.75*max_fig_len*h/w],dpi=1200)#height adjust, but less than proportionally.
-                if do_inset:
-                    plot_split=7
-                    ps2=int(plot_split*h/w)+1
-                    gs=fig.add_gridspec(ps2,plot_split,)
-                    gs.update(wspace=0.025, hspace=0.05)
-                    ax=fig.add_subplot(gs[0:ps2-1,:])
-                    inset_ax=fig.add_subplot(gs[ps2-1,0])
-                else:
-                    ax=fig.add_subplot()
+                plot_split=7
+                ps2=int(plot_split*h/w)+1
+                gs=fig.add_gridspec(ps2,plot_split,)
+                #gs.update(wspace=0.025, hspace=0.05)
+                ax=fig.add_subplot(gs[0:ps2-1,:])
+                if do_inset:inset_ax=fig.add_subplot(gs[ps2-1,0])
+                #cbar_ax=fig.add_subplot(gs[ps2-1,1])
+                cbar_ax=make_axes_locatable(ax).append_axes('left',size='5%',pad=0.5)
+                fig.add_axes(cbar_ax)
+                sample_ax=fig.add_subplot(gs[ps2-1,1:3])
+                #legend_ax=fig.add_subplot(gs[ps2-1,3])
             #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)#height adjust, but less than proportionally.
-            
+            legend_patches=[];ncols=0#for building legend
             buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
+            buffered_huc_range_box.plot(ax=sample_ax,zorder=0,color='c')
             plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
             self.logger.info(
                 f'buffered_huc_range_box.total_bounds: {buffered_huc_range_box.total_bounds}')
             huc_range_intersect=gpd.overlay(combined_huc8_range,conus_outline,how='intersection') #clip hucs to same coastal boundary as states
-            huc_range_intersect.plot(ax=ax,zorder=3,color='lightgrey',edgecolor=None,)
+            huc_range_intersect.plot(ax=sample_ax,zorder=3,color='lightgrey',edgecolor=None)
             if not not_sampled_huc_range is None:
                 not_sampled_huc_range_intersect=gpd.overlay(not_sampled_huc_range,conus_outline,how='intersection')
-                not_sampled_huc_range_intersect.plot(ax=ax,zorder=4,color='darkgrey',edgecolor='lightgray' ,hatch=3*'+', lw=0.25)
+                not_sampled_huc_range_intersect.plot(ax=sample_ax,zorder=4,color='black',edgecolor='lightgray' ,
+                                                     #hatch=3*'+', 
+                                                     lw=0.25)
             else:
                 not_sampled_huc_range_intersect=None
             
@@ -364,7 +376,7 @@ class Mapper(myLogger):
             cv_data_exists=False
             if incl_cv_plot:
                 try:
-                    cv_huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictDF(
+                    cv_huc_species_series_dict,predict_huc8_list=self.cv_ppdt.BuildBigSpeciesXPredictDF(
                         species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
                     self.cv_huc_species_series_dict=cv_huc_species_series_dict
                     cv_data_exists=True
@@ -372,25 +384,45 @@ class Mapper(myLogger):
                     self.logger.exception('error trying to BuildBigSpeciesXPredictDF for cv_run, skipping')
                     #cv_data_exists=False
             if incl_single_fit_plot or not cv_data_exists:
-                huc_species_series_dict=self.ppdt.BuildBigSpeciesXPredictDF(
+                huc_species_series_dict,cv_predict_huc8_list=self.ppdt.BuildBigSpeciesXPredictDF(
                     species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
                 self.huc_species_series_dict=huc_species_series_dict
-                
+            try: predict_huc8_list
+            except: predict_huc8_list=cv_predict_huc8_list
             print(f'plotting {species}...',end='')
             if main_plot=='classify':
-                self.plotByHucDict(huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_kwargs=dict(column='y',zorder=6,color='r'))
-            elif main_plot=='cv_predict'
-            
-            
+                self.plotByHucDict(
+                    ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,main_plot,
+                    include_absent,plot_kwargs=dict(column='y',zorder=6,color='r'),orientation=orientation)
+            elif main_plot=='cv_probability':
+                self.plotByHucDict(ax,
+                    cv_huc_species_series_dict,huc_outer_bounds,huc_range_box,main_plot,
+                    include_absent,
+                    plot_kwargs=dict(column='y',zorder=6,label='cv_probability'),
+                    orientation=orientation
+                    )
+            predict_huc8_keys=dict.fromkeys(predict_huc8_list)
+            #self.logger.info(f'combined_huc8_list: {combined_huc8_list}, predict_huc8_list: {predict_huc8_keys}' )
+            missing_data_huc8_list=[huc for huc in combined_huc8_list if huc not in predict_huc8_keys]#faster search with dict
+            if len(missing_data_huc8_list)>0:
+                self.getHucDigitsGDF(missing_data_huc8_list,huc='08').plot(ax=ax,zorder=11,color='red',edgecolor=None,)
+                legend_patches.append(mpatches.Patch(facecolor='red',edgecolor=None, label='missing data'))
+                ncols+=1
+                                                                           
             self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
-            gpd.overlay(combined_huc8_range,conus_outline, how='intersection').boundary.plot(ax=ax, zorder=10,linewidth=0.25, edgecolor='black')
-                
+            self.add_states(sample_ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
+            #huc_range=gpd.overlay(combined_huc8_range,conus_outline, how='intersection')
+            huc_range_intersect.boundary.plot(ax=sample_ax, zorder=10,linewidth=0.25, edgecolor='black')
+            #huc_range.plot(ax=ax, zorder=10,linewidth=0.25,color='k' color='black')    
             if not extended_huc8_gdf is None:
                 extended_huc8_gdf_intersect=gpd.overlay(extended_huc8_gdf,conus_outline,how='intersection')
-                extended_huc8_gdf_intersect.boundary.plot(ax=ax,zorder=11,color='purple',linewidth=0.75) 
+                extended_huc8_gdf_intersect.boundary.plot(ax=ax,zorder=11,color='orange',linewidth=0.5) 
+                extended_huc8_gdf_intersect.plot(ax=sample_ax,zorder=11,color='orange',linewidth=1) 
                 plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
             ax.set_aspect('equal')
+            sample_ax.set_aspect('equal')
+            
             #if self.plot_train:
             if do_inset:
                 #help from https://jeremysze.github.io/GIS_exploration/build/html/zoomed_inset_axes.html
@@ -411,6 +443,7 @@ class Mapper(myLogger):
                 inset_ax.margins(0)
                 plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
+                
 
             #format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
             format_name_parts=re.split(' ',format_name)
@@ -419,34 +452,67 @@ class Mapper(myLogger):
             #fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
             #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
             ax.margins(0)
-            leg_patches=[
-                mpatches.Patch(color='red', label='Present'),
-                ]
-            ncols=2
-            if include_absent:
-                leg_patches.append(mpatches.Patch(facecolor='b', label='Absent'))
-                ncols+=1
-            leg_patches.append(mpatches.Patch(facecolor='lightgrey',label='HUC8 range in sample'))
-            if not not_sampled_huc_range_intersect is None:
-                leg_patches.append(mpatches.Patch(facecolor='darkgrey',edgecolor='lightgrey',hatch=3*'+',label='out of sample'))
-                ncols+=1
             if not extended_huc8_gdf is None:
-                leg_patches.append(mpatches.Patch(facecolor='lightgray',edgecolor='purple', label='extended range'))
+                    legend_patches.append(mpatches.Patch(facecolor='orange',edgecolor='orange', label='extended range'))
+                    ncols+=1
+            if main_plot=='classify':
+                legend_patches.append(mpatches.Patch(color='magenta', label='Present'))
                 ncols+=1
-            if w>=h*1.4 :
-                bbta=(1,0)
-                lloc='upper right'
+                if include_absent:
+                    legend_patches.append(mpatches.Patch(facecolor='cyan', label='Absent'))
+                    ncols+=1
+            legend_patches.append(mpatches.Patch(facecolor='lightgrey',label='in sample'))
+            ncols+=1
+            if not not_sampled_huc_range_intersect is None:
+                legend_patches.append(mpatches.Patch(facecolor='black',
+                                                     #hatch=3*'+',
+                                                     label='out of sample'))
+                ncols+=1
+           
+            if orientation=='tall':
+                ncols=1# if ncols > 1 else 0
+                bbta=(0,0)
+                lloc='upper left'
             else:
                 bbta=(1,0)
                 lloc='lower left'
-                ncols=1
-            ax.legend(handles=leg_patches,fontsize='x-small',ncol=ncols,bbox_to_anchor=bbta,loc=lloc)
+            if ncols>0:
+                sample_ax.legend(handles=legend_patches,fontsize='x-small',ncol=ncols,bbox_to_anchor=bbta,loc=lloc)
+                #fig.legend(handles=legend_patches,fontsize='x-small',ncol=ncols,loc=lloc)
+            if main_plot=='cv_probability':
+                #fig.subplots_adjust(bottom=0.5)
+                cmap = mpl.cm.cool
+                norm = mpl.colors.Normalize(vmin=0, vmax=1)
+                fig.colorbar(
+                    mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+                    cax=cbar_ax, orientation='horizontal' if not orientation=='wide' else 'vertical', )
+                    #label='Presence Probability', fontsize='x-small')
+                cbar_ax.set_title('Presence Probability',fontsize='xx-small')
+                if orientation=='tall':cbar_ax.xaxis.set_ticks_position("top")
+            else:
+                assert False, f'unexpected val for main_plot: {main_plot}'
+            #if orientation=='tall':
+            sample_ax.set_title('HUC08 Range', fontsize='xx-small',y=0.9)
+            #else:
+            #    sample_ax.text(0.5,0,'HUC08 Range',rotation=90,va='center', fontsize='xx-small')
             #ax.set_axis_off()
+            
             ax.axes.xaxis.set_ticks([])
             ax.axes.yaxis.set_ticks([])
             ax.axes.xaxis.set_ticklabels([])
             ax.axes.yaxis.set_ticklabels([])
-            
+            if do_inset:
+                inset_ax.axes.xaxis.set_ticks([])
+                inset_ax.axes.yaxis.set_ticks([])
+                inset_ax.axes.xaxis.set_ticklabels([])
+                inset_ax.axes.yaxis.set_ticklabels([])
+            sample_ax.axes.xaxis.set_ticks([])
+            sample_ax.axes.yaxis.set_ticks([])
+            sample_ax.axes.xaxis.set_ticklabels([])
+            sample_ax.axes.yaxis.set_ticklabels([])
+            sample_ax.axis('off')
+            if do_inset:inset_ax.axis('off')
+            ax.axis('off')
             fig.tight_layout
             fig.show() 
             fig.savefig(savepath)
@@ -454,40 +520,65 @@ class Mapper(myLogger):
             self.logger.exception('outer catch')
             
             
-    def plotByHucDict(self,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_kwargs=dict(column='y',zorder=6,color='r')):
+    def plotByHucDict(self,ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_type,include_absent,plot_kwargs=dict(column='y',zorder=6,),orientation='wide'):
+        
         for huc,ser in huc_species_series_dict.items():
-                ser_dict={}
-                print(f'{huc}',end=', ')
-                ser[ser==1]='present'
-                ser[ser==0]='absent'
-                pser=ser[ser=='present']
+            ser_dict={};plot_kwarg_dict={}
+            col_name=ser.columns[0]
+            assert col_name=='y',f'expecting "y" at 1st pos, but columns:{ser.columns}' #may need more flexibility later...
+            print(f'{huc}',end=', ')
+            if plot_type=='classify':
+                cser=ser.copy()[col_name]
+                cser[:]='missing data'
+                pser=cser[ser[col_name]>=0.5]
+                #cser[ser.to_numpy()<0.5]='absent'
+                pser[:]='present'
+                self.psers.append(pser)
+                #print(pser)
                 if len(pser)>0:
                     ser_dict['present']=pser
+                    plot_kwargs_i=plot_kwargs.copy()
+                    plot_kwargs_i['color']='r'
+                    plot_kwarg_dict['present']=plot_kwargs_i
                 else:
                     if not include_absent:
                         continue
                 if include_absent:
-                    aser=ser[ser=='absent']
-                    ser_dict['absent']=aser
-                for ser_name,ser in ser_dict.items():
-                    if type(ser.index) is pd.MultiIndex:
+                    aser=cser[ser[col_name]<0.5]
+                    aser[:]='absent'
+                    self.asers.append(aser)
+                    if len(aser)>0:
+                        ser_dict['absent']=aser
+                        plot_kwargs_i=plot_kwargs.copy()
+                        plot_kwargs_i['color']='b'
+                        plot_kwarg_dict['absent']=plot_kwargs_i
+                    
+            elif plot_type=='cv_probability':
+                ser_dict['cv_probability']=ser
+                #divider = make_axes_locatable(ax)
+                plot_kwarg_dict[plot_type]={**plot_kwargs,'cmap':mpl.cm.cool,'vmin':0,'vmax':1,}
+                    #'cax':divider.append_axes("right" if orientation=='wide' else 'bottom', size="5%", pad=0.1),
+                    #'legend':True,'cmap':'brg'} #moved 
+                
+            for ser_name,ser in ser_dict.items():
+                if type(ser.index) is pd.MultiIndex:
+                    try:
                         ser.index=ser.index.get_level_values('COMID')
-                    if type(ser) is pd.DataFrame:
-                        if type(ser.columns) is pd.MultiIndex:
-                            ser.columns=ser.columns.get_level_values('var').tolist()
-                        ser=ser.loc['y']
-                    ser.index=ser.index.astype('int64')
+                    except:
+                        assert False,f'ser.index:{ser.index}'
+                if type(ser) is pd.DataFrame:
+                    #if type(ser.columns) is pd.MultiIndex:
+                        #ser.columns=ser.columns.get_level_values('var').tolist()
+                    ser=ser.loc[:,'y']
+                ser.index=ser.index.astype('int64')
 
-                    gdf=self.NHDPlusV21CatchmentSP.merge(
-                        ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
-                    if len(gdf)==0:continue
-                    if ser_name=='absent':
-                        c='b'
-                    else:c='r'
-                    if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
-                        gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
-                    self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
-                    gdf.plot(ax=ax,**plot_kwargs)
+                gdf=self.NHDPlusV21CatchmentSP.merge(
+                    ser,how='inner',right_on='COMID',left_on='FEATUREID',right_index=True)
+                if len(gdf)==0:continue
+                if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
+                    gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
+                self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
+                gdf.plot(ax=ax,**plot_kwarg_dict[ser_name])
         
         
     def gdfBoxFromOuterBounds(self,outer_bounds,crs):
@@ -566,7 +657,7 @@ class Mapper(myLogger):
     
     
     def plot_y01(self,zzzno_fish=False,rebuild=0,huc_level=None):
-        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
+        coef_df,scor_df,y,yhat=self.cv_pr.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=False)
         
@@ -609,9 +700,9 @@ class Mapper(myLogger):
     def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None,normal_color=True):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
-        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
+        coef_df,scor_df,y,yhat=self.cv_pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
         if not wt is None:
-            wt_df=self.pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
+            wt_df=self.cv_pr.build_wt_comid_feature_importance(rebuild=rebuild,return_weights=True)
             assert False,'not developed'
 
         yhat_a,y_a=yhat.align(y,axis=0)
@@ -801,7 +892,7 @@ class Mapper(myLogger):
         filter_vars=True,spec_wt=None,fit_scorer=None,scale_by_X=False,
         presence_filter=True,wt_type='fitscor_diffscor',cv_collapse='split',):
         
-        coef_df,scor_df=self.pr.get_coef_stack(
+        coef_df,scor_df=self.cv_pr.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,drop_nocoef_scors=True,row_norm=row_norm)
         if re.search('fit',wt_type):
             scor_wt=True
@@ -837,7 +928,7 @@ class Mapper(myLogger):
         spec_list=None,vote=False,row_norm=False):
         
         """
-        coef_df,scor_df,y,yhat=self.pr.get_coef_stack(
+        coef_df,scor_df,y,yhat=self.cv_pr.get_coef_stack(
             rebuild=rebuild,drop_zzz=not zzzno_fish,return_y_yhat=True,
             drop_nocoef_scors=True)
         """
@@ -870,7 +961,7 @@ class Mapper(myLogger):
             title+='_var-mean'
         if not spec_list is None:
             sp_hash=joblib.hash(spec_list)
-            self.pr.getsave_postfit_db_dict('spec_list',{sp_hash:spec_list})
+            self.cv_pr.getsave_postfit_db_dict('spec_list',{sp_hash:spec_list})
             title+=f'sp_count{len(spec_list)}-hash{sp_hash}'
             print(f'starting plot for {len(spec_list)} species. spec_list:{spec_list}, with hash:{sp_hash}')
       
@@ -878,7 +969,7 @@ class Mapper(myLogger):
             
         title+='_'+fit_scorer
         
-        wtd_coef_dfs=self.pr.build_wt_comid_feature_importance(
+        wtd_coef_dfs=self.cv_pr.build_wt_comid_feature_importance(
             presence_filter=presence_filter,rebuild=rebuild,zzzno_fish=zzzno_fish,
             spec_wt=spec_wt,fit_scorer=fit_scorer,scale_by_X=scale_by_X,
             wt_type=wt_type,cv_collapse=cv_collapse,spec_list=spec_list,row_norm=row_norm)
@@ -1065,37 +1156,38 @@ class XMapper(Mapper,PiscesPredictDataTool):
         #PiscesPredictDataTool.__init__(self)
         #NHD data downloaded from https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHD/National/HighResolution/GDB/NHD_H_National_GDB.zip
 """
+class mp_mapper_runner(Process):
+    def __init__(self,q,mapper,kwargs={}):
+        super().__init__()
+        self.q=q
+        self.mapper=mapper
+        self.kwargs=kwargs
+        
+    def run(self):
+        while not self.q.empty():
+            try:
+                spec=self.q.get_nowait()
+                print(f'mapping {spec}')
+                self.mapper.plotSpeciesPredict(spec,**self.kwargs)
+            except:
+                print(f'{spec} error {format_exc()}')
+        return
+        
 
 if __name__=="__main__":
     try:
-        test=False
         mpr=Mapper(mp=True)
-        if test:
-            species='cyprinus carpio'#'etheostoma nigripinne'#'lampetra richardsoni'#
-            mpr.plotSpeciesPredict(species,huc_level=4,include_absent=False,save_check=True,plot_train=False)
-            assert False, 'done'
         specs=PiscesPredictDataTool(cv_run=False).returnspecieslist()
-        """for spec in specs:
-            print(spec)
-            try:
-                mpr.plotSpeciesPredict(spec,huc_level=4,include_absent=False,save_check=True,plot_train=False)
-            except:
-                print(f'error for species:{spec}',format_exc())"""
-        species_plot_kwarg_dict=dict(huc_level=4,include_absent=False,save_check=True,plot_train=False)
-        
+        q=Queue()
+        for spec in specs:q.put(spec)
         proc_count=15
-        procs=[]
-        start=0
-        step=-(-len(specs))//proc_count #ceiling divide
-        for p in range(0,len(specs),step):
-            procs.append(Process(
-                
-                target=mpr.plotSpeciesPredictList,
-                args=[specs[p:p+step],species_plot_kwarg_dict]))
-            procs[-1].start()
-        [proc.join() for proc in procs]
-            
-                
+        plot_kwargs=dict(huc_level=4,include_absent=False,save_check=True,plot_train=False,main_plot='cv_probability')
+        proc_list=[mp_mapper_runner(q,mpr,kwargs=plot_kwargs) for _ in range(proc_count)]
+        for proc in proc_list:proc.start()
+        for proc in proc_list:proc.join()
+                        
     except:
-        print(format_exc())
+        print(format_exc())    
+            
+        
 

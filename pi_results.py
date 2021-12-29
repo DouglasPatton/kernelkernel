@@ -34,11 +34,12 @@ class PiResults(DBTool,myLogger):
     from qcluster.runnode: 
         model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
     '''
-    def __init__(self,):
+    def __init__(self,cv_run=None):
         func_name=f'PiResults'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
-        DBTool.__init__(self)
+        self.cv_run=cv_run
+        DBTool.__init__(self,cv_run=cv_run) #17Dec2021: PiResults written assuming cv_run=True.
         #DataPlotter.__init__(self)
         #self.results_dict={**self.resultsDBdict()} # assuming plenty of memory to hold it
         self.printdir=os.path.join(os.getcwd(),'print')
