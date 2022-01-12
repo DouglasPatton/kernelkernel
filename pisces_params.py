@@ -26,7 +26,7 @@ class PiSetup(myLogger):
         self.logger.info('starting PiSetup logger')
         self.run_type=run_type#'fit'#'predict'# 'fit_fill'#'predict'# 'Xpredict'#,'single_fit'
         if self.run_type=='predict':
-            self.db_kwargs=dict(db=DBTool().predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
+            self.db_kwargs=dict(db=DBTool(cv_run=cv_run).predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         elif self.run_type=='Xpredict':
             self.db_kwargs={'Xpredict':True}
         else:
@@ -120,7 +120,7 @@ class PiSetup(myLogger):
     
     def setupRunners(self,):
         try: self.dbt
-        except:self.dbt=DBTool()
+        except:self.dbt=DBTool(cv_run=self.cv_run)
         try:self.results_dict
         except: self.results_dict=self.dbt.resultsDBdict()
         try: self.fitfail_dict
@@ -220,7 +220,7 @@ class PiSetup(myLogger):
         if callable(db):
             db=db()
         if type(db) is dict and 'Xpredict' in db:
-            complete_hash_id_list=dict.fromkeys(self.dbt.XPredictHashIDComidHashResultsDB()) #tablenames
+            complete_hash_id_list=dict.fromkeys(self.dbt.XpredictHashIDComidHashResultsDB()) #tablenames
         else:
             complete_hash_id_list=dict.fromkeys(db.keys())
         rundrop_idx=[]

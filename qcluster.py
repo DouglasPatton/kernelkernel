@@ -71,9 +71,10 @@ class TheQManager(mp.Process,myLogger):
         s.serve_forever()
         
 class SaveQDumper(mp.Process,myLogger): #DBTool removed
-    def __init__(self,q,db_kwargs={}):
+    def __init__(self,q,cv_run=None,db_kwargs={}):
         self.q=q
         self.db_kwargs=db_kwargs
+        self.cv_run=cv_run
         #fself.netaddress=address
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
@@ -140,10 +141,10 @@ class SaveQDumper(mp.Process,myLogger): #DBTool removed
                         s+=1
                         try:
                             if fitfail:
-                                DBTool().addToDBDict(save_list,db=self.fitfailDBdict)
+                                DBTool(cv_run=self.cv_run).addToDBDict(save_list,db=self.fitfailDBdict)
                             else:
                                 #self.logger.info(f'saveqdumper db_kwargs:{db_kwargs}')
-                                DBTool().addToDBDict(save_list,**self.db_kwargs)
+                                DBTool(cv_run=self.cv_run).addToDBDict(save_list,**self.db_kwargs)
                             break
                         except:
                             self.logger.exception(f'error adding to DB. try:{s}')
@@ -426,7 +427,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         func_name=f'{sys._getframe().f_code.co_name}'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
-        
+        self.cv_run=cv_run
         
         if local_run:
             assert type(qdict) is dict,'qdict expected to be dict b/c local_run is true'
@@ -464,7 +465,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
         self.nodecount=nodecount
         
         super().__init__()
-        DBTool.__init__(self)
+        DBTool.__init__(self,cv_run=cv_run)
         
         
         
@@ -486,7 +487,7 @@ class RunCluster(mp.Process,DBTool,myLogger):
             jobqfiller=JobQFiller(self.qdict['jobq'],runlist,do_mp=True,address=self.netaddress)
             jobqfiller.start()
             self.logger.info(f'back from jobqfiller, initializing saveqdumper')
-            saveqdumper=SaveQDumper(self.qdict['saveq'],db_kwargs=self.setup.db_kwargs)
+            saveqdumper=SaveQDumper(self.qdict['saveq'],cv_run=self.cv_run,db_kwargs=self.setup.db_kwargs)
             check_complete=0
             while True:#not check_complete: #let run forever
                 sleep(40)

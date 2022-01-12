@@ -7,13 +7,19 @@ from time import sleep
 from traceback import format_exc
 
 class DBTool():
-    def __init__(self):
+    def __init__(self,cv_run=None):
+        assert not cv_run is None,f'expecting True or False for cv_run:{cv_run}'
         func_name='DBTool'
         #super.__init__(name=f'{func_name}.log')
        
         self.logger=logging.getLogger()
         #
-        resultsdir=os.path.join(os.getcwd(),'results')
+        results_dir_name='results'
+            
+        if cv_run:
+            results_dir_name+='_cv'
+        resultsdir=os.path.join(os.getcwd(), results_dir_name)
+
         self.resultsdir=resultsdir
         if not os.path.exists(resultsdir):
             os.mkdir(resultsdir)
@@ -25,10 +31,15 @@ class DBTool():
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
         self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
-        self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
-        
+        self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
+        if not os.path.exists(self.Xpredictspecies_dir): 
+            os.mkdir(self.Xpredictspecies_dir)
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
+        
+        self.pidataDBdictpath=os.path.join(os.getcwd(),'data_tool','pidataDB.sqlite')
+        
+        
         #self.resultsDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='results') # contains sk_tool for each hash_id
         #self.genDBdict=lambda:SqliteDict(filename=self.resultsDBdictpath,tablename='gen')# gen for generate. contains {'model_gen':model_gen,'data_gen':data_gen} for each hash_id
         #self.predictDBdict=lambda name:SqliteDict(filename=self.predictDBdictpath,tablename=name)
@@ -53,9 +64,10 @@ class DBTool():
                         newdict.commit()
             
     
-    def anyNameDB(self,dbname,tablename='data',folder='results'):
+    def anyNameDB(self,dbname,tablename='data',folder=None):
+        
         name=dbname+'.sqlite'
-        if folder=='results':
+        if folder is None:
             path=os.path.join(self.resultsdir,name)
         else:
             path=os.path.join(folder,name)
@@ -108,14 +120,14 @@ class DBTool():
     
     def XpredictSpeciesResults(self,spec,hash_id):
         name=f'XpredictSpeciesResults-{spec}'
-        
-        return self.anyNameDB(name,tablename=hash_id,folder='data_tool')
+
+        return self.anyNameDB(name,tablename=hash_id,folder=self.Xpredictspecies_dir)
     
     
-    def XPredictHashIDComidHashResultsDB(self,hash_id=None):
-        name='XPredictHashIDComidHashResults'
+    def XpredictHashIDComidHashResultsDB(self,hash_id=None):
+        name='XpredictHashIDComidHashResults' #note lowercase p!
         if hash_id is None:
-            path=os.path.join('data_tool',name+'.sqlite')
+            path=os.path.join(self.resultsdir,name+'.sqlite')
             if not os.path.exists(path):
                 return []
             try:
@@ -124,7 +136,7 @@ class DBTool():
                 return []
             except:
                 assert False,f'unexpected error, hash_id:{hash_id}'
-        return self.anyNameDB(name,tablename=hash_id,folder='data_tool')
+        return self.anyNameDB(name,tablename=hash_id,folder=self.resultsdir)
     
     
     
@@ -173,7 +185,7 @@ class DBTool():
                     kwargs={}
                 db=lambda: self.pidataDBdict(**kwargs)
             elif Xpredict:
-                db=lambda X:self.XPredictHashIDComidHashResultsDB(hash_id=X)
+                db=lambda X:self.XpredictHashIDComidHashResultsDB(hash_id=X)
             else:
                 db=self.resultsDBdict
             saved=False;tries=0

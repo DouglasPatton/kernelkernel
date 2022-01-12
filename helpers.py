@@ -88,20 +88,19 @@ class Helper:
             else:
                 prefix=filename
                 suffix=''
-            _pos=None
+            dig_stop=None
             for i,char in enumerate(prefix[::-1]):
-                if char=='_':
-                    _pos=len(prefix)-i+1
-                    break
-                elif not char.isdigit():
+                if not char.isdigit():
+                    if i>0:
+                        dig_stop=len(prefix)-i
                     break
                 else:
                     pass
 
-
-            if _pos is None:
-                newname= prefix+'_1'+suffix
+            #print(prefix,suffix,dig_stop)
+            if dig_stop is None:
+                newname= prefix+'_1.'+suffix
             else:
-                countstr=int(prefix[_pos:])+1
-                newname= prefix+'_'+str(countstr)+suffix
+                idx=int(prefix[dig_stop:])
+                newname= prefix[:dig_stop]+str(idx+1)+'.'+suffix
             return self.getname(newname)
