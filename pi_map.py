@@ -25,6 +25,7 @@ from pi_mp_helper import MatchCollapseHuc12,MpHelper,BatchOverlay
 from pi_cluster import SkCluster
 from pi_data_predict import PiscesPredictDataTool
 from traceback import format_exc
+from random import shuffle
 
 
 
@@ -40,6 +41,8 @@ class Mapper(myLogger):
         cwd=os.getcwd()
         self.geo_data_dir=os.path.join(cwd,'geo_data')
         self.print_dir=os.path.join(cwd,'print')
+        self.species_map_dir=os.path.join(cwd,'species_maps')
+        if not os.path.exists(self.species_map_dir: os.mkdir(self.species_map_dir)
         self.states_path=os.path.join(self.geo_data_dir,'states','cb_2017_us_state_500k.dbf')
         self.boundary_data_path=self.boundaryDataCheck()
         #self.NHD_data_path=self.nhdDataCheck()
@@ -58,6 +61,12 @@ class Mapper(myLogger):
         if mp:
             self.set_states()
             self.setNHDPlusV21CatchmentSP()
+            self.ppdt=PiscesPredictDataTool(cv_run=False)
+            self.ppdt.setgt()
+            try:self.huc12comiddict
+            except:self.huc12comiddict={**self.ppdt.gt.gethuc12comiddict()}
+            try: self.huc8_huc12dict
+            except:self.huc8_huc12dict={**self.ppdt.gt.build_huchuc()['huc8_huc12dict']}
         self.asers=[];self.psers=[] # for debugging
     
     def NHDPlusV21DataCheck(self):
@@ -81,7 +90,7 @@ class Mapper(myLogger):
         fips_ordered.pop(hawaii_idx)
         self.states=states.iloc[ilocs[:49]]
         
-    def add_states(self,ax,clip_to=None,bbox=None,zorder=9,crs=None):
+    def add_states(self,ax,clip_to=None,bbox=None,zorder=9,crs=None,plot_kwargs={}):
         self.logger.info('adding states')
         try: self.states
         except: self.set_states()
@@ -96,7 +105,7 @@ class Mapper(myLogger):
             states=self.states
         self.logger.info(f'states.total_bounds: {states.total_bounds}')
         states.plot(ax=ax,color='wheat',zorder=zorder)  
-        states.boundary.plot(linewidth=0.2,ax=ax,edgecolor='k',zorder=8)  
+        states.boundary.plot(linewidth=0.2,ax=ax,edgecolor='k',zorder=8,**plot_kwargs)  
         
     def withinBoundsCheck(self,i_b,o_b):
         #i_b for inner bounds to check and o_b for outer bounds
@@ -245,7 +254,7 @@ class Mapper(myLogger):
             
             
             
-            savepath=os.path.join(self.print_dir,name)
+            savepath=os.path.join(self.species_map_dir,name)
             if save_check and os.path.exists(savepath):
                 print(f'{species} already saved, skipping')
                 return
@@ -260,7 +269,9 @@ class Mapper(myLogger):
             try: self.states
             except: self.set_states()
             try:self.ppdt
-            except:self.ppdt=PiscesPredictDataTool(cv_run=False)
+            except:
+                self.ppdt=PiscesPredictDataTool(cv_run=False)
+                self.ppdt.setgt()
             try: self.ppdt.huclist_survey
             except: self.ppdt.buildspecieslist()
             if incl_cv_plot:
@@ -317,7 +328,7 @@ class Mapper(myLogger):
                 expansion_factor=1.02
                 max_fig_len=11
                 
-            if max(w,h)>18 and min(w,h)>15:
+            if max(w,h)>20 and min(w,h)>15:
                 do_inset=False
             else: do_inset=True
                 
@@ -356,13 +367,13 @@ class Mapper(myLogger):
             #fig, ax = plt.subplots(figsize=[8,8],dpi=1200)#height adjust, but less than proportionally.
             legend_patches=[];ncols=0#for building legend
             buffered_huc_range_box.plot(ax=ax,zorder=0,color='c')
-            buffered_huc_range_box.plot(ax=sample_ax,zorder=0,color='c')
+            buffered_huc_range_box.plot(ax=sample_ax,zorder=0,color='c',alpha=0.2)
             plt.tick_params(axis='both',which='both',bottom=False,left=False,
                                 top=False,labelbottom=False,labelleft=False)
             self.logger.info(
                 f'buffered_huc_range_box.total_bounds: {buffered_huc_range_box.total_bounds}')
             huc_range_intersect=gpd.overlay(combined_huc8_range,conus_outline,how='intersection') #clip hucs to same coastal boundary as states
-            huc_range_intersect.plot(ax=sample_ax,zorder=3,color='lightgrey',edgecolor=None)
+            huc_range_intersect.plot(ax=sample_ax,zorder=3,color='darkgrey',edgecolor=None)
             if not not_sampled_huc_range is None:
                 not_sampled_huc_range_intersect=gpd.overlay(not_sampled_huc_range,conus_outline,how='intersection')
                 not_sampled_huc_range_intersect.plot(ax=sample_ax,zorder=4,color='black',edgecolor='lightgray' ,
@@ -386,9 +397,30 @@ class Mapper(myLogger):
             if incl_single_fit_plot or not cv_data_exists:
                 huc_species_series_dict,cv_predict_huc8_list=self.ppdt.BuildBigSpeciesXPredictDF(
                     species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
-                self.huc_species_series_dict=huc_species_series_dict
+                #self.huc_species_series_dict=huc_species_series_dict
             try: predict_huc8_list
             except: predict_huc8_list=cv_predict_huc8_list
+            """
+            missing_data_comids=self.buildMissingComids(
+                predict_huc8_list,
+                huc_species_series_dict if main_plot=='classify' else cv_huc_species_series_dict,
+                huc_level
+            )
+            self.missing_data_comids=missing_data_comids
+            if len(missing_data_comids)>0:
+                plot_kwargs={'color':'red','edgecolor':None,'zorder':7}
+                '''self.plotByHucDict([ax,sample_ax],
+                    missing_data_comids,huc_outer_bounds,huc_range_box,main_plot,
+                    None,plot_kwargs=plot_kwargs,
+                    orientation=orientation
+                    )'''
+            """
+            huc_range_intersect.plot(ax=ax,zorder=5,color='red',edgecolor=None)
+            legend_patches.append(mpatches.Patch(facecolor='red',edgecolor=None, label='missing data'))
+            ncols+=1
+            
+            
+            
             print(f'plotting {species}...',end='')
             if main_plot=='classify':
                 self.plotByHucDict(
@@ -401,16 +433,20 @@ class Mapper(myLogger):
                     plot_kwargs=dict(column='y',zorder=6,label='cv_probability'),
                     orientation=orientation
                     )
+            """
             predict_huc8_keys=dict.fromkeys(predict_huc8_list)
             #self.logger.info(f'combined_huc8_list: {combined_huc8_list}, predict_huc8_list: {predict_huc8_keys}' )
             missing_data_huc8_list=[huc for huc in combined_huc8_list if huc not in predict_huc8_keys]#faster search with dict
             if len(missing_data_huc8_list)>0:
-                self.getHucDigitsGDF(missing_data_huc8_list,huc='08').plot(ax=ax,zorder=11,color='red',edgecolor=None,)
-                legend_patches.append(mpatches.Patch(facecolor='red',edgecolor=None, label='missing data'))
-                ncols+=1
+                missing_data_gdf=gpd.overlay(self.getHucDigitsGDF(missing_data_huc8_list,huc='08'),buffered_huc_range_box,how='intersection')
+                if missing_data_gdf.size>0:
+                    missing_data_gdf.plot(ax=ax,zorder=15,color='red',edgecolor=None,)"""
+            
+                
+            
                                                                            
             self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
-            self.add_states(sample_ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
+            self.add_states(sample_ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs,plot_kwargs=dict(alpha=0.3))
             #huc_range=gpd.overlay(combined_huc8_range,conus_outline, how='intersection')
             huc_range_intersect.boundary.plot(ax=sample_ax, zorder=10,linewidth=0.25, edgecolor='black')
             #huc_range.plot(ax=ax, zorder=10,linewidth=0.25,color='k' color='black')    
@@ -461,7 +497,7 @@ class Mapper(myLogger):
                 if include_absent:
                     legend_patches.append(mpatches.Patch(facecolor='cyan', label='Absent'))
                     ncols+=1
-            legend_patches.append(mpatches.Patch(facecolor='lightgrey',label='in sample'))
+            legend_patches.append(mpatches.Patch(facecolor='darkgrey',label='in sample'))
             ncols+=1
             if not not_sampled_huc_range_intersect is None:
                 legend_patches.append(mpatches.Patch(facecolor='black',
@@ -492,7 +528,8 @@ class Mapper(myLogger):
             else:
                 assert False, f'unexpected val for main_plot: {main_plot}'
             #if orientation=='tall':
-            sample_ax.set_title('HUC08 Range', fontsize='xx-small',y=0.9)
+            ykwarg={} if (orientation=='tall' or not do_inset) else {'y':0.9}
+            sample_ax.set_title('HUC08 Range', fontsize='xx-small',**ykwarg)
             #else:
             #    sample_ax.text(0.5,0,'HUC08 Range',rotation=90,va='center', fontsize='xx-small')
             #ax.set_axis_off()
@@ -521,6 +558,8 @@ class Mapper(myLogger):
             
             
     def plotByHucDict(self,ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_type,include_absent,plot_kwargs=dict(column='y',zorder=6,),orientation='wide'):
+        if not type(huc_species_series_dict) is dict:
+            huc_species_series_dict={'no_key':huc_species_series_dict}
         
         for huc,ser in huc_species_series_dict.items():
             ser_dict={};plot_kwarg_dict={}
@@ -559,7 +598,9 @@ class Mapper(myLogger):
                 plot_kwarg_dict[plot_type]={**plot_kwargs,'cmap':mpl.cm.cool,'vmin':0,'vmax':1,}
                     #'cax':divider.append_axes("right" if orientation=='wide' else 'bottom', size="5%", pad=0.1),
                     #'legend':True,'cmap':'brg'} #moved 
-                
+            else:
+                ser_dict={huc:ser}
+                plot_kwarg_dict={huc:plot_kwargs}
             for ser_name,ser in ser_dict.items():
                 if type(ser.index) is pd.MultiIndex:
                     try:
@@ -578,8 +619,49 @@ class Mapper(myLogger):
                 if not self.withinBoundsCheck(gdf.total_bounds,huc_outer_bounds):
                     gdf=gpd.overlay(gdf,huc_range_box,how='intersection')
                 self.logger.info(f'plotting (huc,ser_name):{(huc,ser_name)}, total_bounds: {gdf.total_bounds}')
-                gdf.plot(ax=ax,**plot_kwarg_dict[ser_name])
+                if not type(ax) is list:
+                    ax_list=[ax]
+                else:
+                    ax_list=ax
+                for ax_i in ax_list: gdf.plot(ax=ax_i,**plot_kwarg_dict[ser_name])
+    
+    def buildMissingComids(self,huc8_list,hucN_y_dict,huc_level):
+        try:self.huc12comiddict
+        except:self.huc12comiddict={**self.ppdt.gt.gethuc12comiddict()}
+        try: self.huc8_huc12dict
+        except:self.huc8_huc12dict={**self.ppdt.gt.build_huchuc()['huc8_huc12dict']}
+        fixkeys=[]
+        for huc8 in self.huc8_huc12dict.keys():
+            if len(huc8)==7:
+                fixkeys.append(huc8)
+        for huc8 in fixkeys:
+            val=self.huc8_huc12dict.pop(huc8)
+            self.huc8_huc12dict['0'+huc8]=val    
+        if huc_level<8:
+            full_comid_y_dict={hucN:[] for hucN in hucN_y_dict.keys()}
+            for huc8 in huc8_list:
+                
+                full_comid_y_dict[huc8[:huc_level]].extend(
+                    [comid for c_list in [self.huc12comiddict[huc12] for huc12 in self.huc8_huc12dict[huc8]] for comid in c_list]
+                )
+        elif huc_level==8:
+            full_comid_y_dict={huc8:[comid for c_list in [self.huc12comiddict[huc12] for huc12 in self.huc8_huc12dict[huc8]] for comid in c_list] for huc8 in huc8_list}
         
+        else: assert False,f'huc_level>8 not developed, huc_level: {huc_level}'
+        hucN_missing_serdict={}        
+        for hucN,c_list in full_comid_y_dict.items():
+            missing_c_list=list(set(c_list)-set(hucN_y_dict[hucN].index.get_level_values('COMID')))
+            if len(missing_c_list)==0:
+                self.logger.info(f'no missing data in hucN:{hucN}')
+                continue
+            midx=pd.MultiIndex.from_tuples([(c,) for c in missing_c_list],names=['COMID',])
+            ser=pd.DataFrame([1]*len(missing_c_list),index=midx,columns=['y'])
+            hucN_missing_serdict[hucN]=ser
+        return hucN_missing_serdict
+                           
+                           
+    
+    
         
     def gdfBoxFromOuterBounds(self,outer_bounds,crs):
         bbox=outer_bounds
@@ -634,7 +716,7 @@ class Mapper(myLogger):
         # hucboundary files have index levels like 'huc2' not 'HUC02'
         #if right_on.lower()=='huc12':
         self.logger.info(f'starting boundary merge')
-        self.data_df=data_df
+        #self.data_df=data_df
         if type(right_on) is str:
             huc_level=right_on.lower()
         elif type(right_on) is int:
@@ -1178,9 +1260,10 @@ if __name__=="__main__":
     try:
         mpr=Mapper(mp=True)
         specs=PiscesPredictDataTool(cv_run=False).returnspecieslist()
+        shuffle(specs)
         q=Queue()
         for spec in specs:q.put(spec)
-        proc_count=15
+        proc_count=7
         plot_kwargs=dict(huc_level=4,include_absent=False,save_check=True,plot_train=False,main_plot='cv_probability')
         proc_list=[mp_mapper_runner(q,mpr,kwargs=plot_kwargs) for _ in range(proc_count)]
         for proc in proc_list:proc.start()

@@ -275,7 +275,9 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             return species_df
         except:self.logger.exception('unexpected error')    
     
-    
+    def setgt(self):
+        try: self.gt
+        except:self.gt=gt()
     
     def generateXPredictSpeciesComidBlockDicts(self,return_comidlist=False):
         try: self.gt

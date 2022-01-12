@@ -12,7 +12,7 @@ NHD plus V21
 #### create the environment
 `conda update conda` 
 
-`conda create -n kernel -c conda-forge python=3.8 scikit-learn=0.23.2 descartes geopandas jupyterlab matplotlib`
+`conda create -n kernel -c conda-forge python=3.8 scikit-learn=0.23.2 descartes geopandas jupyterlab matplotlib pytables`
 
 `conda activate kernel`
 

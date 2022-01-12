@@ -34,7 +34,7 @@ class PiResults(DBTool,myLogger):
     from qcluster.runnode: 
         model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
     '''
-    def __init__(self,cv_run=None):
+    def __init__(self,cv_run=True):
         func_name=f'PiResults'
         myLogger.__init__(self,name=f'{func_name}.log')
         self.logger.info(f'starting {func_name} logger')
@@ -51,6 +51,8 @@ class PiResults(DBTool,myLogger):
         self.helper=Helper()
         self.fit_scorer='f1_micro'
         self.dp=DataPlotter()
+        cv_suffix='_cv' if cv_run else ''
+        self.results_dir=os.path.join(os.getcwd(),'results'+cv_suffix)
         
     
         
@@ -67,7 +69,7 @@ class PiResults(DBTool,myLogger):
                     zzzno_fish=zzzno_fish,return_weights=True,row_norm=row_norm,
                     wt_type=wt_type,spec_wt=spec_wt,scale_by_X=False,cv_collapse=cv_collapse)
             
-        name=os.path.join(os.getcwd(),'results','bigXB.h5')
+        
         key='data'
         if spec_wt:
             key+=f'_{spec_wt}'
@@ -80,9 +82,10 @@ class PiResults(DBTool,myLogger):
         if row_norm:
             key+='_row-norm'
         key+=f'_{fit_scorer}'
+        name=os.path.join(self.results_dir,f'bigXB_{key}.parquet')
         if not rebuild:
             try:
-                XB_df=pd.read_hdf(name,key)
+                XB_df=pd.read_parquet(name)
                 return XB_df#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
@@ -166,7 +169,7 @@ class PiResults(DBTool,myLogger):
         self.logger.info(f'concatenating dflist after MulXB')
         XB_df=pd.concat(dflist,axis=0) """
         
-        XB_df.to_hdf(name,key,complevel=5)
+        XB_df.to_parquet(name)
         return XB_df
     
     
@@ -358,14 +361,15 @@ class PiResults(DBTool,myLogger):
     
     
     def build_X_train_df(self,rebuild=0,std=True):
-        name=os.path.join(os.getcwd(),'results','bigX.h5')
         if std:
             key='std_data'
         else:
             key='data'
+        name=os.path.join(self.results_dir,f'bigX_{key}.parquet')
+       
         if not rebuild:
             try:
-                Big_X_train_df=pd.read_hdf(name,key)
+                Big_X_train_df=pd.read_parquet(name)
                 return Big_X_train_df#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
@@ -403,8 +407,8 @@ class PiResults(DBTool,myLogger):
             X_train.index=index
             spec_df_list.append(X_train)
         Big_X_train_df=pd.concat(spec_df_list,axis=0) 
-        self.logger.info(f'writing Big_X_train_df to hdf. shape:{Big_X_train_df.shape}, name:{name},key:{key}')
-        Big_X_train_df.to_hdf(name,key,complevel=1)
+        self.logger.info(f'writing Big_X_train_df to parquet. shape:{Big_X_train_df.shape}, name:{name},key:{key}')
+        Big_X_train_df.to_parquet(name)
         return Big_X_train_df
         
                 
@@ -476,11 +480,11 @@ class PiResults(DBTool,myLogger):
     def stack_predictions(self,rebuild=0):
         #combines different models (species+data+fit) over DF index and repetitions over columns (rep_idx level) 
         keys=['y','yhat','coef_scor_df']
-        name=os.path.join(os.getcwd(),'results','prediction_stack.h5')
+        name=lambda key:os.path.join(self.results_dir,f'prediction_stack_{key}.pickle')
         
         if not rebuild:
             try:
-                stacked_predict_dict={key:pd.read_hdf(name,key) for key in keys}
+                stacked_predict_dict={key:pd.read_pickle(name(key)) for key in keys}
                 return stacked_predict_dict#sqlitedict needs a key to pickle and save an object in sqlite
             except:
                 self.logger.exception(f'rebuilding {name} but rebuild:{rebuild}')
@@ -532,8 +536,9 @@ class PiResults(DBTool,myLogger):
             stacked_predict_dict[key]=stacked_df
         y_df_list=list(species_y_dict.values())
         stacked_predict_dict['y']=pd.concat(y_df_list,axis=0).sort_index(axis=0)
+        self.stacked_predict_dict=stacked_predict_dict #delete after debugging
         for key in keys:
-            stacked_predict_dict[key].to_hdf(name,key,complevel=5)
+            stacked_predict_dict[key].to_pickle(name(key))
         return stacked_predict_dict
                                                    
     def do_col_stack(self,predict_list):
