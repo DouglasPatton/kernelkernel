@@ -1095,9 +1095,10 @@ class PiResults(DBTool,myLogger):
             ax=fig.add_subplot(*sub_tups[i])
             self.dp.my2dHist(data,name,ax=ax,log_bins=log_bins,bin_count=bin_count)
         plt.tight_layout()
+        log_str='_log' if log_bins else ''
         fig.savefig(
             self.helper.getname(
-                os.path.join(self.printdir,f'{name}_histogram.png')))
+                os.path.join(self.printdir,f'basic_histogram{log_str}.png')))
      
     def plot_basic_scatter(self,log_scale=True):
         viz_dict=self.get_basic_meta()
@@ -1107,7 +1108,8 @@ class PiResults(DBTool,myLogger):
         for key,data in viz_dict.items():
             args.extend([data,key])
         self.dp.my2dscatter(*args,ax=ax,log_scale=log_scale)
+        log_str='_log' if log_scale else ''
         fig.savefig(
             self.helper.getname(
-                os.path.join(self.printdir,f'xy_scatter.png')))
+                os.path.join(self.printdir,f'xy_scatter{log_str}.png')))
     
