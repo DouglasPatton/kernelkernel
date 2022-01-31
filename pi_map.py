@@ -245,7 +245,13 @@ class Mapper(myLogger):
         '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
         try:
             
-            
+            if type(species) is str:
+                is_single_species_plot=False
+            else:
+                assert type(species) is tuple
+                is_single_spec_plot=False
+                species,multi_spec_plot_kwargs=*species #extracting name of species and instructions for making multi species plot
+
             format_name=species[0].upper()+species[1:].lower()
             
             name=f'{main_plot}_{format_name}.png'
@@ -779,7 +785,7 @@ class Mapper(myLogger):
         fig.savefig(Helper().getname(os.path.join(self.print_dir,name)))
         fig.show() 
         
-    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None,normal_color=True):
+    def plot_confusion_01predict(self,rebuild=0,fit_scorer=None,drop_zzz=True,wt=None,huc_level=None,normal_color=True,title=False):
         if fit_scorer is None:
             fit_scorer=self.fit_scorer
         coef_df,scor_df,y,yhat=self.cv_pr.get_coef_stack(rebuild=rebuild,drop_zzz=drop_zzz,return_y_yhat=True)
@@ -803,7 +809,7 @@ class Mapper(myLogger):
         
         
         confu_list=[tp,fp,fn,tn]
-        confu_varnames=['true positive','false positive','false negative','true negative']
+        confu_varnames=['true positive rate','false positive rate','false negative rate','true negative rate']
         for i in range(len(confu_list)):confu_list[i].rename(confu_varnames[i],inplace=True)
         
         self.confu_list=confu_list
@@ -832,7 +838,7 @@ class Mapper(myLogger):
         tuplist=[(r,c,i+1) for i in range(len(df_col_vars))]
         
         fig=plt.figure(dpi=600,figsize=[12,8])
-        fig.suptitle(f'all species normalized confusion matrix by {huc_level}')
+        if title: fig.suptitle(f'all species normalized confusion matrix by {huc_level}')
         for i in range(len(df_col_vars)):
             col=df_col_vars[i]
             geo_df=geo_dfs[i]
@@ -843,7 +849,7 @@ class Mapper(myLogger):
                 plotkwargs={}
             self.map_plot(geo_df,col,subplot_tup=tuplist[i],fig=fig,plotkwargs=plotkwargs)
 
-        name=f'confusion_matrix_map_{huc_level}.png'
+            name=f'{huc_level}_confusion_matrix_map.png'
         
         fig.savefig(Helper().getname(os.path.join(self.print_dir,name)))
         fig.show() 

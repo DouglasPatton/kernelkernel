@@ -316,8 +316,11 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         except: self.buildspecieslist()
         if only_new_hucs:
             return self.specieshuclist_newhucs[self.specieslist.index(species)]
-        
-        return self.specieshuc8list[self.specieslist.index(species)]
+        if species in self.specieslist:
+            return self.specieshuc8list[self.specieslist.index(species)]
+        elif species=='all':
+            return list(dict.fromkeys([huc8 for huc8_list in self.specieshuc8list for huc8 in huc8_list]).keys())
+        else: assert False,f'species: {species} option not developed, cannot get huc8list'
         
     
     def buildCOMIDlist(self,):
