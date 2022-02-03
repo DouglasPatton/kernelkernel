@@ -106,10 +106,12 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         try: self.species_hash_id_est_dict
         except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(output_estimator_tuple=True)
         tuplist=self.species_hash_id_est_dict[species]
+        #self.logger.info(f'species: {species}tuplist: {tuplist}')
         df_list=[]
         for est_name,hash_id in tuplist:
             if not estimator_name is None:
                 if not est_name==estimator_name:continue
+            #self.logger.info(f'sp_results_dict: {list(sp_results_dict.items())}')
             for c_hash,df in self.XpredictSpeciesResults(species,hash_id).items():
                 #if not type(estimator_name) is str: df.index=pd.MultiIndex.from_tuples(zip(df.index.to_list(),[est_name]*len(df.index)),names=['COMID','estimator'])
                  #takes mean across estimators
@@ -128,7 +130,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             for df in df_list:
                 huc8_list.extend([h[:8] for h in df.index.get_level_values('HUC12').tolist()])
             huc8_list=list(dict.fromkeys(huc8_list).keys()) #unique vals
-        self.df_list=df_list
+        #self.df_list=df_list
         if hucdigitcount>0:
             huc_ydf_dict=self.splitDFByHucDigits(df_list,hucdigitcount=hucdigitcount)#ydf means y in a pd.Series
         else:
@@ -139,7 +141,7 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
             #assert type(df.index) is pd.MultiIndex
             huc_ydf_dict[huc]=df.groupby(level=['COMID','HUC12']).mean()
         
-        if True:#self.cv_run:
+        if self.cv_run:
             huc_ydf_dict=self.cvAggregate(huc_ydf_dict,**cv_agg_kwargs)
         self.huc_ydf_dict=huc_ydf_dict
         if return_predicted_huc8_list:

@@ -42,7 +42,7 @@ class Mapper(myLogger):
         self.geo_data_dir=os.path.join(cwd,'geo_data')
         self.print_dir=os.path.join(cwd,'print')
         self.species_map_dir=os.path.join(cwd,'species_maps')
-        if not os.path.exists(self.species_map_dir: os.mkdir(self.species_map_dir)
+        if not os.path.exists(self.species_map_dir): os.mkdir(self.species_map_dir)
         self.states_path=os.path.join(self.geo_data_dir,'states','cb_2017_us_state_500k.dbf')
         self.boundary_data_path=self.boundaryDataCheck()
         #self.NHD_data_path=self.nhdDataCheck()
@@ -200,6 +200,7 @@ class Mapper(myLogger):
         except:self.ppdt.buildspecieslist()
         specieshuclist=self.ppdt.specieshuclist #from the survey
         specieslist=self.ppdt.specieslist
+                              
         idx=specieslist.index(spec)
         #########
         species_huc8_dict={}
@@ -219,6 +220,7 @@ class Mapper(myLogger):
 
             
     def truncateExtendedHucs(self,extended_huc8_list,NS_huc8_list):
+        #only retains huc8's that are at least partially within the boundingbox determined by the natureserve huc8 list for that species.
         try:
             bbox=self.getHucDigitsGDF(NS_huc8_list,huc='08').total_bounds
             selected=self.getHucDigitsGDF(extended_huc8_list,huc='08').cx[bbox[0]:bbox[2],bbox[1]:bbox[3]].loc[:,'huc8'].tolist()
@@ -233,8 +235,8 @@ class Mapper(myLogger):
     def plotSpeciesPredictList(self,species_list,species_plot_kwarg_dict):
         for species in species_list:
             self.plotSpeciesPredict(species,**species_plot_kwarg_dict)
-            
-          
+                              
+                              
     def plotSpeciesPredict(
         self,species,
         estimator_name=None,huc_level=2,include_absent=False,save_check=False,
@@ -242,23 +244,21 @@ class Mapper(myLogger):
         main_plot='classify',#'cv_probability',#'classify'
         secondary_plots={}#{'binary_classify':'middle'} # 'cv_PI-lower-5%', '
     ):
-        '''if slow, try https://gis.stackexchange.com/questions/197945/geopandas-polygon-to-matplotlib-patches-polygon-conversion'''
+        
         try:
-            
             if type(species) is str:
-                is_single_species_plot=False
+                is_single_spec_plot=True
             else:
                 assert type(species) is tuple
                 is_single_spec_plot=False
-                species,multi_spec_plot_kwargs=*species #extracting name of species and instructions for making multi species plot
-
+                species,multi_spec_plot_kwargs=species #extracting name of species and instructions for making multi species plot
             format_name=species[0].upper()+species[1:].lower()
+            if estimator_name is None:f_estimator_name='all_estimators'
+            else: f_estimator_name=estimator_name
+            name_builder=lambda x: f'{x}_{main_plot}_{f_estimator_name}.png'    
+
             
-            name=f'{main_plot}_{format_name}.png'
-            if  not estimator_name is None:
-                name+=f'_{estimator_name}'
-            
-            
+            name=name_builder(format_name)
             
             savepath=os.path.join(self.species_map_dir,name)
             if save_check and os.path.exists(savepath):
@@ -283,9 +283,10 @@ class Mapper(myLogger):
             if incl_cv_plot:
                 try: self.cv_ppdt
                 except:self.cv_ppdt=PiscesPredictDataTool(cv_run=True)
-                
+            if not is_single_spec_plot:
+                self.checkMultiSpecPlotData(name_list=[name_builder(spec) for spec in self.ppdt.specieslist])    
             
-            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve(NS) huc8's
+            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve(NS) huc8's, #accepts species='all'
             not_sampled_NS_huc8_list=self.getNotSampledNSHuc8s(NS_huc8_list)
             #huc_range=self.getHucDigitsGDF(NS_huc8_list,huc='08')
             if len(not_sampled_NS_huc8_list)>0:
@@ -426,18 +427,17 @@ class Mapper(myLogger):
             ncols+=1
             
             
-            
             print(f'plotting {species}...',end='')
             if main_plot=='classify':
                 self.plotByHucDict(
                     ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,main_plot,
-                    include_absent,plot_kwargs=dict(column='y',zorder=6,color='r'),orientation=orientation)
+                    include_absent,plot_kwargs=dict(column='y',zorder=6,color='r'),orientation=orientation,save_name=name)
             elif main_plot=='cv_probability':
                 self.plotByHucDict(ax,
                     cv_huc_species_series_dict,huc_outer_bounds,huc_range_box,main_plot,
                     include_absent,
                     plot_kwargs=dict(column='y',zorder=6,label='cv_probability'),
-                    orientation=orientation
+                    orientation=orientation,save_name=name
                     )
             """
             predict_huc8_keys=dict.fromkeys(predict_huc8_list)
@@ -470,9 +470,9 @@ class Mapper(myLogger):
                 #help from https://jeremysze.github.io/GIS_exploration/build/html/zoomed_inset_axes.html
                 expanded_states_bounds=self.expandBBox(self.states.total_bounds,1.15)
                 g='x' if w<h else 'y'
-                r=self.findBoxRatio(buffered_huc_outer_bounds,expanded_states_bounds,geo=g)
+                ratio=self.findBoxRatio(buffered_huc_outer_bounds,expanded_states_bounds,geo=g)
                 #ag=np.log((-np.log(r)))/40
-                mag=r*0.15
+                #mag=r*0.15
                 #inset_ax = zoomed_inset_axes(ax, mag, loc=2)
                 inset_ax.set_xlim(expanded_states_bounds[0], expanded_states_bounds[2])
                 inset_ax.set_ylim(expanded_states_bounds[1], expanded_states_bounds[3])
@@ -480,7 +480,7 @@ class Mapper(myLogger):
                 #    expanded_states_bounds,crs).plot(ax=inset_ax,color='c',zorder=0,alpha=0.5)
                 self.states.plot(ax=inset_ax,facecolor='tan',edgecolor='none',zorder=1,alpha=0.6)
                 self.states.plot(ax=inset_ax,zorder=2,linewidth=0.5,edgecolor='grey',facecolor='none')
-                lw=(-np.log(r)*1.7)**.1
+                lw=(-np.log(ratio)*1.7)**.1
                 buffered_huc_range_box.boundary.plot(ax=inset_ax,color='k',zorder=3,linewidth=lw,alpha=1)
                 inset_ax.margins(0)
                 plt.tick_params(axis='both',which='both',bottom=False,left=False,
@@ -563,7 +563,7 @@ class Mapper(myLogger):
             self.logger.exception('outer catch')
             
             
-    def plotByHucDict(self,ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_type,include_absent,plot_kwargs=dict(column='y',zorder=6,),orientation='wide'):
+    def plotByHucDict(self,ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_type,include_absent,plot_kwargs=dict(column='y',zorder=6,),orientation='wide',save_name=False):
         if not type(huc_species_series_dict) is dict:
             huc_species_series_dict={'no_key':huc_species_series_dict}
         
@@ -607,6 +607,7 @@ class Mapper(myLogger):
             else:
                 ser_dict={huc:ser}
                 plot_kwarg_dict={huc:plot_kwargs}
+            save_gdf_dict={}
             for ser_name,ser in ser_dict.items():
                 if type(ser.index) is pd.MultiIndex:
                     try:
@@ -630,6 +631,27 @@ class Mapper(myLogger):
                 else:
                     ax_list=ax
                 for ax_i in ax_list: gdf.plot(ax=ax_i,**plot_kwarg_dict[ser_name])
+                if save_name:
+                    save_gdf_dict[ser_name]=gdf
+                    
+        if save_name: self.saveSpeciesGDF(save_gdf_dict,save_name)
+    
+    def checkMultiSpecPlotData(self,species_filename_list):
+        missing_tables=[]
+        table_names=dict.fromkeys(self.ppdt.get_tablenames(os.path.join(self.ppdt.resultsdir,'print_GDF_dict.sqlite')))
+        for fname in species_filename_list:
+            if not fname in table_names:
+                missing_tables.append(fname)
+        assert len(missing_tables)==0,'the following gdf tables are missing: {missing_tables}'
+        
+     
+    def saveSpeciesGDF(self,gdf_dict,name):
+        try: self.ppdt
+        except:self.ppdt=PiscesPredictDataTool(cv_run=False)
+        with self.ppdt.anyNameDB('print_GDF_dict',tablename=name) as db:
+            for key,gdf in gdf_dict.items():
+                db[key]=gdf
+            db.commit()
     
     def buildMissingComids(self,huc8_list,hucN_y_dict,huc_level):
         try:self.huc12comiddict

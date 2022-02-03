@@ -62,7 +62,9 @@ class DBTool():
                         val=olddict[key]
                         newdict[key]=val
                         newdict.commit()
-            
+    
+    def get_tablenames(self,path):
+        return SqliteDict.get_tablenames(path)
     
     def anyNameDB(self,dbname,tablename='data',folder=None):
         
