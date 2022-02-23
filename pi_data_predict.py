@@ -17,6 +17,7 @@ from pisces_data_huc12 import PiscesDataTool
 #from sklearn.model_selection import HalvingRandomSearchCV
 #from sklearn.linear_model import SGDOneClassSVM
 #from sklearn.kernel_approximation import Nystroem
+from sklearn.svm import OneClassSVM
 from sklearn.pipeline import make_pipeline
 
 
@@ -60,20 +61,57 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         for hash_id in self.hash_ids_in_Xresults:
             for c_hash in self.XpredictHashIDComidHashResultsDB(hash_id=None):
                 pass
+            
+    '''likely moving novelty filter functionality to its own runner in pi_runners.py for cluster computing
     
-    def buildNoveltyFilter(self,species,method=None,try_load=True):
-        assert False, 'not developed'
-        n_hash=joblib.hash([f'{species},{method}'])
-        path=os.path.join(os.getcwd(),'data_tool',f'novelty_filter_{species}_{n_hash}.pkl')
+    def buildNoveltyFilter(self,species,method=None,try_load=True,save=True):
+        #n_hash=joblib.hash([f'{species},{method}'])
+        path=os.path.join(os.getcwd(),'data_tool',f'novelty_filter_{species}_{method}.pkl')
         if try_load and os.path.exists(path):
             try:
                 with open(path,'rb') as f:
                     return pickle.load(f)
             except:
                 self.logger.excpetion(f'load error, rebuilding novelty filter')
-            
+        if method is None:
+            method=OneClassSVM()
+        else: 
+            assert False, 'not developed'
+        X=self.buildSpecTrainData(species,returnX=True)
+        novelty_detector=method.fit(X)#/2+1/2 #rescale -1,1 to 0,1
+        if save:
+            with open(path,'wb') as f:
+                pickle.dump(novelty_detector,f)
+        return novelty_detector
         
-    
+        
+        
+    def buildSpecTrainData(self,spec,returnX=True,fancy_index=False):
+        try:
+            self.ppdt.gen_dict
+        except:
+            self.ppdt.gen_dict=self.ppdt.genDBdict()
+            
+        a_hash_id=species_hash_id_dict[spec][0]
+        run_record=self.gen_dict[a_hash_id]
+        datagen_dict=run_record['data_gen']
+        data=self.dataGenerator(datagen_dict,fit_gen=True)#fit_gen just filters out species with too few observations
+        n=data.y_train.shape[0]
+        X_train=data.X_train
+        if fancy_index:
+            huc12s=data.df.loc[:,'HUC12']
+            huc12strs=huc12s.apply(self.ppdt.huc12float_to_str)
+            comids=data.y_train.index
+            names=['species','HUC12','COMID']
+            index=pd.MultiIndex.from_tuples([(species,huc12strs[i],comids[i])  for i in range(n)],names=names)
+            X_train.index=index
+        if returnX:
+            return X_train
+        else: 
+            return data
+     '''   
+            
+            
         
     
     def buildXPredict(self,):
@@ -105,6 +143,25 @@ class PiscesPredictDataTool(PiscesDataTool,myLogger):
         #pulls together all of the data required to map a species, broken up into a dictionary: {huc:y_series,...}
         try: self.species_hash_id_est_dict
         except:self.species_hash_id_est_dict=self.build_species_hash_id_dict(output_estimator_tuple=True)
+        '''if type(species) is list or species=='all':
+            if species=='all':
+                species_list=self.returnspecieslist()
+            else:
+                species_list=species
+            agg_huc_ydf_dict={};huc8_list=[]
+            for s in species_list:
+                next_huc_ydf_dict,next_huc8_list=self.BuildBigSpeciesXPredictDF(
+                    s,estimator_name=estimator_name,hucdigitcount=hucdigitcount,
+                    cv_agg_kwargs=cv_agg_kwargs,return_predicted_huc8_list=True)
+                for huc,ydf in next_huc_ydf_dict.items():
+                    if not huc in agg_huc_ydf_dict:
+                        agg_huc_ydf_dict[huc]=ydf
+                    else:
+                        agg_huc_ydf_dict[huc]=agg_huc_ydf_dict[huc],ydf],axis='''
+            
+                
+        
+        
         tuplist=self.species_hash_id_est_dict[species]
         #self.logger.info(f'species: {species}tuplist: {tuplist}')
         df_list=[]

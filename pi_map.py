@@ -230,7 +230,9 @@ class Mapper(myLogger):
                 return selected
         except:
             return []
-            
+        
+    #def detectOutliers(self,spec,
+        
             
     def plotSpeciesPredictList(self,species_list,species_plot_kwarg_dict):
         for species in species_list:
@@ -242,25 +244,32 @@ class Mapper(myLogger):
         estimator_name=None,huc_level=2,include_absent=False,save_check=False,
         plot_train=False,include_extended_hucs='truncated',
         main_plot='classify',#'cv_probability',#'classify'
-        secondary_plots={}#{'binary_classify':'middle'} # 'cv_PI-lower-5%', '
+        secondary_plots={},#{'binary_classify':'middle'} # 'cv_PI-lower-5%', '
+        multi_spec_plot_kwargs={ #only used if species='all' or a list of species
+            'merge_type':'sum',
+            'title':None} 
     ):
         
         try:
-            if type(species) is str:
-                is_single_spec_plot=True
-            else:
-                assert type(species) is tuple
-                is_single_spec_plot=False
-                species,multi_spec_plot_kwargs=species #extracting name of species and instructions for making multi species plot
-            format_name=species[0].upper()+species[1:].lower()
+            
             if estimator_name is None:f_estimator_name='all_estimators'
             else: f_estimator_name=estimator_name
+            
             name_builder=lambda x: f'{x}_{main_plot}_{f_estimator_name}.png'    
-
             
-            name=name_builder(format_name)
-            
+            if type(species) is str and not species=='all':
+                is_single_spec_plot=True
+                format_name=species[0].upper()+species[1:].lower()
+                name=name_builder(format_name)
+            else:
+                assert type(species) is list or species=='all',f'expecting list or "all" for species, got species: {species}'
+                is_single_spec_plot=False
+                spec_list_hash=joblib.hash(species)
+                name=name_builder(spec_list_hash)
+                format_name=name
+            self.logger.info(f'name: {name} for species: {species}')
             savepath=os.path.join(self.species_map_dir,name)
+                
             if save_check and os.path.exists(savepath):
                 print(f'{species} already saved, skipping')
                 return
@@ -284,16 +293,28 @@ class Mapper(myLogger):
                 try: self.cv_ppdt
                 except:self.cv_ppdt=PiscesPredictDataTool(cv_run=True)
             if not is_single_spec_plot:
-                self.checkMultiSpecPlotData(name_list=[name_builder(spec) for spec in self.ppdt.specieslist])    
+                if type(species) is list:s_list=species
+                elif species=='all': s_list=self.ppdt.specieslist
+                s_name_list=[name_builder(spec[0].upper()+spec[1:].lower()) for spec in s_list]
+                try: self.species_hash_id_est_dict
+                except:self.species_hash_id_est_dict=self.ppdt.build_species_hash_id_dict(output_estimator_tuple=True)
+                if main_plot=='classify':
+                    ppdt_main=self.ppdt
+                elif main_plot=='cv_probability':
+                    ppdt_main=self.cv_ppdt
+                else: assert False,f'unexpected value for main_plot: {main_plot}'
+                try: species_with_models=list(ppdt_main.species_hash_id_est_dict.keys())
+                except: species_with_models=list(ppdt_main.build_species_hash_id_dict(output_estimator_tuple=True).keys())
+                #self.checkMultiSpecPlotData(s_name_list,species_with_models)    
             
-            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve(NS) huc8's, #accepts species='all'
+            NS_huc8_list=self.ppdt.getSpeciesHuc8List(species,only_new_hucs=False) #natureserve(NS) huc8's, #accepts species='all' or species=list of species
             not_sampled_NS_huc8_list=self.getNotSampledNSHuc8s(NS_huc8_list)
             #huc_range=self.getHucDigitsGDF(NS_huc8_list,huc='08')
             if len(not_sampled_NS_huc8_list)>0:
                 not_sampled_huc_range=self.getHucDigitsGDF(not_sampled_NS_huc8_list,huc='08')
             else: 
                 not_sampled_huc_range=None
-            if include_extended_hucs:    
+            if include_extended_hucs and is_single_spec_plot:    
                 extended_huc8_list=self.getExtendedHuc8s(species,NS_huc8_list)
                 if extended_huc8_list:
                     if type(include_extended_hucs) is str:
@@ -301,10 +322,11 @@ class Mapper(myLogger):
                             extended_huc8_list=self.truncateExtendedHucs(extended_huc8_list,NS_huc8_list)
                         else: assert False, 'not developed'
                     combined_huc8_list=list(dict.fromkeys([*extended_huc8_list,*NS_huc8_list]))
-                if extended_huc8_list:
+                if extended_huc8_list: 
                     extended_huc8_gdf=self.getHucDigitsGDF(extended_huc8_list,huc='08')
                 else:
                     extended_huc8_gdf=None
+            else: extended_huc8_list=None
             if not include_extended_hucs or not extended_huc8_list:
                 extended_huc8_gdf=None
                 extended_huc8_list=None
@@ -388,11 +410,15 @@ class Mapper(myLogger):
                                                      lw=0.25)
             else:
                 not_sampled_huc_range_intersect=None
-            
-            print(f'building data for {species}')
-            self.logger.info(f'building data for {species}')
+            if is_single_spec_plot:
+                print(f'building data for {species}')
+                self.logger.info(f'building data for {species}')
             cv_data_exists=False
-            if incl_cv_plot:
+            if not is_single_spec_plot:
+                huc_gdf_dict=self.retrieveAndMergeSpeciesGDF(s_name_list,multi_spec_plot_kwargs['merge_type'])
+                #self.huc_gdf_dict=huc_gdf_dict
+            
+            elif incl_cv_plot:
                 try:
                     cv_huc_species_series_dict,predict_huc8_list=self.cv_ppdt.BuildBigSpeciesXPredictDF(
                         species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
@@ -401,34 +427,26 @@ class Mapper(myLogger):
                 except:
                     self.logger.exception('error trying to BuildBigSpeciesXPredictDF for cv_run, skipping')
                     #cv_data_exists=False
-            if incl_single_fit_plot or not cv_data_exists:
+            elif incl_single_fit_plot or not cv_data_exists:
                 huc_species_series_dict,cv_predict_huc8_list=self.ppdt.BuildBigSpeciesXPredictDF(
                     species=species,estimator_name=estimator_name,hucdigitcount=huc_level)
                 #self.huc_species_series_dict=huc_species_series_dict
-            try: predict_huc8_list
-            except: predict_huc8_list=cv_predict_huc8_list
-            """
-            missing_data_comids=self.buildMissingComids(
-                predict_huc8_list,
-                huc_species_series_dict if main_plot=='classify' else cv_huc_species_series_dict,
-                huc_level
-            )
-            self.missing_data_comids=missing_data_comids
-            if len(missing_data_comids)>0:
-                plot_kwargs={'color':'red','edgecolor':None,'zorder':7}
-                '''self.plotByHucDict([ax,sample_ax],
-                    missing_data_comids,huc_outer_bounds,huc_range_box,main_plot,
-                    None,plot_kwargs=plot_kwargs,
-                    orientation=orientation
-                    )'''
-            """
-            huc_range_intersect.plot(ax=ax,zorder=5,color='red',edgecolor=None)
-            legend_patches.append(mpatches.Patch(facecolor='red',edgecolor=None, label='missing data'))
-            ncols+=1
+            
+            if is_single_spec_plot:
+                huc_range_intersect.plot(ax=ax,zorder=5,color='red',edgecolor=None)
+                legend_patches.append(mpatches.Patch(facecolor='red',edgecolor=None, label='missing data'))
+                ncols+=1
             
             
             print(f'plotting {species}...',end='')
-            if main_plot=='classify':
+            if not is_single_spec_plot:
+                max_val=max([g['y'].max() for g in huc_gdf_dict.values()])
+                min_val=min([g['y'].min() for g in huc_gdf_dict.values()])
+                print(f"plotting existing gdf's with max_val:{max_val},min_val:{min_val}")
+                for huc,gdf in huc_gdf_dict.items():
+                    self.logger.info(f'plotting huc: {huc}, gdf.shape:{gdf.shape}')
+                    gdf.plot(ax=ax,cmap=mpl.cm.plasma,vmin=min_val,vmax=max_val,column='y',zorder=6)
+            elif main_plot=='classify':
                 self.plotByHucDict(
                     ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,main_plot,
                     include_absent,plot_kwargs=dict(column='y',zorder=6,color='r'),orientation=orientation,save_name=name)
@@ -439,17 +457,6 @@ class Mapper(myLogger):
                     plot_kwargs=dict(column='y',zorder=6,label='cv_probability'),
                     orientation=orientation,save_name=name
                     )
-            """
-            predict_huc8_keys=dict.fromkeys(predict_huc8_list)
-            #self.logger.info(f'combined_huc8_list: {combined_huc8_list}, predict_huc8_list: {predict_huc8_keys}' )
-            missing_data_huc8_list=[huc for huc in combined_huc8_list if huc not in predict_huc8_keys]#faster search with dict
-            if len(missing_data_huc8_list)>0:
-                missing_data_gdf=gpd.overlay(self.getHucDigitsGDF(missing_data_huc8_list,huc='08'),buffered_huc_range_box,how='intersection')
-                if missing_data_gdf.size>0:
-                    missing_data_gdf.plot(ax=ax,zorder=15,color='red',edgecolor=None,)"""
-            
-                
-            
                                                                            
             self.add_states(ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs)
             self.add_states(sample_ax,bbox=buffered_huc_outer_bounds,zorder=2,crs=crs,plot_kwargs=dict(alpha=0.3))
@@ -488,9 +495,12 @@ class Mapper(myLogger):
                 
 
             #format_name_parts=re.split(' ',species[0].upper()+species[1:].lower())
-            format_name_parts=re.split(' ',format_name)
-            title=f'Predicted Distribution for '+" ".join([f'$\it{{{part}}}$' for part in format_name_parts])
-            fig.suptitle(title)  #\it destroys spaces!!
+            if is_single_spec_plot:
+                format_name_parts=re.split(' ',format_name)
+                title=f'Predicted Distribution for '+" ".join([f'$\it{{{part}}}$' for part in format_name_parts])
+            else:
+                title=name
+            fig.suptitle(title)  #\it destroys spaces when making italic!!
             #fig.suptitle(f'Predicted Distribution for $\it{{{format_name_parts[0]}}}$ $\it{{{format_name_parts[1]}}}$')
             #self.addInverseConus(ax,buffered_huc_outer_bounds,gdf.crs,zorder=9)
             ax.margins(0)
@@ -563,11 +573,17 @@ class Mapper(myLogger):
             self.logger.exception('outer catch')
             
             
-    def plotByHucDict(self,ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,plot_type,include_absent,plot_kwargs=dict(column='y',zorder=6,),orientation='wide',save_name=False):
+    def plotByHucDict(
+        self,ax,huc_species_series_dict,huc_outer_bounds,huc_range_box,
+        plot_type,include_absent,plot_kwargs=dict(column='y',zorder=6,),
+        orientation='wide',save_name=False
+        ):
+                             
         if not type(huc_species_series_dict) is dict:
             huc_species_series_dict={'no_key':huc_species_series_dict}
-        
+        save_gdf_dict={}
         for huc,ser in huc_species_series_dict.items():
+            
             ser_dict={};plot_kwarg_dict={}
             col_name=ser.columns[0]
             assert col_name=='y',f'expecting "y" at 1st pos, but columns:{ser.columns}' #may need more flexibility later...
@@ -607,7 +623,8 @@ class Mapper(myLogger):
             else:
                 ser_dict={huc:ser}
                 plot_kwarg_dict={huc:plot_kwargs}
-            save_gdf_dict={}
+            if save_name and len(ser_dict)>1:
+                save_gdf_dict[huc]={}
             for ser_name,ser in ser_dict.items():
                 if type(ser.index) is pd.MultiIndex:
                     try:
@@ -632,18 +649,130 @@ class Mapper(myLogger):
                     ax_list=ax
                 for ax_i in ax_list: gdf.plot(ax=ax_i,**plot_kwarg_dict[ser_name])
                 if save_name:
-                    save_gdf_dict[ser_name]=gdf
+                    if len(ser_dict)>1:
+                        save_gdf_dict[huc][ser_name]=gdf
+                    else:
+                        save_gdf_dict[huc]=gdf
                     
         if save_name: self.saveSpeciesGDF(save_gdf_dict,save_name)
     
-    def checkMultiSpecPlotData(self,species_filename_list):
+    def checkMultiSpecPlotData(self,species_filename_list,species_with_models):
         missing_tables=[]
         table_names=dict.fromkeys(self.ppdt.get_tablenames(os.path.join(self.ppdt.resultsdir,'print_GDF_dict.sqlite')))
         for fname in species_filename_list:
             if not fname in table_names:
-                missing_tables.append(fname)
-        assert len(missing_tables)==0,'the following gdf tables are missing: {missing_tables}'
+                if fname.split('_')[0] in species_with_models:
+                    missing_tables.append(fname)
+                else: self.logger.info(f'')
+        assert len(missing_tables)==0,f'the following gdf tables are missing: {missing_tables}. and table_names:{table_names}'
+      
+    def retrieveAndMergeSpeciesGDF(self,species_tablename_list,merge_type):
+        huc_gdf_dict={}
+        self.logger.info(f'merging the species_tablename_list:{species_tablename_list}')
+        for name in species_tablename_list:  
+            self.logger.info(f'merging species with name: {name}')
+            species_name=name.split('_')[0]
+            for huc, y_gdf in self.ppdt.anyNameDB('print_GDF_dict',tablename=name).items():
+                #self.y_gdf=y_gdf
+                if y_gdf.shape[0]==0:
+                    self.logger.info(f'empty gdf for {species_name} and huc: {huc}, skipping')
+                    continue
+                gdf_idx=y_gdf.index.to_list()#just an integer index from the original catchment gdf
+                tuplist=[(idx,species_name) for idx in gdf_idx] #add a 
+                y_gdf.index=pd.MultiIndex.from_tuples(tuplist,names=['range_idx','species'])
+                if not huc in huc_gdf_dict:
+                    huc_gdf_dict[huc]=y_gdf
+                else:
+                    self.logger.info(f'concatenating existing species y_gdf for huc:{huc}')
+                    huc_gdf_dict[huc]=pd.concat([huc_gdf_dict[huc],y_gdf],axis=0)   
+                self.logger.info(f'for huc:{huc} size of gdf: {huc_gdf_dict[huc].size}')
+        first_gdf=next(iter(huc_gdf_dict.values()))
+        keep_levels=[level for level in first_gdf.index.names if not level=='species']
+        #self.huc_gdf_dict_unmerged=huc_gdf_dict.copy()
+        if merge_type=='sum':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=gdf.sum(axis=0, level=keep_levels)
+        elif merge_type=='mean':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=gdf.mean(axis=0, level=keep_levels)                                         
+        elif merge_type=='inverse_sum':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=(1-gdf).mean(axis=0, level=keep_levels)                                         
+        else: assert False,f'unexpected merge_type: {merge_type}'
+        for huc,df in huc_gdf_dict.items():
+            try: 
+                df.geometry
+                f'skipping attribute join. {df.head()}'
+            except AttributeError:
+                #print(f'no geomtery detected, attribute joining nhdplus for huc:{huc}')
+                huc_gdf_dict[huc]=self.NHDPlusV21CatchmentSP.merge(
+                    df,how='inner',on='FEATUREID')
+                #print(f'after join, type:{huc_gdf_dict[huc]}')
+            except:
+                self.logger.exception()
+                assert false, format_exc()
+        #self.huc_gdf_dict=huc_gdf_dict
+        return huc_gdf_dict       
         
+        '''huc_gdf_dict={}
+        for name in species_tablename_list:  
+            species_name=name.split('_')[0]
+            for huc, y_gdf in self.ppdt.anyNameDB('print_GDF_dict',tablename=name).items():
+                #y_gdf.loc['species']=species_name
+                y_gdf[f'y_huc{huc}']=y_gdf['y']
+                y_gdf.drop(inplace=True,axis=1,labels='y')
+                if not huc in huc_gdf_dict:
+                    huc_gdf_dict[huc]=y_gdf
+                else:
+                    
+                    big_y_gdf=huc_gdf_dict[huc]
+                    big_y_gdf.merge(y_gdf,on=None,how='outer')
+                    huc_gdf_dict[huc]=big_y_gdf
+                    #huc_gdf_dict[huc]=pd.concat([huc_gdf_dict[huc],y_gdf],axis=0)   
+        self.huc_gdf_dict_unmerged=huc_gdf_dict.copy()
+        if merge_type=='sum':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=gdf.groupby('FEATUREID').sum()
+        elif merge_type=='mean':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=gdf.groupby('FEATUREID').mean()                                      
+        elif merge_type=='inverse_sum':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=(1-gdf).groupby('FEATUREID').sum()                                       
+        else: assert False,f'unexpected merge_type: {merge_type}'
+        return huc_gdf_dict
+        '''
+            
+        '''
+            
+            
+            for huc, y_gdf in self.ppdt.anyNameDB('print_GDF_dict',tablename=name).items():
+                #self.y_gdf=y_gdf
+                gdf_idx=y_gdf.index.to_list()#just an integer index from the original catchment gdf
+                tuplist=[(idx,species_name) for idx in gdf_idx] #add a 
+                y_gdf.index=pd.MultiIndex.from_tuples(tuplist,names=['range_idx','species'])
+                if not huc in huc_gdf_dict:
+                    huc_gdf_dict[huc]=y_gdf
+                else:
+                    huc_gdf_dict[huc]=pd.concat([huc_gdf_dict[huc],y_gdf],axis=0)   
+        first_gdf=next(iter(huc_gdf_dict.values()))
+        keep_levels=[level for level in first_gdf.index.names if not level=='species']
+        self.huc_gdf_dict_unmerged=huc_gdf_dict.copy()
+        if merge_type=='sum':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=gdf.sum(axis=0, level=keep_levels)
+        elif merge_type=='mean':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=gdf.mean(axis=0, level=keep_levels)                                         
+        elif merge_type=='inverse_sum':
+            for huc,gdf in huc_gdf_dict.items():
+                huc_gdf_dict[huc]=(1-gdf).mean(axis=0, level=keep_levels)                                         
+        else: assert False,f'unexpected merge_type: {merge_type}'
+        return huc_gdf_dict'''
+                                                     
+                    
+        
+            
      
     def saveSpeciesGDF(self,gdf_dict,name):
         try: self.ppdt
@@ -1285,7 +1414,7 @@ class mp_mapper_runner(Process):
         
 
 if __name__=="__main__":
-    try:
+    '''try:
         mpr=Mapper(mp=True)
         specs=PiscesPredictDataTool(cv_run=False).returnspecieslist()
         shuffle(specs)
@@ -1299,6 +1428,10 @@ if __name__=="__main__":
                         
     except:
         print(format_exc())    
-            
-        
+        '''
+    try:
+        mpr=Mapper(mp=False)
+        mpr.plotSpeciesPredict('all',multi_spec_plot_kwargs={'merge_type':'sum','title':'all species cv_probability stack'} ,main_plot='cv_probability',estimator_name=None,huc_level=4,include_absent=False,save_check=False,plot_train=False)                                              
+    except:pass
+    
 

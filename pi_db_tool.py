@@ -34,6 +34,10 @@ class DBTool():
         self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
         if not os.path.exists(self.Xpredictspecies_dir): 
             os.mkdir(self.Xpredictspecies_dir)
+        self.NoveltyfilterDBdictpath=os.path.join(resultsdir,'NoveltyFilterdDB.sqlite')
+        self.NoveltyFilterspecies_dir=os.path.join(resultsdir,'species_novelty')
+        if not os.path.exists(self.NoveltyFilterspecies_dir): 
+            os.mkdir(self.NoveltyFilterspecies_dir)
         self.postfitDBdictpath=os.path.join(resultsdir,'postfitDB.sqlite')
         self.fitfailDBdictpath=os.path.join(resultsdir,'fitfailDB.sqlite')
         
@@ -139,7 +143,20 @@ class DBTool():
             except:
                 assert False,f'unexpected error, hash_id:{hash_id}'
         return self.anyNameDB(name,tablename=hash_id,folder=self.resultsdir)
-    
+
+    def NoveltyFilterHashIDComidHashResultsDB(self,hash_id=None):
+        name='NoveltyFilterHashIDComidHashResults' 
+        if hash_id is None:
+            path=os.path.join(self.resultsdir,name+'.sqlite')
+            if not os.path.exists(path):
+                return []
+            try:
+                return SqliteDict.get_tablenames(path)
+            except OSError:
+                return []
+            except:
+                assert False,f'unexpected error, hash_id:{hash_id}'
+        return self.anyNameDB(name,tablename=hash_id,folder=self.resultsdir)
     
     
     def postFitDBdict(self,name):
@@ -169,6 +186,8 @@ class DBTool():
     def XpredictDBdict(self,):
         return SqliteDict(filename=self.XpredictDBdictpath,tablename='predict01', encode=self.my_encode, decode=self.my_decode)
     
+    def NoveltyFilterDBdict(self,):
+        return SqliteDict(filename=self.NoveltyFilterDBdictpath,tablename='novelty', encode=self.my_encode, decode=self.my_decode)
     
     def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0,Xpredict=False,fast_add=False):
         try:

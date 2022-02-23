@@ -625,3 +625,193 @@ class FitRunner(myLogger):
             model_dict={'model':SKToolInitializer(model_gen),'data_gen':data_gen,'model_gen':model_gen}
             hash_id_model_dict[hash_id]=model_dict# hashid based on model_gen and data_gen
         return data,hash_id_model_dict
+
+    
+    
+class NoveltyFilterRunner:
+    '''
+    build() considerations:
+    open saved prediction model for imputation step, save imputer as attribute
+    check for trained novelty alg.
+      if exists, 
+      open and save as attribute
+      else,
+      open training data, impute, train novelty algorithm, save it, assign as attribute
+    impute c_hash 100k comid collections, make novelty predictions, save
+      
+    
+    '''
+    def __init__(self,rundict):
+        myLogger.__init__(self,name='NoveltyFilterRunner.log')
+        self.logger.info('starting NoveltyFilterRunner logger')
+        self.rundict=rundict
+        self.saveq=None
+        self.hash_id_c_hash_dict=None
+        
+    def passQ(self,saveq):
+        self.saveq=saveq
+                             
+    def getResult(self,result):
+        if type(result) is str:
+            if os.path.exists(result):
+                try:
+                    with open(result,'rb') as f:
+                        return pickle.load(f)
+                except:
+                    self.logger.exception(f'error loading file from {result}')
+            else:
+                self.logger.info(f'no file at result:{result}')
+        else:
+            self.logger.info(f'getResult has result that is not a str: {result}')
+        return None
+                             
+    def build(self):
+        #called on master machine by jobqfiller before sending to jobq
+        try:
+            regen_done=False
+            data_gen=self.rundict['data_gen']
+            spec=data_gen['species']
+            comidblockhashdict=PiscesPredictDataTool().getXpredictSpeciesComidBlockDict()[spec]
+            hash_id_list=[key for key in self.rundict.keys() if key!='data_gen']
+            self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
+            if len(self.hash_id_c_hash_dict)==0:
+                return True #job will be skipped
+            
+            none_hash_id_list=[key for key,val in self.rundict.items() if key!='data_gen' and val is None]
+            if len(none_hash_id_list)>0: #fill in None with 'model' from resultsDBdict
+                resultsDBdict=DBTool().resultsDBdict()
+                for hash_id in hash_id_list:
+                    if hash_id in self.hash_id_c_hash_dict:
+                        if self.rundict[hash_id] is None: #then need to load the result
+                            result=resultsDBdict[hash_id]
+                            if type(result) is str:
+                                result=self.getResult(result)
+                            self.rundict[hash_id]=result['model'] #
+                            self.logger.info(f'sucessful rundict build for hash_id:{hash_id}')
+                            if not regen_done:
+                                self.rundict['data_gen']=result['data_gen'] #load updated data_gen from result once
+                                regen_done=True 
+                    else:
+                        self.logger.warning(f'removing hash_id:{hash_id} from xpredict rundict because already complete')
+                        self.rundict.pop(hash_id)
+            if not regen_done:
+                self.logger.critical(f'regen_done is False, so retrieving data_gen from a result')
+                for hash_id,result in self.rundict.items():
+                    if 'data_gen' in result:
+                        self.rundict['data_gen']=result['data_gen']
+                        regen_done=True
+                        continue
+            assert regen_done,f'for some reason regen_done is False. self.rundict:{self.rundict}'
+            self.logger.info(f'{spec} predictrunner built')
+        except: 
+            self.logger.exception(f'build error with rundict:{self.rundict}')
+    
+    
+    def huc12float_to_str(self,huc12):
+        huc12str=str(int(huc12))
+        if len(huc12str)==11:huc12str='0'+huc12str
+        assert len(huc12str)==12,'expecting len 12 from huc12str:{huc12str}'
+        return huc12str
+    
+    
+    def checkXPredictHashIDComidHashResults(self,hash_ids,comidblockdict):
+        dbt=DBTool()
+        hash_id_c_hash_dict={}
+        hash_ids_in_results=dbt.XpredictHashIDComidHashResultsDB(hash_id=None)#tablenames
+        for hash_id in hash_ids:
+            if hash_id in hash_ids_in_results:
+                with dbt.XpredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
+                    hash_c_hash_with_results=dict.fromkeys(hash_resultsdb.keys())
+                hash_id_c_hash_dict[hash_id]=[]
+
+                for c_hash in comidblockdict.keys():
+                    if not c_hash in hash_c_hash_with_results:
+                        hash_id_c_hash_dict[hash_id].append(c_hash)
+                    else:
+                        self.logger.info(f'hash_id:{hash_id},c_hash:{c_hash} already complete')
+                if len(hash_id_c_hash_dict[hash_id])==0:
+                    with dbt.XpredictDBdict() as done_db:
+                        done_db[hash_id]='complete'
+                        done_db.commit()
+                    del hash_id_c_hash_dict[hash_id]
+                    self.logger.info(f'hash_id:{hash_id} is complete and added to XpredictDBdict as "complete"')
+            else:
+                hash_id_c_hash_dict[hash_id]=list(comidblockdict.keys())
+        return hash_id_c_hash_dict
+                    
+        
+    def build_from_rundict(self,rundict):
+        data_gen=rundict.pop('data_gen') #how to generate the data
+        data=XdataGenerator(data_gen)
+        return data,rundict   
+    
+    
+        
+    
+    def run(self,):
+
+        self.pid=os.getpid()
+
+
+        #self.hash_id_c_hash_dict
+        c_hash_hash_id_dict={}#just reversing the dict
+        for hash_id,c_hash_list in self.hash_id_c_hash_dict.items():
+            for c_hash in c_hash_list:
+                if not c_hash in c_hash_hash_id_dict:
+                    c_hash_hash_id_dict[c_hash]=[hash_id]
+                else:
+                    c_hash_hash_id_dict[c_hash].append(hash_id)
+        """c_hash_list=[]
+        for c_hashes in self.hash_id_c_hash_dict.values():
+            c_hash_list.extend(c_hashes)
+        c_hash_list=list(dict.fromkeys(c_hash_list)) #removes duplicates"""
+                    
+        self.ske=sk_estimator()
+        data,hash_id_model_dict=self.build_from_rundict(self.rundict)
+        """for hash_id,model in hash_id_model_dict.items():
+            for skt in model['estimator']:
+                if 'HUC12' in skt.x_vars:
+                    self.logger.error(f'HUC12 found in hash_id:{hash_id}')
+                    assert False, f'huc12 error for hash_id:{hash_id}, {data.spec}'"""
+        #first_model=list(hash_id_model_dict.values())[0]
+        #keylist=first_model.x_vars
+        
+        keylist=data.datagen_dict['x_vars']
+        keylist.append('HUC12')
+        comidblockdict=data.getXpredictSpeciesComidBlockDict()[data.spec]
+        c_count=len(c_hash_hash_id_dict)
+        for c_idx,(c_hash,hash_id_list) in enumerate(c_hash_hash_id_dict.items()):
+            self.logger.info(f'{self.pid} is starting c_hash #{1+c_idx} of {c_count}')
+            comidlist=comidblockdict[c_hash]
+            
+            datadf=data.generateXPredictBlockDF(
+                data.spec,comidlist=comidlist,keylist=keylist)
+            
+            
+            this_hash_id_model_dict={hash_id:hash_id_model_dict[hash_id] for hash_id in hash_id_list} #b/c some hash_id's may be done for some c_hash's
+            predictresult=self.Xpredict(
+                datadf,hash_id_model_dict=this_hash_id_model_dict,data=data) #will run hash_id's round-robin to avoid re-imputing
+            for hash_id,p_df in predictresult.items():
+                qtry=0
+                while True:
+                    self.logger.debug(f'adding predictresult to saveq')
+                    try:
+                        qtry+=1
+                        self.saveq.put({hash_id:{c_hash:p_df}})
+                        self.logger.debug(f'savedict successfully added to saveq')
+                        break
+                    except:
+                        if not self.saveq.full() and qtry>3:
+                            self.logger.exception(f'error adding to saveq, qtry:{qtry}')
+                        else:
+                            sleep(3)
+            
+
+
+ 
+    def doImputation(self,df,pipe):
+        imputation_step=pipe[0]
+        self.logger.info(f'{self.pid} starting imputation')
+        i_df= imputation_step.transform(df)
+        self.logger.info(f'{self.pid} has completed imputation')
+        return i_df

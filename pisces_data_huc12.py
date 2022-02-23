@@ -316,6 +316,8 @@ class PiscesDataTool(myLogger,DBTool,Helper):
         except: self.buildspecieslist()
         if only_new_hucs:
             return self.specieshuclist_newhucs[self.specieslist.index(species)]
+        if type(species) is list:
+            return list(dict.fromkeys([huc for huc8list in [self.specieshuc8list[self.specieslist.index(sp)] for sp in species] for huc in huc8list]))
         if species in self.specieslist:
             return self.specieshuc8list[self.specieslist.index(species)]
         elif species=='all':
