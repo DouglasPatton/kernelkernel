@@ -671,7 +671,7 @@ class NoveltyFilterRunner:
             regen_done=False
             data_gen=self.rundict['data_gen']
             spec=data_gen['species']
-            comidblockhashdict=PiscesPredictDataTool().getXpredictSpeciesComidBlockDict()[spec]
+            comidblockhashdict=PiscesPredictDataTool().getXpredictSpeciesComidBlockDict()[spec] #shared with xpredict
             hash_id_list=[key for key in self.rundict.keys() if key!='data_gen']
             self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
             if len(self.hash_id_c_hash_dict)==0:

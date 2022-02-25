@@ -34,7 +34,7 @@ class DBTool():
         self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
         if not os.path.exists(self.Xpredictspecies_dir): 
             os.mkdir(self.Xpredictspecies_dir)
-        self.NoveltyfilterDBdictpath=os.path.join(resultsdir,'NoveltyFilterdDB.sqlite')
+        self.NoveltyFilterDBdictpath=os.path.join(resultsdir,'NoveltyFilterdDB.sqlite')
         self.NoveltyFilterspecies_dir=os.path.join(resultsdir,'species_novelty')
         if not os.path.exists(self.NoveltyFilterspecies_dir): 
             os.mkdir(self.NoveltyFilterspecies_dir)
@@ -129,6 +129,10 @@ class DBTool():
 
         return self.anyNameDB(name,tablename=hash_id,folder=self.Xpredictspecies_dir)
     
+    def NoveltyFilterSpeciesResults(self,spec,hash_id):
+        name=f'NoveltyFilterSpeciesResults-{spec}'
+
+        return self.anyNameDB(name,tablename=hash_id,folder=self.NoveltyFilterspecies_dir)
     
     def XpredictHashIDComidHashResultsDB(self,hash_id=None):
         name='XpredictHashIDComidHashResults' #note lowercase p!

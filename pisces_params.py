@@ -29,6 +29,8 @@ class PiSetup(myLogger):
             self.db_kwargs=dict(db=DBTool(cv_run=cv_run).predictDBdict)# for saveqdumper addToDBDict and checkcomplete too! #{'predict':True} # for saveQdumper
         elif self.run_type=='Xpredict':
             self.db_kwargs={'Xpredict':True}
+        elif self.run_type=='novelty_filter'
+            self.db_kwargs={'novelty_filter':True}
         else:
             self.db_kwargs={}
         rs=1
