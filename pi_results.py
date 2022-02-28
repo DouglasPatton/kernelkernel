@@ -588,20 +588,23 @@ class PiResults(DBTool,myLogger):
         return None
                 
     
-    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None): # used by pisce_params PiSetup to build runners for in-sample or out-of-sample prediction on cv test sets
+    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None,NoveltyFilterDB=None): # used by pisce_params PiSetup to build runners for in-sample or out-of-sample prediction on cv test sets
         try:
             self.results_dict
         except:
             self.results_dict=self.resultsDBdict()
         try: self.gen_dict
         except: self.gen_dict=self.genDBdict()
-        
-        
-        if  XpredictDB is None:
+        is_novelty_filter=False
+        if not XpredictDB is None:
+            predictDB=XpredictDB
+        elif not NoveltyFilterDB is None:
+            is_novelty_filter=True
+            predictDB=NoveltyFilterDB
+        else:
             try: predictDB=self.predictDB
             except:predictDB=self.predictDBdict()
-        else:
-            predictDB=XpredictDB
+        
         predicted=dict.fromkeys(predictDB.keys()) #dict for fast search
         try:
             datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0)
@@ -619,6 +622,7 @@ class PiResults(DBTool,myLogger):
                         if len(rundict_list)<job_idx+1:
                             rundict_list.append({'data_gen':self.gen_dict[hash_id_list[0]]['data_gen']})
                         rundict_list[job_idx][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
+                            
                         ###data_gen added by runner.build()
                         """if not 'data_gen' in rundict_list[d]: #just add once per run_dict
                             result=self.results_dict[hash_id]

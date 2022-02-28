@@ -193,6 +193,20 @@ class PiSetup(myLogger):
                 runlist.append(XPredictRunner(rundict))
             self.logger.info(f'list of runners built. len(runlist):{len(runlist)}')
             self.logger.info(f'runlist:{runlist}')
+        elif self.run_type=='novelty_filter':
+            if self.test:
+                test=20
+            else:
+                test=self.test
+            #PiXResults.consolidateXpredict()
+            #rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
+            rundict_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.NoveltyFilterDBdict())
+            runlist=[]
+            self.logger.info(f'building list of noveltyfilter runners. len(rundict_list):{len(rundict_list)}')
+            for rundict in rundict_list:
+                runlist.append(NoveltyFilterRunner(rundict))
+            self.logger.info(f'list of runners built. len(runlist):{len(runlist)}')
+            self.logger.info(f'runlist:{runlist}')
         elif self.run_type=='predict':
             if self.test:
                 test=20
