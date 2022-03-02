@@ -672,7 +672,7 @@ class NoveltyFilterRunner:
             data_gen=self.rundict['data_gen']
             spec=data_gen['species']
             comidblockhashdict=PiscesPredictDataTool().getXpredictSpeciesComidBlockDict()[spec] #shared with xpredict
-            hash_id_list=[key for key in self.rundict.keys() if key!='data_gen']
+            hash_id_list=[key for key in self.rundict.keys() if key!='data_gen'][:1]#just a list with the first hash_id
             self.hash_id_c_hash_dict=self.checkXPredictHashIDComidHashResults(hash_id_list,comidblockhashdict)
             if len(self.hash_id_c_hash_dict)==0:
                 return True #job will be skipped
@@ -714,13 +714,13 @@ class NoveltyFilterRunner:
         return huc12str
     
     
-    def checkXPredictHashIDComidHashResults(self,hash_ids,comidblockdict):
+    def checkNoveltyFilterHashIDComidHashResults(self,hash_ids,comidblockdict):
         dbt=DBTool()
         hash_id_c_hash_dict={}
-        hash_ids_in_results=dbt.XpredictHashIDComidHashResultsDB(hash_id=None)#tablenames
+        hash_ids_in_results=dbt.NoveltyFilterHashIDComidHashResultsDB(hash_id=None)#tablenames
         for hash_id in hash_ids:
             if hash_id in hash_ids_in_results:
-                with dbt.XpredictHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
+                with dbt.NoveltyFilterHashIDComidHashResultsDB(hash_id=hash_id) as hash_resultsdb:
                     hash_c_hash_with_results=dict.fromkeys(hash_resultsdb.keys())
                 hash_id_c_hash_dict[hash_id]=[]
 
@@ -730,11 +730,11 @@ class NoveltyFilterRunner:
                     else:
                         self.logger.info(f'hash_id:{hash_id},c_hash:{c_hash} already complete')
                 if len(hash_id_c_hash_dict[hash_id])==0:
-                    with dbt.XpredictDBdict() as done_db:
+                    with dbt.NoveltyFilterDBdict() as done_db:
                         done_db[hash_id]='complete'
                         done_db.commit()
                     del hash_id_c_hash_dict[hash_id]
-                    self.logger.info(f'hash_id:{hash_id} is complete and added to XpredictDBdict as "complete"')
+                    self.logger.info(f'hash_id:{hash_id} is complete and added to NoveltyFilterDBdict as "complete"')
             else:
                 hash_id_c_hash_dict[hash_id]=list(comidblockdict.keys())
         return hash_id_c_hash_dict

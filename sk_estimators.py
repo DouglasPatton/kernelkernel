@@ -16,7 +16,29 @@ import numpy as np
 from mylogger import myLogger
 from pi_db_tool import DBTool
 
+from sklearn.linear_model import SGDOneClassSVM
+from sklearn.kernel_approximation import Nystroem
 
+class sk_novelty(myLogger):
+    def __init__(self,):
+        myLogger.__init__(self,name='sk_novelty.log')
+        N
+    def get_est_dict(self,):
+        fit_kwarg_dict={'clf__sample_weight':'balanced'}#  
+        fit_kwarg_dict2={'static_pipeline__clf__sample_weight':'balanced'}# 
+        estimator_dict={
+            #add logistic with e-net
+            'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict2},#{'regressor__clf__sample_weight':'balanced'}},
+            'logistic-reg':{'estimator':self.logisticClf,'fit_kwarg_dict':fit_kwarg_dict},
+            'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict2,},
+            'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict2,},
+            'gradient-boosting-classifier':{'estimator':self.gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+            'hist-gradient-boosting-classifier':{'estimator':self.histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
+        }
+        return estimator_dict
+    
+    def oneClassNystroemSDG(self,nystroem_kwargs={},sdg_kwargs={}):
+        
 
 class sk_estimator(myLogger):
     def __init__(self,scorer='f1_micro'):

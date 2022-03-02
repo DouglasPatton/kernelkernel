@@ -589,17 +589,31 @@ class PiResults(DBTool,myLogger):
                 
     
     def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None,NoveltyFilterDB=None): # used by pisce_params PiSetup to build runners for in-sample or out-of-sample prediction on cv test sets
-        try:
-            self.results_dict
-        except:
-            self.results_dict=self.resultsDBdict()
-        try: self.gen_dict
-        except: self.gen_dict=self.genDBdict()
-        is_novelty_filter=False
+        if NoveltyFilterDB is None:
+            is_novelty_filter=False
+        else:is_novelty_filter=True
+            
+        if is_novelty_filter:
+            try:
+                self.noveltyFilterResults
+            except:
+                self.noveltyFilterResults=self.noveltyFilterResultsDBdict()
+            results_dict=self.noveltyFilterResults
+        else:
+            try: self.results_dict
+            except:self.results_dict=self.resultsDBdict()
+            results_dict=self.results_dict
+        if is_novelty_filter:
+            try: self.noveltyfilter_gen_dict
+            except: self.noveltyfilter_gen_dict=self.noveltyFilterGenDBdict()
+            gen_dict=self.noveltyfilter_gen_dict
+        else:
+            try: self.gen_dict
+            except: self.gen_dict=self.genDBdict()
+            gen_dict=self.gen_dict
         if not XpredictDB is None:
             predictDB=XpredictDB
         elif not NoveltyFilterDB is None:
-            is_novelty_filter=True
             predictDB=NoveltyFilterDB
         else:
             try: predictDB=self.predictDB
@@ -607,7 +621,7 @@ class PiResults(DBTool,myLogger):
         
         predicted=dict.fromkeys(predictDB.keys()) #dict for fast search
         try:
-            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0)
+            datagenhash_hash_id_dict=self.build_dghash_hash_id_dict(rebuild=0,is_novelty_filter=is_novelty_filter)
             rundict_list=[]
             #keep_hash_id_list=[]
             self.logger.info(f'building rundict_list')
@@ -620,31 +634,12 @@ class PiResults(DBTool,myLogger):
                     if not hash_id in predicted:
                         dg_hash_id_complete=False # at least one hash_id not complete for this datagen
                         if len(rundict_list)<job_idx+1:
-                            rundict_list.append({'data_gen':self.gen_dict[hash_id_list[0]]['data_gen']})
+                            rundict_list.append({'data_gen':gen_dict[hash_id_list[0]]['data_gen']})
                         rundict_list[job_idx][hash_id]=None# will be added by jobqfiller. #self.results_dict[hash_id]['model'] #
                             
-                        ###data_gen added by runner.build()
-                        """if not 'data_gen' in rundict_list[d]: #just add once per run_dict
-                            result=self.results_dict[hash_id]
-                            if type(result) is str:
-                                result=self.getResult(result)
-                            if not result is None:
-                                rundict_list[d]['data_gen']=result['data_gen']"""
-                            #rundict_list[d]['data_gen']=self.gen_dict[hash_id]['data_gen'] #try getting from here to avoid loading big results
-                        #keep_hash_id_list.append(hash_id)
                 if not dg_hash_id_complete:
                     job_idx+=1
-                        
-            '''#logic above reworked to obviate below
-            drop_idx_list=[]
-            for r,rundict in enumerate(rundict_list):
-                if len(rundict)==0:
-                    drop_idx_list.append(r)
-            for r in drop_idx_list[::-1]:
-                del rundict_list[r] # delete from rhs to avoid change of order on remaining idx's to delete
-            '''
             self.logger.info('building rundict_list is complete')
-            #return rundict_list,keep_hash_id_list
             return rundict_list
         except:
             self.logger.exception('outer catch, halting')
@@ -722,16 +717,24 @@ class PiResults(DBTool,myLogger):
         self.getsave_postfit_db_dict(name,species_hash_id_dict)
         return species_hash_id_dict
     
-    def add_check_dghash_hash_id_dict(self,dghash_hash_id_dict):
-        try: self.results_dict
-        except:self.results_dict=self.resultsDBdict()
+    def add_check_dghash_hash_id_dict(self,dghash_hash_id_dict,is_novelty_filter=False):
+        if is_novelty_filter:
+            try:
+                self.noveltyFilterResults
+            except:
+                self.noveltyFilterResults=self.noveltyFilterResultsDBdict()
+            results_dict=self.noveltyFilterResults
+        else:
+            try: self.results_dict
+            except:self.results_dict=self.resultsDBdict()
+            results_dict=self.results_dict
         hash_id_list=[]
         for _,h_i_list in dghash_hash_id_dict.items():
             hash_id_list.extend(h_i_list)
-        results_hash_id_list=list(self.results_dict.keys())
+        results_hash_id_list=list(results_dict.keys())
         for hash_id in results_hash_id_list:
             if not hash_id in hash_id_list:
-                result=self.results_dict[hash_id]
+                result=results_dict[hash_id]
                 if type(result) is str:
                     result=self.getResult(result)
                     if result is None: continue
@@ -744,8 +747,12 @@ class PiResults(DBTool,myLogger):
         return dghash_hash_id_dict
         
         
-    def build_dghash_hash_id_dict(self,rebuild=0,add=0):
-        name='dghash_hash_id_dict'
+    def build_dghash_hash_id_dict(self,rebuild=0,add=0,is_novelty_filter=False):
+        if is_novelty_filter:
+            name='dghash_nfhash_id_dict'
+        else:
+            name='dghash_hash_id_dict'
+        
         db=lambda: self.anyNameDB(name,tablename='data')
         if not rebuild:
             try:
@@ -756,18 +763,33 @@ class PiResults(DBTool,myLogger):
                     else:
                         return dghash_hash_id_dict
                 else:
-                    dghash_hash_id_dict=self.add_check_dghash_hash_id_dict(dghash_hash_id_dict)
+                    dghash_hash_id_dict=self.add_check_dghash_hash_id_dict(dghash_hash_id_dict,is_novelty_filter=is_novelty_filter)
             except:
                 self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
                 rebuild=1
         if rebuild:
-            try: self.results_dict
-            except:self.results_dict=self.resultsDBdict()
-            try: self.gen_dict
-            except: self.gen_dict=self.genDBdict()
+            if is_novelty_filter:
+                try:
+                    self.noveltyFilterResults
+                except:
+                    self.noveltyFilterResults=self.noveltyFilterResultsDBdict()
+                results_dict=self.noveltyFilterResults
+            else:
+                try: self.results_dict
+                except:self.results_dict=self.resultsDBdict()
+                results_dict=self.results_dict
+            if is_novelty_filter:
+                try: self.noveltyfilter_gen_dict
+                except: self.noveltyfilter_gen_dict=self.noveltyFilterGenDBdict()
+                gen_dict=self.noveltyfilter_gen_dict
+            else:
+                try: self.gen_dict
+                except: self.gen_dict=self.genDBdict()
+                gen_dict=self.gen_dict
+            
             datagenhash_hash_id_dict={}
             self.logger.info(f'building datagen hash hash_id dict ')
-            hash_id_list=list(self.results_dict.keys())
+            hash_id_list=list(results_dict.keys())
             """hash_id_count=len(hash_id_list)
             blocksize=100
             block_count=-(-hash_id_count//blocksize) #ceil divide
@@ -777,7 +799,7 @@ class PiResults(DBTool,myLogger):
                 #self.results_dict=self.resultsDBdict()
                 #self.logger.info(f'starting block {h+1} of {block_count}')
                 for hash_id in hash_id_list:
-                    run_record=self.gen_dict[hash_id]
+                    run_record=gen_dict[hash_id]
                     data_gen=run_record["data_gen"]
                     datagenhash=joblib.hash(data_gen)
                     try:

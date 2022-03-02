@@ -89,6 +89,8 @@ class PiSetup(myLogger):
             model_gen_list.append(model_gen)
         return model_gen_list
             
+    def novelty_filter_model_setup(self,):
+        nf_ests=sk_novelty().get_
     
     def data_setup(self,):
         species_list=PiscesDataTool().returnspecieslist()
@@ -148,7 +150,7 @@ class PiSetup(myLogger):
                     else:
                         rundict['model_gen_dict'][hash_id]=run_record['model_gen']
                     first=False
-                rundict_list.append(rundict.copy()) #maybe copy is not necessary
+                rundict_list.append(rundict.copy()) 
             runlist=[]    
             for rundict in rundict_list:
                 runlist.append(FitRunner(rundict))
@@ -200,7 +202,7 @@ class PiSetup(myLogger):
                 test=self.test
             #PiXResults.consolidateXpredict()
             #rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
-            rundict_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.NoveltyFilterDBdict())
+            rundict_list=PiResults().build_prediction_rundicts(test=test,NoveltyFilterDB=self.dbt.NoveltyFilterDBdict())
             runlist=[]
             self.logger.info(f'building list of noveltyfilter runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
