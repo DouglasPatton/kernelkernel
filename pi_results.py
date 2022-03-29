@@ -588,7 +588,7 @@ class PiResults(DBTool,myLogger):
         return None
                 
     
-    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None,NoveltyFilterDB=None): # used by pisce_params PiSetup to build runners for in-sample or out-of-sample prediction on cv test sets
+    def build_prediction_rundicts(self,rebuild=1,test=False,XpredictDB=None,NoveltyFilterDB=None,skip_finished=True): # used by pisce_params PiSetup to build runners for in-sample or out-of-sample prediction on cv test sets
         if NoveltyFilterDB is None:
             is_novelty_filter=False
         else:is_novelty_filter=True
@@ -631,7 +631,7 @@ class PiResults(DBTool,myLogger):
                 dg_hash_id_complete=True    
                 
                 for hash_id in (hash_id_list):
-                    if not hash_id in predicted:
+                    if not hash_id in predicted and skip_finished:
                         dg_hash_id_complete=False # at least one hash_id not complete for this datagen
                         if len(rundict_list)<job_idx+1:
                             rundict_list.append({'data_gen':gen_dict[hash_id_list[0]]['data_gen']})
@@ -645,78 +645,6 @@ class PiResults(DBTool,myLogger):
             self.logger.exception('outer catch, halting')
             assert False,'halt'
         
-            
-                
-    def build_y_like_agg_pred_spec(self,rebuild=0,species_hash_id_dict=None):
-        #just runs once per species 
-        name='y_like_agg_pred_spec'
-        if not rebuild:
-            try:
-                datadict=self.getsave_postfit_db_dict(name)
-                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
-            except:
-                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
-        else:
-            if type(rebuild) is int:
-                rebuild-=1
-        if species_hash_id_dict is None: 
-            species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
-        hash_id_list1=[hash_id_list[0] for species,hash_id_list in species_hash_id_dict.items()] # just get 1 hash_id per species
-        runners=[]
-        for species,hash_id_list in species_hash_id_dict.items():
-            for hash_id in hash_id_list1:
-                rundict={}
-                result=self.results_dict[hash_id]
-                if type(result) is str:
-                    result=self.getResult(result)
-                if result is None: continue
-                data_gen=result['data_gen'] # same as datagen_dict
-                data_gen['make_y']=1
-                rundict['data_gen']=data_gen
-                rundict[hash_id]=None #this is where the model from results+dict will go when jobqfiller calls build()
-                runners.append(PredictRunner(rundict))
-        
-        dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'
-        all_y_df=pd.concat(dflist,axis=0)
-        datadict={'data':all_y_df} 
-        self.getsave_postfit_db_dict(name,datadict)
-        return all_y_df # just returning the df
-        
-            
-        
-        
-    
-    
-    def getsave_postfit_db_dict(self,name,data=None,):
-        if data is None:
-            return self.postFitDBdict(name)
-        else:
-            if not type(data) is dict:
-                data={'data':data}
-            self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
-    
-    def build_species_hash_id_dict(self,rebuild=0):
-        try: self.gen_dict
-        except:self.gen_dict=self.genDBdict
-        name='species_hash_id_dict'
-        if not rebuild:
-            try:
-                species_hash_id_dict=self.getsave_postfit_db_dict(name)
-                if len(species_hash_id_dict)>0:
-                    return species_hash_id_dict
-                else:
-                    self.logger.info(f'rebuilding b/c species_hash_id_dict has non-pos length')
-            except:
-                self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
-        species_hash_id_dict={}
-        for hash_id,run_record in self.gen_dict.items():
-            species=run_record['data_gen']['species']
-            try: species_hash_id_dict[species].append(hash_id)
-            except KeyError: species_hash_id_dict[species]=[hash_id]
-            except: assert False, 'halt'
-        self.getsave_postfit_db_dict(name,species_hash_id_dict)
-        return species_hash_id_dict
-    
     def add_check_dghash_hash_id_dict(self,dghash_hash_id_dict,is_novelty_filter=False):
         if is_novelty_filter:
             try:
@@ -821,7 +749,79 @@ class PiResults(DBTool,myLogger):
             except:
                 self.logger.exception('unexpected error building dghash...')
             self.logger.info('datagen hash hash_id dict complete')
-        return db()
+        return db()        
+                
+    def build_y_like_agg_pred_spec(self,rebuild=0,species_hash_id_dict=None):
+        #just runs once per species 
+        name='y_like_agg_pred_spec'
+        if not rebuild:
+            try:
+                datadict=self.getsave_postfit_db_dict(name)
+                return datadict['data']#sqlitedict needs a key to pickle and save an object in sqlite
+            except:
+                self.logger.info(f'rebuilding {name} but rebuild:{rebuild}')
+        else:
+            if type(rebuild) is int:
+                rebuild-=1
+        if species_hash_id_dict is None: 
+            species_hash_id_dict=self.build_species_hash_id_dict(rebuild=rebuild) 
+        hash_id_list1=[hash_id_list[0] for species,hash_id_list in species_hash_id_dict.items()] # just get 1 hash_id per species
+        runners=[]
+        for species,hash_id_list in species_hash_id_dict.items():
+            for hash_id in hash_id_list1:
+                rundict={}
+                result=self.results_dict[hash_id]
+                if type(result) is str:
+                    result=self.getResult(result)
+                if result is None: continue
+                data_gen=result['data_gen'] # same as datagen_dict
+                data_gen['make_y']=1
+                rundict['data_gen']=data_gen
+                rundict[hash_id]=None #this is where the model from results+dict will go when jobqfiller calls build()
+                runners.append(PredictRunner(rundict))
+        
+        dflist=[runner.run() for runner in runners] # no build b/c of 'make_y'
+        all_y_df=pd.concat(dflist,axis=0)
+        datadict={'data':all_y_df} 
+        self.getsave_postfit_db_dict(name,datadict)
+        return all_y_df # just returning the df
+        
+            
+        
+        
+    
+    
+    def getsave_postfit_db_dict(self,name,data=None,):
+        if data is None:
+            return self.postFitDBdict(name)
+        else:
+            if not type(data) is dict:
+                data={'data':data}
+            self.addToDBDict(data,db=lambda: self.postFitDBdict(name))
+    
+    def build_species_hash_id_dict(self,rebuild=0):
+        try: self.gen_dict
+        except:self.gen_dict=self.genDBdict
+        name='species_hash_id_dict'
+        if not rebuild:
+            try:
+                species_hash_id_dict=self.getsave_postfit_db_dict(name)
+                if len(species_hash_id_dict)>0:
+                    return species_hash_id_dict
+                else:
+                    self.logger.info(f'rebuilding b/c species_hash_id_dict has non-pos length')
+            except:
+                self.logger.info(f'rebuilding species_hash_id_dict but  rebuild:{rebuild}')
+        species_hash_id_dict={}
+        for hash_id,run_record in self.gen_dict.items():
+            species=run_record['data_gen']['species']
+            try: species_hash_id_dict[species].append(hash_id)
+            except KeyError: species_hash_id_dict[species]=[hash_id]
+            except: assert False, 'halt'
+        self.getsave_postfit_db_dict(name,species_hash_id_dict)
+        return species_hash_id_dict
+    
+    
     
     
     def build_species_estimator_prediction_dict(self,rebuild=0):

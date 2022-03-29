@@ -27,8 +27,10 @@ class DBTool():
         if not os.path.exists(self.errordir):
             os.mkdir(self.errordir)
         self.resultsDBdictpath=os.path.join(resultsdir,'resultsDB.sqlite')
+        self.noveltyFilterResultsDBdictpath=os.path.join(resultsdir,'noveltyFilterResultsDB.sqlite')
         self.metadataDBdictpath=os.path.join(resultsdir,'metadataDB.sqlite')
         self.genDBdictpath=os.path.join(resultsdir,'genDB.sqlite')
+        self.noveltyFilterenDBdictpath=os.path.join(resultsdir,'noveltyFilterGenDB.sqlite')
         self.predictDBdictpath=os.path.join(resultsdir,'predictDB.sqlite')
         self.XpredictDBdictpath=os.path.join(resultsdir,'XpredictDB.sqlite')
         self.Xpredictspecies_dir=os.path.join(resultsdir,'species_predict')
@@ -172,6 +174,9 @@ class DBTool():
     def resultsDBdict(self):
         return SqliteDict(filename=self.resultsDBdictpath,tablename='results', encode=self.my_encode, decode=self.my_decode)
     
+    def noveltyFilterResultsDBdict(self):
+        return SqliteDict(filename=self.noveltyFilterResultsDBdictpath,tablename='results', encode=self.my_encode, decode=self.my_decode)
+    
     def metadataDBdict(self):
         return SqliteDict(filename=self.metadataDBdictpath,tablename='metadata', encode=self.my_encode, decode=self.my_decode)
     
@@ -180,6 +185,9 @@ class DBTool():
     
     def pidataDBdict(self,name='species01'):
         return SqliteDict(filename=self.pidataDBdictpath,tablename=name, encode=self.my_encode, decode=self.my_decode)
+    
+    def noveltyFilterGenDBdict(self):
+        return SqliteDict(filename=self.noveltyFilterGenDBdictpath,tablename='gen', encode=self.my_encode, decode=self.my_decode)
     
     def genDBdict(self):
         return SqliteDict(filename=self.genDBdictpath,tablename='gen', encode=self.my_encode, decode=self.my_decode)
@@ -193,26 +201,35 @@ class DBTool():
     def NoveltyFilterDBdict(self,):
         return SqliteDict(filename=self.NoveltyFilterDBdictpath,tablename='novelty', encode=self.my_encode, decode=self.my_decode)
     
-    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0,Xpredict=False,fast_add=False):
+    def addToDBDict(self,save_list,db=None,gen=0,predict=0,pi_data=0,Xpredict=False,fast_add=False,is_novelty_filter=False):
         try:
             if type(save_list) is dict:
                 save_list=[save_list]
             if not db is None:
                 pass        
             elif gen:
-                db=self.genDBdict
+                if is_novelty_filter:
+                    db=self.noveltyFilterGenDBdict
+                else:
+                    db=self.genDBdict
             elif predict:
+                assert not is_novelty_filter
                 db=self.predictDBdict
             elif pi_data:
+                assert not is_novelty_filter
                 if type(pi_data) is str:
                     kwargs={'name':pi_data}
                 else:
                     kwargs={}
                 db=lambda: self.pidataDBdict(**kwargs)
             elif Xpredict:
+                assert not is_novelty_filter
                 db=lambda X:self.XpredictHashIDComidHashResultsDB(hash_id=X)
             else:
-                db=self.resultsDBdict
+                if is_novelty_filter:
+                    db=self.noveltyFilterResultsDBdict
+                else:
+                    db=self.resultsDBdict
             saved=False;tries=0
             while len(save_list)>0:
                 try:

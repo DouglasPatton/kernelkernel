@@ -202,11 +202,16 @@ class PiSetup(myLogger):
                 test=self.test
             #PiXResults.consolidateXpredict()
             #rundict_list,hash_id_list=PiResults().build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
-            rundict_list=PiResults().build_prediction_rundicts(test=test,NoveltyFilterDB=self.dbt.NoveltyFilterDBdict())
+            
+            rundict_list=PiResults().build_prediction_rundicts(test=test,NoveltyFilterDB=self.dbt.NoveltyFilterDBdict(),skip_finished=True)
+            dg_hash_hash_id_dict=PiResults().build_dghash_hash_id_dict(self,rebuild=0,add=0,is_novelty_filter=False)#it's a sqlitedbdict
+            #build_prediction_rundicts(test=test,XpredictDB=self.dbt.XpredictDBdict())
             runlist=[]
             self.logger.info(f'building list of noveltyfilter runners. len(rundict_list):{len(rundict_list)}')
             for rundict in rundict_list:
-                runlist.append(NoveltyFilterRunner(rundict))
+                dg_hash=joblib.hash(rundict['data_gen'])
+                hash_id_list=dg_hash_hash_id_dict[dg_hash]#hash_id list is for retrieving the trained imputer.
+                runlist.append(NoveltyFilterRunner(rundict,hash_id_list))
             self.logger.info(f'list of runners built. len(runlist):{len(runlist)}')
             self.logger.info(f'runlist:{runlist}')
         elif self.run_type=='predict':

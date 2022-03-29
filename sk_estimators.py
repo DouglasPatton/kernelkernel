@@ -16,28 +16,104 @@ import numpy as np
 from mylogger import myLogger
 from pi_db_tool import DBTool
 
+from sklearn.base import BaseEstimator,RegressorMixin
 from sklearn.linear_model import SGDOneClassSVM
 from sklearn.kernel_approximation import Nystroem
+
+class OneClassScorer(myLogger):
+    def __init__(self,y_train)
+
+
+class OneClassWrapper(BaseEstimator,RegressorMixin,myLogger):
+    def __init__(self,one_class_pipeline,kwargs={}):
+        self.one_class_pipeline=one_class_pipeline
+        self.kwargs=kwargs
+    
+    def fit(self,X,y=None,w=None):
+        wrapper_dict=self.kwargs.pop('wrapper_dict')
+        sdg_kwargs=self.kwargs['sdg_kwargs']
+        if 'nu' in sdg_kwargs:
+            sdg_nu=sdg_kwargs['nu']
+            if type(sdg_nu) is list:
+                try: sdg_kwargs['nu'][sdg_nu.index('1/n')]=1/X.shape[0]
+            elif type(sdg_nu) is str and sdg_nu='1/n'
+                sdg_kwargs['nu']=1/X.shape[0]]
+        if 'balanced_weights' in wrapper_dict and wrapper_dict['balanced_weights']:
+            w=np.empty(y.shape,dtype=np.float64)
+            cats=np.unique(y)
+            c=cats.size
+            n=y.size
+            for u in cats:
+                share=n/(np.size(y[y==u])*c)
+                w[y==u]=share
+        self.pipe_=self.one_class_pipeline(**self.kwargs).fit(X,y=y,w=w)
+    def predict(self,X,y=None,w=None):
+        return self.pipe_.predict(X)
+    def score(self,X,y,w=None):
+        if w is None:
+            w=np.ones_like(y)
+        else:
+            w=w*w.shape[0]/w.sum()
+            assert w.shape[0]==y.shape[0]
+        
+        return (w*y*self.pipe_.predict(X)).sum()
+        
+        
+        
+        
+    return self
 
 class sk_novelty(myLogger):
     def __init__(self,):
         myLogger.__init__(self,name='sk_novelty.log')
         N
-    def get_est_dict(self,):
-        fit_kwarg_dict={'clf__sample_weight':'balanced'}#  
-        fit_kwarg_dict2={'static_pipeline__clf__sample_weight':'balanced'}# 
+    def get_est_dict(self):
+        
         estimator_dict={
             #add logistic with e-net
-            'linear-probability-model':{'estimator':self.lpmClf,'fit_kwarg_dict':fit_kwarg_dict2},#{'regressor__clf__sample_weight':'balanced'}},
-            'logistic-reg':{'estimator':self.logisticClf,'fit_kwarg_dict':fit_kwarg_dict},
-            'linear-svc':{'estimator':self.linSvcClf,'fit_kwarg_dict':fit_kwarg_dict2,},
-            'rbf-svc':{'estimator':self.rbfSvcClf,'fit_kwarg_dict':fit_kwarg_dict2,},
-            'gradient-boosting-classifier':{'estimator':self.gradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
-            'hist-gradient-boosting-classifier':{'estimator':self.histGradientBoostingClf,'fit_kwarg_dict':fit_kwarg_dict,},
-        }
+            {f'one-class-sdg-{nu_i}{"-balanced" if wt_bool_i else "-unbalanced"}':{
+                'estimator':self.oneClassNystroemSDG,
+                'wrapper':OneClassWrapper
+                'kwargs':dict(
+                    nystroem_kwargs={'random_state':0,gamma=[0.01,0.1,0.5,1,None]},
+                    sdg_kwargs={'random_state':0,nu=nu_i}),
+                    wrapper_dict={'balanced_weights':wt_bool_i} for nu_i in ['1/n',0.01,0.05] for wt_bool_i in [True,False] },
+            }
         return estimator_dict
     
-    def oneClassNystroemSDG(self,nystroem_kwargs={},sdg_kwargs={}):
+    def oneClassNystroemSDG(
+        self,
+        nystroem_kwargs={'random_state':0},
+        sdg_kwargs={'random_state':0},
+        inner_cv_splits=5,inner_cv_reps=1,random_state=0):
+        try:
+            
+            inner_cv1=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
+            inner_cv2=RepeatedStratifiedKFold(n_splits=inner_cv_splits, n_repeats=inner_cv_reps, random_state=random_state)
+            param_grid1={};param_grid2={}
+            
+            for key,val in nystroem_kwargs.items():
+                if type(val) is list:
+                    param_grid1[f'rbf_kernel__{key}']=val
+                    nystroem_kwargs.pop(key)
+            for key,val in sdg_kwargs.items():
+                if type(val) is list:
+                    param_grid2[f'clf__{key}]=val
+                    sdg_kwargs.pop(key)
+                
+                    
+            steps=[
+                #
+                ('scaler',StandardScaler()),
+                ('rbf_kernel',Nystroem(**nystroem_kwargs))
+                ('clf',SGDOneClassSVM(random_state=random_state,tol=1e-2,max_iter=1000))]
+            
+                                
+            if do_prep:
+                mvh=missingValHandler(strategy='impute_knn_10')
+            return Pipeline(steps=[('prep',None),('static_pipeline',static_pipeline)])
+        except:
+            self.logger.exception('')
         
 
 class sk_estimator(myLogger):
